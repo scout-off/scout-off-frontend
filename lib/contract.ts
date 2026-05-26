@@ -50,6 +50,10 @@ export async function buildApproveMilestone(validatorKey: string, playerId: stri
   ], validatorKey);
 }
 
+export async function checkIsValidator(address: string) {
+  return simulateTx("is_validator", [nativeToScVal(address, { type: "address" })]);
+}
+
 // ── Scout ─────────────────────────────────────────────────────────────────────
 export async function buildPayToContact(scoutKey: string, playerId: string) {
   return buildTx("pay_to_contact", [
