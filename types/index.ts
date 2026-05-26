@@ -61,3 +61,38 @@ export interface ContractCallResult<T = unknown> {
   data?: T;
   error?: string;
 }
+
+// ── Contract errors ──────────────────────────────────────────────────────────
+export interface ContractError {
+  code: number;
+  message: string;
+}
+
+export const CONTRACT_ERRORS: Record<number, string> = {
+  1: "AlreadyInitialized",
+  2: "NotInitialized",
+  3: "PlayerNotFound",
+  4: "UnauthorizedValidator",
+  5: "InvalidMilestone",
+  6: "AlreadyAtLevel",
+  7: "InsufficientFee",
+  8: "SubscriptionExpired",
+  9: "ContractPaused",
+  10: "Unauthorized",
+  11: "NoFeesToWithdraw",
+  12: "Overflow",
+};
+
+export function isContractError(e: unknown): e is ContractError {
+  if (typeof e !== "object" || e === null) {
+    return false;
+  }
+
+  const maybe = e as { code?: unknown; message?: unknown };
+
+  return (
+    typeof maybe.code === "number" &&
+    Number.isFinite(maybe.code) &&
+    typeof maybe.message === "string"
+  );
+}
