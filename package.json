@@ -13,7 +13,7 @@
     "next": "14.2.3",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "@stellar/stellar-sdk": "12.1.0",
+    "@stellar/stellar-sdk": "12.3.0",
     "@stellar/freighter-api": "2.0.0",
     "axios": "1.7.2"
   },
