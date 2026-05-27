@@ -37,6 +37,26 @@ export async function buildRegisterPlayer(wallet: string, vitals: PlayerVitals, 
   ], wallet);
 }
 
+/**
+ * Builds a transaction to update a player's IPFS media hash.
+ * 
+ * @param wallet - The caller's wallet public key. Must match the player's registered wallet address.
+ *                 Authorization is enforced on-chain; transactions from mismatched wallets will fail.
+ * @param playerId - The unique identifier of the player to update.
+ * @param ipfsHash - The new IPFS hash for the player's media content.
+ * @returns A Promise that resolves to the XDR-encoded transaction string.
+ * 
+ * @throws {ContractError} Throws error code 10 (Unauthorized) if the caller's wallet does not match
+ *                         the player's registered wallet address. This check is performed on-chain
+ *                         when the transaction is executed.
+ */
+export async function buildUpdateProfile(wallet: string, playerId: string, ipfsHash: string) {
+  return buildTx("update_profile", [
+    nativeToScVal(playerId, { type: "string" }),
+    nativeToScVal(ipfsHash, { type: "string" }),
+  ], wallet);
+}
+
 export async function getPlayer(playerId: string) {
   return simulateTx("get_player", [nativeToScVal(playerId, { type: "string" })]);
 }
