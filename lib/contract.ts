@@ -96,6 +96,23 @@ export async function registerPlayer(
   throw new Error(`ContractError: transaction did not return a value`);
 }
 
+export async function updateProfile(wallet: string, playerId: string, ipfsHash: string) {
+  const { signTransaction } = await import("@stellar/freighter-api");
+  const xdrTx = await buildTx(
+    "update_profile",
+    [
+      nativeToScVal(playerId, { type: "string" }),
+      nativeToScVal(ipfsHash, { type: "string" }),
+    ],
+    wallet
+  );
+  const signedTxXdr = await signTransaction(xdrTx, { networkPassphrase: NETWORK });
+  const { Transaction } = await import("@stellar/stellar-sdk");
+  const result = await rpc.sendTransaction(new Transaction(signedTxXdr, NETWORK));
+  if (result.status === "ERROR") throw new Error(`ContractError: ${JSON.stringify(result)}`);
+  return result;
+}
+
 // ── Scout ─────────────────────────────────────────────────────────────────────
 export async function buildPayToContact(scoutKey: string, playerId: string) {
   return buildTx("pay_to_contact", [
