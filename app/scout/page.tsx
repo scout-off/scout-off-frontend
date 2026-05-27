@@ -1,8 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useWallet } from "@/hooks/useWallet";
-import { useScout } from "@/hooks/useScout";
+import { useRequireWallet } from "@/hooks/useRequireWallet";
 import PlayerCard from "@/components/PlayerCard";
 import PlayerCardSkeleton from "@/components/PlayerCardSkeleton";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
@@ -12,7 +11,7 @@ const POSITIONS = ["GK", "CB", "LB", "RB", "CM", "CAM", "LW", "RW", "ST"];
 const PAGE_SIZE = 12;
 
 function ScoutDashboardContent() {
-  const { publicKey } = useWallet();
+  const { walletAddress: publicKey } = useRequireWallet();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -47,11 +46,7 @@ function ScoutDashboardContent() {
   }, [loading, players]);
 
   if (!publicKey) {
-    return (
-      <p className="text-center text-gray-400 mt-20">
-        Connect your wallet to access the scout dashboard.
-      </p>
-    );
+    return null; // Redirect handled by useRequireWallet
   }
 
   const showSkeletons = loading && !hasLoaded.current;
