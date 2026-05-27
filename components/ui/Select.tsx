@@ -1,53 +1,36 @@
-import React from "react";
+"use client";
 
-interface SelectOption {
-  label: string;
-  value: string;
-}
+import { SelectHTMLAttributes, ReactNode } from "react";
 
-interface SelectProps {
-  options: SelectOption[];
-  placeholder?: string;
-  value: string;
-  onChange: (value: string) => void;
+export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
+  children: ReactNode;
   label?: string;
   error?: string;
-  disabled?: boolean;
 }
 
 export default function Select({
-  options,
-  placeholder,
-  value,
-  onChange,
+  children,
   label,
   error,
-  disabled,
+  className = "",
+  ...props
 }: SelectProps) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="space-y-1">
       {label && (
-        <label className="text-xs text-gray-400">{label}</label>
+        <label className="block text-sm font-medium text-gray-300">
+          {label}
+        </label>
       )}
       <select
-        value={value}
-        onChange={(e) => !disabled && onChange(e.target.value)}
-        disabled={disabled}
-        aria-invalid={!!error}
-        className={`input ${error ? "border-red-500" : ""} ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+        className={`w-full bg-gray-900 border border-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-green transition ${
+          error ? "border-red-500" : ""
+        } ${className}`}
+        {...props}
       >
-        {placeholder !== undefined && (
-          <option value="">{placeholder}</option>
-        )}
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
+        {children}
       </select>
-      {error && (
-        <p className="text-xs text-red-500" role="alert">{error}</p>
-      )}
+      {error && <p className="text-sm text-red-500">{error}</p>}
     </div>
   );
 }
