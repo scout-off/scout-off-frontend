@@ -56,6 +56,7 @@ const player: Player = {
 function renderComponent(onSuccess = jest.fn()) {
   mockedUseWallet.mockReturnValue({
     publicKey: player.wallet,
+    isAuthenticated: true,
     isConnecting: false,
     connect: jest.fn(),
     disconnect: jest.fn(),
@@ -81,6 +82,7 @@ describe("UpdateProfileForm", () => {
   it("does not render when the connected wallet does not match the player wallet", () => {
     mockedUseWallet.mockReturnValue({
       publicKey: "OTHERPUBLICKEY",
+      isAuthenticated: true,
       isConnecting: false,
       connect: jest.fn(),
       disconnect: jest.fn(),
