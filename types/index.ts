@@ -55,6 +55,16 @@ export interface Scout {
   contactedPlayers: string[];   // player IDs
 }
 
+// ── Chat ─────────────────────────────────────────────────────────────────────
+export interface ChatMessage {
+  id: string;
+  from: string;        // Stellar address of sender
+  to: string;          // Stellar address of recipient
+  text: string;
+  timestamp: number;   // Unix timestamp
+  read: boolean;
+}
+
 // ── Filter ────────────────────────────────────────────────────────────────────
 export interface PlayerFilter {
   region?: string;
