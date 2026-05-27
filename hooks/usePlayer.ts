@@ -8,7 +8,7 @@ export function usePlayer(walletOrId: string | null) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchPlayer = () => {
     if (!walletOrId) return;
     setLoading(true);
     setError(null);
@@ -16,6 +16,23 @@ export function usePlayer(walletOrId: string | null) {
       .then(setPlayer)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchPlayer();
+  }, [walletOrId]);
+
+  useEffect(() => {
+    const handlePlayerUpdate = (event: CustomEvent) => {
+      if (event.detail?.playerId === walletOrId) {
+        fetchPlayer();
+      }
+    };
+
+    window.addEventListener("player-updated", handlePlayerUpdate as EventListener);
+    return () => {
+      window.removeEventListener("player-updated", handlePlayerUpdate as EventListener);
+    };
   }, [walletOrId]);
 
   return { player, loading, error };

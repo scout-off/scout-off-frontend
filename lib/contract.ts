@@ -78,6 +78,14 @@ export async function buildPayToContact(scoutKey: string, playerId: string) {
   ], scoutKey);
 }
 
+export async function buildLogTrialOffer(scoutKey: string, playerId: string, details: string) {
+  return buildTx("log_trial_offer", [
+    nativeToScVal(scoutKey, { type: "address" }),
+    nativeToScVal(playerId, { type: "string" }),
+    nativeToScVal(details, { type: "string" }),
+  ], scoutKey);
+}
+
 export async function filterPlayers(region: string, position: string, minLevel: number) {
   return simulateTx("filter_players", [
     nativeToScVal(region, { type: "string" }),
