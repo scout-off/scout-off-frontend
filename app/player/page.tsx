@@ -1,13 +1,14 @@
 "use client";
 import { useState } from "react";
-import { useWallet } from "@/hooks/useWallet";
-import { usePlayer } from "@/hooks/usePlayer";
+import { useRequireWallet } from "@/hooks/useRequireWallet";
 import ProgressBar from "@/components/ProgressBar";
 import { uploadToIPFS } from "@/lib/ipfs";
 import { buildRegisterPlayer } from "@/lib/contract";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
-export default function PlayerDashboard() {
-  const { publicKey, signAndSubmit } = useWallet();
+function PlayerDashboardContent() {
+  const { walletAddress: publicKey } = useRequireWallet();
+  const { signAndSubmit } = useWallet();
   const { player, loading } = usePlayer(publicKey);
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -17,11 +18,7 @@ export default function PlayerDashboard() {
   const [age, setAge] = useState("");
 
   if (!publicKey) {
-    return (
-      <p className="text-center text-gray-400 mt-20">
-        Connect your wallet to access your player dashboard.
-      </p>
-    );
+    return null; // Redirect handled by useRequireWallet
   }
 
   async function handleRegister(e: React.FormEvent) {

@@ -1,100 +1,96 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
+import { Player } from "@/types";
 import { useWallet } from "@/hooks/useWallet";
-import { updateProfile } from "@/lib/contract";
 import { ipfsUrl } from "@/lib/ipfs";
+import { updateProfile } from "@/lib/contract";
 import { useToast } from "@/components/ui/Toast";
-import Button from "@/components/ui/Button";
 import VideoUpload from "@/components/ui/VideoUpload";
-import type { Player } from "@/types";
+import Button from "@/components/ui/Button";
 
 interface UpdateProfileFormProps {
   player: Player;
   onSuccess: () => void;
 }
 
-function truncateCid(cid: string) {
-  if (cid.length <= 16) return cid;
-  return `${cid.slice(0, 8)}…${cid.slice(-8)}`;
-}
-
 export default function UpdateProfileForm({ player, onSuccess }: UpdateProfileFormProps) {
   const { publicKey } = useWallet();
   const { show } = useToast();
-  const [newCid, setNewCid] = useState("");
+  const [newCid, setNewCid] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!publicKey || publicKey !== player.wallet) {
     return null;
   }
 
-  const currentMediaUrl = ipfsUrl(player.ipfsHash);
-  const canSubmit = Boolean(newCid && newCid !== player.ipfsHash && !isSubmitting);
-
   const handleUpload = (cid: string) => {
     setNewCid(cid);
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!canSubmit) {
-      return;
-    }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCid || isSubmitting) return;
 
     setIsSubmitting(true);
-
     try {
       await updateProfile(publicKey, player.id, newCid);
-      show({ message: "Profile updated successfully.", variant: "success" });
+      show({ message: "Profile media updated successfully", variant: "success" });
       setNewCid("");
       onSuccess();
-    } catch (error: unknown) {
-      show({
-        message:
-          error instanceof Error
-            ? error.message
-            : "Unable to update profile. Please try again.",
-        variant: "error",
-      });
+    } catch (err) {
+      console.error("Update profile failed:", err);
+      show({ message: "Failed to update profile media", variant: "error" });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const truncatedCid = `${player.ipfsHash.slice(0, 8)}…${player.ipfsHash.slice(-8)}`;
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 bg-brand-card border border-gray-800 rounded-xl p-6">
-      <div className="space-y-2">
-        <h2 className="text-xl font-semibold text-white">Update Profile Media</h2>
+    <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 space-y-6">
+      <div className="space-y-1">
+        <h2 className="text-xl font-bold text-white">Update Profile Media</h2>
         <p className="text-sm text-gray-400">
-          Updating your profile will replace your current media on-chain.
+          Manage your highlight reel and on-chain media.
         </p>
       </div>
 
-      <div className="rounded-xl border border-gray-700 bg-gray-900 p-4">
-        <p className="text-sm text-gray-400">Current media CID</p>
-        <a
-          href={currentMediaUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-2 inline-block text-sm text-brand-green hover:underline"
-        >
-          {truncateCid(player.ipfsHash)}
-        </a>
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1">
+            Current Media CID
+          </label>
+          <a
+            href={ipfsUrl(player.ipfsHash)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-brand-green hover:underline font-mono text-sm"
+          >
+            {truncatedCid}
+          </a>
+        </div>
+
+        <div className="bg-amber-900/20 border border-amber-900/50 p-4 rounded-lg">
+          <p className="text-sm text-amber-500 font-medium">
+            Warning: Updating your profile will replace your current media on-chain.
+          </p>
+        </div>
+
+        <VideoUpload onUpload={handleUpload} />
+
+        <form onSubmit={handleSubmit}>
+          <Button
+            type="submit"
+            disabled={!newCid || isSubmitting}
+            isLoading={isSubmitting}
+            className="w-full"
+          >
+            Update Profile
+          </Button>
+        </form>
       </div>
-
-      <VideoUpload onUpload={handleUpload} />
-
-      {newCid && newCid === player.ipfsHash && (
-        <p className="text-sm text-yellow-300">
-          The uploaded file matches your current CID. Upload a different video to update your profile.
-        </p>
-      )}
-
-      <Button type="submit" isLoading={isSubmitting} disabled={!canSubmit} className="w-full">
-        {isSubmitting ? "Updating profile…" : "Update profile"}
-      </Button>
-    </form>
+    </div>
   );
 }

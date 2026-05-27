@@ -1,6 +1,5 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
 import UpdateProfileForm from "@/components/player/UpdateProfileForm";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ipfsUrl } from "@/lib/ipfs";
@@ -13,6 +12,18 @@ jest.mock("@/components/ui/VideoUpload", () => ({
   default: ({ onUpload }: { onUpload: (cid: string) => void }) => (
     <button type="button" onClick={() => onUpload("new-cid-1234567890")}>Upload new media</button>
   ),
+}));
+
+jest.mock("@/lib/stellar", () => ({
+  rpc: {
+    getAccount: jest.fn(),
+    prepareTransaction: jest.fn(),
+    simulateTransaction: jest.fn(),
+    sendTransaction: jest.fn(),
+    getTransaction: jest.fn(),
+  },
+  NETWORK: "TESTNET",
+  BASE_FEE: "100",
 }));
 
 jest.mock("@/hooks/useWallet", () => ({
@@ -29,16 +40,28 @@ const mockedUpdateProfile = updateProfile as jest.MockedFunction<typeof updatePr
 const player: Player = {
   id: "player-1",
   wallet: "GABC123PUBLICKEY",
-  name: "Test Player",
-  organisation: "Test Club",
-  subscriptionTier: "basic",
-  subscriptionExpiry: 0,
-  contactedPlayers: [],
+  vitals: {
+    name: "Test Player",
+    age: 20,
+    position: "Forward",
+    region: "West Africa",
+    nationality: "Nigerian",
+  },
   ipfsHash: "Qmabcdef1234567890abcdef1234567890abcdef12",
+  progressLevel: 0,
+  milestones: [],
+  createdAt: 1234567890,
 };
 
 function renderComponent(onSuccess = jest.fn()) {
-  mockedUseWallet.mockReturnValue({ publicKey: player.wallet, signAndSubmit: jest.fn() });
+  mockedUseWallet.mockReturnValue({
+    publicKey: player.wallet,
+    isAuthenticated: true,
+    isConnecting: false,
+    connect: jest.fn(),
+    disconnect: jest.fn(),
+    signAndSubmit: jest.fn(),
+  });
 
   return render(
     <ToastProvider>
@@ -49,8 +72,7 @@ function renderComponent(onSuccess = jest.fn()) {
 
 describe("UpdateProfileForm", () => {
   beforeEach(() => {
-    mockedUpdateProfile.mockReset();
-    mockedUseWallet.mockReset();
+    jest.clearAllMocks();
   });
 
   afterEach(() => {
@@ -58,7 +80,14 @@ describe("UpdateProfileForm", () => {
   });
 
   it("does not render when the connected wallet does not match the player wallet", () => {
-    mockedUseWallet.mockReturnValue({ publicKey: "OTHERPUBLICKEY", signAndSubmit: jest.fn() });
+    mockedUseWallet.mockReturnValue({
+      publicKey: "OTHERPUBLICKEY",
+      isAuthenticated: true,
+      isConnecting: false,
+      connect: jest.fn(),
+      disconnect: jest.fn(),
+      signAndSubmit: jest.fn(),
+    });
 
     render(
       <ToastProvider>
@@ -91,7 +120,12 @@ describe("UpdateProfileForm", () => {
 
   it("calls updateProfile with the new CID and invokes onSuccess after a successful transaction", async () => {
     const onSuccess = jest.fn();
-    mockedUpdateProfile.mockResolvedValue({});
+    mockedUpdateProfile.mockResolvedValue({
+      status: "PENDING",
+      hash: "tx-hash",
+      latestLedger: 1,
+      latestLedgerCloseTime: 1,
+    } as any);
 
     renderComponent(onSuccess);
 
