@@ -1,9 +1,10 @@
+import { memo } from "react";
 import Link from "next/link";
 import type { Player } from "@/types";
 import { PROGRESS_LABELS } from "@/types";
 import ProgressBar from "./ProgressBar";
 
-export default function PlayerCard({ player }: { player: Player }) {
+function PlayerCard({ player }: { player: Player }) {
   const { id, vitals, progressLevel, ipfsHash } = player;
   return (
     <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-4 hover:border-brand-green transition">
@@ -40,3 +41,8 @@ export default function PlayerCard({ player }: { player: Player }) {
     </div>
   );
 }
+
+export default memo(PlayerCard, (prev, next) =>
+  prev.player.id === next.player.id &&
+  prev.player.progressLevel === next.player.progressLevel
+);
