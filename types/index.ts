@@ -55,11 +55,30 @@ export interface Scout {
   contactedPlayers: string[];   // player IDs
 }
 
+// ── Subscription ──────────────────────────────────────────────────────────────
+export interface Subscription {
+  scout: string;          // Stellar address
+  tier: SubscriptionTier;
+  expiresAt: number;      // Unix timestamp
+}
+
 // ── Filter ────────────────────────────────────────────────────────────────────
 export interface PlayerFilter {
   region?: string;
   position?: string;
   minLevel?: ProgressLevel;
+}
+
+// ── Contact Details ───────────────────────────────────────────────────────────
+/**
+ * Contact information returned after pay-to-contact is unlocked for a player.
+ * At least one field must be present. Validation of the requirement is enforced
+ * at the contract level to ensure data integrity.
+ */
+export interface ContactDetails {
+  email?: string;
+  phone?: string;
+  telegram?: string;
 }
 
 // ── Contract call helpers ─────────────────────────────────────────────────────
