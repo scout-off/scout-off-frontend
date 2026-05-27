@@ -38,6 +38,12 @@ export interface Player {
 // ── Scout ─────────────────────────────────────────────────────────────────────
 export type SubscriptionTier = "basic" | "pro" | "elite";
 
+export interface Subscription {
+  scout: string;            // Stellar address of the scout
+  tier: SubscriptionTier;
+  expiry: number;           // Unix timestamp
+}
+
 export interface Scout {
   id: string;
   wallet: string;
