@@ -37,6 +37,26 @@ export async function buildRegisterPlayer(wallet: string, vitals: PlayerVitals, 
   ], wallet);
 }
 
+/**
+ * Builds a transaction to update a player's IPFS media hash.
+ * 
+ * @param wallet - The caller's wallet public key. Must match the player's registered wallet address.
+ *                 Authorization is enforced on-chain; transactions from mismatched wallets will fail.
+ * @param playerId - The unique identifier of the player to update.
+ * @param ipfsHash - The new IPFS hash for the player's media content.
+ * @returns A Promise that resolves to the XDR-encoded transaction string.
+ * 
+ * @throws {ContractError} Throws error code 10 (Unauthorized) if the caller's wallet does not match
+ *                         the player's registered wallet address. This check is performed on-chain
+ *                         when the transaction is executed.
+ */
+export async function buildUpdateProfile(wallet: string, playerId: string, ipfsHash: string) {
+  return buildTx("update_profile", [
+    nativeToScVal(playerId, { type: "string" }),
+    nativeToScVal(ipfsHash, { type: "string" }),
+  ], wallet);
+}
+
 export async function getPlayer(playerId: string) {
   return simulateTx("get_player", [nativeToScVal(playerId, { type: "string" })]);
 }
@@ -48,6 +68,69 @@ export async function buildApproveMilestone(validatorKey: string, playerId: stri
     nativeToScVal(milestone, { type: "string" }),
     nativeToScVal(validatorKey, { type: "address" }),
   ], validatorKey);
+}
+
+export async function checkIsValidator(address: string) {
+  return simulateTx("is_validator", [nativeToScVal(address, { type: "address" })]);
+}
+
+export async function getMilestoneHistory(playerId: string) {
+  return simulateTx("get_milestone_history", [nativeToScVal(playerId, { type: "string" })]);
+}
+
+export async function getContractHealth() {
+  return simulateTx("health", []);
+}
+
+/**
+ * Build a signed `register_player` transaction via Freighter and submit it.
+ *
+ * @param wallet - The player's Stellar public key (source + auth).
+ * @param vitals - Player vitals: name, age, position, region, nationality.
+ * @param ipfsHash - IPFS CID of the player's initial highlight reel.
+ * @returns The new player ID string assigned by the contract.
+ * @throws {ContractError} AlreadyInitialized (1) if the player is already registered.
+ * @throws {ContractError} NotInitialized (2) if the contract has not been set up.
+ */
+export async function registerPlayer(
+  wallet: string,
+  vitals: PlayerVitals,
+  ipfsHash: string
+): Promise<string> {
+  const { signTransaction } = await import("@stellar/freighter-api");
+  const xdrTx = await buildTx(
+    "register_player",
+    [
+      nativeToScVal(wallet, { type: "address" }),
+      nativeToScVal(vitals),
+      nativeToScVal(ipfsHash, { type: "string" }),
+    ],
+    wallet
+  );
+  const signedTxXdr = await signTransaction(xdrTx, { networkPassphrase: NETWORK });
+  const { Transaction } = await import("@stellar/stellar-sdk");
+  const result = await rpc.sendTransaction(new Transaction(signedTxXdr, NETWORK));
+  if (result.status === "ERROR") throw new Error(`ContractError: ${JSON.stringify(result)}`);
+  const getResult = await rpc.getTransaction(result.hash);
+  if ("returnValue" in getResult) return scValToNative(getResult.returnValue!) as string;
+  throw new Error(`ContractError: transaction did not return a value`);
+}
+
+export async function updateProfile(wallet: string, playerId: string, ipfsHash: string) {
+  const { signTransaction } = await import("@stellar/freighter-api");
+  const xdrTx = await buildTx(
+    "update_profile",
+    [
+      nativeToScVal(playerId, { type: "string" }),
+      nativeToScVal(ipfsHash, { type: "string" }),
+    ],
+    wallet
+  );
+  const signedTxXdr = await signTransaction(xdrTx, { networkPassphrase: NETWORK });
+  const { Transaction } = await import("@stellar/stellar-sdk");
+  const result = await rpc.sendTransaction(new Transaction(signedTxXdr, NETWORK));
+  if (result.status === "ERROR") throw new Error(`ContractError: ${JSON.stringify(result)}`);
+  return result;
 }
 
 // ── Scout ─────────────────────────────────────────────────────────────────────
@@ -66,20 +149,24 @@ export async function filterPlayers(region: string, position: string, minLevel: 
   ]);
 }
 
-/**
- * Fetches the active subscription for the provided scout address.
- * 
- * @param scout - The Stellar address of the scout
- * @returns A promise that resolves to the Subscription object if one exists, or null if no subscription is found
- * @throws {Error} If the contract simulation fails
- * 
- * @example
- * const subscription = await getSubscription("GBUQWP3BOUZX34ULNQG23RQ6F4YUSXHTWYTTE2XFVFNNE4XMJLERI5SZ");
- * if (subscription) {
- *   console.log(`Scout has ${subscription.tier} subscription until ${new Date(subscription.expiresAt * 1000)}`);
- * }
- */
-export async function getSubscription(scout: string): Promise<Subscription | null> {
-  const result = await simulateTx("get_subscription", [nativeToScVal(scout, { type: "address" })]);
-  return result ?? null;
+export async function getValidators(): Promise<string[]> {
+  return simulateTx("get_validators", []);
+}
+
+export async function buildRevokeMilestone(validatorKey: string, playerId: string, milestoneId: string) {
+  return buildTx("revoke_milestone", [
+    nativeToScVal(playerId, { type: "string" }),
+    nativeToScVal(milestoneId, { type: "string" }),
+  ], validatorKey);
+}
+
+export async function getSubscription(scout: string) {
+  return simulateTx("get_subscription", [nativeToScVal(scout, { type: "address" })]);
+}
+
+export async function buildSubscribe(scoutKey: string, tier: string) {
+  return buildTx("subscribe", [
+    nativeToScVal(scoutKey, { type: "address" }),
+    nativeToScVal(tier, { type: "string" }),
+  ], scoutKey);
 }
