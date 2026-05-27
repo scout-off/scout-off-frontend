@@ -1,0 +1,27 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    target-branch: "main"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+
+    # Group all patch-level updates into a single PR to reduce noise
+    groups:
+      patch-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
+
+    # Ignore major version bumps for core dependencies
+    ignore:
+      - dependency-name: "next"
+        update-types: ["version-update:semver-major"]
+        # Reason: Major Next.js updates (e.g., v14 to v15) often introduce breaking App Router changes requiring manual migration.
+      - dependency-name: "@stellar/stellar-sdk"
+        update-types: ["version-update:semver-major"]
+        # Reason: Major Stellar SDK bumps usually include breaking Soroban RPC changes that require smart contract compatibility checks.
