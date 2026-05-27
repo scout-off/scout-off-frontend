@@ -38,6 +38,12 @@ export interface Player {
 // ── Scout ─────────────────────────────────────────────────────────────────────
 export type SubscriptionTier = "basic" | "pro" | "elite";
 
+export interface Subscription {
+  scout: string;            // Stellar address of the scout
+  tier: SubscriptionTier;
+  expiry: number;           // Unix timestamp
+}
+
 export interface Scout {
   id: string;
   wallet: string;
@@ -79,4 +85,21 @@ export interface ContractCallResult<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
+}
+
+/** Error codes surfaced by the ScoutOff smart contract. */
+export const ContractErrorCode = {
+  PlayerNotFound: 3,
+  UnauthorizedValidator: 4,
+  InvalidMilestone: 5,
+} as const;
+
+export type ContractErrorCode = (typeof ContractErrorCode)[keyof typeof ContractErrorCode];
+
+/** Thrown when the ScoutOff contract returns a known error code. */
+export class ContractError extends Error {
+  constructor(public readonly code: ContractErrorCode, message: string) {
+    super(message);
+    this.name = "ContractError";
+  }
 }
