@@ -98,3 +98,11 @@ export default function PlayerDashboard() {
     </div>
   );
 }
+
+export default function PlayerDashboard() {
+  return (
+    <ErrorBoundary>
+      <PlayerDashboardContent />
+    </ErrorBoundary>
+  );
+}
