@@ -48,6 +48,13 @@ export interface Scout {
   contactedPlayers: string[];   // player IDs
 }
 
+// ── Subscription ──────────────────────────────────────────────────────────────
+export interface Subscription {
+  scout: string;          // Stellar address
+  tier: SubscriptionTier;
+  expiresAt: number;      // Unix timestamp
+}
+
 // ── Filter ────────────────────────────────────────────────────────────────────
 export interface PlayerFilter {
   region?: string;

@@ -69,3 +69,25 @@ export async function filterPlayers(region: string, position: string, minLevel: 
     nativeToScVal(minLevel, { type: "u32" }),
   ]);
 }
+
+export async function getValidators(): Promise<string[]> {
+  return simulateTx("get_validators", []);
+}
+
+export async function buildRevokeMilestone(validatorKey: string, playerId: string, milestoneId: string) {
+  return buildTx("revoke_milestone", [
+    nativeToScVal(playerId, { type: "string" }),
+    nativeToScVal(milestoneId, { type: "string" }),
+  ], validatorKey);
+}
+
+export async function getSubscription(scout: string) {
+  return simulateTx("get_subscription", [nativeToScVal(scout, { type: "address" })]);
+}
+
+export async function buildSubscribe(scoutKey: string, tier: string) {
+  return buildTx("subscribe", [
+    nativeToScVal(scoutKey, { type: "address" }),
+    nativeToScVal(tier, { type: "string" }),
+  ], scoutKey);
+}
