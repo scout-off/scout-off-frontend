@@ -1,6 +1,6 @@
 import { Contract, nativeToScVal, scValToNative, xdr, TransactionBuilder as TB, Account } from "@stellar/stellar-sdk";
 import { rpc, NETWORK, BASE_FEE } from "./stellar";
-import type { PlayerVitals } from "@/types";
+import type { PlayerVitals, Subscription } from "@/types";
 
 const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID!;
 const contract = new Contract(CONTRACT_ID);
@@ -64,4 +64,20 @@ export async function filterPlayers(region: string, position: string, minLevel: 
     nativeToScVal(position, { type: "string" }),
     nativeToScVal(minLevel, { type: "u32" }),
   ]);
+}
+
+/**
+ * Retrieves the active subscription for a scout.
+ *
+ * @param scout - The Stellar address of the scout.
+ * @returns The scout's active {@link Subscription}, or `null` if none exists.
+ */
+export async function getSubscription(scout: string): Promise<Subscription | null> {
+  const raw = await simulateTx("get_subscription", [nativeToScVal(scout, { type: "address" })]);
+  if (!raw) return null;
+  return {
+    scout: raw.scout as string,
+    tier: raw.tier as Subscription["tier"],
+    expiry: raw.expiry as number,
+  };
 }
