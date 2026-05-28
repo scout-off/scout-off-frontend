@@ -230,3 +230,26 @@ export async function buildSubscribe(scoutKey: string, tier: string) {
     nativeToScVal(tier, { type: "string" }),
   ], scoutKey);
 }
+
+// ── Admin ─────────────────────────────────────────────────────────────────────
+export async function getPlatformFees(): Promise<number> {
+  return simulateTx("get_platform_fees", []);
+}
+
+export async function buildWithdrawFees(adminKey: string) {
+  return buildTx("withdraw_fees", [
+    nativeToScVal(adminKey, { type: "address" }),
+  ], adminKey);
+}
+
+export async function buildPauseContract(adminKey: string) {
+  return buildTx("pause_contract", [], adminKey);
+}
+
+export async function buildUnpauseContract(adminKey: string) {
+  return buildTx("unpause_contract", [], adminKey);
+}
+
+export async function getContractPaused(): Promise<boolean> {
+  return simulateTx("is_paused", []);
+}
