@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { getPlayer } from "@/lib/contract";
+import { getPlayer } from '../lib/contract';
 import type { Player } from "@/types";
 
 export function usePlayer(walletOrId: string | null) {
