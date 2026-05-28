@@ -1,7 +1,7 @@
 "use client";
 import { useState, useCallback } from "react";
 import { useWallet } from "@/hooks/useWallet";
-import { payToContact, getSubscription } from "@/lib/contract";
+import { payToContact, getSubscription, parseContractError } from "@/lib/contract";
 import type { ContactDetails } from "@/types";
 
 export function usePayToContact() {
@@ -13,11 +13,15 @@ export function usePayToContact() {
    * Map contract error codes to user-friendly messages.
    */
   function mapErrorMessage(errorText: string): string {
-    if (errorText.includes("code 3") || errorText.includes("InsufficientFee")) {
-      return "Insufficient balance. Please upgrade your subscription.";
+    const codeMatch = errorText.match(/code\s*[:=]?\s*(\d+)/i);
+    if (codeMatch) {
+      return parseContractError(Number(codeMatch[1]));
     }
-    if (errorText.includes("code 11") || errorText.includes("SubscriptionExpired")) {
-      return "Your subscription has expired. Please renew it to access contact details.";
+    if (errorText.includes("InsufficientFee")) {
+      return parseContractError(7);
+    }
+    if (errorText.includes("SubscriptionExpired")) {
+      return parseContractError(8);
     }
     return errorText || "An error occurred while fetching contact details.";
   }

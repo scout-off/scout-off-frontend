@@ -1,5 +1,6 @@
 import { Contract, nativeToScVal, scValToNative, xdr, TransactionBuilder as TB, Account } from "@stellar/stellar-sdk";
 import { rpc, NETWORK, BASE_FEE } from "./stellar";
+import { CONTRACT_ERRORS } from "@/types";
 import type { PlayerVitals, ValidatorInfo, ContactDetails } from "@/types";
 
 const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID!;
@@ -26,6 +27,10 @@ async function simulateTx(method: string, args: xdr.ScVal[]) {
   const result = await rpc.simulateTransaction(tx);
   if ("result" in result) return scValToNative(result.result!.retval);
   throw new Error(`Simulation failed: ${JSON.stringify(result)}`);
+}
+
+export function parseContractError(code: number): string {
+  return CONTRACT_ERRORS[code] ?? "Unknown contract error";
 }
 
 // ── Player ────────────────────────────────────────────────────────────────────
