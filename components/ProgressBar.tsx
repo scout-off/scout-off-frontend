@@ -20,6 +20,7 @@ export default function ProgressBar({ level }: { level: ProgressLevel }) {
         <div
           className="h-full bg-brand-green rounded-full transition-all duration-500"
           style={{ width: `${(level / 3) * 100}%` }}
+          aria-valuenow={level}
         />
       </div>
     </div>
