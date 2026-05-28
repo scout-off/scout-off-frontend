@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useWallet } from "@/hooks/useWallet";
 import { useValidator } from "@/hooks/useValidator";
 import { getPlayer } from "@/lib/contract";
@@ -8,12 +8,13 @@ import type { Player } from "@/types";
 
 interface ApproveFormProps {
   onSuccess: () => void;
+  initialPlayerId?: string;
 }
 
-export default function ApproveForm({ onSuccess }: ApproveFormProps) {
+export default function ApproveForm({ onSuccess, initialPlayerId = "" }: ApproveFormProps) {
   const { publicKey, signAndSubmit } = useWallet();
   const { isValidator, checking, approveMilestone } = useValidator(publicKey);
-  const [playerId, setPlayerId] = useState("");
+  const [playerId, setPlayerId] = useState(initialPlayerId);
   const [description, setDescription] = useState("");
   const [evidenceUrl, setEvidenceUrl] = useState("");
   const [urlError, setUrlError] = useState<string | null>(null);
@@ -39,6 +40,12 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
       setUrlError(null);
     }
   }
+
+  useEffect(() => {
+    if (initialPlayerId && initialPlayerId !== playerId) {
+      setPlayerId(initialPlayerId);
+    }
+  }, [initialPlayerId, playerId]);
 
   async function handlePlayerSearch() {
     if (!playerId.trim()) return;
