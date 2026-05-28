@@ -1,8 +1,10 @@
 "use client";
+import { useTranslations } from "next-intl";
 import { useWallet } from "@/hooks/useWallet";
 
 export default function WalletButton() {
   const { publicKey, connect, disconnect, isConnecting } = useWallet();
+  const t = useTranslations("wallet");
 
   if (publicKey) {
     return (
@@ -21,7 +23,7 @@ export default function WalletButton() {
       disabled={isConnecting}
       className="text-sm bg-brand-green text-black font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition disabled:opacity-50"
     >
-      {isConnecting ? "Connecting…" : "Connect Wallet"}
+      {isConnecting ? t("connecting") : t("connect")}
     </button>
   );
 }

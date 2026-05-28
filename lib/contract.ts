@@ -5,6 +5,16 @@ import type { PlayerVitals, ValidatorInfo, ContactDetails } from "@/types";
 const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID!;
 const contract = new Contract(CONTRACT_ID);
 
+/** Lazily import Sentry so it is never loaded in test/development environments. */
+async function captureContractError(error: unknown, context: Record<string, unknown>) {
+  if (process.env.NODE_ENV === "test" || process.env.NODE_ENV === "development") return;
+  const Sentry = await import("@sentry/nextjs");
+  Sentry.withScope((scope) => {
+    scope.setContext("contract", context);
+    Sentry.captureException(error);
+  });
+}
+
 // ── Write helper (requires a real funded account) ─────────────────────────────
 async function buildTx(method: string, args: xdr.ScVal[], sourcePublicKey: string) {
   const account = await rpc.getAccount(sourcePublicKey);
@@ -39,13 +49,13 @@ export async function buildRegisterPlayer(wallet: string, vitals: PlayerVitals, 
 
 /**
  * Builds a transaction to update a player's IPFS media hash.
- * 
+ *
  * @param wallet - The caller's wallet public key. Must match the player's registered wallet address.
  *                 Authorization is enforced on-chain; transactions from mismatched wallets will fail.
  * @param playerId - The unique identifier of the player to update.
  * @param ipfsHash - The new IPFS hash for the player's media content.
  * @returns A Promise that resolves to the XDR-encoded transaction string.
- * 
+ *
  * @throws {ContractError} Throws error code 10 (Unauthorized) if the caller's wallet does not match
  *                         the player's registered wallet address. This check is performed on-chain
  *                         when the transaction is executed.
@@ -110,10 +120,16 @@ export async function registerPlayer(
   const signedTxXdr = await signTransaction(xdrTx, { networkPassphrase: NETWORK });
   const { Transaction } = await import("@stellar/stellar-sdk");
   const result = await rpc.sendTransaction(new Transaction(signedTxXdr, NETWORK));
-  if (result.status === "ERROR") throw new Error(`ContractError: ${JSON.stringify(result)}`);
+  if (result.status === "ERROR") {
+    const err = new Error(`ContractError: ${JSON.stringify(result)}`);
+    await captureContractError(err, { method: "register_player", status: result.status });
+    throw err;
+  }
   const getResult = await rpc.getTransaction(result.hash);
   if ("returnValue" in getResult) return scValToNative(getResult.returnValue!) as string;
-  throw new Error(`ContractError: transaction did not return a value`);
+  const noReturnErr = new Error(`ContractError: transaction did not return a value`);
+  await captureContractError(noReturnErr, { method: "register_player", hash: result.hash });
+  throw noReturnErr;
 }
 
 export async function updateProfile(wallet: string, playerId: string, ipfsHash: string) {
@@ -129,7 +145,11 @@ export async function updateProfile(wallet: string, playerId: string, ipfsHash: 
   const signedTxXdr = await signTransaction(xdrTx, { networkPassphrase: NETWORK });
   const { Transaction } = await import("@stellar/stellar-sdk");
   const result = await rpc.sendTransaction(new Transaction(signedTxXdr, NETWORK));
-  if (result.status === "ERROR") throw new Error(`ContractError: ${JSON.stringify(result)}`);
+  if (result.status === "ERROR") {
+    const err = new Error(`ContractError: ${JSON.stringify(result)}`);
+    await captureContractError(err, { method: "update_profile", playerId, status: result.status });
+    throw err;
+  }
   return result;
 }
 
@@ -160,10 +180,16 @@ export async function payToContact(scoutKey: string, playerId: string): Promise<
   const signedTxXdr = await signTransaction(xdrTx, { networkPassphrase: NETWORK });
   const { Transaction } = await import("@stellar/stellar-sdk");
   const result = await rpc.sendTransaction(new Transaction(signedTxXdr, NETWORK));
-  if (result.status === "ERROR") throw new Error(`ContractError: ${JSON.stringify(result)}`);
+  if (result.status === "ERROR") {
+    const err = new Error(`ContractError: ${JSON.stringify(result)}`);
+    await captureContractError(err, { method: "pay_to_contact", playerId, status: result.status });
+    throw err;
+  }
   const getResult = await rpc.getTransaction(result.hash);
   if ("returnValue" in getResult) return scValToNative(getResult.returnValue!) as ContactDetails;
-  throw new Error(`ContractError: transaction did not return contact details`);
+  const noReturnErr = new Error(`ContractError: transaction did not return contact details`);
+  await captureContractError(noReturnErr, { method: "pay_to_contact", playerId, hash: result.hash });
+  throw noReturnErr;
 }
 
 export async function filterPlayers(region: string, position: string, minLevel: number) {

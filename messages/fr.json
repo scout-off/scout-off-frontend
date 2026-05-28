@@ -1,0 +1,53 @@
+{
+  "navbar": {
+    "brand": "ScoutOff",
+    "scoutDashboard": "Tableau de bord Scout",
+    "playerDashboard": "Tableau de bord Joueur",
+    "maintenance": "⚠️ ScoutOff est actuellement en maintenance. Les actions d'écriture sont temporairement désactivées."
+  },
+  "wallet": {
+    "connect": "Connecter le portefeuille",
+    "connecting": "Connexion…",
+    "disconnect": "Déconnecter"
+  },
+  "home": {
+    "headline": "Découvrez les Talents du Football",
+    "headlineHighlight": "On-Chain",
+    "subheadline": "Profils de joueurs infalsifiables, jalons vérifiables et connexions directes scout-joueur — propulsés par les contrats intelligents Stellar Soroban.",
+    "ctaPlayer": "Je suis un Joueur",
+    "ctaScout": "Je suis un Scout"
+  },
+  "player": {
+    "dashboard": "Tableau de bord Joueur",
+    "loading": "Chargement…",
+    "createProfile": "Créer votre profil",
+    "namePlaceholder": "Nom complet",
+    "positionPlaceholder": "Poste (ex. AT, MC)",
+    "regionPlaceholder": "Région / Pays",
+    "agePlaceholder": "Âge",
+    "highlightLabel": "Vidéo de présentation / photo",
+    "registerButton": "S'inscrire sur Stellar",
+    "registeringButton": "Inscription…",
+    "milestoneHistory": "Historique des jalons",
+    "noMilestones": "Aucun jalon pour l'instant."
+  },
+  "validator": {
+    "dashboard": "Tableau de bord Validateur",
+    "welcome": "Bienvenue, validateur {address}. Les jalons en attente apparaîtront ici."
+  },
+  "progress": {
+    "0": "Non vérifié",
+    "1": "Identité vérifiée",
+    "2": "Jalons de performance",
+    "3": "Niveau élite"
+  },
+  "errors": {
+    "walletRequired": "Veuillez connecter votre portefeuille pour continuer.",
+    "contractError": "Une erreur de contrat s'est produite. Veuillez réessayer.",
+    "unknownError": "Une erreur inattendue s'est produite."
+  },
+  "meta": {
+    "title": "ScoutOff — Scouting Football Décentralisé",
+    "description": "Profils de joueurs infalsifiables et vérification des jalons on-chain sur Stellar."
+  }
+}

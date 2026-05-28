@@ -1,0 +1,53 @@
+{
+  "navbar": {
+    "brand": "ScoutOff",
+    "scoutDashboard": "Scout Dashboard",
+    "playerDashboard": "Player Dashboard",
+    "maintenance": "⚠️ ScoutOff is currently under maintenance. Write actions are temporarily disabled."
+  },
+  "wallet": {
+    "connect": "Connect Wallet",
+    "connecting": "Connecting…",
+    "disconnect": "Disconnect"
+  },
+  "home": {
+    "headline": "Discover Football Talent",
+    "headlineHighlight": "On-Chain",
+    "subheadline": "Tamper-proof player profiles, verifiable milestones, and direct scout-to-player connections — powered by Stellar Soroban smart contracts.",
+    "ctaPlayer": "I'm a Player",
+    "ctaScout": "I'm a Scout"
+  },
+  "player": {
+    "dashboard": "Player Dashboard",
+    "loading": "Loading…",
+    "createProfile": "Create Your Profile",
+    "namePlaceholder": "Full name",
+    "positionPlaceholder": "Position (e.g. ST, CM)",
+    "regionPlaceholder": "Region / Country",
+    "agePlaceholder": "Age",
+    "highlightLabel": "Highlight reel / photo",
+    "registerButton": "Register on Stellar",
+    "registeringButton": "Registering…",
+    "milestoneHistory": "Milestone History",
+    "noMilestones": "No milestones yet."
+  },
+  "validator": {
+    "dashboard": "Validator Dashboard",
+    "welcome": "Welcome, validator {address}. Pending milestones will appear here."
+  },
+  "progress": {
+    "0": "Unverified",
+    "1": "Verified Identity",
+    "2": "Performance Milestones",
+    "3": "Elite Tier"
+  },
+  "errors": {
+    "walletRequired": "Please connect your wallet to continue.",
+    "contractError": "A contract error occurred. Please try again.",
+    "unknownError": "An unexpected error occurred."
+  },
+  "meta": {
+    "title": "ScoutOff — Decentralized Football Scouting",
+    "description": "Tamper-proof player profiles and on-chain milestone verification on Stellar."
+  }
+}
