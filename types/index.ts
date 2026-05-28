@@ -68,6 +68,14 @@ export interface PlayerFilter {
   minLevel?: ProgressLevel;
 }
 
+// ── Trial Offer ──────────────────────────────────────────────────────────────
+export interface TrialOffer {
+  club: string;           // Club or organisation name
+  location: string;       // Trial location
+  startDate: number;      // Unix timestamp of trial start
+  details: string;        // Free-text description of the offer
+}
+
 // ── Contact Details ───────────────────────────────────────────────────────────
 /**
  * Contact information returned after pay-to-contact is unlocked for a player.
