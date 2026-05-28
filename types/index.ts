@@ -8,6 +8,21 @@ export const PROGRESS_LABELS: Record<ProgressLevel, string> = {
   3: "Elite Tier",
 };
 
+export const CONTRACT_ERRORS: Record<number, string> = {
+  1: "Contract is already initialized.",
+  2: "Contract is not initialized.",
+  3: "Player not found. Player ID does not exist.",
+  4: "Unauthorized validator. Caller is not an approved validator.",
+  5: "Invalid milestone data. Milestone data is empty or malformed.",
+  6: "Player is already at this level.",
+  7: "Insufficient fee. XLM fee is too low.",
+  8: "Subscription expired. Scout subscription has lapsed.",
+  9: "Contract is currently paused.",
+  10: "Unauthorized. Caller is not authorized.",
+  11: "No fees to withdraw. No accumulated platform fees are available.",
+  12: "Overflow. Arithmetic overflow occurred in fee calculation.",
+};
+
 // ── Player ────────────────────────────────────────────────────────────────────
 export interface PlayerVitals {
   name: string;
