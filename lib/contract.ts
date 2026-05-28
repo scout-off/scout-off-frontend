@@ -1,6 +1,6 @@
 import { Contract, nativeToScVal, scValToNative, xdr, TransactionBuilder as TB, Account } from "@stellar/stellar-sdk";
 import { rpc, NETWORK, BASE_FEE } from "./stellar";
-import type { PlayerVitals, ValidatorInfo, ContactDetails } from "@/types";
+import type { PlayerVitals, ValidatorInfo, ContactDetails, TrialOffer, Player } from "@/types";
 
 const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID!;
 const contract = new Contract(CONTRACT_ID);
@@ -229,4 +229,44 @@ export async function buildSubscribe(scoutKey: string, tier: string) {
     nativeToScVal(scoutKey, { type: "address" }),
     nativeToScVal(tier, { type: "string" }),
   ], scoutKey);
+}
+
+/**
+ * Record a trial offer on-chain and advance the player to Level 3 (Elite Tier).
+ *
+ * @param scout - The scout's Stellar public key (source + auth).
+ * @param playerID - The unique identifier of the player receiving the trial offer.
+ * @param details - Trial offer details: club, location, startDate, and description.
+ * @returns The updated Player object reflecting Level 3 (Elite Tier).
+ *
+ * @throws {ContractError} AlreadyAtLevel (6) if the player is already at Level 3.
+ *   This error is thrown when `log_trial_offer` is called for a player who has
+ *   already reached Elite Tier. Check the player's `progressLevel` via `get_player`
+ *   before calling this function to avoid this error.
+ * @throws {ContractError} PlayerNotFound (3) if the player ID does not exist.
+ * @throws {ContractError} Unauthorized (10) if the caller is not a registered scout.
+ * @throws {ContractError} SubscriptionExpired (8) if the scout's subscription has lapsed.
+ */
+export async function logTrialOffer(
+  scout: string,
+  playerID: string,
+  details: TrialOffer
+): Promise<Player> {
+  const { signTransaction } = await import("@stellar/freighter-api");
+  const xdrTx = await buildTx(
+    "log_trial_offer",
+    [
+      nativeToScVal(scout, { type: "address" }),
+      nativeToScVal(playerID, { type: "string" }),
+      nativeToScVal(details),
+    ],
+    scout
+  );
+  const signedTxXdr = await signTransaction(xdrTx, { networkPassphrase: NETWORK });
+  const { Transaction } = await import("@stellar/stellar-sdk");
+  const result = await rpc.sendTransaction(new Transaction(signedTxXdr, NETWORK));
+  if (result.status === "ERROR") throw new Error(`ContractError: ${JSON.stringify(result)}`);
+  const getResult = await rpc.getTransaction(result.hash);
+  if ("returnValue" in getResult) return scValToNative(getResult.returnValue!) as Player;
+  throw new Error(`ContractError: transaction did not return updated player`);
 }
