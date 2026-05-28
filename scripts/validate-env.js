@@ -1,24 +1,18 @@
 #!/usr/bin/env node
-// Checks every NEXT_PUBLIC_ and server-side env var used in source
-// is declared in .env.example. Fails CI if any are missing.
 const fs = require("fs");
 const path = require("path");
-const { execSync } = require("child_process");
 
 const example = fs.readFileSync(path.join(__dirname, "../.env.example"), "utf8");
-const declared = new Set(example.match(/^[A-Z_]+(?==)/gm) ?? []);
+const declared = example
+  .split(/\r?\n/)
+  .map((line) => line.trim())
+  .filter((line) => line && !line.startsWith("#"))
+  .map((line) => line.split("=")[0])
+  .filter(Boolean);
 
-const used = new Set(
-  execSync('grep -roh "process\\.env\\.[A-Z_]\\+" --include="*.ts" --include="*.tsx" .')
-    .toString()
-    .split("\n")
-    .filter(Boolean)
-    .map((m) => m.replace("process.env.", ""))
-);
-
-const missing = [...used].filter((v) => !declared.has(v));
+const missing = declared.filter((name) => !(name in process.env));
 if (missing.length) {
-  console.error("Missing from .env.example:", missing.join(", "));
+  console.log("Missing environment variables:", missing.join(", "));
   process.exit(1);
 }
-console.log(`✓ All ${used.size} env vars declared in .env.example`);
+console.log(`All ${declared.length} env vars from .env.example are present`);
