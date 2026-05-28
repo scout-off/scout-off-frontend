@@ -80,6 +80,22 @@ export interface ContactDetails {
   telegram?: string;
 }
 
+// ── Trial Offer ──────────────────────────────────────────────────────────────
+export interface TrialOffer {
+  /** Stellar address of the scout making the offer */
+  scout: string;
+  /** On-chain player ID the offer is directed at */
+  playerID: string;
+  /** Human-readable description of the trial terms */
+  details: string;
+  /** Physical or club location where the trial will take place */
+  location: string;
+  /** ISO 8601 date string for the trial start date */
+  startDate: string;
+  /** Unix timestamp (seconds) when the offer was recorded on-chain */
+  timestamp: number;
+}
+
 // ── Contract call helpers ─────────────────────────────────────────────────────
 export interface ContractCallResult<T = unknown> {
   success: boolean;
