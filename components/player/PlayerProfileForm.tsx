@@ -6,20 +6,12 @@ import { buildRegisterPlayer } from "@/lib/contract";
 import Button from "@/components/ui/Button";
 import Select from "@/components/ui/Select";
 import VideoUpload from "@/components/ui/VideoUpload";
+import { FOOTBALL_POSITIONS } from "@/lib/positions";
 import type { PlayerVitals } from "@/types";
 
 interface PlayerProfileFormProps {
   onSuccess: (playerId: string) => void;
 }
-
-const POSITIONS = [
-  "Goalkeeper",
-  "Defender",
-  "Midfielder",
-  "Forward",
-  "Winger",
-  "Striker",
-];
 
 const REGIONS = [
   "Europe",
@@ -177,9 +169,9 @@ export default function PlayerProfileForm({ onSuccess }: PlayerProfileFormProps)
         error={errors.position}
       >
         <option value="">Select position</option>
-        {POSITIONS.map((pos) => (
-          <option key={pos} value={pos}>
-            {pos}
+        {FOOTBALL_POSITIONS.map((pos) => (
+          <option key={pos.value} value={pos.value}>
+            {pos.label}
           </option>
         ))}
       </Select>

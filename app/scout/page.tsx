@@ -4,12 +4,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useRequireWallet } from "@/hooks/useRequireWallet";
 import { useScout } from "@/hooks/useScout";
 import { getPlayer } from "@/lib/contract";
+import { FOOTBALL_POSITIONS } from "@/lib/positions";
 import PlayerCard from "@/components/PlayerCard";
 import PlayerCardSkeleton from "@/components/PlayerCardSkeleton";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import type { Player, PlayerFilter, ProgressLevel } from "@/types";
 
-const POSITIONS = ["GK", "CB", "LB", "RB", "CM", "CAM", "LW", "RW", "ST"];
 const PAGE_SIZE = 12;
 
 function isStellarKey(v: string) {
@@ -142,7 +142,11 @@ function ScoutDashboardContent() {
             onChange={(e) => setFilter((f) => ({ ...f, position: e.target.value }))}
           >
             <option value="">Any</option>
-            {POSITIONS.map((p) => <option key={p}>{p}</option>)}
+            {FOOTBALL_POSITIONS.map((p) => (
+              <option key={p.value} value={p.value}>
+                {p.label}
+              </option>
+            ))}
           </select>
         </div>
         <div className="flex flex-col gap-1">

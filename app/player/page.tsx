@@ -1,7 +1,11 @@
 "use client";
 import { useState } from "react";
 import { useRequireWallet } from "@/hooks/useRequireWallet";
+import { useWallet } from "@/hooks/useWallet";
+import { usePlayer } from "@/hooks/usePlayer";
 import ProgressBar from "@/components/ProgressBar";
+import Select from "@/components/ui/Select";
+import { FOOTBALL_POSITIONS } from "@/lib/positions";
 import { uploadToIPFS } from "@/lib/ipfs";
 import { buildRegisterPlayer } from "@/lib/contract";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
@@ -76,7 +80,18 @@ function PlayerDashboardContent() {
         <form onSubmit={handleRegister} className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
           <h2 className="text-xl font-semibold text-white">Create Your Profile</h2>
           <input className="input" placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} required />
-          <input className="input" placeholder="Position (e.g. ST, CM)" value={position} onChange={(e) => setPosition(e.target.value)} required />
+          <Select
+            label="Position"
+            value={position}
+            onChange={(e) => setPosition(e.target.value)}
+          >
+            <option value="">Select position</option>
+            {FOOTBALL_POSITIONS.map((pos) => (
+              <option key={pos.value} value={pos.value}>
+                {pos.label}
+              </option>
+            ))}
+          </Select>
           <input className="input" placeholder="Region / Country" value={region} onChange={(e) => setRegion(e.target.value)} required />
           <input className="input" type="number" placeholder="Age" value={age} onChange={(e) => setAge(e.target.value)} required />
           <label className="text-sm text-gray-400">
