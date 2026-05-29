@@ -59,7 +59,10 @@ export interface ValidatorInfo {
 }
 
 // ── Scout ─────────────────────────────────────────────────────────────────────
-export type SubscriptionTier = "basic" | "pro" | "elite";
+export enum SubscriptionTier {
+  Basic = "basic",
+  Pro = "pro"
+}
 
 export interface Scout {
   id: string;
@@ -72,10 +75,16 @@ export interface Scout {
 }
 
 // ── Subscription ──────────────────────────────────────────────────────────────
+/**
+ * Represents a scout's subscription details.
+ */
 export interface Subscription {
-  scout: string;          // Stellar address
+  /** Stellar address of the scout. */
+  scout: string;
+  /** The subscription tier the scout is subscribed to. */
   tier: SubscriptionTier;
-  expiresAt: number;      // Unix timestamp
+  /** Unix timestamp (seconds) when the subscription expires. */
+  expiresAt: number;
 }
 
 // ── Filter ────────────────────────────────────────────────────────────────────

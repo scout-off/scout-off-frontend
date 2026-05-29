@@ -1,6 +1,6 @@
 import { Contract, nativeToScVal, scValToNative, xdr, TransactionBuilder as TB, Account } from "@stellar/stellar-sdk";
 import { rpc, NETWORK, BASE_FEE } from "./stellar";
-import type { PlayerVitals, ValidatorInfo, ContactDetails } from "@/types";
+import type { PlayerVitals, ValidatorInfo, ContactDetails, SubscriptionTier } from "@/types";
 
 const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID!;
 const contract = new Contract(CONTRACT_ID);
