@@ -6,7 +6,31 @@ import { WalletProvider } from "@/context/WalletContext";
 
 export const metadata: Metadata = {
   title: "ScoutOff — Decentralized Football Scouting",
-  description: "Tamper-proof player profiles and on-chain milestone verification on Stellar.",
+  description:
+    "Tamper-proof player profiles, verifiable milestones, and direct scout-to-player connections — powered by Stellar Soroban smart contracts.",
+  openGraph: {
+    title: "ScoutOff — Decentralized Football Scouting",
+    description:
+      "Tamper-proof player profiles, verifiable milestones, and direct scout-to-player connections — powered by Stellar Soroban smart contracts.",
+    url: "https://scoutoff.app",
+    siteName: "ScoutOff",
+    type: "website",
+    images: [
+      {
+        url: "https://scoutoff.app/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "ScoutOff — Decentralized Football Scouting on Stellar",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ScoutOff — Decentralized Football Scouting",
+    description:
+      "Tamper-proof player profiles, verifiable milestones, and direct scout-to-player connections — powered by Stellar Soroban smart contracts.",
+    images: ["https://scoutoff.app/og-image.png"],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
