@@ -36,9 +36,26 @@ export interface Player {
 }
 
 // ── Validator ────────────────────────────────────────────────────────────────────
+
+/**
+ * Represents an approved validator's on-chain record as stored in the contract.
+ */
 export interface ValidatorInfo {
-  address: string;        // Stellar public key of the validator
-  joinedAt: number;       // Unix timestamp when added to the validators list
+  /** Stellar public key of the validator. */
+  address: string;
+
+  /**
+   * Unix timestamp (seconds) when this validator was added to the contract.
+   * Sourced directly from the ledger close time at the time of the `add_validator`
+   * transaction.
+   */
+  addedAt: number;
+
+  /**
+   * Stellar public key of the admin wallet that authorized this validator.
+   * Recorded on-chain at the time of the `add_validator` call.
+   */
+  addedBy: string;
 }
 
 // ── Scout ─────────────────────────────────────────────────────────────────────

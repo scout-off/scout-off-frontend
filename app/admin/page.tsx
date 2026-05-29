@@ -65,7 +65,7 @@ export default function AdminDashboard() {
       if (action === "add") {
         xdr = await buildAddValidator(publicKey, validatorInput);
         await signAndSubmit(xdr);
-        setValidators((v) => [...v, { address: validatorInput, joinedAt: Date.now() / 1000 }]);
+        setValidators((v) => [...v, { address: validatorInput, addedAt: Date.now() / 1000, addedBy: publicKey }]);
         setValidatorInput("");
         show({ message: "Validator added.", variant: "success" });
       } else if (action === "remove") {
