@@ -37,10 +37,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-brand-green focus:text-black focus:px-6 focus:py-3 focus:rounded-lg focus:font-semibold"
+        >
+          Skip to main content
+        </a>
         <WalletProvider>
           <ToastProvider>
             <Navbar />
-            <main className="max-w-6xl mx-auto px-4 py-8">{children}</main>
+            <main id="main-content" className="max-w-6xl mx-auto px-4 py-8">{children}</main>
           </ToastProvider>
         </WalletProvider>
       </body>

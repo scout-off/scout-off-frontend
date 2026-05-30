@@ -1,4 +1,5 @@
 import { memo } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import type { Player } from "@/types";
 import { PROGRESS_LABELS } from "@/types";
@@ -9,13 +10,15 @@ function PlayerCard({ player }: { player: Player }) {
   return (
     <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-4 hover:border-brand-green transition">
       {/* Avatar placeholder */}
-      <div className="w-16 h-16 rounded-full bg-gray-700 overflow-hidden">
+      <div className="w-16 h-16 rounded-full bg-gray-700 overflow-hidden relative">
         {ipfsHash && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={`${process.env.NEXT_PUBLIC_IPFS_GATEWAY}/${ipfsHash}`}
             alt={vitals.name}
-            className="w-full h-full object-cover"
+            fill
+            className="object-cover"
+            loading="lazy"
+            unoptimized
           />
         )}
       </div>

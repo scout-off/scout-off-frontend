@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useWallet } from "@/hooks/useWallet";
 import ProgressBar from "@/components/ProgressBar";
@@ -37,10 +38,16 @@ export default function PlayerProfile() {
     <div className="max-w-2xl mx-auto flex flex-col gap-8">
       {/* Header */}
       <div className="bg-brand-card border border-gray-800 rounded-xl p-6 flex gap-6 items-start">
-        <div className="w-20 h-20 rounded-full bg-gray-700 overflow-hidden shrink-0">
+        <div className="w-20 h-20 rounded-full bg-gray-700 overflow-hidden shrink-0 relative">
           {player.ipfsHash && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={ipfsUrl(player.ipfsHash)} alt={player.vitals.name} className="w-full h-full object-cover" />
+            <Image
+              src={ipfsUrl(player.ipfsHash)}
+              alt={player.vitals.name}
+              fill
+              className="object-cover"
+              loading="lazy"
+              unoptimized
+            />
           )}
         </div>
         <div className="flex-1">
