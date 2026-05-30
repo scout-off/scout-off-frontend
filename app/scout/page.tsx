@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useRequireWallet } from "@/hooks/useRequireWallet";
 import { useScout } from "@/hooks/useScout";
+import { useDebounce } from "@/hooks/useDebounce";
 import { getPlayer } from "@/lib/contract";
 import PlayerCard from "@/components/PlayerCard";
 import PlayerCardSkeleton from "@/components/PlayerCardSkeleton";
@@ -22,6 +23,7 @@ function ScoutDashboardContent() {
   const searchParams = useSearchParams();
 
   const [filter, setFilter] = useState<PlayerFilter>({});
+  const debouncedFilter = useDebounce(filter, 300);
   const { players, loading, search } = useScout();
   const hasLoaded = useRef(false);
 
@@ -46,7 +48,7 @@ function ScoutDashboardContent() {
     e.preventDefault();
     hasLoaded.current = false;
     setPage(1);
-    search(filter).then(() => { hasLoaded.current = true; });
+    search(debouncedFilter).then(() => { hasLoaded.current = true; });
   }
 
   useEffect(() => {

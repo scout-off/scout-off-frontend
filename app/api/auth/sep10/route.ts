@@ -53,9 +53,9 @@ export async function POST(req: NextRequest) {
 
     response.cookies.set("session", clientPublicKey, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 60 * 60 * 24, // 24 hours
+      secure: true,          // Always Secure (HTTPS only)
+      sameSite: "strict",    // SameSite=Strict
+      maxAge: 60 * 60 * 24,  // 24 hours
       path: "/",
     });
 
