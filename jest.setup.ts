@@ -7,7 +7,7 @@ process.env.NEXT_PUBLIC_CONTRACT_ID = "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 process.env.NEXT_PUBLIC_IPFS_GATEWAY = "https://gateway.pinata.cloud/ipfs";
 
 jest.mock("@stellar/stellar-sdk", () => {
-  const original = jest.requireActual("@stellar/stellar-sdk") as any;
+  const original = jest.requireActual("@stellar/stellar-sdk") as Record<string, unknown>;
   return {
     ...original,
     Contract: jest.fn().mockImplementation(() => ({

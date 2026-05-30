@@ -40,7 +40,7 @@ describe("Navbar", () => {
   });
 
   test("renders the ScoutOff logo/link", () => {
-    mockUseWallet.mockReturnValue({ publicKey: null, isConnecting: false, connect: jest.fn(), disconnect: jest.fn(), signAndSubmit: jest.fn() });
+    mockUseWallet.mockReturnValue({ publicKey: null, isConnecting: false, connect: jest.fn(), disconnect: jest.fn(), signAndSubmit: jest.fn(), activeProvider: null, isSelectingWallet: false, openWalletSelect: jest.fn(), closeWalletSelect: jest.fn() });
     mockUsePathname.mockReturnValue("/");
 
     render(<Navbar />);
@@ -49,7 +49,7 @@ describe("Navbar", () => {
   });
 
   test("shows Connect Wallet button when wallet is disconnected", () => {
-    mockUseWallet.mockReturnValue({ publicKey: null, isConnecting: false, connect: jest.fn(), disconnect: jest.fn(), signAndSubmit: jest.fn() });
+    mockUseWallet.mockReturnValue({ publicKey: null, isConnecting: false, connect: jest.fn(), disconnect: jest.fn(), signAndSubmit: jest.fn(), activeProvider: null, isSelectingWallet: false, openWalletSelect: jest.fn(), closeWalletSelect: jest.fn() });
     mockUsePathname.mockReturnValue("/");
 
     render(<Navbar />);
@@ -59,17 +59,19 @@ describe("Navbar", () => {
 
   test("shows truncated wallet address when wallet is connected", () => {
     const publicKey = "0x1234567890abcdef";
-    mockUseWallet.mockReturnValue({ publicKey, isConnecting: false, connect: jest.fn(), disconnect: jest.fn(), signAndSubmit: jest.fn() });
+    mockUseWallet.mockReturnValue({ publicKey, isConnecting: false, connect: jest.fn(), disconnect: jest.fn(), signAndSubmit: jest.fn(), activeProvider: null, isSelectingWallet: false, openWalletSelect: jest.fn(), closeWalletSelect: jest.fn() });
     mockUsePathname.mockReturnValue("/");
 
     render(<Navbar />);
 
-    const expected = `${publicKey.slice(0, 4)}…${publicKey.slice(-4)}`;
-    expect(screen.getByRole("button", { name: expected })).toBeInTheDocument();
+    // The disconnect button has an aria-label that includes the truncated address
+    const truncated = `${publicKey.slice(0, 4)}…${publicKey.slice(-4)}`;
+    const btn = screen.getByRole("button", { name: new RegExp(truncated) });
+    expect(btn).toBeInTheDocument();
   });
 
   test("active route link has aria-current=\"page\"", () => {
-    mockUseWallet.mockReturnValue({ publicKey: null, isConnecting: false, connect: jest.fn(), disconnect: jest.fn(), signAndSubmit: jest.fn() });
+    mockUseWallet.mockReturnValue({ publicKey: null, isConnecting: false, connect: jest.fn(), disconnect: jest.fn(), signAndSubmit: jest.fn(), activeProvider: null, isSelectingWallet: false, openWalletSelect: jest.fn(), closeWalletSelect: jest.fn() });
     mockUsePathname.mockReturnValue("/player");
 
     render(<Navbar />);
