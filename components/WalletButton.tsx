@@ -1,16 +1,27 @@
 "use client";
 import { useWallet } from "@/hooks/useWallet";
+import Spinner from "@/components/ui/Spinner";
 
 export default function WalletButton() {
-  const { publicKey, connect, disconnect, isConnecting } = useWallet();
+  const { publicKey, connect, disconnect, isConnecting, xlmBalance, isLoadingBalance } =
+    useWallet();
 
   if (publicKey) {
     return (
       <button
         onClick={disconnect}
-        className="text-sm bg-brand-card border border-brand-green text-brand-green px-4 py-2 rounded-lg hover:bg-brand-green hover:text-black transition"
+        className="flex items-center gap-2 text-sm bg-brand-card border border-brand-green text-brand-green px-4 py-2 rounded-lg hover:bg-brand-green hover:text-black transition"
       >
-        {publicKey.slice(0, 4)}…{publicKey.slice(-4)}
+        <span>
+          {publicKey.slice(0, 4)}…{publicKey.slice(-4)}
+        </span>
+        <span className="border-l border-current pl-2 opacity-80">
+          {isLoadingBalance ? (
+            <Spinner size="sm" />
+          ) : (
+            <span>{xlmBalance ?? "0.00"} XLM</span>
+          )}
+        </span>
       </button>
     );
   }
