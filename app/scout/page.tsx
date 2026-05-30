@@ -21,8 +21,7 @@ function ScoutDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [filter, setFilter] = useState<PlayerFilter>({});
-  const { players, loading, search } = useScout();
+  const { players, loading, error, filter, setFilter } = useScout();
   const hasLoaded = useRef(false);
 
   // Wallet search state
@@ -40,13 +39,6 @@ function ScoutDashboardContent() {
     const params = new URLSearchParams(searchParams.toString());
     params.set("page", String(p));
     router.replace(`?${params.toString()}`);
-  }
-
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    hasLoaded.current = false;
-    setPage(1);
-    search(filter).then(() => { hasLoaded.current = true; });
   }
 
   useEffect(() => {
@@ -123,8 +115,7 @@ function ScoutDashboardContent() {
       </div>
 
       {/* Filter bar */}
-      <form
-        onSubmit={handleSearch}
+      <div
         className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-wrap gap-4 items-end"
       >
         <div className="flex flex-col gap-1">
@@ -159,13 +150,7 @@ function ScoutDashboardContent() {
             <option value="3">Elite</option>
           </select>
         </div>
-        <button
-          type="submit"
-          className="bg-brand-green text-black font-semibold px-5 py-2 rounded-lg hover:opacity-90 transition"
-        >
-          Search
-        </button>
-      </form>
+      </div>
 
       {/* Results */}
       {showSkeletons ? (

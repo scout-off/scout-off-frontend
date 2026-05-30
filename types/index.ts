@@ -1,3 +1,4 @@
+
 // ── Progress ──────────────────────────────────────────────────────────────────
 export type ProgressLevel = 0 | 1 | 2 | 3;
 
@@ -35,11 +36,10 @@ export interface Player {
   createdAt: number;
 }
 
-// ── Validator ────────────────────────────────────────────────────────────────────
+// ── Validator ─────────────────────────────────────────────────────────────────
 
 /**
- * Represents an approved validator's on-chain record as stored in the contract.
- */
+ * Represents an approved validator's on-chain record as stored in the contract. */
 export interface ValidatorInfo {
   /** Stellar public key of the validator. */
   address: string;
@@ -52,7 +52,7 @@ export interface ValidatorInfo {
   addedAt: number;
 
   /**
-   * Stellar public key of the admin wallet that authorized this validator.
+   * Stellar public key of the admin wallet that authorized this validator.     
    * Recorded on-chain at the time of the `add_validator` call.
    */
   addedBy: string;
@@ -87,9 +87,8 @@ export interface PlayerFilter {
 
 // ── Contact Details ───────────────────────────────────────────────────────────
 /**
- * Contact information returned after pay-to-contact is unlocked for a player.
- * At least one field must be present. Validation of the requirement is enforced
- * at the contract level to ensure data integrity.
+ * Contact information returned after pay-to-contact is unlocked for a player.  
+ * At least one field must be present. Validation of the requirement is enforced * at the contract level to ensure data integrity.
  */
 export interface ContactDetails {
   email?: string;
@@ -103,3 +102,20 @@ export interface ContractCallResult<T = unknown> {
   data?: T;
   error?: string;
 }
+
+// ── Chat ──────────────────────────────────────────────────────────────────────
+export interface ChatMessage {
+  /** Unique identifier for the message */
+  id: string;
+  /** Wallet address of the sender */
+  from: string;
+  /** Wallet address of the recipient */
+  to: string;
+  /** Message text content */
+  text: string;
+  /** Unix timestamp in milliseconds (matches Date.now()) */
+  timestamp: number;
+  /** Whether the message has been read by the recipient */
+  read: boolean;
+}
+
