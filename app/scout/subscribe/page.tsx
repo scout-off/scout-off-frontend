@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import Button from "@/components/ui/Button";
-import ErrorBoundary from "@/components/ui/ErrorBoundary";
-import { useSubscription } from "@/hooks/useSubscription";
-import type { SubscriptionTier } from "@/types";
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Button from '@/components/ui/Button';
+import ErrorBoundary from '@/components/ui/ErrorBoundary';
+import { useSubscription } from '@/hooks/useSubscription';
+import type { SubscriptionTier } from '@/types';
 
 const TIERS: Array<{
   tier: SubscriptionTier;
@@ -16,25 +16,27 @@ const TIERS: Array<{
   recommended?: boolean;
 }> = [
   {
-    tier: "basic",
-    title: "Basic",
-    price: "5 XLM",
-    description: "Get started with essential scout access and basic player contact capabilities.",
+    tier: 'basic',
+    title: 'Basic',
+    price: '5 XLM',
+    description:
+      'Get started with essential scout access and basic player contact capabilities.',
     features: [
-      "Browse player profiles",
-      "Connect with verified prospects",
-      "Pay-to-contact for player details",
+      'Browse player profiles',
+      'Connect with verified prospects',
+      'Pay-to-contact for player details',
     ],
   },
   {
-    tier: "pro",
-    title: "Pro",
-    price: "12 XLM",
-    description: "Recommended for active scouts who want priority access and advanced scouting tools.",
+    tier: 'pro',
+    title: 'Pro',
+    price: '12 XLM',
+    description:
+      'Recommended for active scouts who want priority access and advanced scouting tools.',
     features: [
-      "All Basic features",
-      "Priority player discovery",
-      "Faster access to contact details",
+      'All Basic features',
+      'Priority player discovery',
+      'Faster access to contact details',
     ],
     recommended: true,
   },
@@ -42,17 +44,20 @@ const TIERS: Array<{
 
 function formatExpiry(timestamp: number) {
   return new Date(timestamp * 1000).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
   });
 }
 
 function SubscribeContent() {
   const router = useRouter();
-  const { subscription, isExpired, subscribe, loading, error } = useSubscription();
-  const [successMessage, setSuccessMessage] = useState("");
-  const [selectedTier, setSelectedTier] = useState<SubscriptionTier | null>(null);
+  const { subscription, isExpired, subscribe, loading, error } =
+    useSubscription();
+  const [successMessage, setSuccessMessage] = useState('');
+  const [selectedTier, setSelectedTier] = useState<SubscriptionTier | null>(
+    null,
+  );
   const redirectTimer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -65,11 +70,11 @@ function SubscribeContent() {
 
   const statusMessage = useMemo(() => {
     if (loading && !subscription) {
-      return "Loading your current subscription...";
+      return 'Loading your current subscription...';
     }
 
     if (!subscription) {
-      return "No active subscription found.";
+      return 'No active subscription found.';
     }
 
     if (isExpired) {
@@ -85,13 +90,13 @@ function SubscribeContent() {
     }
 
     setSelectedTier(tier);
-    setSuccessMessage("");
+    setSuccessMessage('');
 
     try {
       await subscribe(tier);
       setSuccessMessage(`Subscribed to ${tier.toUpperCase()} successfully.`);
       redirectTimer.current = window.setTimeout(() => {
-        router.push("/scout");
+        router.push('/scout');
       }, 1000);
     } catch (err) {
       // Error state is handled by the hook and displayed in the page.
@@ -107,8 +112,12 @@ function SubscribeContent() {
         <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-white">Scout Subscription</h1>
-              <p className="text-sm text-gray-400 mt-1">Upgrade your access and unlock better scouting capabilities.</p>
+              <h1 className="text-3xl font-bold text-white">
+                Scout Subscription
+              </h1>
+              <p className="text-sm text-gray-400 mt-1">
+                Upgrade your access and unlock better scouting capabilities.
+              </p>
             </div>
             <div className="rounded-2xl bg-gray-900 border border-gray-700 px-4 py-3 text-sm text-gray-200">
               {statusMessage}
@@ -147,14 +156,18 @@ function SubscribeContent() {
               key={plan.tier}
               className={`bg-brand-card border rounded-xl p-6 shadow-sm transition ${
                 isRecommended
-                  ? "border-brand-green bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.08),_transparent)]"
-                  : "border-gray-800"
+                  ? 'border-brand-green bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.08),_transparent)]'
+                  : 'border-gray-800'
               }`}
             >
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm uppercase tracking-[0.2em] text-gray-400">{plan.title}</p>
-                  <p className="text-4xl font-bold text-white mt-3">{plan.price}</p>
+                  <p className="text-sm uppercase tracking-[0.2em] text-gray-400">
+                    {plan.title}
+                  </p>
+                  <p className="text-4xl font-bold text-white mt-3">
+                    {plan.price}
+                  </p>
                 </div>
                 {isRecommended && (
                   <span className="rounded-full bg-brand-green px-3 py-1 text-xs font-semibold uppercase text-black">
@@ -167,7 +180,10 @@ function SubscribeContent() {
 
               <ul className="mt-6 space-y-3">
                 {plan.features.map((feature) => (
-                  <li key={feature} className="flex gap-3 text-sm text-gray-300">
+                  <li
+                    key={feature}
+                    className="flex gap-3 text-sm text-gray-300"
+                  >
                     <span className="mt-1 h-2.5 w-2.5 rounded-full bg-brand-green" />
                     {feature}
                   </li>
@@ -180,7 +196,9 @@ function SubscribeContent() {
                 onClick={() => handleSubscribe(plan.tier)}
                 disabled={loading}
               >
-                {loading && isSelected ? "Processing…" : `Subscribe to ${plan.title}`}
+                {loading && isSelected
+                  ? 'Processing…'
+                  : `Subscribe to ${plan.title}`}
               </Button>
             </div>
           );

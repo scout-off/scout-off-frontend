@@ -1,10 +1,10 @@
-"use client";
-import { useState } from "react";
-import { useRequireWallet } from "@/hooks/useRequireWallet";
-import ProgressBar from "@/components/ProgressBar";
-import { uploadToIPFS } from "@/lib/ipfs";
-import { buildRegisterPlayer } from "@/lib/contract";
-import ErrorBoundary from "@/components/ui/ErrorBoundary";
+'use client';
+import { useState } from 'react';
+import { useRequireWallet } from '@/hooks/useRequireWallet';
+import ProgressBar from '@/components/ProgressBar';
+import { uploadToIPFS } from '@/lib/ipfs';
+import { buildRegisterPlayer } from '@/lib/contract';
+import ErrorBoundary from '@/components/ui/ErrorBoundary';
 
 function PlayerDashboardContent() {
   const { walletAddress: publicKey } = useRequireWallet();
@@ -12,10 +12,10 @@ function PlayerDashboardContent() {
   const { player, loading } = usePlayer(publicKey);
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [name, setName] = useState("");
-  const [position, setPosition] = useState("");
-  const [region, setRegion] = useState("");
-  const [age, setAge] = useState("");
+  const [name, setName] = useState('');
+  const [position, setPosition] = useState('');
+  const [region, setRegion] = useState('');
+  const [age, setAge] = useState('');
 
   if (!publicKey) {
     return null; // Redirect handled by useRequireWallet
@@ -29,8 +29,8 @@ function PlayerDashboardContent() {
       const cid = await uploadToIPFS(file);
       const xdr = await buildRegisterPlayer(
         publicKey,
-        { name, position, region, age: Number(age), nationality: "" },
-        cid
+        { name, position, region, age: Number(age), nationality: '' },
+        cid,
       );
       await signAndSubmit(xdr);
     } finally {
@@ -38,7 +38,8 @@ function PlayerDashboardContent() {
     }
   }
 
-  if (loading) return <p className="text-center text-gray-400 mt-20">Loading…</p>;
+  if (loading)
+    return <p className="text-center text-gray-400 mt-20">Loading…</p>;
 
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-8">
@@ -47,7 +48,9 @@ function PlayerDashboardContent() {
       {player ? (
         <>
           <div className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
-            <h2 className="text-xl font-semibold text-white">{player.vitals.name}</h2>
+            <h2 className="text-xl font-semibold text-white">
+              {player.vitals.name}
+            </h2>
             <p className="text-gray-400 text-sm">
               {player.vitals.position} · {player.vitals.region}
             </p>
@@ -61,7 +64,10 @@ function PlayerDashboardContent() {
             ) : (
               <ul className="flex flex-col gap-3">
                 {player.milestones.map((m) => (
-                  <li key={m.id} className="text-sm text-gray-300 border-l-2 border-brand-green pl-3">
+                  <li
+                    key={m.id}
+                    className="text-sm text-gray-300 border-l-2 border-brand-green pl-3"
+                  >
                     {m.description}
                     <span className="block text-xs text-gray-500 mt-0.5">
                       {new Date(m.timestamp * 1000).toLocaleDateString()}
@@ -73,22 +79,58 @@ function PlayerDashboardContent() {
           </div>
         </>
       ) : (
-        <form onSubmit={handleRegister} className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
-          <h2 className="text-xl font-semibold text-white">Create Your Profile</h2>
-          <input className="input" placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} required />
-          <input className="input" placeholder="Position (e.g. ST, CM)" value={position} onChange={(e) => setPosition(e.target.value)} required />
-          <input className="input" placeholder="Region / Country" value={region} onChange={(e) => setRegion(e.target.value)} required />
-          <input className="input" type="number" placeholder="Age" value={age} onChange={(e) => setAge(e.target.value)} required />
+        <form
+          onSubmit={handleRegister}
+          className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4"
+        >
+          <h2 className="text-xl font-semibold text-white">
+            Create Your Profile
+          </h2>
+          <input
+            className="input"
+            placeholder="Full name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+          <input
+            className="input"
+            placeholder="Position (e.g. ST, CM)"
+            value={position}
+            onChange={(e) => setPosition(e.target.value)}
+            required
+          />
+          <input
+            className="input"
+            placeholder="Region / Country"
+            value={region}
+            onChange={(e) => setRegion(e.target.value)}
+            required
+          />
+          <input
+            className="input"
+            type="number"
+            placeholder="Age"
+            value={age}
+            onChange={(e) => setAge(e.target.value)}
+            required
+          />
           <label className="text-sm text-gray-400">
             Highlight reel / photo
-            <input type="file" accept="video/*,image/*" className="mt-1 block" onChange={(e) => setFile(e.target.files?.[0] ?? null)} required />
+            <input
+              type="file"
+              accept="video/*,image/*"
+              className="mt-1 block"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              required
+            />
           </label>
           <button
             type="submit"
             disabled={submitting}
             className="bg-brand-green text-black font-semibold py-2 rounded-lg hover:opacity-90 transition disabled:opacity-50"
           >
-            {submitting ? "Registering…" : "Register on Stellar"}
+            {submitting ? 'Registering…' : 'Register on Stellar'}
           </button>
         </form>
       )}

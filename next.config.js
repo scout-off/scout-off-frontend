@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ["ipfs.io", "gateway.pinata.cloud"],
+    domains: ['ipfs.io', 'gateway.pinata.cloud'],
   },
 };
 

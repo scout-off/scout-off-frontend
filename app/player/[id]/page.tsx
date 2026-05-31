@@ -1,12 +1,12 @@
-"use client";
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { useWallet } from "@/hooks/useWallet";
-import ProgressBar from "@/components/ProgressBar";
-import { getPlayer } from "@/lib/contract";
-import { buildPayToContact } from "@/lib/contract";
-import { ipfsUrl } from "@/lib/ipfs";
-import type { Player } from "@/types";
+'use client';
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
+import { useWallet } from '@/hooks/useWallet';
+import ProgressBar from '@/components/ProgressBar';
+import { getPlayer } from '@/lib/contract';
+import { buildPayToContact } from '@/lib/contract';
+import { ipfsUrl } from '@/lib/ipfs';
+import type { Player } from '@/types';
 
 export default function PlayerProfile() {
   const { id } = useParams<{ id: string }>();
@@ -16,7 +16,9 @@ export default function PlayerProfile() {
   const [contacting, setContacting] = useState(false);
 
   useEffect(() => {
-    getPlayer(id).then(setPlayer).finally(() => setLoading(false));
+    getPlayer(id)
+      .then(setPlayer)
+      .finally(() => setLoading(false));
   }, [id]);
 
   async function handleContact() {
@@ -30,8 +32,10 @@ export default function PlayerProfile() {
     }
   }
 
-  if (loading) return <p className="text-center text-gray-400 mt-20">Loading…</p>;
-  if (!player) return <p className="text-center text-gray-400 mt-20">Player not found.</p>;
+  if (loading)
+    return <p className="text-center text-gray-400 mt-20">Loading…</p>;
+  if (!player)
+    return <p className="text-center text-gray-400 mt-20">Player not found.</p>;
 
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-8">
@@ -40,13 +44,20 @@ export default function PlayerProfile() {
         <div className="w-20 h-20 rounded-full bg-gray-700 overflow-hidden shrink-0">
           {player.ipfsHash && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={ipfsUrl(player.ipfsHash)} alt={player.vitals.name} className="w-full h-full object-cover" />
+            <img
+              src={ipfsUrl(player.ipfsHash)}
+              alt={player.vitals.name}
+              className="w-full h-full object-cover"
+            />
           )}
         </div>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-white">{player.vitals.name}</h1>
+          <h1 className="text-2xl font-bold text-white">
+            {player.vitals.name}
+          </h1>
           <p className="text-gray-400 text-sm mt-1">
-            {player.vitals.position} · {player.vitals.region} · Age {player.vitals.age}
+            {player.vitals.position} · {player.vitals.region} · Age{' '}
+            {player.vitals.age}
           </p>
           <div className="mt-4">
             <ProgressBar level={player.progressLevel} />
@@ -62,10 +73,14 @@ export default function PlayerProfile() {
         ) : (
           <ul className="flex flex-col gap-3">
             {player.milestones.map((m) => (
-              <li key={m.id} className="text-sm text-gray-300 border-l-2 border-brand-green pl-3">
+              <li
+                key={m.id}
+                className="text-sm text-gray-300 border-l-2 border-brand-green pl-3"
+              >
                 {m.description}
                 <span className="block text-xs text-gray-500 mt-0.5">
-                  Validator: {m.validator.slice(0, 8)}… · {new Date(m.timestamp * 1000).toLocaleDateString()}
+                  Validator: {m.validator.slice(0, 8)}… ·{' '}
+                  {new Date(m.timestamp * 1000).toLocaleDateString()}
                 </span>
               </li>
             ))}
@@ -80,7 +95,7 @@ export default function PlayerProfile() {
           disabled={contacting}
           className="bg-brand-green text-black font-semibold py-3 rounded-xl hover:opacity-90 transition disabled:opacity-50"
         >
-          {contacting ? "Processing…" : "Pay to Contact (1 XLM)"}
+          {contacting ? 'Processing…' : 'Pay to Contact (1 XLM)'}
         </button>
       )}
     </div>

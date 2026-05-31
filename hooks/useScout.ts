@@ -1,7 +1,7 @@
-"use client";
-import { useState } from "react";
-import { filterPlayers } from "@/lib/contract";
-import type { Player, PlayerFilter } from "@/types";
+'use client';
+import { useState } from 'react';
+import { filterPlayers } from '@/lib/contract';
+import type { Player, PlayerFilter } from '@/types';
 
 export function useScout() {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -13,9 +13,9 @@ export function useScout() {
     setError(null);
     try {
       const results = await filterPlayers(
-        filter.region ?? "",
-        filter.position ?? "",
-        filter.minLevel ?? 0
+        filter.region ?? '',
+        filter.position ?? '',
+        filter.minLevel ?? 0,
       );
       setPlayers(results as Player[]);
     } catch (e: any) {

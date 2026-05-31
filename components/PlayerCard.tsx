@@ -1,8 +1,8 @@
-import { memo } from "react";
-import Link from "next/link";
-import type { Player } from "@/types";
-import { PROGRESS_LABELS } from "@/types";
-import ProgressBar from "./ProgressBar";
+import { memo } from 'react';
+import Link from 'next/link';
+import type { Player } from '@/types';
+import { PROGRESS_LABELS } from '@/types';
+import ProgressBar from './ProgressBar';
 
 function PlayerCard({ player }: { player: Player }) {
   const { id, vitals, progressLevel, ipfsHash } = player;
@@ -42,7 +42,9 @@ function PlayerCard({ player }: { player: Player }) {
   );
 }
 
-export default memo(PlayerCard, (prev, next) =>
-  prev.player.id === next.player.id &&
-  prev.player.progressLevel === next.player.progressLevel
+export default memo(
+  PlayerCard,
+  (prev, next) =>
+    prev.player.id === next.player.id &&
+    prev.player.progressLevel === next.player.progressLevel,
 );

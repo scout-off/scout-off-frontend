@@ -1,18 +1,20 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { getPlayer } from "@/lib/contract";
-import { PROGRESS_LABELS } from "@/types";
-import type { Player } from "@/types";
-import EmptyState from "@/components/ui/EmptyState";
-import Button from "@/components/ui/Button";
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { getPlayer } from '@/lib/contract';
+import { PROGRESS_LABELS } from '@/types';
+import type { Player } from '@/types';
+import EmptyState from '@/components/ui/EmptyState';
+import Button from '@/components/ui/Button';
 
 interface ValidatorPlayerSearchProps {
   onSelect: (player: Player) => void;
 }
 
-export default function ValidatorPlayerSearch({ onSelect }: ValidatorPlayerSearchProps) {
-  const [query, setQuery] = useState("");
+export default function ValidatorPlayerSearch({
+  onSelect,
+}: ValidatorPlayerSearchProps) {
+  const [query, setQuery] = useState('');
   const [player, setPlayer] = useState<Player | null>(null);
   const [loading, setLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
@@ -52,7 +54,7 @@ export default function ValidatorPlayerSearch({ onSelect }: ValidatorPlayerSearc
 
   const handleClear = () => {
     searchIdRef.current++; // invalidate any in-flight request
-    setQuery("");
+    setQuery('');
     setPlayer(null);
     setNotFound(false);
     setLoading(false);
@@ -60,7 +62,7 @@ export default function ValidatorPlayerSearch({ onSelect }: ValidatorPlayerSearc
 
   const lastMilestoneDate = player?.milestones.length
     ? new Date(
-        Math.max(...player.milestones.map((m) => m.timestamp)) * 1000
+        Math.max(...player.milestones.map((m) => m.timestamp)) * 1000,
       ).toLocaleDateString()
     : null;
 
