@@ -8,7 +8,7 @@ export default function WalletButton() {
     return (
       <button
         onClick={disconnect}
-        className="text-sm bg-brand-card border border-brand-green text-brand-green px-4 py-2 rounded-lg hover:bg-brand-green hover:text-black transition"
+        className="text-sm bg-white border border-brand-green text-brand-green px-4 py-2 rounded-lg hover:bg-brand-green hover:text-black transition-colors duration-200 dark:bg-brand-card"
       >
         {publicKey.slice(0, 4)}…{publicKey.slice(-4)}
       </button>

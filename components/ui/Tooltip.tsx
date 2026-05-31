@@ -59,7 +59,7 @@ export default function Tooltip({ content, children }: TooltipProps) {
         <span
           id={tooltipId}
           role="tooltip"
-          className="absolute z-50 w-max max-w-xs rounded-lg bg-gray-900 border border-gray-700 px-3 py-2 text-xs text-gray-200 shadow-xl pointer-events-none"
+          className="absolute z-50 w-max max-w-xs rounded-lg bg-white border border-gray-200 px-3 py-2 text-xs text-gray-700 shadow-xl pointer-events-none transition-colors duration-200 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200"
           style={tooltipStyle}
         >
           {content}

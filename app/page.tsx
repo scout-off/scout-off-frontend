@@ -88,10 +88,10 @@ export default function HomePage() {
       {/* ── Features ──────────────────────────────────────────────────────── */}
       <section className="px-4">
         <div className="text-center mb-12">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 dark:text-white">
             Why ScoutOff?
           </h2>
-          <p className="text-gray-400 max-w-lg mx-auto text-sm sm:text-base">
+          <p className="text-gray-500 max-w-lg mx-auto text-sm sm:text-base dark:text-gray-400">
             A decentralized platform that puts players and scouts in control —
             no intermediaries, no hidden fees.
           </p>
@@ -101,20 +101,20 @@ export default function HomePage() {
           {features.map(({ icon: Icon, title, description }) => (
             <div
               key={title}
-              className="flex flex-col gap-4 bg-brand-card border border-gray-800 rounded-2xl p-6 hover:border-brand-green/40 transition"
+              className="flex flex-col gap-4 bg-white border border-gray-200 rounded-2xl p-6 hover:border-brand-green/40 transition-colors duration-200 dark:bg-brand-card dark:border-gray-800"
             >
               <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-brand-green/10 text-brand-green">
                 <Icon size={20} />
               </div>
-              <h3 className="text-white font-semibold text-base">{title}</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">{description}</p>
+              <h3 className="text-gray-900 font-semibold text-base dark:text-white">{title}</h3>
+              <p className="text-gray-500 text-sm leading-relaxed dark:text-gray-400">{description}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* ── Footer ────────────────────────────────────────────────────────── */}
-      <footer className="border-t border-gray-800 pt-10 px-4">
+      <footer className="border-t border-gray-200 pt-10 px-4 dark:border-gray-800">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-6 max-w-4xl mx-auto">
           <p className="text-gray-500 text-sm">
             © {new Date().getFullYear()} ScoutOff. Built on Stellar.
@@ -124,7 +124,7 @@ export default function HomePage() {
               href="https://github.com/jhayniffy/scout-off"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition"
+              className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 text-sm transition-colors duration-200 dark:text-gray-400 dark:hover:text-white"
             >
               <Github size={15} />
               GitHub
@@ -133,14 +133,14 @@ export default function HomePage() {
               href="https://discord.gg/stellar"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition"
+              className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 text-sm transition-colors duration-200 dark:text-gray-400 dark:hover:text-white"
             >
               <MessageCircle size={15} />
               Stellar Discord
             </a>
             <a
               href="/README.md"
-              className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition"
+              className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 text-sm transition-colors duration-200 dark:text-gray-400 dark:hover:text-white"
             >
               <BookOpen size={15} />
               README

@@ -31,8 +31,8 @@ export default function ConfirmDialog({
   return (
     <Modal isOpen={isOpen} onClose={onCancel}>
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-white">{title}</h2>
-        <p className="text-gray-300">{message}</p>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{title}</h2>
+        <p className="text-gray-600 dark:text-gray-300">{message}</p>
         <div className="flex justify-end gap-3 pt-2">
           <Button variant="secondary" onClick={onCancel} disabled={loading}>
             {cancelLabel}
