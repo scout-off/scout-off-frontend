@@ -22,7 +22,7 @@ export default function Button({
   const variants = {
     default: "bg-brand-green text-black hover:opacity-90",
     danger: "bg-red-600 text-white hover:bg-red-700",
-    secondary: "bg-gray-700 text-white hover:bg-gray-600",
+    secondary: "bg-gray-200 text-gray-900 hover:bg-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600",
   };
 
   return (

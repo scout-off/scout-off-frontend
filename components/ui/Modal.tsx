@@ -36,7 +36,7 @@ export default function Modal({ isOpen, onClose, children }: ModalProps) {
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative bg-brand-card border border-gray-700 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl"
+        className="relative bg-white border border-gray-200 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl transition-colors duration-200 dark:bg-brand-card dark:border-gray-700"
         onClick={(e) => e.stopPropagation()}
       >
         {children}

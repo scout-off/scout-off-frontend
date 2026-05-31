@@ -18,12 +18,12 @@ export default function Select({
   return (
     <div className="space-y-1">
       {label && (
-        <label className="block text-sm font-medium text-gray-300">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           {label}
         </label>
       )}
       <select
-        className={`w-full bg-gray-900 border border-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-green transition ${
+        className={`w-full bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-green transition-colors duration-200 dark:bg-gray-900 dark:border-gray-700 dark:text-white ${
           error ? "border-red-500" : ""
         } ${className}`}
         {...props}

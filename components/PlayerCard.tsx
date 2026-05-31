@@ -7,7 +7,7 @@ import ProgressBar from "./ProgressBar";
 function PlayerCard({ player }: { player: Player }) {
   const { id, vitals, progressLevel, ipfsHash } = player;
   return (
-    <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-4 hover:border-brand-green transition">
+    <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col gap-4 hover:border-brand-green transition-colors duration-200 dark:bg-brand-card dark:border-gray-800">
       {/* Avatar placeholder */}
       <div className="w-16 h-16 rounded-full bg-gray-700 overflow-hidden">
         {ipfsHash && (
@@ -21,8 +21,8 @@ function PlayerCard({ player }: { player: Player }) {
       </div>
 
       <div>
-        <h3 className="font-semibold text-white">{vitals.name}</h3>
-        <p className="text-sm text-gray-400">
+        <h3 className="font-semibold text-gray-900 dark:text-white">{vitals.name}</h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           {vitals.position} · {vitals.region}
         </p>
         <span className="inline-block mt-1 text-xs text-brand-green font-medium">

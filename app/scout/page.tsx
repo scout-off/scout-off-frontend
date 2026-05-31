@@ -88,11 +88,11 @@ function ScoutDashboardContent() {
 
   return (
     <div className="flex flex-col gap-8">
-      <h1 className="text-3xl font-bold text-white">Scout Dashboard</h1>
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Scout Dashboard</h1>
 
       {/* Wallet address search */}
-      <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
-        <label className="text-sm font-medium text-gray-300" htmlFor="wallet-search">
+      <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col gap-3 transition-colors duration-200 dark:bg-brand-card dark:border-gray-800">
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="wallet-search">
           Search by Wallet Address
         </label>
         <input
@@ -125,10 +125,10 @@ function ScoutDashboardContent() {
       {/* Filter bar */}
       <form
         onSubmit={handleSearch}
-        className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-wrap gap-4 items-end"
+        className="bg-white border border-gray-200 rounded-xl p-5 flex flex-wrap gap-4 items-end transition-colors duration-200 dark:bg-brand-card dark:border-gray-800"
       >
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-400">Region</label>
+          <label className="text-xs text-gray-500 dark:text-gray-400">Region</label>
           <input
             className="input w-40"
             placeholder="e.g. Africa"
@@ -136,7 +136,7 @@ function ScoutDashboardContent() {
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-400">Position</label>
+          <label className="text-xs text-gray-500 dark:text-gray-400">Position</label>
           <select
             className="input w-32"
             onChange={(e) => setFilter((f) => ({ ...f, position: e.target.value }))}
@@ -146,7 +146,7 @@ function ScoutDashboardContent() {
           </select>
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-400">Min Level</label>
+          <label className="text-xs text-gray-500 dark:text-gray-400">Min Level</label>
           <select
             className="input w-32"
             onChange={(e) =>
@@ -190,15 +190,15 @@ function ScoutDashboardContent() {
               <button
                 onClick={() => setPage(safePage - 1)}
                 disabled={safePage <= 1}
-                className="px-4 py-2 rounded-lg border border-gray-700 text-gray-300 disabled:opacity-40 hover:border-brand-green transition"
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 disabled:opacity-40 hover:border-brand-green transition-colors duration-200 dark:border-gray-700 dark:text-gray-300"
               >
                 Previous
               </button>
-              <span className="text-sm text-gray-400">Page {safePage} of {totalPages}</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">Page {safePage} of {totalPages}</span>
               <button
                 onClick={() => setPage(safePage + 1)}
                 disabled={safePage >= totalPages}
-                className="px-4 py-2 rounded-lg border border-gray-700 text-gray-300 disabled:opacity-40 hover:border-brand-green transition"
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 disabled:opacity-40 hover:border-brand-green transition-colors duration-200 dark:border-gray-700 dark:text-gray-300"
               >
                 Next
               </button>

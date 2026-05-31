@@ -11,12 +11,12 @@ const SIZE_CLASSES: Record<Size, string> = {
 }
 
 const VARIANT_CLASSES: Record<Variant, string> = {
-  level0: 'bg-gray-100 text-gray-800',
-  level1: 'bg-blue-100 text-blue-800',
-  level2: 'bg-yellow-100 text-yellow-800',
-  level3: 'bg-green-100 text-green-800',
-  position: 'bg-indigo-100 text-indigo-800',
-  region: 'bg-purple-100 text-purple-800',
+  level0: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
+  level1: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
+  level2: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300',
+  level3: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
+  position: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300',
+  region: 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300',
 }
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {

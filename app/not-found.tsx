@@ -8,7 +8,7 @@ export const metadata = {
 export default function NotFound() {
   return (
     <html lang="en">
-      <body className="bg-brand-dark text-white font-sans">
+      <body className="bg-white text-gray-900 font-sans transition-colors duration-200 dark:bg-brand-dark dark:text-white">
         <Navbar />
         <main className="max-w-6xl mx-auto px-4 py-8 min-h-[calc(100vh-4rem)] flex items-center justify-center">
           <div className="text-center space-y-8">
@@ -30,10 +30,10 @@ export default function NotFound() {
             </div>
             <div className="space-y-4">
               <h1 className="text-8xl font-bold text-brand-green">404</h1>
-              <h2 className="text-2xl font-semibold text-white">
+              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
                 Page Not Found
               </h2>
-              <p className="text-gray-400 max-w-md mx-auto">
+              <p className="text-gray-500 max-w-md mx-auto dark:text-gray-400">
                 The page you're looking for doesn't exist or has been moved.
               </p>
             </div>
