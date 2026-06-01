@@ -6,6 +6,7 @@ import { useScout } from '@/hooks/useScout';
 import { getPlayer } from '@/lib/contract';
 import PlayerCard from '@/components/PlayerCard';
 import PlayerCardSkeleton from '@/components/PlayerCardSkeleton';
+import ActivityFeed from '@/components/scout/ActivityFeed';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import type { Player, PlayerFilter, ProgressLevel } from '@/types';
 
@@ -100,7 +101,9 @@ function ScoutDashboardContent() {
     <div className="flex flex-col gap-8">
       <h1 className="text-3xl font-bold text-white">Scout Dashboard</h1>
 
-      {/* Wallet address search */}
+      <ActivityFeed />
+
+      {/* Wallet address search */
       <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
         <label
           className="text-sm font-medium text-gray-300"
