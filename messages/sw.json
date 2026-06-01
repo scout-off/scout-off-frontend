@@ -1,0 +1,86 @@
+{
+  "app_title": "ScoutOff",
+  "nav": {
+    "scout_dashboard": "Dashibodi ya Scout",
+    "player_dashboard": "Dashibodi ya Mchezaji",
+    "maintenance_warning": "ScoutOff iko chini ya matengenezo sasa. Vitendo vya kuandika vimezimwa kwa sasa."
+  },
+  "common": {
+    "connect_wallet": "Unganisha Pochi",
+    "disconnect": "Tenganisha",
+    "loading": "Inakipakia...",
+    "error": "Kosa",
+    "success": "Mafanikio",
+    "warning": "Onyo",
+    "info": "Habari",
+    "close": "Funga",
+    "submit": "Wasilisha",
+    "cancel": "Ghairi",
+    "save": "Hifadhi",
+    "delete": "Futa",
+    "edit": "Hariri",
+    "back": "Nyuma",
+    "next": "Inayofuata",
+    "previous": "Iliyotangulia",
+    "search": "Tafuta",
+    "filter": "Kuchuja",
+    "sort": "Panga",
+    "clear": "Futa"
+  },
+  "language": {
+    "select_language": "Chagua Lugha",
+    "english": "English",
+    "french": "Français",
+    "swahili": "Kiswahili"
+  },
+  "scout_dashboard": {
+    "title": "Dashibodi ya Scout",
+    "welcome": "TODO: Machine-translated - Karibu kwenye dashibodi ya Scout",
+    "description": "TODO: Machine-translated - Dhibiti wachezaji na majaribio",
+    "recent_activity": "TODO: Machine-translated - Shughuli ya Hivi Karibuni",
+    "players": "Wachezaji",
+    "trials": "Majaribio",
+    "statistics": "Takwimu",
+    "milestones": "Miikukuu",
+    "search_player": "TODO: Machine-translated - Tafuta mchezaji kwa anwani ya pochi",
+    "player_not_found": "TODO: Machine-translated - Mchezaji hajafikiwa",
+    "no_players": "TODO: Machine-translated - Hakuna wachezaji waliopatikana"
+  },
+  "player_dashboard": {
+    "title": "Dashibodi ya Mchezaji",
+    "welcome": "TODO: Machine-translated - Karibu kwenye dashibodi ya mchezaji",
+    "description": "TODO: Machine-translated - Tazama profili yako na maendeleo",
+    "profile": "Wasifu",
+    "milestones": "Miikukuu",
+    "achievements": "Mafanikio",
+    "progress": "Maendeleo",
+    "stats": "Takwimu"
+  },
+  "wallet": {
+    "connect": "Unganisha Pochi",
+    "connected": "Imeunganishwa",
+    "disconnect": "Tenganisha Pochi",
+    "balance": "Salio",
+    "address": "Anwani",
+    "invalid_address": "TODO: Machine-translated - Anwani ya Stellar sio sahihi",
+    "connection_failed": "TODO: Machine-translated - Kushindwa kuunganisha pochi"
+  },
+  "errors": {
+    "not_found": "Haijafikiwa",
+    "unauthorized": "TODO: Machine-translated - Sio Halali",
+    "forbidden": "Haramu",
+    "internal_error": "TODO: Machine-translated - Kosa la ndani la seva",
+    "network_error": "TODO: Machine-translated - Kosa la Mtandao",
+    "contract_error": "TODO: Machine-translated - Wito wa kontrata umeshindwa",
+    "wallet_error": "TODO: Machine-translated - Operesheni ya pochi imeshindwa"
+  },
+  "actions": {
+    "refresh": "Refresh",
+    "export": "TODO: Machine-translated - Hamisha nje",
+    "import": "TODO: Machine-translated - Hamisha ndani",
+    "download": "TODO: Machine-translated - Pakua",
+    "upload": "TODO: Machine-translated - Pakua",
+    "view_details": "TODO: Machine-translated - Tazama Maelezo",
+    "view_more": "TODO: Machine-translated - Tazama Zaidi"
+  }
+}

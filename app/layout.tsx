@@ -1,47 +1,52 @@
-import type { Metadata } from 'next';
-import './globals.css';
-import Navbar from '@/components/Navbar';
-import { ToastProvider } from '@/components/ui/Toast';
-import { WalletProvider } from '@/context/WalletContext';
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://scoutoff.app";
+import type { Metadata } from "next";
+import "./globals.css";
+import Navbar from "@/components/Navbar";
+import { ToastProvider } from "@/components/ui/Toast";
+import { WalletProvider } from "@/context/WalletContext";
+import { NextIntlClientProvider } from "next-intl";
+import { getMessages } from "next-intl/server";
 
 export const metadata: Metadata = {
-  title: 'ScoutOff — Decentralized Football Scouting',
+  title: "ScoutOff — Decentralized Football Scouting",
   description:
-    'Tamper-proof player profiles, verifiable milestones, and direct scout-to-player connections — powered by Stellar Soroban smart contracts.',
+    "Tamper-proof player profiles, verifiable milestones, and direct scout-to-player connections — powered by Stellar Soroban smart contracts.",
   openGraph: {
-    title: 'ScoutOff — Decentralized Football Scouting',
+    title: "ScoutOff — Decentralized Football Scouting",
     description:
-      'Tamper-proof player profiles, verifiable milestones, and direct scout-to-player connections — powered by Stellar Soroban smart contracts.',
-    url: 'https://scoutoff.app',
-    siteName: 'ScoutOff',
-    type: 'website',
+      "Tamper-proof player profiles, verifiable milestones, and direct scout-to-player connections — powered by Stellar Soroban smart contracts.",
+    url: "https://scoutoff.app",
+    siteName: "ScoutOff",
+    type: "website",
     images: [
       {
-        url: 'https://scoutoff.app/og-image.png',
+        url: "https://scoutoff.app/og-image.png",
         width: 1200,
         height: 630,
-        alt: 'ScoutOff — Decentralized Football Scouting on Stellar',
+        alt: "ScoutOff — Decentralized Football Scouting on Stellar",
       },
     ],
   },
   twitter: {
-    card: 'summary_large_image',
-    title: 'ScoutOff — Decentralized Football Scouting',
+    card: "summary_large_image",
+    title: "ScoutOff — Decentralized Football Scouting",
     description:
-      'Tamper-proof player profiles, verifiable milestones, and direct scout-to-player connections — powered by Stellar Soroban smart contracts.',
-    images: ['https://scoutoff.app/og-image.png'],
+      "Tamper-proof player profiles, verifiable milestones, and direct scout-to-player connections — powered by Stellar Soroban smart contracts.",
+    images: ["https://scoutoff.app/og-image.png"],
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
+  params,
 }: {
   children: React.ReactNode;
+  params?: { locale?: string };
 }) {
+  const locale = params?.locale ?? "en";
+  const messages = await getMessages();
+
   return (
-    <html lang="en">
+    <html lang={locale}>
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#0f172a" />
@@ -54,12 +59,16 @@ export default function RootLayout({
         >
           Skip to main content
         </a>
-        <WalletProvider>
-          <ToastProvider>
-            <Navbar />
-            <main id="main-content" className="max-w-6xl mx-auto px-4 py-8">{children}</main>
-          </ToastProvider>
-        </WalletProvider>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <WalletProvider>
+            <ToastProvider>
+              <Navbar />
+              <main id="main-content" className="max-w-6xl mx-auto px-4 py-8">
+                {children}
+              </main>
+            </ToastProvider>
+          </WalletProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );
