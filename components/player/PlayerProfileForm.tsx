@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
+import { sanitize } from '@/lib/sanitize';
 import { useWallet } from '@/hooks/useWallet';
 import { buildRegisterPlayer } from '@/lib/contract';
 import Button from '@/components/ui/Button';
@@ -87,6 +88,11 @@ export default function PlayerProfileForm({
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
+    // Sanitize free-text fields (player bio) before any submission
+    const sanitizedBio = sanitize(formData.bio);
+    // Update local state synchronously so subsequent flows see sanitized value
+    setFormData((prev: typeof formData) => ({ ...prev, bio: sanitizedBio }));
 
     if (!validate()) return;
     if (!publicKey) {

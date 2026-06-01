@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
+import { sanitize } from '@/lib/sanitize';
 
 export async function POST(req: NextRequest) {
   const form = await req.formData();
@@ -32,6 +33,18 @@ export async function POST(req: NextRequest) {
     form = await req.formData();
   } catch {
     return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
+  }
+
+  // Server-side sanitization: strip HTML tags from any text fields that may be present
+  try {
+    for (const [key, value] of Array.from(form.entries())) {
+      if (typeof value === 'string') {
+        // overwrite with stripped value
+        form.set(key, sanitize(value));
+      }
+    }
+  } catch (e) {
+    // If FormData.set isn't available in this environment, ignore — sanitization is best-effort here
   }
 
   const file = form.get("file") as File | null;

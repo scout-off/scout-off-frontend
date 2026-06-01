@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { sanitize } from '@/lib/sanitize';
 import { useWallet } from '@/hooks/useWallet';
 import { useValidator } from '@/hooks/useValidator';
 import { getPlayer } from '@/lib/contract';
@@ -68,7 +69,8 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
     setTxHash(null);
     setSubmitError(null);
     try {
-      const xdr = await approveMilestone(playerId.trim(), description);
+      const sanitizedDescription = sanitize(description);
+      const xdr = await approveMilestone(playerId.trim(), sanitizedDescription);
       const result = await signAndSubmit(xdr);
       const hash = (result as any)?.hash ?? null;
       setTxHash(hash);
