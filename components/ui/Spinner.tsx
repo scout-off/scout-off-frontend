@@ -1,28 +1,34 @@
-import React from 'react'
+import React from 'react';
 
-type SpinnerSize = 'sm' | 'md' | 'lg'
+type SpinnerSize = 'sm' | 'md' | 'lg';
 
 export const SPINNER_SIZE_PIXEL_MAP = {
   sm: 16,
   md: 24,
   lg: 40,
-} as const
+} as const;
 
-const BASE_CLASSES = 'inline-flex items-center justify-center rounded-full'
+const BASE_CLASSES = 'inline-flex items-center justify-center rounded-full';
 
 const SIZE_CLASSES: Record<SpinnerSize, string> = {
   sm: 'w-4 h-4',
   md: 'w-6 h-6',
   lg: 'w-10 h-10',
-}
+};
 
 export interface SpinnerProps extends React.HTMLAttributes<HTMLSpanElement> {
-  size?: SpinnerSize
-  className?: string
+  size?: SpinnerSize;
+  className?: string;
 }
 
-export default function Spinner({ size = 'md', className, ...rest }: SpinnerProps) {
-  const classes = [className, BASE_CLASSES, SIZE_CLASSES[size]].filter(Boolean).join(' ')
+export default function Spinner({
+  size = 'md',
+  className,
+  ...rest
+}: SpinnerProps) {
+  const classes = [className, BASE_CLASSES, SIZE_CLASSES[size]]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <span role="status" aria-label="Loading" className={classes} {...rest}>
@@ -50,5 +56,5 @@ export default function Spinner({ size = 'md', className, ...rest }: SpinnerProp
       </svg>
       <span className="sr-only">Loading</span>
     </span>
-  )
+  );
 }

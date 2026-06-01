@@ -1,29 +1,37 @@
-import Link from "next/link";
-import { Github, MessageCircle, BookOpen, Zap, ShieldCheck, Users, TrendingUp } from "lucide-react";
+import Link from 'next/link';
+import {
+  Github,
+  MessageCircle,
+  BookOpen,
+  Zap,
+  ShieldCheck,
+  Users,
+  TrendingUp,
+} from 'lucide-react';
 
 // ── Feature card data ─────────────────────────────────────────────────────────
 const features = [
   {
     icon: ShieldCheck,
-    title: "Tamper-Proof Profiles",
+    title: 'Tamper-Proof Profiles',
     description:
-      "Every player profile and milestone is stored on Stellar Soroban smart contracts — immutable, verifiable, and owned by the player.",
+      'Every player profile and milestone is stored on Stellar Soroban smart contracts — immutable, verifiable, and owned by the player.',
   },
   {
     icon: TrendingUp,
-    title: "On-Chain Milestones",
+    title: 'On-Chain Milestones',
     description:
-      "Validators approve performance milestones directly on-chain. No middlemen, no falsified records — just verifiable progress.",
+      'Validators approve performance milestones directly on-chain. No middlemen, no falsified records — just verifiable progress.',
   },
   {
     icon: Users,
-    title: "Direct Scout Access",
+    title: 'Direct Scout Access',
     description:
-      "Scouts subscribe and pay to unlock player contact details. Transparent fees, instant access, no agency gatekeeping.",
+      'Scouts subscribe and pay to unlock player contact details. Transparent fees, instant access, no agency gatekeeping.',
   },
   {
     icon: Zap,
-    title: "Powered by Stellar",
+    title: 'Powered by Stellar',
     description:
       "Built on Stellar's fast, low-cost network. Transactions settle in seconds with near-zero fees — accessible to everyone.",
   },
@@ -37,7 +45,7 @@ export default function HomePage() {
         className="relative flex flex-col items-center text-center gap-8 py-24 px-4 overflow-hidden rounded-2xl"
         style={{
           background:
-            "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(0,200,83,0.12) 0%, transparent 70%), linear-gradient(180deg, #0d1526 0%, #0A0F1E 100%)",
+            'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(0,200,83,0.12) 0%, transparent 70%), linear-gradient(180deg, #0d1526 0%, #0A0F1E 100%)',
         }}
       >
         {/* Subtle grid overlay */}
@@ -46,8 +54,8 @@ export default function HomePage() {
           className="pointer-events-none absolute inset-0 opacity-[0.04]"
           style={{
             backgroundImage:
-              "linear-gradient(#00C853 1px, transparent 1px), linear-gradient(90deg, #00C853 1px, transparent 1px)",
-            backgroundSize: "40px 40px",
+              'linear-gradient(#00C853 1px, transparent 1px), linear-gradient(90deg, #00C853 1px, transparent 1px)',
+            backgroundSize: '40px 40px',
           }}
         />
 
@@ -58,7 +66,7 @@ export default function HomePage() {
           </span>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white leading-tight">
-            Discover Football Talent{" "}
+            Discover Football Talent{' '}
             <span className="text-brand-green">On-Chain</span>
           </h1>
 
@@ -107,7 +115,9 @@ export default function HomePage() {
                 <Icon size={20} />
               </div>
               <h3 className="text-white font-semibold text-base">{title}</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">{description}</p>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                {description}
+              </p>
             </div>
           ))}
         </div>
@@ -119,7 +129,10 @@ export default function HomePage() {
           <p className="text-gray-500 text-sm">
             © {new Date().getFullYear()} ScoutOff. Built on Stellar.
           </p>
-          <nav className="flex items-center gap-6" aria-label="Footer navigation">
+          <nav
+            className="flex items-center gap-6"
+            aria-label="Footer navigation"
+          >
             <a
               href="https://github.com/jhayniffy/scout-off"
               target="_blank"

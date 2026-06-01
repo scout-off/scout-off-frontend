@@ -1,5 +1,5 @@
-import type { ProgressLevel } from "@/types";
-import { PROGRESS_LABELS } from "@/types";
+import type { ProgressLevel } from '@/types';
+import { PROGRESS_LABELS } from '@/types';
 
 /*
  * WCAG 2.1 AA Contrast Audit
@@ -19,10 +19,10 @@ import { PROGRESS_LABELS } from "@/types";
 const STEPS: ProgressLevel[] = [0, 1, 2, 3];
 
 const FILL_COLOUR: Record<ProgressLevel, string> = {
-  0: "bg-gray-600",
-  1: "bg-blue-400",
-  2: "bg-amber-400",
-  3: "bg-emerald-400",
+  0: 'bg-gray-600',
+  1: 'bg-blue-400',
+  2: 'bg-amber-400',
+  3: 'bg-emerald-400',
 };
 
 export default function ProgressBar({ level }: { level: ProgressLevel }) {
@@ -34,7 +34,7 @@ export default function ProgressBar({ level }: { level: ProgressLevel }) {
         {STEPS.map((step) => (
           <span
             key={step}
-            className={`text-xs ${step <= level ? "text-gray-50" : "text-gray-400"}`}
+            className={`text-xs ${step <= level ? 'text-gray-50' : 'text-gray-400'}`}
           >
             {PROGRESS_LABELS[step]}
           </span>

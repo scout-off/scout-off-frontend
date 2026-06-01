@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { SelectHTMLAttributes, ReactNode } from "react";
+import { SelectHTMLAttributes, ReactNode } from 'react';
 
 export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   children: ReactNode;
@@ -12,7 +12,7 @@ export default function Select({
   children,
   label,
   error,
-  className = "",
+  className = '',
   ...props
 }: SelectProps) {
   return (
@@ -24,7 +24,7 @@ export default function Select({
       )}
       <select
         className={`w-full bg-gray-900 border border-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-green transition ${
-          error ? "border-red-500" : ""
+          error ? 'border-red-500' : ''
         } ${className}`}
         {...props}
       >

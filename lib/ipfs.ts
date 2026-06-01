@@ -1,7 +1,7 @@
-import axios from "axios";
+import axios from 'axios';
 
 const PRIMARY_GATEWAY =
-  process.env.NEXT_PUBLIC_IPFS_GATEWAY ?? "https://gateway.pinata.cloud/ipfs";
+  process.env.NEXT_PUBLIC_IPFS_GATEWAY ?? 'https://gateway.pinata.cloud/ipfs';
 
 /**
  * Default ordered list of fallback IPFS gateways used when the primary gateway
@@ -10,8 +10,8 @@ const PRIMARY_GATEWAY =
  * Exported so consumers and test suites can reference or override the list.
  */
 export const DEFAULT_IPFS_FALLBACKS: string[] = [
-  "https://ipfs.io/ipfs",
-  "https://cloudflare-ipfs.com/ipfs",
+  'https://ipfs.io/ipfs',
+  'https://cloudflare-ipfs.com/ipfs',
 ];
 
 /** Timeout per gateway attempt in milliseconds. */
@@ -25,9 +25,9 @@ const ATTEMPT_TIMEOUT_MS = 8_000;
  */
 export async function uploadToIPFS(file: File): Promise<string> {
   const form = new FormData();
-  form.append("file", file);
+  form.append('file', file);
 
-  const { data } = await axios.post("/api/ipfs/upload", form);
+  const { data } = await axios.post('/api/ipfs/upload', form);
   return data.cid as string;
 }
 
@@ -58,46 +58,49 @@ export async function uploadToIPFS(file: File): Promise<string> {
  */
 export async function ipfsUrl(
   cid: string,
-  fallbacks: string[] = DEFAULT_IPFS_FALLBACKS
+  fallbacks: string[] = DEFAULT_IPFS_FALLBACKS,
 ): Promise<string> {
   const gateways = [PRIMARY_GATEWAY, ...fallbacks];
-
+  
   for (let i = 0; i < gateways.length; i++) {
     const gateway = gateways[i];
     const url = `${gateway}/${cid}`;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), ATTEMPT_TIMEOUT_MS);
-
+    
     try {
-      const response = await fetch(url, { method: "HEAD", signal: controller.signal });
+      const response = await fetch(url, {
+        method: 'HEAD',
+        signal: controller.signal,
+      });
       clearTimeout(timeoutId);
-
+      
       if (response.ok) {
         if (i > 0) {
           console.warn(
-            `[ipfs] Primary gateway unavailable. Using fallback gateway: ${gateway}`
+            `[ipfs] Primary gateway unavailable. Using fallback gateway: ${gateway}`,
           );
         }
         return url;
+      } else if (i < gateways.length - 1) {
+        console.warn(`Primary gateway failed (${response.status}), falling back to ${gateways[i + 1]}`);
       }
 
       // 4xx / 5xx — try next gateway
       if (i > 0) {
         console.warn(
-          `[ipfs] Gateway ${gateway} returned ${response.status}. Trying next fallback…`
+          `[ipfs] Gateway ${gateway} returned ${response.status}. Trying next fallback…`,
         );
       }
     } catch {
       clearTimeout(timeoutId);
       if (i > 0) {
         console.warn(
-          `[ipfs] Gateway ${gateway} failed (timeout or network error). Trying next fallback…`
+          `[ipfs] Gateway ${gateway} failed (timeout or network error). Trying next fallback…`,
         );
       }
     }
   }
 
   throw new Error(
-    `[ipfs] All gateways exhausted for CID "${cid}". Tried: ${gateways.join(", ")}`
+    `[ipfs] All gateways exhausted for CID "${cid}". Tried: ${gateways.join(', ')}`,
   );
 }

@@ -1,5 +1,5 @@
-"use client";
-import { useState, useCallback } from "react";
+'use client';
+import { useState, useCallback } from 'react';
 
 const MAX_SIZE = 100 * 1024 * 1024; // 100 MB
 const ALLOWED_TYPES = /^(video|image)\//;
@@ -14,12 +14,12 @@ export function useIPFSUpload() {
     setError(null);
 
     if (!ALLOWED_TYPES.test(file.type)) {
-      const msg = "Invalid file type. Only video and image files are allowed.";
+      const msg = 'Invalid file type. Only video and image files are allowed.';
       setError(msg);
       return Promise.reject(new Error(msg));
     }
     if (file.size > MAX_SIZE) {
-      const msg = "File exceeds the 100 MB size limit.";
+      const msg = 'File exceeds the 100 MB size limit.';
       setError(msg);
       return Promise.reject(new Error(msg));
     }
@@ -29,13 +29,14 @@ export function useIPFSUpload() {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       const form = new FormData();
-      form.append("file", file);
+      form.append('file', file);
 
-      xhr.upload.addEventListener("progress", (e) => {
-        if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100));
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable)
+          setProgress(Math.round((e.loaded / e.total) * 100));
       });
 
-      xhr.addEventListener("load", () => {
+      xhr.addEventListener('load', () => {
         setUploading(false);
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
@@ -43,7 +44,7 @@ export function useIPFSUpload() {
             setProgress(100);
             resolve(cid as string);
           } catch {
-            const msg = "Unexpected response from upload server.";
+            const msg = 'Unexpected response from upload server.';
             setError(msg);
             reject(new Error(msg));
           }
@@ -54,14 +55,14 @@ export function useIPFSUpload() {
         }
       });
 
-      xhr.addEventListener("error", () => {
+      xhr.addEventListener('error', () => {
         setUploading(false);
-        const msg = "Network error during upload.";
+        const msg = 'Network error during upload.';
         setError(msg);
         reject(new Error(msg));
       });
 
-      xhr.open("POST", "/api/ipfs/upload");
+      xhr.open('POST', '/api/ipfs/upload');
       xhr.send(form);
     });
   }, []);

@@ -1,8 +1,16 @@
-"use client";
+'use client';
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 
-type ToastVariant = "success" | "error" | "info" | "warning";
+type ToastVariant = 'success' | 'error' | 'info' | 'warning';
 
 export interface ToastOptions {
   message: string;
@@ -19,15 +27,30 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
-const VARIANT_META: Record<ToastVariant, { border: string; iconClass: string; label: string }> = {
-  success: { border: "border-brand-green", iconClass: "text-brand-green", label: "Success" },
-  error: { border: "border-red-500", iconClass: "text-red-500", label: "Error" },
-  info: { border: "border-sky-400", iconClass: "text-sky-400", label: "Info" },
-  warning: { border: "border-yellow-400", iconClass: "text-yellow-400", label: "Warning" },
+const VARIANT_META: Record<
+  ToastVariant,
+  { border: string; iconClass: string; label: string }
+> = {
+  success: {
+    border: 'border-brand-green',
+    iconClass: 'text-brand-green',
+    label: 'Success',
+  },
+  error: {
+    border: 'border-red-500',
+    iconClass: 'text-red-500',
+    label: 'Error',
+  },
+  info: { border: 'border-sky-400', iconClass: 'text-sky-400', label: 'Info' },
+  warning: {
+    border: 'border-yellow-400',
+    iconClass: 'text-yellow-400',
+    label: 'Warning',
+  },
 };
 
 function generateToastId() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
     return crypto.randomUUID();
   }
 
@@ -47,26 +70,29 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const show = useCallback((toast: ToastOptions) => {
-    const id = generateToastId();
-    setToasts((current) => {
-      const next = [...current, { id, ...toast }];
-      if (next.length > 3) {
-        const [oldest, ...rest] = next;
-        const oldestTimer = toastTimers.current[oldest.id];
-        if (oldestTimer) {
-          window.clearTimeout(oldestTimer);
-          delete toastTimers.current[oldest.id];
+  const show = useCallback(
+    (toast: ToastOptions) => {
+      const id = generateToastId();
+      setToasts((current) => {
+        const next = [...current, { id, ...toast }];
+        if (next.length > 3) {
+          const [oldest, ...rest] = next;
+          const oldestTimer = toastTimers.current[oldest.id];
+          if (oldestTimer) {
+            window.clearTimeout(oldestTimer);
+            delete toastTimers.current[oldest.id];
+          }
+          return rest;
         }
-        return rest;
-      }
-      return next;
-    });
+        return next;
+      });
 
-    toastTimers.current[id] = window.setTimeout(() => {
-      removeToast(id);
-    }, 4000);
-  }, [removeToast]);
+      toastTimers.current[id] = window.setTimeout(() => {
+        removeToast(id);
+      }, 4000);
+    },
+    [removeToast],
+  );
 
   useEffect(() => {
     return () => {
@@ -92,11 +118,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 className={`pointer-events-auto flex items-start gap-3 rounded-xl border border-gray-800 border-l-4 bg-brand-card p-4 shadow-2xl ${meta.border}`}
               >
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5">
-                  <span className={`${meta.iconClass} text-lg`} aria-hidden="true">
-                    {toast.variant === "success" && "✓"}
-                    {toast.variant === "error" && "✕"}
-                    {toast.variant === "info" && "ℹ"}
-                    {toast.variant === "warning" && "⚠"}
+                  <span
+                    className={`${meta.iconClass} text-lg`}
+                    aria-hidden="true"
+                  >
+                    {toast.variant === 'success' && '✓'}
+                    {toast.variant === 'error' && '✕'}
+                    {toast.variant === 'info' && 'ℹ'}
+                    {toast.variant === 'warning' && '⚠'}
                   </span>
                 </div>
                 <div className="flex-1 text-sm leading-6 text-gray-200">
@@ -123,7 +152,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 export function useToast() {
   const context = useContext(ToastContext);
   if (!context) {
-    throw new Error("useToast must be used within a ToastProvider");
+    throw new Error('useToast must be used within a ToastProvider');
   }
   return context;
 }
