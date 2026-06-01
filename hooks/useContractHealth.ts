@@ -1,6 +1,6 @@
-"use client";
-import { useState, useEffect } from "react";
-import { getContractHealth } from "@/lib/contract";
+'use client';
+import { useState, useEffect } from 'react';
+import { getContractHealth } from '@/lib/contract';
 
 export function useContractHealth() {
   const [healthy, setHealthy] = useState(true);

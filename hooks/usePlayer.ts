@@ -1,7 +1,7 @@
-"use client";
-import { useState, useEffect } from "react";
-import { getPlayer } from "@/lib/contract";
-import type { Player } from "@/types";
+'use client';
+import { useState, useEffect } from 'react';
+import { getPlayer } from '@/lib/contract';
+import type { Player } from '@/types';
 
 export function usePlayer(walletOrId: string | null) {
   const [player, setPlayer] = useState<Player | null>(null);

@@ -1,8 +1,8 @@
-"use client";
-import { useState, useEffect, useCallback } from "react";
-import { useWallet } from "@/hooks/useWallet";
-import { getSubscription, buildSubscribe } from "@/lib/contract";
-import type { Subscription, SubscriptionTier } from "@/types";
+'use client';
+import { useState, useEffect, useCallback } from 'react';
+import { useWallet } from '@/hooks/useWallet';
+import { getSubscription, buildSubscribe } from '@/lib/contract';
+import type { Subscription, SubscriptionTier } from '@/types';
 
 export function useSubscription() {
   const { publicKey, signAndSubmit } = useWallet();
@@ -11,12 +11,15 @@ export function useSubscription() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchSubscription = useCallback(async () => {
-    if (!publicKey) { setSubscription(null); return; }
+    if (!publicKey) {
+      setSubscription(null);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       const data = await getSubscription(publicKey);
-      setSubscription(data as Subscription ?? null);
+      setSubscription((data as Subscription) ?? null);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -24,11 +27,13 @@ export function useSubscription() {
     }
   }, [publicKey]);
 
-  useEffect(() => { fetchSubscription(); }, [fetchSubscription]);
+  useEffect(() => {
+    fetchSubscription();
+  }, [fetchSubscription]);
 
   const subscribe = useCallback(
     async (tier: SubscriptionTier) => {
-      if (!publicKey) throw new Error("Wallet not connected");
+      if (!publicKey) throw new Error('Wallet not connected');
       setLoading(true);
       setError(null);
       try {
@@ -42,7 +47,7 @@ export function useSubscription() {
         setLoading(false);
       }
     },
-    [publicKey, signAndSubmit, fetchSubscription]
+    [publicKey, signAndSubmit, fetchSubscription],
   );
 
   const isExpired = subscription

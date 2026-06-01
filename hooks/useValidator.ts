@@ -1,8 +1,12 @@
-"use client";
-import { useState, useEffect, useCallback } from "react";
-import { useWallet } from "@/hooks/useWallet";
-import { getValidators, buildApproveMilestone, buildRevokeMilestone } from "@/lib/contract";
-import type { Player } from "@/types";
+'use client';
+import { useState, useEffect, useCallback } from 'react';
+import { useWallet } from '@/hooks/useWallet';
+import {
+  getValidators,
+  buildApproveMilestone,
+  buildRevokeMilestone,
+} from '@/lib/contract';
+import type { Player } from '@/types';
 
 const CACHE_TTL_MS = 60_000;
 
@@ -16,7 +20,8 @@ export function invalidateValidatorCache() {
 
 async function fetchValidators(): Promise<string[]> {
   const now = Date.now();
-  if (cachedValidators && now - cacheTimestamp < CACHE_TTL_MS) return cachedValidators;
+  if (cachedValidators && now - cacheTimestamp < CACHE_TTL_MS)
+    return cachedValidators;
   const list = await getValidators();
   cachedValidators = list;
   cacheTimestamp = now;
@@ -33,7 +38,10 @@ export function useValidator(walletAddress?: string | null) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!publicKey) { setIsValidator(false); return; }
+    if (!publicKey) {
+      setIsValidator(false);
+      return;
+    }
     setChecking(true);
     fetchValidators()
       .then((list) => setIsValidator(list.includes(publicKey)))
@@ -43,7 +51,7 @@ export function useValidator(walletAddress?: string | null) {
 
   const approveMilestone = useCallback(
     async (playerId: string, milestone: string): Promise<string> => {
-      if (!publicKey) throw new Error("Wallet not connected");
+      if (!publicKey) throw new Error('Wallet not connected');
       setLoading(true);
       setError(null);
       try {
@@ -55,16 +63,20 @@ export function useValidator(walletAddress?: string | null) {
         setLoading(false);
       }
     },
-    [publicKey]
+    [publicKey],
   );
 
   const revokeMilestone = useCallback(
     async (playerId: string, milestoneId: string): Promise<Player> => {
-      if (!publicKey) throw new Error("Wallet not connected");
+      if (!publicKey) throw new Error('Wallet not connected');
       setLoading(true);
       setError(null);
       try {
-        const xdr = await buildRevokeMilestone(publicKey, playerId, milestoneId);
+        const xdr = await buildRevokeMilestone(
+          publicKey,
+          playerId,
+          milestoneId,
+        );
         const result = await signAndSubmit(xdr);
         return result as Player;
       } catch (e: any) {
@@ -74,8 +86,15 @@ export function useValidator(walletAddress?: string | null) {
         setLoading(false);
       }
     },
-    [publicKey, signAndSubmit]
+    [publicKey, signAndSubmit],
   );
 
-  return { isValidator, checking, approveMilestone, revokeMilestone, loading, error };
+  return {
+    isValidator,
+    checking,
+    approveMilestone,
+    revokeMilestone,
+    loading,
+    error,
+  };
 }

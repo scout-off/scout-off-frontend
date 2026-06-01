@@ -1,80 +1,84 @@
-"use client";
+'use client';
 
-import { useState, FormEvent } from "react";
-import { useWallet } from "@/hooks/useWallet";
-import { buildRegisterPlayer } from "@/lib/contract";
-import Button from "@/components/ui/Button";
-import Select from "@/components/ui/Select";
-import VideoUpload from "@/components/ui/VideoUpload";
-import type { PlayerVitals } from "@/types";
+import { useState, FormEvent } from 'react';
+import { useWallet } from '@/hooks/useWallet';
+import { buildRegisterPlayer } from '@/lib/contract';
+import Button from '@/components/ui/Button';
+import Select from '@/components/ui/Select';
+import VideoUpload from '@/components/ui/VideoUpload';
+import type { PlayerVitals } from '@/types';
 
 interface PlayerProfileFormProps {
   onSuccess: (playerId: string) => void;
 }
 
 const POSITIONS = [
-  "Goalkeeper",
-  "Defender",
-  "Midfielder",
-  "Forward",
-  "Winger",
-  "Striker",
+  'Goalkeeper',
+  'Defender',
+  'Midfielder',
+  'Forward',
+  'Winger',
+  'Striker',
 ];
 
 const REGIONS = [
-  "Europe",
-  "South America",
-  "North America",
-  "Africa",
-  "Asia",
-  "Oceania",
+  'Europe',
+  'South America',
+  'North America',
+  'Africa',
+  'Asia',
+  'Oceania',
 ];
 
-export default function PlayerProfileForm({ onSuccess }: PlayerProfileFormProps) {
+export default function PlayerProfileForm({
+  onSuccess,
+}: PlayerProfileFormProps) {
   const { publicKey, signAndSubmit } = useWallet();
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [txStatus, setTxStatus] = useState<TxStatus | null>(null);
+  const [txHash, setTxHash] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
-    name: "",
-    age: "",
-    position: "",
-    region: "",
-    nationality: "",
-    bio: "",
-    ipfsHash: "",
+    name: '',
+    age: '',
+    position: '',
+    region: '',
+    nationality: '',
+    bio: '',
+    ipfsHash: '',
   });
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = "Name is required";
+      newErrors.name = 'Name is required';
     }
 
     if (!formData.age) {
-      newErrors.age = "Age is required";
+      newErrors.age = 'Age is required';
     } else {
       const ageNum = parseInt(formData.age);
       if (isNaN(ageNum) || ageNum < 14 || ageNum > 45) {
-        newErrors.age = "Age must be between 14 and 45";
+        newErrors.age = 'Age must be between 14 and 45';
       }
     }
 
     if (!formData.position) {
-      newErrors.position = "Position is required";
+      newErrors.position = 'Position is required';
     }
 
     if (!formData.region) {
-      newErrors.region = "Region is required";
+      newErrors.region = 'Region is required';
     }
 
     if (!formData.nationality.trim()) {
-      newErrors.nationality = "Nationality is required";
+      newErrors.nationality = 'Nationality is required';
     }
 
     if (!formData.ipfsHash) {
-      newErrors.ipfsHash = "Highlight reel is required";
+      newErrors.ipfsHash = 'Highlight reel is required';
     }
 
     setErrors(newErrors);
@@ -86,12 +90,14 @@ export default function PlayerProfileForm({ onSuccess }: PlayerProfileFormProps)
 
     if (!validate()) return;
     if (!publicKey) {
-      setErrors({ form: "Wallet not connected" });
+      setErrors({ form: 'Wallet not connected' });
       return;
     }
 
     setIsLoading(true);
     setErrors({});
+    setTxStatus("pending");
+    setTxHash(null);
 
     try {
       const vitals: PlayerVitals = {
@@ -102,18 +108,23 @@ export default function PlayerProfileForm({ onSuccess }: PlayerProfileFormProps)
         nationality: formData.nationality,
       };
 
-      const xdr = await buildRegisterPlayer(publicKey, vitals, formData.ipfsHash);
+      const xdr = await buildRegisterPlayer(
+        publicKey,
+        vitals,
+        formData.ipfsHash,
+      );
       const result = await signAndSubmit(xdr);
 
-      // Extract player ID from result or generate it
-      // For now, we'll use the transaction hash as a temporary ID
-      // In a real implementation, this would come from the contract response
-      const playerId = (result as any)?.id || publicKey;
+      const hash = (result as any)?.hash ?? null;
+      setTxHash(hash);
+      setTxStatus("success");
 
+      const playerId = (result as any)?.id || publicKey;
       onSuccess(playerId);
     } catch (error) {
+      setTxStatus("error");
       setErrors({
-        form: error instanceof Error ? error.message : "Registration failed",
+        form: error instanceof Error ? error.message : 'Registration failed',
       });
     } finally {
       setIsLoading(false);
@@ -121,7 +132,9 @@ export default function PlayerProfileForm({ onSuccess }: PlayerProfileFormProps)
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
   ) => {
     const { name, value } = e.target;
     setFormData((prev: typeof formData) => ({ ...prev, [name]: value }));
@@ -146,10 +159,12 @@ export default function PlayerProfileForm({ onSuccess }: PlayerProfileFormProps)
           name="name"
           value={formData.name}
           onChange={handleChange}
-          className={`input ${errors.name ? "border-red-500" : ""}`}
+          className={`input ${errors.name ? 'border-red-500' : ''}`}
           placeholder="Enter your full name"
         />
-        {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name}</p>}
+        {errors.name && (
+          <p className="text-sm text-red-500 mt-1">{errors.name}</p>
+        )}
       </div>
 
       <div>
@@ -161,12 +176,14 @@ export default function PlayerProfileForm({ onSuccess }: PlayerProfileFormProps)
           name="age"
           value={formData.age}
           onChange={handleChange}
-          className={`input ${errors.age ? "border-red-500" : ""}`}
+          className={`input ${errors.age ? 'border-red-500' : ''}`}
           placeholder="Enter your age (14-45)"
           min="14"
           max="45"
         />
-        {errors.age && <p className="text-sm text-red-500 mt-1">{errors.age}</p>}
+        {errors.age && (
+          <p className="text-sm text-red-500 mt-1">{errors.age}</p>
+        )}
       </div>
 
       <Select
@@ -177,9 +194,9 @@ export default function PlayerProfileForm({ onSuccess }: PlayerProfileFormProps)
         error={errors.position}
       >
         <option value="">Select position</option>
-        {POSITIONS.map((pos) => (
-          <option key={pos} value={pos}>
-            {pos}
+        {FOOTBALL_POSITIONS.map((pos) => (
+          <option key={pos.value} value={pos.value}>
+            {pos.label}
           </option>
         ))}
       </Select>
@@ -208,7 +225,7 @@ export default function PlayerProfileForm({ onSuccess }: PlayerProfileFormProps)
           name="nationality"
           value={formData.nationality}
           onChange={handleChange}
-          className={`input ${errors.nationality ? "border-red-500" : ""}`}
+          className={`input ${errors.nationality ? 'border-red-500' : ''}`}
           placeholder="Enter your nationality"
         />
         {errors.nationality && (
@@ -231,7 +248,9 @@ export default function PlayerProfileForm({ onSuccess }: PlayerProfileFormProps)
       </div>
 
       <VideoUpload
-        onUpload={(cid) => setFormData((prev: typeof formData) => ({ ...prev, ipfsHash: cid }))}
+        onUpload={(cid) =>
+          setFormData((prev: typeof formData) => ({ ...prev, ipfsHash: cid }))
+        }
         error={errors.ipfsHash}
       />
 
@@ -239,8 +258,13 @@ export default function PlayerProfileForm({ onSuccess }: PlayerProfileFormProps)
         <p className="text-sm text-red-500 text-center">{errors.form}</p>
       )}
 
-      <Button type="submit" isLoading={isLoading} disabled={isLoading} className="w-full">
-        {isLoading ? "Registering..." : "Register as Player"}
+      <Button
+        type="submit"
+        isLoading={isLoading}
+        disabled={isLoading}
+        className="w-full"
+      >
+        {isLoading ? 'Registering...' : 'Register as Player'}
       </Button>
     </form>
   );

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import {
   useState,
   useRef,
@@ -6,7 +6,7 @@ import {
   useId,
   type ReactNode,
   type CSSProperties,
-} from "react";
+} from 'react';
 
 interface TooltipProps {
   content: string;
@@ -36,11 +36,16 @@ export default function Tooltip({ content, children }: TooltipProps) {
     setVisible(false);
   }
 
-  useEffect(() => () => { if (hideTimer.current) clearTimeout(hideTimer.current); }, []);
+  useEffect(
+    () => () => {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+    },
+    [],
+  );
 
   const tooltipStyle: CSSProperties = above
-    ? { bottom: "calc(100% + 6px)", left: "50%", transform: "translateX(-50%)" }
-    : { top: "calc(100% + 6px)", left: "50%", transform: "translateX(-50%)" };
+    ? { bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)' }
+    : { top: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)' };
 
   return (
     <span className="relative inline-flex" ref={triggerRef}>

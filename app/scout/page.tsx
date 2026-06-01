@@ -1,15 +1,15 @@
-"use client";
-import { useState, useEffect, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useRequireWallet } from "@/hooks/useRequireWallet";
-import { useScout } from "@/hooks/useScout";
-import { getPlayer } from "@/lib/contract";
-import PlayerCard from "@/components/PlayerCard";
-import PlayerCardSkeleton from "@/components/PlayerCardSkeleton";
-import ErrorBoundary from "@/components/ui/ErrorBoundary";
-import type { Player, PlayerFilter, ProgressLevel } from "@/types";
+'use client';
+import { useState, useEffect, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useRequireWallet } from '@/hooks/useRequireWallet';
+import { useScout } from '@/hooks/useScout';
+import { getPlayer } from '@/lib/contract';
+import PlayerCard from '@/components/PlayerCard';
+import PlayerCardSkeleton from '@/components/PlayerCardSkeleton';
+import ErrorBoundary from '@/components/ui/ErrorBoundary';
+import type { Player, PlayerFilter, ProgressLevel } from '@/types';
 
-const POSITIONS = ["GK", "CB", "LB", "RB", "CM", "CAM", "LW", "RW", "ST"];
+const POSITIONS = ['GK', 'CB', 'LB', 'RB', 'CM', 'CAM', 'LW', 'RW', 'ST'];
 const PAGE_SIZE = 12;
 
 function isStellarKey(v: string) {
@@ -22,23 +22,29 @@ function ScoutDashboardContent() {
   const searchParams = useSearchParams();
 
   const [filter, setFilter] = useState<PlayerFilter>({});
+  const debouncedFilter = useDebounce(filter, 300);
   const { players, loading, search } = useScout();
   const hasLoaded = useRef(false);
 
   // Wallet search state
-  const [walletQuery, setWalletQuery] = useState("");
-  const [searchResult, setSearchResult] = useState<Player | null | "not-found" | "invalid">(null);
+  const [walletQuery, setWalletQuery] = useState('');
+  const [searchResult, setSearchResult] = useState<
+    Player | null | 'not-found' | 'invalid'
+  >(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const page = Math.max(1, Number(searchParams.get("page") ?? "1"));
+  const page = Math.max(1, Number(searchParams.get('page') ?? '1'));
   const totalPages = Math.max(1, Math.ceil(players.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  const paginated = players.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const paginated = players.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE,
+  );
 
   function setPage(p: number) {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("page", String(p));
+    params.set('page', String(p));
     router.replace(`?${params.toString()}`);
   }
 
@@ -46,7 +52,9 @@ function ScoutDashboardContent() {
     e.preventDefault();
     hasLoaded.current = false;
     setPage(1);
-    search(filter).then(() => { hasLoaded.current = true; });
+    search(filter).then(() => {
+      hasLoaded.current = true;
+    });
   }
 
   useEffect(() => {
@@ -63,7 +71,7 @@ function ScoutDashboardContent() {
     }
 
     if (!isStellarKey(walletQuery)) {
-      setSearchResult("invalid");
+      setSearchResult('invalid');
       return;
     }
 
@@ -71,15 +79,17 @@ function ScoutDashboardContent() {
       setSearchLoading(true);
       try {
         const result = await getPlayer(walletQuery);
-        setSearchResult(result ? (result as Player) : "not-found");
+        setSearchResult(result ? (result as Player) : 'not-found');
       } catch {
-        setSearchResult("not-found");
+        setSearchResult('not-found');
       } finally {
         setSearchLoading(false);
       }
     }, 300);
 
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, [walletQuery]);
 
   if (!publicKey) return null;
@@ -92,7 +102,10 @@ function ScoutDashboardContent() {
 
       {/* Wallet address search */}
       <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
-        <label className="text-sm font-medium text-gray-300" htmlFor="wallet-search">
+        <label
+          className="text-sm font-medium text-gray-300"
+          htmlFor="wallet-search"
+        >
           Search by Wallet Address
         </label>
         <input
@@ -106,18 +119,26 @@ function ScoutDashboardContent() {
         />
         {walletQuery && (
           <div className="mt-1">
-            {searchLoading && <p className="text-sm text-gray-400">Searching…</p>}
-            {!searchLoading && searchResult === "invalid" && (
-              <p className="text-sm text-red-400">Invalid Stellar address — must be a 56-character key starting with G.</p>
+            {searchLoading && (
+              <p className="text-sm text-gray-400">Searching…</p>
             )}
-            {!searchLoading && searchResult === "not-found" && (
+            {!searchLoading && searchResult === 'invalid' && (
+              <p className="text-sm text-red-400">
+                Invalid Stellar address — must be a 56-character key starting
+                with G.
+              </p>
+            )}
+            {!searchLoading && searchResult === 'not-found' && (
               <p className="text-sm text-gray-500">Player not found.</p>
             )}
-            {!searchLoading && searchResult && searchResult !== "invalid" && searchResult !== "not-found" && (
-              <div className="mt-2 max-w-sm">
-                <PlayerCard player={searchResult} />
-              </div>
-            )}
+            {!searchLoading &&
+              searchResult &&
+              searchResult !== 'invalid' &&
+              searchResult !== 'not-found' && (
+                <div className="mt-2 max-w-sm">
+                  <PlayerCard player={searchResult} />
+                </div>
+              )}
           </div>
         )}
       </div>
@@ -132,17 +153,23 @@ function ScoutDashboardContent() {
           <input
             className="input w-40"
             placeholder="e.g. Africa"
-            onChange={(e) => setFilter((f) => ({ ...f, region: e.target.value }))}
+            onChange={(e) =>
+              setFilter((f) => ({ ...f, region: e.target.value }))
+            }
           />
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs text-gray-400">Position</label>
           <select
             className="input w-32"
-            onChange={(e) => setFilter((f) => ({ ...f, position: e.target.value }))}
+            onChange={(e) =>
+              setFilter((f) => ({ ...f, position: e.target.value }))
+            }
           >
             <option value="">Any</option>
-            {POSITIONS.map((p) => <option key={p}>{p}</option>)}
+            {POSITIONS.map((p) => (
+              <option key={p}>{p}</option>
+            ))}
           </select>
         </div>
         <div className="flex flex-col gap-1">
@@ -150,7 +177,10 @@ function ScoutDashboardContent() {
           <select
             className="input w-32"
             onChange={(e) =>
-              setFilter((f) => ({ ...f, minLevel: Number(e.target.value) as ProgressLevel }))
+              setFilter((f) => ({
+                ...f,
+                minLevel: Number(e.target.value) as ProgressLevel,
+              }))
             }
           >
             <option value="0">Any</option>
@@ -177,12 +207,18 @@ function ScoutDashboardContent() {
       ) : (
         <>
           {players.length > 0 && (
-            <p className="text-sm text-gray-400">{players.length} player{players.length !== 1 ? "s" : ""} found</p>
+            <p className="text-sm text-gray-400">
+              {players.length} player{players.length !== 1 ? 's' : ''} found
+            </p>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {paginated.map((p) => <PlayerCard key={p.id} player={p} />)}
+            {paginated.map((p) => (
+              <PlayerCard key={p.id} player={p} />
+            ))}
             {players.length === 0 && (
-              <p className="text-gray-500 col-span-3">No players found. Try adjusting your filters.</p>
+              <p className="text-gray-500 col-span-3">
+                No players found. Try adjusting your filters.
+              </p>
             )}
           </div>
           {players.length > PAGE_SIZE && (
@@ -194,7 +230,9 @@ function ScoutDashboardContent() {
               >
                 Previous
               </button>
-              <span className="text-sm text-gray-400">Page {safePage} of {totalPages}</span>
+              <span className="text-sm text-gray-400">
+                Page {safePage} of {totalPages}
+              </span>
               <button
                 onClick={() => setPage(safePage + 1)}
                 disabled={safePage >= totalPages}

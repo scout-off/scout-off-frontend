@@ -1,7 +1,7 @@
-"use client";
-import { useState, useEffect, useRef, useCallback } from "react";
-import { getMilestoneHistory } from "@/lib/contract";
-import type { Milestone } from "@/types";
+'use client';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { getMilestoneHistory } from '@/lib/contract';
+import type { Milestone } from '@/types';
 
 export function useMilestoneHistory(playerID: string | null) {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
