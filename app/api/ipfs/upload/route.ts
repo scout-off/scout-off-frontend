@@ -1,30 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 
-export async function POST(req: NextRequest) {
-  const form = await req.formData();
-  const file = form.get('file') as File;
-  if (!file) return NextResponse.json({ error: 'No file' }, { status: 400 });
+/**
+ * POST /api/ipfs/upload
+ *
+ * Rate limiting: max 10 uploads per IP per 60 seconds.
+ * When exceeded, responds with 429 Too Many Requests and Retry-After header.
+ *
+ * Real client IP is extracted from the x-forwarded-for header.
+ */
+const RATE_LIMIT = 10;
+const WINDOW_MS = 60 * 1000;
 
-  const pinataForm = new FormData();
-  pinataForm.append('file', file);
+type RateEntry = { count: number; firstSeen: number };
+const ipRateMap = new Map<string, RateEntry>();
 
-  const { data } = await axios.post(
-    'https://api.pinata.cloud/pinning/pinFileToIPFS',
-    pinataForm,
-    {
-      headers: {
-        pinata_api_key: process.env.PINATA_API_KEY!,
-        pinata_secret_api_key: process.env.PINATA_SECRET!,
-      },
-    },
-  );
+function getClientIp(req: NextRequest): string {
+  const forwarded = req.headers.get('x-forwarded-for');
+  if (forwarded) return forwarded.split(',')[0].trim();
+  const realIp = req.headers.get('x-real-ip');
+  if (realIp) return realIp;
+  return 'unknown';
 }
 
-// ─── Route handler ────────────────────────────────────────────────────────────
+function checkRateLimit(ip: string): { limited: boolean; retryAfterSec?: number } {
+  const now = Date.now();
+  const entry = ipRateMap.get(ip);
+  if (!entry) {
+    ipRateMap.set(ip, { count: 1, firstSeen: now });
+    return { limited: false };
+  }
+
+  if (now - entry.firstSeen > WINDOW_MS) {
+    ipRateMap.set(ip, { count: 1, firstSeen: now });
+    return { limited: false };
+  }
+
+  entry.count += 1;
+  ipRateMap.set(ip, entry);
+
+  if (entry.count > RATE_LIMIT) {
+    const retryAfterSec = Math.ceil((WINDOW_MS - (now - entry.firstSeen)) / 1000);
+    return { limited: true, retryAfterSec };
+  }
+
+  return { limited: false };
+}
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
+
+  // Rate limiting check
+  const rl = checkRateLimit(ip);
+  if (rl.limited) {
+    console.warn(`[IPFS rate limit] Too many uploads from IP: ${ip}`);
+    const retryAfter = rl.retryAfterSec ?? 60;
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429, headers: { 'Retry-After': String(retryAfter) } });
+  }
 
   // ── 1. Parse form data ──────────────────────────────────────────────────────
   let form: FormData;
