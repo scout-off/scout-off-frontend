@@ -1,5 +1,5 @@
 'use client';
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import useSWR from 'swr';
 import { filterPlayers } from '@/lib/contract';
 import type { Player, PlayerFilter } from '@/types';
@@ -18,8 +18,6 @@ function scoutSearchKey(filter: PlayerFilter): string {
 
 export function useScout() {
   const [searchKey, setSearchKey] = useState<string | null>(null);
-  // Ref to bridge the search promise with SWR's async fetcher
-  const resolveRef = useRef<((players: Player[]) => void) | null>(null);
 
   const { data, error, isValidating } = useSWR<Player[]>(
     searchKey,
@@ -29,11 +27,7 @@ export function useScout() {
       const position = parts[3] ?? '';
       const minLevel = Number(parts[4] ?? 0);
       const results = await filterPlayers(region, position, minLevel);
-      const players = results as Player[];
-      // Resolve the pending search promise so callers can await completion
-      resolveRef.current?.(players);
-      resolveRef.current = null;
-      return players;
+      return results as Player[];
     },
     {
       dedupingInterval: 60_000, // 60-second stale time — no duplicate RPC calls within this window
@@ -42,17 +36,12 @@ export function useScout() {
     },
   );
 
-  const search = useCallback(
-    async (filter: PlayerFilter): Promise<Player[]> => {
-      const key = scoutSearchKey(filter);
-      setSearchKey(key);
-      // Return a promise that resolves when the SWR fetcher completes
-      return new Promise<Player[]>((resolve) => {
-        resolveRef.current = resolve;
-      });
-    },
-    [],
-  );
+  /** Trigger a search with the given filter. The returned loading/isValidating
+   *  state can be observed via the reactive `loading` property. */
+  const search = useCallback((filter: PlayerFilter) => {
+    const key = scoutSearchKey(filter);
+    setSearchKey(key);
+  }, []);
 
   return {
     players: data ?? [],

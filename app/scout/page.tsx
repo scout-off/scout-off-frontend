@@ -23,7 +23,7 @@ function ScoutDashboardContent() {
   const searchParams = useSearchParams();
 
   const [filter, setFilter] = useState<PlayerFilter>({});
-  const debouncedFilter = useDebounce(filter, 300);
+
   const { players, loading, search } = useScout();
   const hasLoaded = useRef(false);
 
@@ -53,9 +53,7 @@ function ScoutDashboardContent() {
     e.preventDefault();
     hasLoaded.current = false;
     setPage(1);
-    search(filter).then(() => {
-      hasLoaded.current = true;
-    });
+    search(filter);
   }
 
   useEffect(() => {

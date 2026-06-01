@@ -47,14 +47,11 @@ function ScoutDashboardContent() {
     params.set('page', String(p));
     router.replace(`?${params.toString()}`);
   }
-
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     hasLoaded.current = false;
     setPage(1);
-    search(filter).then(() => {
-      hasLoaded.current = true;
-    });
+    search(filter);
   }
 
   useEffect(() => {
