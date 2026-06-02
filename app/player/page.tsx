@@ -7,6 +7,7 @@ import ProgressBar from '@/components/ProgressBar';
 import { uploadToIPFS } from '@/lib/ipfs';
 import { buildRegisterPlayer } from '@/lib/contract';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
+import Button from '@/components/ui/Button';
 
 function PlayerDashboardContent() {
   const { walletAddress: publicKey } = useRequireWallet();
@@ -127,13 +128,9 @@ function PlayerDashboardContent() {
               required
             />
           </label>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="bg-brand-green text-black font-semibold py-2 rounded-lg hover:opacity-90 transition disabled:opacity-50"
-          >
-            {submitting ? 'Registering…' : 'Register on Stellar'}
-          </button>
+          <Button type="submit" loading={submitting} fullWidth>
+            Register on Stellar
+          </Button>
         </form>
       )}
     </div>

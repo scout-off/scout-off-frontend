@@ -3,6 +3,7 @@ import { useWallet } from '@/hooks/useWallet';
 import { WALLET_PROVIDERS } from '@/context/WalletContext';
 import Modal from '@/components/ui/Modal';
 import Spinner from '@/components/ui/Spinner';
+import Button from '@/components/ui/Button';
 import type { WalletProvider } from '@/context/WalletContext';
 
 export default function WalletButton() {
@@ -21,9 +22,11 @@ export default function WalletButton() {
 
   if (publicKey) {
     return (
-      <button
+      <Button
+        type="button"
         onClick={disconnect}
-        className="flex items-center gap-2 text-sm bg-brand-card border border-brand-green text-brand-green px-4 py-2 rounded-lg hover:bg-brand-green hover:text-black transition"
+        variant="secondary"
+        className="flex items-center gap-2 text-sm"
       >
         {walletProviderInfo && (
           <span className="text-base" aria-hidden="true">
@@ -40,21 +43,21 @@ export default function WalletButton() {
             <span>{xlmBalance ?? '0.00'} XLM</span>
           )}
         </span>
-      </button>
+      </Button>
     );
   }
 
   return (
     <>
-      <button
+      <Button
+        type="button"
         onClick={connect}
-        disabled={isConnecting}
+        loading={isConnecting}
         aria-label="Connect wallet"
         aria-pressed={false}
-        className="text-sm bg-brand-green text-black font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition disabled:opacity-50"
       >
         {isConnecting ? 'Connecting…' : 'Connect Wallet'}
-      </button>
+      </Button>
 
       {/* Wallet Selection Modal */}
       <Modal isOpen={showWalletModal} onClose={closeWalletModal}>
@@ -65,13 +68,15 @@ export default function WalletButton() {
           </p>
           <div className="flex flex-col gap-2">
             {WALLET_PROVIDERS.map((wp) => (
-              <button
+              <Button
                 key={wp.provider}
                 type="button"
+                variant="ghost"
+                fullWidth
+                className="justify-start text-left px-4 py-3"
                 onClick={() =>
                   connectWithProvider(wp.provider as WalletProvider)
                 }
-                className="flex items-center gap-3 w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-left text-white hover:border-brand-green hover:bg-gray-800 transition"
               >
                 <span className="text-2xl" aria-hidden="true">
                   {wp.icon}
@@ -84,16 +89,17 @@ export default function WalletButton() {
                     {wp.provider === 'lobstr' && 'Browser extension'}
                   </p>
                 </div>
-              </button>
+              </Button>
             ))}
           </div>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            className="text-sm text-gray-500 hover:text-gray-300 self-center"
             onClick={closeWalletModal}
-            className="text-sm text-gray-500 hover:text-gray-300 transition self-center"
           >
             Cancel
-          </button>
+          </Button>
         </div>
       </Modal>
     </>
