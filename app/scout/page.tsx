@@ -8,6 +8,7 @@ import PlayerCard from '@/components/PlayerCard';
 import PlayerCardSkeleton from '@/components/PlayerCardSkeleton';
 import ActivityFeed from '@/components/scout/ActivityFeed';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
+import Button from '@/components/ui/Button';
 import { AFRICAN_REGIONS } from '@/lib/regions';
 import type { Player, PlayerFilter, ProgressLevel } from '@/types';
 
@@ -102,7 +103,7 @@ function ScoutDashboardContent() {
 
       <ActivityFeed />
 
-      {/* Wallet address search */
+      {/* Wallet address search */}
       <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
         <label
           className="text-sm font-medium text-gray-300"
@@ -198,12 +199,7 @@ function ScoutDashboardContent() {
             <option value="3">Elite</option>
           </select>
         </div>
-        <button
-          type="submit"
-          className="bg-brand-green text-black font-semibold px-5 py-2 rounded-lg hover:opacity-90 transition"
-        >
-          Search
-        </button>
+        <Button type="submit">Search</Button>
       </form>
 
       {/* Results */}
@@ -232,23 +228,23 @@ function ScoutDashboardContent() {
           </div>
           {players.length > PAGE_SIZE && (
             <div className="flex items-center justify-center gap-4">
-              <button
+              <Button
+                variant="ghost"
                 onClick={() => setPage(safePage - 1)}
                 disabled={safePage <= 1}
-                className="px-4 py-2 rounded-lg border border-gray-700 text-gray-300 disabled:opacity-40 hover:border-brand-green transition"
               >
                 Previous
-              </button>
+              </Button>
               <span className="text-sm text-gray-400">
                 Page {safePage} of {totalPages}
               </span>
-              <button
+              <Button
+                variant="ghost"
                 onClick={() => setPage(safePage + 1)}
                 disabled={safePage >= totalPages}
-                className="px-4 py-2 rounded-lg border border-gray-700 text-gray-300 disabled:opacity-40 hover:border-brand-green transition"
               >
                 Next
-              </button>
+              </Button>
             </div>
           )}
         </>

@@ -19,15 +19,16 @@ const customJestConfig = {
     },
   },
   // Output coverage reports to the coverage/ directory
-  coverageDirectory: "coverage",
+  coverageDirectory: 'coverage',
   collectCoverageFrom: [
-    "app/**/*.{ts,tsx}",
-    "components/**/*.{ts,tsx}",
-    "hooks/**/*.{ts,tsx}",
-    "lib/**/*.{ts,tsx}",
-    "context/**/*.{ts,tsx}",
-    "!**/*.d.ts",
-    "!**/node_modules/**",
+    'app/**/*.{ts,tsx}',
+    'components/**/*.{ts,tsx}',
+    'hooks/**/*.{ts,tsx}',
+    'lib/**/*.{ts,tsx}',
+    'context/**/*.{ts,tsx}',
+    'packages/**/*.{ts,tsx}',
+    '!**/*.d.ts',
+    '!**/node_modules/**',
   ],
 };
 
