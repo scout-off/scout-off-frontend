@@ -7,7 +7,10 @@ import { PROGRESS_LABELS } from '@/types';
 import ProgressBar from './ProgressBar';
 import Badge from '@/components/ui/Badge';
 
-const LEVEL_VARIANT: Record<ProgressLevel, 'level0' | 'level1' | 'level2' | 'level3'> = {
+const LEVEL_VARIANT: Record<
+  ProgressLevel,
+  'level0' | 'level1' | 'level2' | 'level3'
+> = {
   0: 'level0',
   1: 'level1',
   2: 'level2',
@@ -46,7 +49,10 @@ function PlayerCard({ player }: { player: Player }) {
       className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-4 hover:border-brand-green transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-green focus:ring-offset-2 focus:ring-offset-black"
     >
       {/* Avatar */}
-      <div className="w-16 h-16 rounded-full bg-gray-700 overflow-hidden" aria-hidden="true">
+      <div
+        className="w-16 h-16 rounded-full bg-gray-700 overflow-hidden"
+        aria-hidden="true"
+      >
         {ipfsHash && (
           <Image
             src={`${process.env.NEXT_PUBLIC_IPFS_GATEWAY}/${ipfsHash}`}

@@ -63,7 +63,12 @@ function hasValidMagicBytes(header: Uint8Array): boolean {
   )
     return true;
   // MP4/MOV/M4V ftyp box: bytes 4-7 = 66 74 79 70
-  if (header[4] === 0x66 && header[5] === 0x74 && header[6] === 0x79 && header[7] === 0x70)
+  if (
+    header[4] === 0x66 &&
+    header[5] === 0x74 &&
+    header[6] === 0x79 &&
+    header[7] === 0x70
+  )
     return true;
   // WebM/MKV: 1A 45 DF A3
   if (
@@ -98,7 +103,10 @@ function getClientIp(req: NextRequest): string {
   return 'unknown';
 }
 
-function checkRateLimit(ip: string): { limited: boolean; retryAfterSec?: number } {
+function checkRateLimit(ip: string): {
+  limited: boolean;
+  retryAfterSec?: number;
+} {
   const now = Date.now();
   const entry = ipRateMap.get(ip);
   if (!entry) {
@@ -115,7 +123,9 @@ function checkRateLimit(ip: string): { limited: boolean; retryAfterSec?: number 
   ipRateMap.set(ip, entry);
 
   if (entry.count > RATE_LIMIT) {
-    const retryAfterSec = Math.ceil((WINDOW_MS - (now - entry.firstSeen)) / 1000);
+    const retryAfterSec = Math.ceil(
+      (WINDOW_MS - (now - entry.firstSeen)) / 1000,
+    );
     return { limited: true, retryAfterSec };
   }
 
@@ -130,7 +140,10 @@ export async function POST(req: NextRequest) {
   if (rl.limited) {
     console.warn(`[IPFS rate limit] Too many uploads from IP: ${ip}`);
     const retryAfter = rl.retryAfterSec ?? 60;
-    return NextResponse.json({ error: 'Too many requests' }, { status: 429, headers: { 'Retry-After': String(retryAfter) } });
+    return NextResponse.json(
+      { error: 'Too many requests' },
+      { status: 429, headers: { 'Retry-After': String(retryAfter) } },
+    );
   }
 
   // ── 1. Parse form data ──────────────────────────────────────────────────────
@@ -138,7 +151,7 @@ export async function POST(req: NextRequest) {
   try {
     form = await req.formData();
   } catch {
-    return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid form data' }, { status: 400 });
   }
 
   // Server-side sanitization: strip HTML tags from any text fields that may be present
@@ -153,32 +166,38 @@ export async function POST(req: NextRequest) {
     // If FormData.set isn't available in this environment, ignore — sanitization is best-effort here
   }
 
-  const file = form.get("file") as File | null;
+  const file = form.get('file') as File | null;
   if (!file) {
-    return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    return NextResponse.json({ error: 'No file provided' }, { status: 400 });
   }
 
   // ── 2. Size check (issue #119) ──────────────────────────────────────────────
   if (file.size > MAX_FILE_SIZE_BYTES) {
     console.warn(
-      `[IPFS upload] Rejected oversized file: size=${file.size} type=${file.type} ip=${ip}`
+      `[IPFS upload] Rejected oversized file: size=${file.size} type=${file.type} ip=${ip}`,
     );
     return NextResponse.json(
-      { error: `File exceeds the 100 MB size limit (received ${(file.size / 1024 / 1024).toFixed(1)} MB)` },
-      { status: 400 }
+      {
+        error: `File exceeds the 100 MB size limit (received ${(file.size / 1024 / 1024).toFixed(1)} MB)`,
+      },
+      { status: 400 },
     );
   }
 
   // ── 3. MIME type check (issue #119) ────────────────────────────────────────
   const mimeType = file.type.toLowerCase();
-  const mimeAllowed = ALLOWED_MIME_PREFIXES.some((prefix) => mimeType.startsWith(prefix));
+  const mimeAllowed = ALLOWED_MIME_PREFIXES.some((prefix) =>
+    mimeType.startsWith(prefix),
+  );
   if (!mimeAllowed) {
     console.warn(
-      `[IPFS upload] Rejected disallowed MIME type: type=${file.type} size=${file.size} ip=${ip}`
+      `[IPFS upload] Rejected disallowed MIME type: type=${file.type} size=${file.size} ip=${ip}`,
     );
     return NextResponse.json(
-      { error: `File type "${file.type}" is not allowed. Only image/* and video/* files are accepted.` },
-      { status: 400 }
+      {
+        error: `File type "${file.type}" is not allowed. Only image/* and video/* files are accepted.`,
+      },
+      { status: 400 },
     );
   }
 
@@ -189,33 +208,39 @@ export async function POST(req: NextRequest) {
 
   if (!hasValidMagicBytes(headerBuffer)) {
     console.warn(
-      `[IPFS upload] Rejected spoofed MIME type: type=${file.type} size=${file.size} ip=${ip} header=${bufToHex(headerBuffer)}`
+      `[IPFS upload] Rejected spoofed MIME type: type=${file.type} size=${file.size} ip=${ip} header=${bufToHex(headerBuffer)}`,
     );
     return NextResponse.json(
-      { error: "File content does not match its declared type. Upload rejected." },
-      { status: 400 }
+      {
+        error:
+          'File content does not match its declared type. Upload rejected.',
+      },
+      { status: 400 },
     );
   }
 
   // ── 5. Forward to Pinata ────────────────────────────────────────────────────
   try {
     const pinataForm = new FormData();
-    pinataForm.append("file", file);
+    pinataForm.append('file', file);
 
     const { data } = await axios.post(
-      "https://api.pinata.cloud/pinning/pinFileToIPFS",
+      'https://api.pinata.cloud/pinning/pinFileToIPFS',
       pinataForm,
       {
         headers: {
           pinata_api_key: process.env.PINATA_API_KEY!,
           pinata_secret_api_key: process.env.PINATA_SECRET!,
         },
-      }
+      },
     );
 
     return NextResponse.json({ cid: data.IpfsHash });
   } catch (err) {
     console.error(`[IPFS upload] Pinata error: ip=${ip}`, err);
-    return NextResponse.json({ error: "Failed to upload file to IPFS" }, { status: 502 });
+    return NextResponse.json(
+      { error: 'Failed to upload file to IPFS' },
+      { status: 502 },
+    );
   }
 }

@@ -1,5 +1,5 @@
-"use client";
-import { useEffect } from "react";
+'use client';
+import { useEffect } from 'react';
 
 interface ErrorPageProps {
   error: Error & { digest?: string };
@@ -11,10 +11,11 @@ function reportToSentry(error: Error) {
     if (!process.env.NEXT_PUBLIC_SENTRY_DSN) return;
     // Dynamic import via variable to avoid TS type error when @sentry/nextjs is not installed
     const pkg = '@sentry/nextjs';
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (import(/* webpackIgnore: true */ pkg) as Promise<any>)
       .then(({ captureException }) => captureException(error))
-      .catch(() => {/* Sentry unavailable — silent */});
+      .catch(() => {
+        /* Sentry unavailable — silent */
+      });
   } catch {
     // Never let reporting crash the error UI
   }
@@ -22,14 +23,14 @@ function reportToSentry(error: Error) {
 
 export default function ErrorPage({ error, reset }: ErrorPageProps) {
   useEffect(() => {
-    console.error("[ScoutOff] Unhandled error:", error);
+    console.error('[ScoutOff] Unhandled error:', error);
     reportToSentry(error);
   }, [error]);
 
-  const isDev = process.env.NODE_ENV === "development";
+  const isDev = process.env.NODE_ENV === 'development';
   // Safely extract a message — guard against malformed error objects
   const devMessage =
-    isDev && error instanceof Error && typeof error.message === "string"
+    isDev && error instanceof Error && typeof error.message === 'string'
       ? error.message
       : null;
 
@@ -40,7 +41,9 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
       className="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-4 text-center"
     >
       <div className="flex flex-col items-center gap-3 max-w-md">
-        <span className="text-4xl" aria-hidden>⚠️</span>
+        <span className="text-4xl" aria-hidden>
+          ⚠️
+        </span>
         <h1 className="text-2xl font-bold text-white">Something went wrong</h1>
         <p className="text-gray-400 text-sm leading-relaxed">
           An unexpected error occurred. Please try again, or return to the home

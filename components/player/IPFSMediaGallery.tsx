@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useState, useRef, useEffect } from "react";
-import Image from "next/image";
+import { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
 
 interface IPFSMediaGalleryProps {
   cids: string[];
@@ -40,7 +40,7 @@ function IPFSMediaItem({ cid }: IPFSMediaItemProps) {
           observerRef.current?.disconnect();
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     );
 
     if (containerRef.current) {
@@ -52,7 +52,7 @@ function IPFSMediaItem({ cid }: IPFSMediaItemProps) {
     };
   }, []);
 
-  const isVideo = cid.endsWith(".mp4") || cid.endsWith(".webm");
+  const isVideo = cid.endsWith('.mp4') || cid.endsWith('.webm');
   const mediaUrl = `${process.env.NEXT_PUBLIC_IPFS_GATEWAY}/${cid}`;
 
   if (isVideo) {
@@ -64,12 +64,15 @@ function IPFSMediaItem({ cid }: IPFSMediaItemProps) {
         <video
           ref={videoRef}
           className="w-full h-full object-cover"
-          poster={mediaUrl.replace(/\.(mp4|webm)$/, ".jpg")}
+          poster={mediaUrl.replace(/\.(mp4|webm)$/, '.jpg')}
           controls
           onClick={() => setIsPlaying(!isPlaying)}
         >
           {isVisible && isPlaying && (
-            <source src={mediaUrl} type={`video/${mediaUrl.split(".").pop()}`} />
+            <source
+              src={mediaUrl}
+              type={`video/${mediaUrl.split('.').pop()}`}
+            />
           )}
         </video>
         {!isPlaying && (
@@ -93,7 +96,10 @@ function IPFSMediaItem({ cid }: IPFSMediaItemProps) {
   }
 
   return (
-    <div ref={containerRef} className="aspect-square bg-gray-800 rounded-xl overflow-hidden relative">
+    <div
+      ref={containerRef}
+      className="aspect-square bg-gray-800 rounded-xl overflow-hidden relative"
+    >
       <Image
         src={mediaUrl}
         alt={`IPFS media ${cid}`}

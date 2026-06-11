@@ -1,9 +1,12 @@
-"use client";
+'use client';
 
-import React, { useEffect, useState, useRef } from "react";
-import api from "@/lib/api";
+import React, { useEffect, useState, useRef } from 'react';
+import api from '@/lib/api';
 
-type EventType = "player_registered" | "milestone_approved" | "trial_offer_logged";
+type EventType =
+  | 'player_registered'
+  | 'milestone_approved'
+  | 'trial_offer_logged';
 
 interface FeedEvent {
   id: string;
@@ -14,7 +17,7 @@ interface FeedEvent {
 
 function timeAgo(ms: number) {
   const secs = Math.floor((Date.now() - ms) / 1000);
-  if (secs < 5) return "just now";
+  if (secs < 5) return 'just now';
   if (secs < 60) return `${secs}s ago`;
   if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
   if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
@@ -29,17 +32,21 @@ const ICONS: Record<EventType, JSX.Element> = {
 
 function renderDescription(ev: FeedEvent) {
   switch (ev.type) {
-    case "player_registered": {
-      const name = ev.payload?.playerName || ev.payload?.playerId || "Player";
+    case 'player_registered': {
+      const name = ev.payload?.playerName || ev.payload?.playerId || 'Player';
       return <>{name} registered</>;
     }
-    case "milestone_approved": {
-      const who = ev.payload?.scoutName || ev.payload?.scoutId || "A scout";
-      const milestone = ev.payload?.milestone || "milestone";
-      return <>{who} approved {milestone}</>;
+    case 'milestone_approved': {
+      const who = ev.payload?.scoutName || ev.payload?.scoutId || 'A scout';
+      const milestone = ev.payload?.milestone || 'milestone';
+      return (
+        <>
+          {who} approved {milestone}
+        </>
+      );
     }
-    case "trial_offer_logged": {
-      const player = ev.payload?.playerName || ev.payload?.playerId || "Player";
+    case 'trial_offer_logged': {
+      const player = ev.payload?.playerName || ev.payload?.playerId || 'Player';
       return <>{player} received a trial offer</>;
     }
     default:
@@ -56,13 +63,13 @@ export default function ActivityFeed() {
     setLoading(true);
     try {
       // backend should expose an events endpoint returning recent events
-      const resp = await api.get("/events?limit=20");
+      const resp = await api.get('/events?limit=20');
       const data = Array.isArray(resp.data) ? resp.data : [];
       setEvents(data.slice(0, 20));
     } catch (err) {
       // fail quietly and show no events
       // eslint-disable-next-line no-console
-      console.error("Failed to fetch events", err);
+      console.error('Failed to fetch events', err);
       setEvents([]);
     } finally {
       setLoading(false);
@@ -104,17 +111,22 @@ export default function ActivityFeed() {
         <ul className="flex flex-col divide-y divide-gray-800">
           {events.map((ev) => {
             // Accept createdAt as seconds or ISO string
-            const ts = typeof ev.createdAt === "number"
-              ? ev.createdAt * 1000
-              : new Date(ev.createdAt).getTime();
+            const ts =
+              typeof ev.createdAt === 'number'
+                ? ev.createdAt * 1000
+                : new Date(ev.createdAt).getTime();
             return (
               <li key={ev.id} className="py-3 flex items-start gap-3">
                 <div className="shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-gray-900 text-white text-sm">
-                  {ICONS[ev.type] ?? "ℹ️"}
+                  {ICONS[ev.type] ?? 'ℹ️'}
                 </div>
                 <div className="flex-1">
-                  <div className="text-sm text-gray-200">{renderDescription(ev)}</div>
-                  <div className="text-xs text-gray-500 mt-0.5">{timeAgo(ts)}</div>
+                  <div className="text-sm text-gray-200">
+                    {renderDescription(ev)}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    {timeAgo(ts)}
+                  </div>
                 </div>
               </li>
             );

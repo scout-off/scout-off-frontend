@@ -92,7 +92,7 @@ describe('PlayerCard', () => {
     expect(viewProfileLink).toHaveAttribute('href', `/player/${mockPlayer.id}`);
   });
 
-  it("navigates to the player profile when Space is pressed", () => {
+  it('navigates to the player profile when Space is pressed', () => {
     render(<PlayerCard player={mockPlayer} />);
 
     const viewProfileLink = screen.getByRole('link', { name: /view profile/i });
@@ -109,7 +109,7 @@ describe('PlayerCard', () => {
       'src',
       `${process.env.NEXT_PUBLIC_IPFS_GATEWAY}/${mockPlayer.ipfsHash}`,
     );
-    expect(image).toHaveAttribute("alt", mockPlayer.vitals.name);
+    expect(image).toHaveAttribute('alt', mockPlayer.vitals.name);
   });
 
   it('shows a placeholder when no IPFS image CID is set', () => {

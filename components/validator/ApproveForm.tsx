@@ -16,6 +16,7 @@ interface ApproveFormProps {
 export default function ApproveForm({ onSuccess }: ApproveFormProps) {
   const { publicKey, signAndSubmit } = useWallet();
   const { isValidator, checking, approveMilestone } = useValidator(publicKey);
+  const isPaused = useIsPaused();
   const [playerId, setPlayerId] = useState('');
   const [description, setDescription] = useState('');
   const [evidenceUrl, setEvidenceUrl] = useState('');
@@ -66,7 +67,7 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
     if (!publicKey || !isValidator) return;
     if (evidenceUrl && !validateUrl(evidenceUrl)) return;
 
-    if (useIsPaused()) {
+    if (isPaused) {
       setSubmitError('Transactions are currently disabled');
       return;
     }

@@ -1,33 +1,33 @@
-"use client";
-import React from "react";
-import { renderHook, act } from "@testing-library/react";
-import { useSubscription } from "@/hooks/useSubscription";
+'use client';
+import React from 'react';
+import { renderHook, act } from '@testing-library/react';
+import { useSubscription } from '@/hooks/useSubscription';
 
 // Mock useWallet
-jest.mock("@/hooks/useWallet", () => ({
+jest.mock('@/hooks/useWallet', () => ({
   useWallet: jest.fn(),
 }));
 
 // Mock lib/contract
-jest.mock("@/lib/contract", () => ({
+jest.mock('@/lib/contract', () => ({
   getSubscription: jest.fn(),
   buildSubscribe: jest.fn(),
 }));
 
-import { useWallet } from "@/hooks/useWallet";
-import { getSubscription, buildSubscribe } from "@/lib/contract";
+import { useWallet } from '@/hooks/useWallet';
+import { getSubscription, buildSubscribe } from '@/lib/contract';
 
 const mockUseWallet = useWallet as jest.Mock;
 const mockGetSubscription = getSubscription as jest.Mock;
 const mockBuildSubscribe = buildSubscribe as jest.Mock;
 
-describe("useSubscription", () => {
+describe('useSubscription', () => {
   beforeEach(() => {
     jest.resetAllMocks();
   });
 
-  test("isExpired is true when expiresAt is in the past", async () => {
-    const mockPublicKey = "GABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+  test('isExpired is true when expiresAt is in the past', async () => {
+    const mockPublicKey = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890';
     const mockSignAndSubmit = jest.fn();
     mockUseWallet.mockReturnValue({
       publicKey: mockPublicKey,
@@ -50,8 +50,8 @@ describe("useSubscription", () => {
     expect(result.current.isExpired).toBe(true);
   });
 
-  test("isExpired is false when expiresAt is in the future", async () => {
-    const mockPublicKey = "GABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+  test('isExpired is false when expiresAt is in the future', async () => {
+    const mockPublicKey = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890';
     const mockSignAndSubmit = jest.fn();
     mockUseWallet.mockReturnValue({
       publicKey: mockPublicKey,
@@ -74,15 +74,15 @@ describe("useSubscription", () => {
     expect(result.current.isExpired).toBe(false);
   });
 
-  test("subscribe(tier) calls buildSubscribe, signAndSubmit, and fetchSubscription", async () => {
-    const mockPublicKey = "GABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+  test('subscribe(tier) calls buildSubscribe, signAndSubmit, and fetchSubscription', async () => {
+    const mockPublicKey = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890';
     const mockSignAndSubmit = jest.fn();
     mockUseWallet.mockReturnValue({
       publicKey: mockPublicKey,
       signAndSubmit: mockSignAndSubmit,
     });
 
-    const mockXdr = "AAAAA...";
+    const mockXdr = 'AAAAA...';
     const mockSubscription = {
       scout: mockPublicKey,
       tier: 'pro',
@@ -106,15 +106,17 @@ describe("useSubscription", () => {
     expect(mockGetSubscription).toHaveBeenCalledTimes(2);
   });
 
-  test("InsufficientFee error is surfaced in the error state", async () => {
-    const mockPublicKey = "GABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
-    const mockSignAndSubmit = jest.fn().mockRejectedValue(new Error("InsufficientFee"));
+  test('InsufficientFee error is surfaced in the error state', async () => {
+    const mockPublicKey = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890';
+    const mockSignAndSubmit = jest
+      .fn()
+      .mockRejectedValue(new Error('InsufficientFee'));
     mockUseWallet.mockReturnValue({
       publicKey: mockPublicKey,
       signAndSubmit: mockSignAndSubmit,
     });
 
-    mockBuildSubscribe.mockResolvedValue("AAAAA...");
+    mockBuildSubscribe.mockResolvedValue('AAAAA...');
     mockGetSubscription.mockResolvedValue(null);
 
     const { result } = renderHook(() => useSubscription());
@@ -126,9 +128,9 @@ describe("useSubscription", () => {
     await expect(
       act(async () => {
         await result.current.subscribe('basic');
-      })
-    ).rejects.toThrow("InsufficientFee");
+      }),
+    ).rejects.toThrow('InsufficientFee');
 
-    expect(result.current.error).toBe("InsufficientFee");
+    expect(result.current.error).toBe('InsufficientFee');
   });
 });

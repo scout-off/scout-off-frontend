@@ -1,29 +1,29 @@
-"use client";
-import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
-import { useTranslations } from "next-intl";
-import { useState } from "react";
-import WalletButton from "./WalletButton";
-import { useContractHealth } from "@/hooks/useContractHealth";
+'use client';
+import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { useState } from 'react';
+import WalletButton from './WalletButton';
+import { useContractHealth } from '@/hooks/useContractHealth';
 
 const NAV_LINKS = [
-  { href: "/scout", labelKey: "nav.scout_dashboard" },
-  { href: "/player", labelKey: "nav.player_dashboard" },
+  { href: '/scout', labelKey: 'nav.scout_dashboard' },
+  { href: '/player', labelKey: 'nav.player_dashboard' },
 ];
 
 export default function Navbar() {
   const { paused } = useContractHealth();
   const t = useTranslations();
   const router = useRouter();
-  const pathname = usePathname() ?? "/";
+  const pathname = usePathname() ?? '/';
   const [localeOpen, setLocaleOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const currentLocale = pathname.split("/")[1] || "en";
+  const currentLocale = pathname.split('/')[1] || 'en';
   const locales = [
-    { code: "en", label: t("language.english") },
-    { code: "fr", label: t("language.french") },
-    { code: "sw", label: t("language.swahili") },
+    { code: 'en', label: t('language.english') },
+    { code: 'fr', label: t('language.french') },
+    { code: 'sw', label: t('language.swahili') },
   ];
 
   const handleLanguageChange = (locale: string) => {
@@ -41,7 +41,7 @@ export default function Navbar() {
     <>
       {paused && (
         <div className="bg-yellow-500 text-black text-center text-sm font-medium py-2 px-4">
-          {t("nav.maintenance_warning")}
+          {t('nav.maintenance_warning')}
         </div>
       )}
       <nav
@@ -53,7 +53,7 @@ export default function Navbar() {
             href={`/${currentLocale}`}
             className="text-brand-green font-bold text-xl tracking-tight"
           >
-            {t("app_title")}
+            {t('app_title')}
           </Link>
 
           <div className="hidden sm:flex items-center gap-6 text-sm text-gray-300">
@@ -74,7 +74,7 @@ export default function Navbar() {
                 type="button"
               >
                 {locales.find((l) => l.code === currentLocale)?.label ||
-                  t("language.select_language")}
+                  t('language.select_language')}
                 <span className="text-xs">▼</span>
               </button>
               {localeOpen && (
@@ -86,8 +86,8 @@ export default function Navbar() {
                       onClick={() => handleLanguageChange(locale.code)}
                       className={`w-full text-left px-4 py-2 text-sm hover:bg-brand-green hover:text-black transition ${
                         currentLocale === locale.code
-                          ? "bg-brand-green/20 text-brand-green"
-                          : ""
+                          ? 'bg-brand-green/20 text-brand-green'
+                          : ''
                       }`}
                     >
                       {locale.label}
@@ -105,7 +105,9 @@ export default function Navbar() {
             className="sm:hidden p-2 rounded text-gray-300 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green"
             aria-expanded={menuOpen}
             aria-controls="mobile-menu"
-            aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-label={
+              menuOpen ? 'Close navigation menu' : 'Open navigation menu'
+            }
             onClick={() => setMenuOpen((prev) => !prev)}
           >
             <svg
@@ -144,7 +146,9 @@ export default function Navbar() {
               <Link
                 key={href}
                 href={`/${currentLocale}${href}`}
-                aria-current={pathname === `/${currentLocale}${href}` ? "page" : undefined}
+                aria-current={
+                  pathname === `/${currentLocale}${href}` ? 'page' : undefined
+                }
                 className="hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green rounded py-1"
                 onClick={() => setMenuOpen(false)}
               >
@@ -159,8 +163,8 @@ export default function Navbar() {
                   onClick={() => handleLanguageChange(locale.code)}
                   className={`w-full text-left px-4 py-2 text-sm hover:bg-brand-green hover:text-black transition ${
                     currentLocale === locale.code
-                      ? "bg-brand-green/20 text-brand-green"
-                      : ""
+                      ? 'bg-brand-green/20 text-brand-green'
+                      : ''
                   }`}
                 >
                   {locale.label}

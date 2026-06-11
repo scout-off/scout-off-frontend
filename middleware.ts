@@ -28,7 +28,7 @@ export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   const pathnameHasLocale = locales.some(
-    (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
+    (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`,
   );
 
   if (pathnameHasLocale) {
@@ -37,7 +37,7 @@ export function middleware(request: NextRequest) {
 
   const locale = getLocale(request);
   const response = NextResponse.redirect(
-    new URL(`/${locale}${pathname}`, request.url)
+    new URL(`/${locale}${pathname}`, request.url),
   );
 
   response.cookies.set('NEXT_LOCALE', locale);
@@ -45,7 +45,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|icons).*)',
-  ],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|icons).*)'],
 };

@@ -33,6 +33,7 @@ export default function PlayerProfileForm({
   onSuccess,
 }: PlayerProfileFormProps) {
   const { publicKey, signAndSubmit } = useWallet();
+  const isPaused = useIsPaused();
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [txStatus, setTxStatus] = useState<TxStatus | null>(null);
@@ -98,7 +99,7 @@ export default function PlayerProfileForm({
       return;
     }
 
-    if (useIsPaused()) {
+    if (isPaused) {
       setErrors({ form: 'Transactions are currently disabled' });
       return;
     }

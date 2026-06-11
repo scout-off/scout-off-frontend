@@ -7,7 +7,6 @@ export function sanitize(input: string): string {
   // { ALLOWED_TAGS: [] } to remove all tags.
   if (typeof window !== 'undefined') {
     // Use require at runtime so server-side bundling doesn't attempt to call DOM APIs.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const createDOMPurify = require('dompurify');
     const DOMPurify = createDOMPurify(window);
     return DOMPurify.sanitize(input, { ALLOWED_TAGS: [] });

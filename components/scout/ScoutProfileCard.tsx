@@ -1,20 +1,23 @@
-"use client";
-import { memo, useState, useEffect, useCallback } from "react";
-import Link from "next/link";
-import type { Scout } from "@/types";
-import { fetchScoutStats, type ScoutStats } from "@/lib/api";
+'use client';
+import { memo, useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import type { Scout } from '@/types';
+import { fetchScoutStats, type ScoutStats } from '@/lib/api';
 
 const TIER_STYLES: Record<string, string> = {
-  basic: "bg-gray-700 text-gray-200",
-  pro:   "bg-blue-900 text-blue-300",
-  elite: "bg-yellow-900 text-yellow-300",
+  basic: 'bg-gray-700 text-gray-200',
+  pro: 'bg-blue-900 text-blue-300',
+  elite: 'bg-yellow-900 text-yellow-300',
 };
 
 function truncateWallet(wallet: string) {
   return `${wallet.slice(0, 6)}…${wallet.slice(-4)}`;
 }
 
-function subscriptionStatus(tier: string | undefined, expiry: number | undefined) {
+function subscriptionStatus(
+  tier: string | undefined,
+  expiry: number | undefined,
+) {
   if (!tier || !expiry) return null;
   const now = Math.floor(Date.now() / 1000);
   if (expiry <= now) return null;
@@ -23,7 +26,9 @@ function subscriptionStatus(tier: string | undefined, expiry: number | undefined
 
 function formatDate(unix: number) {
   return new Date(unix * 1000).toLocaleDateString(undefined, {
-    year: "numeric", month: "short", day: "numeric",
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
   });
 }
 
@@ -33,17 +38,28 @@ function ScoutProfileCard({ scout }: { scout: Scout }) {
   const [statsError, setStatsError] = useState(false);
   const [statsLoading, setStatsLoading] = useState(true);
 
-  const sub = subscriptionStatus(scout.subscriptionTier, scout.subscriptionExpiry);
+  const sub = subscriptionStatus(
+    scout.subscriptionTier,
+    scout.subscriptionExpiry,
+  );
 
   useEffect(() => {
     let cancelled = false;
     setStatsLoading(true);
     setStatsError(false);
     fetchScoutStats(scout.id)
-      .then((data) => { if (!cancelled) setStats(data); })
-      .catch(() => { if (!cancelled) setStatsError(true); })
-      .finally(() => { if (!cancelled) setStatsLoading(false); });
-    return () => { cancelled = true; };
+      .then((data) => {
+        if (!cancelled) setStats(data);
+      })
+      .catch(() => {
+        if (!cancelled) setStatsError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setStatsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [scout.id]);
 
   const copyWallet = useCallback(async () => {
@@ -66,7 +82,9 @@ function ScoutProfileCard({ scout }: { scout: Scout }) {
         <div className="min-w-0">
           <h3 className="font-semibold text-white truncate">{scout.name}</h3>
           {scout.organisation && (
-            <p className="text-sm text-gray-400 truncate">{scout.organisation}</p>
+            <p className="text-sm text-gray-400 truncate">
+              {scout.organisation}
+            </p>
           )}
         </div>
         {sub ? (
@@ -84,7 +102,10 @@ function ScoutProfileCard({ scout }: { scout: Scout }) {
 
       {/* Wallet */}
       <div className="flex items-center gap-2">
-        <span className="font-mono text-sm text-gray-400 select-all" title={scout.wallet}>
+        <span
+          className="font-mono text-sm text-gray-400 select-all"
+          title={scout.wallet}
+        >
           {truncateWallet(scout.wallet)}
         </span>
         <button
@@ -92,32 +113,37 @@ function ScoutProfileCard({ scout }: { scout: Scout }) {
           aria-label="Copy wallet address"
           className="text-xs text-brand-green hover:opacity-75 transition shrink-0"
         >
-          {copied ? "Copied!" : "Copy"}
+          {copied ? 'Copied!' : 'Copy'}
         </button>
       </div>
 
       {/* Subscription expiry */}
       {sub ? (
         <p className="text-xs text-gray-500">
-          Expires <span className="text-gray-300">{formatDate(sub.expiry)}</span>
+          Expires{' '}
+          <span className="text-gray-300">{formatDate(sub.expiry)}</span>
         </p>
       ) : (
-        <p className="text-xs text-gray-500">Subscription inactive or expired</p>
+        <p className="text-xs text-gray-500">
+          Subscription inactive or expired
+        </p>
       )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3">
-        {(["contactedCount", "trialOffersCount"] as const).map((key) => (
+        {(['contactedCount', 'trialOffersCount'] as const).map((key) => (
           <div key={key} className="bg-gray-900 rounded-lg p-3 text-center">
             {statsLoading ? (
               <div className="h-6 w-10 mx-auto bg-gray-700 rounded animate-pulse" />
             ) : statsError ? (
               <span className="text-gray-600 text-sm">—</span>
             ) : (
-              <span className="text-xl font-bold text-white">{stats?.[key] ?? 0}</span>
+              <span className="text-xl font-bold text-white">
+                {stats?.[key] ?? 0}
+              </span>
             )}
             <p className="text-xs text-gray-500 mt-0.5">
-              {key === "contactedCount" ? "Players Contacted" : "Trial Offers"}
+              {key === 'contactedCount' ? 'Players Contacted' : 'Trial Offers'}
             </p>
           </div>
         ))}
@@ -134,8 +160,10 @@ function ScoutProfileCard({ scout }: { scout: Scout }) {
   );
 }
 
-export default memo(ScoutProfileCard, (prev, next) =>
-  prev.scout.id === next.scout.id &&
-  prev.scout.subscriptionTier === next.scout.subscriptionTier &&
-  prev.scout.subscriptionExpiry === next.scout.subscriptionExpiry
+export default memo(
+  ScoutProfileCard,
+  (prev, next) =>
+    prev.scout.id === next.scout.id &&
+    prev.scout.subscriptionTier === next.scout.subscriptionTier &&
+    prev.scout.subscriptionExpiry === next.scout.subscriptionExpiry,
 );

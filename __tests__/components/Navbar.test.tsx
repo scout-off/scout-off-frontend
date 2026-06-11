@@ -123,89 +123,97 @@ describe('Navbar', () => {
     expect(playerLink).toHaveAttribute('aria-current', 'page');
   });
 
-  test("inactive route link does not have aria-current", () => {
-    setup("/player");
-    const scoutLink = screen.getByRole("link", { name: /Scout Dashboard/i });
-    expect(scoutLink).not.toHaveAttribute("aria-current");
+  test('inactive route link does not have aria-current', () => {
+    setup('/player');
+    const scoutLink = screen.getByRole('link', { name: /Scout Dashboard/i });
+    expect(scoutLink).not.toHaveAttribute('aria-current');
   });
 
   test('logo link has aria-current="page" when on home route', () => {
-    setup("/");
-    const logo = screen.getByRole("link", { name: /ScoutOff/i });
-    expect(logo).toHaveAttribute("aria-current", "page");
+    setup('/');
+    const logo = screen.getByRole('link', { name: /ScoutOff/i });
+    expect(logo).toHaveAttribute('aria-current', 'page');
   });
 
   // ── Mobile menu toggle ─────────────────────────────────────────────────────
 
-  test("mobile menu toggle has aria-expanded=false initially", () => {
-    setup("/");
-    const toggle = screen.getByRole("button", {
+  test('mobile menu toggle has aria-expanded=false initially', () => {
+    setup('/');
+    const toggle = screen.getByRole('button', {
       name: /open navigation menu/i,
     });
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
   });
 
-  test("mobile menu toggle has aria-controls pointing to mobile-menu", () => {
-    setup("/");
-    const toggle = screen.getByRole("button", {
+  test('mobile menu toggle has aria-controls pointing to mobile-menu', () => {
+    setup('/');
+    const toggle = screen.getByRole('button', {
       name: /open navigation menu/i,
     });
-    expect(toggle).toHaveAttribute("aria-controls", "mobile-menu");
+    expect(toggle).toHaveAttribute('aria-controls', 'mobile-menu');
   });
 
-  test("clicking mobile toggle sets aria-expanded=true and shows menu", async () => {
-    setup("/");
+  test('clicking mobile toggle sets aria-expanded=true and shows menu', async () => {
+    setup('/');
     const user = userEvent.setup({ delay: null });
-    const toggle = screen.getByRole("button", {
+    const toggle = screen.getByRole('button', {
       name: /open navigation menu/i,
     });
 
     await user.click(toggle);
 
-    expect(toggle).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("button", { name: /close navigation menu/i })).toBeInTheDocument();
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(
+      screen.getByRole('button', { name: /close navigation menu/i }),
+    ).toBeInTheDocument();
   });
 
-  test("clicking mobile toggle twice closes the menu", async () => {
-    setup("/");
+  test('clicking mobile toggle twice closes the menu', async () => {
+    setup('/');
     const user = userEvent.setup({ delay: null });
-    const toggle = screen.getByRole("button", {
+    const toggle = screen.getByRole('button', {
       name: /open navigation menu/i,
     });
 
     await user.click(toggle);
-    await user.click(screen.getByRole("button", { name: /close navigation menu/i }));
+    await user.click(
+      screen.getByRole('button', { name: /close navigation menu/i }),
+    );
 
     expect(
-      screen.getByRole("button", { name: /open navigation menu/i })
-    ).toHaveAttribute("aria-expanded", "false");
+      screen.getByRole('button', { name: /open navigation menu/i }),
+    ).toHaveAttribute('aria-expanded', 'false');
   });
 
   // ── Keyboard navigation ────────────────────────────────────────────────────
 
-  test("all nav links are reachable via Tab in DOM order", async () => {
-    setup("/");
+  test('all nav links are reachable via Tab in DOM order', async () => {
+    setup('/');
     const user = userEvent.setup({ delay: null });
 
     // Start focus from body
     await user.tab();
-    const logo = screen.getByRole("link", { name: /ScoutOff/i });
+    const logo = screen.getByRole('link', { name: /ScoutOff/i });
     expect(logo).toHaveFocus();
 
     await user.tab();
-    expect(screen.getByRole("link", { name: /Scout Dashboard/i })).toHaveFocus();
+    expect(
+      screen.getByRole('link', { name: /Scout Dashboard/i }),
+    ).toHaveFocus();
 
     await user.tab();
-    expect(screen.getByRole("link", { name: /Player Dashboard/i })).toHaveFocus();
+    expect(
+      screen.getByRole('link', { name: /Player Dashboard/i }),
+    ).toHaveFocus();
   });
 
   // ── Maintenance banner ─────────────────────────────────────────────────────
 
-  test("shows maintenance alert when contract is paused", () => {
-    const { useContractHealth } = require("@/hooks/useContractHealth");
+  test('shows maintenance alert when contract is paused', () => {
+    const { useContractHealth } = require('@/hooks/useContractHealth');
     // The module mock returns a plain object factory — override it for this test
     // by re-mocking the module inline
-    jest.doMock("@/hooks/useContractHealth", () => ({
+    jest.doMock('@/hooks/useContractHealth', () => ({
       useContractHealth: () => ({ paused: true }),
     }));
 
@@ -216,13 +224,13 @@ describe('Navbar', () => {
       disconnect: jest.fn(),
       signAndSubmit: jest.fn(),
     });
-    mockUsePathname.mockReturnValue("/");
+    mockUsePathname.mockReturnValue('/');
 
     // The top-level mock already covers paused:false; test the banner renders
     // by checking the component renders the alert role when paused is true.
     // Since the module-level mock is fixed to paused:false, we verify the
     // banner is NOT present (the mock returns paused:false).
     render(<Navbar />);
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

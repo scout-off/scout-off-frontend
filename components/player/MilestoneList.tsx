@@ -9,7 +9,12 @@ import { useToast } from '@/components/ui/Toast';
 // Maps a milestone's position in verified-history to the level badge variant.
 // Milestones approved by validators are at least level 2.
 const LEVEL_VARIANT = ['level0', 'level1', 'level2', 'level3'] as const;
-const LEVEL_LABELS = ['Unverified', 'Verified', 'Performance', 'Elite'] as const;
+const LEVEL_LABELS = [
+  'Unverified',
+  'Verified',
+  'Performance',
+  'Elite',
+] as const;
 
 function truncateAddress(addr: string): string {
   return `${addr.slice(0, 8)}…${addr.slice(-4)}`;
