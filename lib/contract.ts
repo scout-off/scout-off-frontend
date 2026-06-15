@@ -17,6 +17,16 @@ import type {
 const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID!;
 const contract = new Contract(CONTRACT_ID);
 
+/** Lazily import Sentry so it is never loaded in test/development environments. */
+async function captureContractError(error: unknown, context: Record<string, unknown>) {
+  if (process.env.NODE_ENV === "test" || process.env.NODE_ENV === "development") return;
+  const Sentry = await import("@sentry/nextjs");
+  Sentry.withScope((scope) => {
+    scope.setContext("contract", context);
+    Sentry.captureException(error);
+  });
+}
+
 // ── Write helper (requires a real funded account) ─────────────────────────────
 async function buildTx(
   method: string,

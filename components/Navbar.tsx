@@ -11,6 +11,11 @@ const NAV_LINKS = [
   { href: '/player', labelKey: 'nav.player_dashboard' },
 ];
 
+const LOCALES = [
+  { code: "en", label: "EN" },
+  { code: "fr", label: "FR" },
+];
+
 export default function Navbar() {
   const { paused } = useContractHealth();
   const t = useTranslations();
