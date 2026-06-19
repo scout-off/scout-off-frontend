@@ -1,24 +1,17 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
+import { usePlayer } from '@/hooks/usePlayer';
 import ProgressBar from '@/components/ProgressBar';
-import { getPlayer } from '@/lib/contract';
+import PlayerProfileSkeleton from '@/components/PlayerProfileSkeleton';
 import { buildPayToContact } from '@/lib/contract';
-import type { Player } from '@/types';
 
 export default function PlayerProfile() {
   const { id } = useParams<{ id: string }>();
   const { publicKey, signAndSubmit } = useWallet();
-  const [player, setPlayer] = useState<Player | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { player, loading } = usePlayer(id ?? null);
   const [contacting, setContacting] = useState(false);
-
-  useEffect(() => {
-    getPlayer(id)
-      .then(setPlayer)
-      .finally(() => setLoading(false));
-  }, [id]);
 
   async function handleContact() {
     if (!publicKey) return;
@@ -31,8 +24,9 @@ export default function PlayerProfile() {
     }
   }
 
-  if (loading)
-    return <p className="text-center text-gray-400 mt-20">Loading…</p>;
+  if (loading) {
+    return <PlayerProfileSkeleton showContactButton={!!publicKey} />;
+  }
   if (!player)
     return <p className="text-center text-gray-400 mt-20">Player not found.</p>;
 
