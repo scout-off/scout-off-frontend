@@ -34,12 +34,19 @@ export default function PlayerVitalsCard({
   progressLevel,
 }: PlayerVitalsCardProps) {
   return (
-    <div className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
-      <h2 className="text-xl font-semibold text-white">{vitals.name}</h2>
+    <section aria-labelledby="vitals-heading">
+      <div className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
+        <h2
+          id="vitals-heading"
+          className="text-xl font-semibold text-white"
+        >
+          {vitals.name}
+        </h2>
       <p className="text-gray-400 text-sm">
         {vitals.position} · {vitals.region}
       </p>
-      <ProgressBar level={progressLevel} />
-    </div>
+        <ProgressBar level={progressLevel} />
+      </div>
+    </section>
   );
 }

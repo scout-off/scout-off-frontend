@@ -100,4 +100,24 @@ describe('PlayerVitalsCard', () => {
     expect(container.querySelector('p script')).toBeNull();
     expect(container.querySelector('p iframe')).toBeNull();
   });
+
+  it('exposes the section as a navigable region via aria-labelledby + heading id', () => {
+    render(<PlayerVitalsCard vitals={makeVitals()} progressLevel={2} />);
+
+    // The h2 carries the id referenced by the section's aria-labelledby.
+    const heading = screen.getByRole('heading', {
+      name: 'Ada Lovelace',
+      level: 2,
+    });
+    expect(heading).toHaveAttribute('id', 'vitals-heading');
+
+    // The section's accessible name comes from the label-referenced
+    // heading text — the player's vitals.name — so
+    // `getByRole('region', { name: ... })` resolves it. This also fails
+    // loudly when the id ⇔ aria-labelledby link is broken, catching any
+    // future regression that drops one side of the pairing.
+    expect(
+      screen.getByRole('region', { name: 'Ada Lovelace' }),
+    ).toBeInTheDocument();
+  });
 });
