@@ -21,3 +21,9 @@ jobs:
       - run: npm run lint
       - run: npm run test
       - run: node scripts/validate-env.js
+      # Audit-sweep guard: blocks the PR if any source file in the merge
+      # contains a literal six-character `\uXXXX` escape sequence \u2014 the
+      # dead hand-off artefact from the write_file JSON-escape bug.
+      # Defense in depth alongside the husky pre-commit hook; catches
+      # any change that landed through a path that bypassed lint-staged.
+      - run: npm run check:unicode

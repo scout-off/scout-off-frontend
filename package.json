@@ -12,7 +12,8 @@
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md,mdx}\"",
     "prepare": "node -e \"if (process.env.CI !== 'true') { require('child_process').execSync('husky install', {stdio: 'inherit'}) }\"",
     "postbuild": "next-sitemap",
-    "generate:icons": "node scripts/generate-icons.js"
+    "generate:icons": "node scripts/generate-icons.js",
+    "check:unicode": "node scripts/check-unicode.mjs"
   },
   "dependencies": {
     "@albedo-link/intent": "^0.13.0",
@@ -55,10 +56,12 @@
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
       "eslint --fix",
-      "prettier --write"
+      "prettier --write",
+      "node scripts/check-unicode.mjs"
     ],
     "*.{json,css,md,mdx}": [
-      "prettier --write"
+      "prettier --write",
+      "node scripts/check-unicode.mjs"
     ]
   }
 }

@@ -1,4 +1,10 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import '@testing-library/jest-dom';
 import PlayerProfileForm from '@/components/player/PlayerProfileForm';
 import { AFRICAN_REGIONS } from '@/lib/regions';
@@ -211,9 +217,7 @@ describe('PlayerProfileForm — nationality field (Issue #301)', () => {
       fireEvent.click(screen.getByRole('button', { name: SUBMIT_REGEX }));
     });
 
-    await waitFor(() =>
-      expect(mockedBuildRegisterPlayer).toHaveBeenCalled(),
-    );
+    await waitFor(() => expect(mockedBuildRegisterPlayer).toHaveBeenCalled());
     const [, vitals] = mockedBuildRegisterPlayer.mock.calls[0];
     expect(vitals.nationality).toBe('Kenyan');
     expect(vitals.nationality).not.toBe('');
@@ -247,12 +251,10 @@ describe('PlayerProfileForm — post-submit inclusion hardening', () => {
       3,
     );
     // On the success path the submit button must stay locked (label still
-    // "Confirming on Stellar\u2026") so the user cannot accidentally
+    // "Confirming on Stellar…") so the user cannot accidentally
     // double-pay during the gap between onSuccess and the parent page's
     // SWR refetch unmounting the form.
-    expect(
-      screen.getByRole('button', { name: /confirming/i }),
-    ).toBeDisabled();
+    expect(screen.getByRole('button', { name: /confirming/i })).toBeDisabled();
   });
 
   it('surfaces a form error and does not call onSuccess when the ledger reports FAILED', async () => {
@@ -270,9 +272,7 @@ describe('PlayerProfileForm — post-submit inclusion hardening', () => {
     await waitFor(() => expect(onSuccess).not.toHaveBeenCalled());
     // The error text comes from the FAILED check inside waitForInclusion; the
     // user must see this so they understand why the form bounced back.
-    expect(
-      await screen.findByText(/FAILED on-ledger/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/FAILED on-ledger/i)).toBeInTheDocument();
     expect(mockedRpc.getTransaction).toHaveBeenCalledWith('tx-hash');
   });
 
@@ -303,9 +303,7 @@ describe('PlayerProfileForm — post-submit inclusion hardening', () => {
       expect(mockedRpc.getTransaction).toHaveBeenCalledWith('tx-hash'),
     );
     expect(onSuccess).not.toHaveBeenCalled();
-    expect(
-      screen.getByRole('button', { name: SUBMIT_REGEX }),
-    ).toBeDisabled();
+    expect(screen.getByRole('button', { name: SUBMIT_REGEX })).toBeDisabled();
 
     // Unblock the dangling promise so Jest exits cleanly even if the test
     // file's lifecycle ends before the AbortController fires.
@@ -328,9 +326,7 @@ describe('PlayerProfileForm — post-submit inclusion hardening', () => {
     });
 
     // Confirm we're in the confirming phase (busy button).
-    expect(
-      screen.getByRole('button', { name: SUBMIT_REGEX }),
-    ).toBeDisabled();
+    expect(screen.getByRole('button', { name: SUBMIT_REGEX })).toBeDisabled();
 
     // Unmount. The useEffect cleanup should abort the AbortController and the
     // waitForInclusion promise should reject with AbortError. The component
