@@ -1,20 +1,16 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import type { Milestone, ProgressLevel } from '@/types';
 import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
 import Tooltip from '@/components/ui/Tooltip';
 import { useToast } from '@/components/ui/Toast';
 
-// Maps a milestone's position in verified-history to the level badge variant.
-// Milestones approved by validators are at least level 2.
+// Map a milestone's level to the corresponding Badge variant. The label
+// resolved through useTranslations — see player_dashboard.milestones_level_*
+// in messages/en.json (and fr/sw siblings).
 const LEVEL_VARIANT = ['level0', 'level1', 'level2', 'level3'] as const;
-const LEVEL_LABELS = [
-  'Unverified',
-  'Verified',
-  'Performance',
-  'Elite',
-] as const;
 
 function truncateAddress(addr: string): string {
   return `${addr.slice(0, 8)}…${addr.slice(-4)}`;
@@ -44,7 +40,7 @@ function formatRelative(ts: number): string {
 
 interface MilestoneListProps {
   milestones: Milestone[];
-  /** Override the level badge based on milestone index (defaults to level2). */
+  /** Override the level badge applied to every milestone (defaults to 2). */
   level?: ProgressLevel;
 }
 
@@ -53,12 +49,13 @@ export default function MilestoneList({
   level = 2,
 }: MilestoneListProps) {
   const { show } = useToast();
+  const t = useTranslations('player_dashboard');
 
   if (milestones.length === 0) {
     return (
       <EmptyState
-        title="No milestones yet"
-        description="Verified milestones from approved validators will appear here."
+        title={t('milestones_empty_title')}
+        description={t('milestones_empty_description')}
       />
     );
   }
@@ -68,14 +65,16 @@ export default function MilestoneList({
   async function copyAddress(addr: string) {
     try {
       await navigator.clipboard.writeText(addr);
-      show({ message: 'Copied', variant: 'success' });
+      show({ message: t('milestones_copied'), variant: 'success' });
     } catch {
-      show({ message: 'Copy failed', variant: 'error' });
+      show({ message: t('milestones_copy_failed'), variant: 'error' });
     }
   }
 
   const badgeVariant = LEVEL_VARIANT[level];
-  const badgeLabel = LEVEL_LABELS[level];
+  const badgeLabel = t(
+    `milestones_level_${level}` as 'milestones_level_0' | 'milestones_level_1' | 'milestones_level_2' | 'milestones_level_3',
+  );
 
   return (
     <ul className="flex flex-col gap-3" aria-label="Milestone history">

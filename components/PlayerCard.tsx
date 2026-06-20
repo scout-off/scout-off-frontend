@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import type { Player, ProgressLevel } from '@/types';
 import { PROGRESS_LABELS } from '@/types';
-import ProgressBar from './ProgressBar';
+import PlayerVitalsCard from '@/components/player/PlayerVitalsCard';
 import Badge from '@/components/ui/Badge';
 
 const LEVEL_VARIANT: Record<
@@ -64,22 +64,28 @@ function PlayerCard({ player }: { player: Player }) {
         )}
       </div>
 
-      <div>
-        <h3 className="font-semibold text-white">{vitals.name}</h3>
-        <p className="text-sm text-gray-400">
-          {vitals.position} · {vitals.region}
-        </p>
+      {/* Identity + progress — delegated to PlayerVitalsCard for consistency
+          with the player dashboard's vitals UX. headingLevel=3 because the
+          player name is a sub-heading in the (h1-titled) Scout Dashboard
+          grid. landmark=false + chrome=false so a grid of tiles does not
+          expose one region per card to assistive tech and so PlayerCard's
+          outer rounded article remains the only card chrome applied
+          (avoiding nested card visuals). */}
+      <PlayerVitalsCard
+        vitals={vitals}
+        progressLevel={progressLevel}
+        headingLevel={3}
+        landmark={false}
+        chrome={false}
+      />
 
-        <Badge
-          variant={LEVEL_VARIANT[progressLevel]}
-          label={levelLabel}
-          aria-label={`Level ${progressLevel}: ${levelLabel}`}
-          size="sm"
-          className="mt-1"
-        />
-      </div>
-
-      <ProgressBar level={progressLevel} />
+      <Badge
+        variant={LEVEL_VARIANT[progressLevel]}
+        label={levelLabel}
+        aria-label={`Level ${progressLevel}: ${levelLabel}`}
+        size="sm"
+        className="self-start"
+      />
 
       {/* Decorative link — navigation is handled by the card wrapper */}
       <Link

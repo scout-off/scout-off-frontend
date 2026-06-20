@@ -142,7 +142,7 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
             disabled={playerLoading}
             className="bg-brand-green text-black font-semibold px-3 py-2 rounded-lg hover:opacity-90 transition disabled:opacity-50 text-sm"
           >
-            {playerLoading ? '\u2026' : 'Look up'}
+            {playerLoading ? '…' : 'Look up'}
           </button>
         </div>
         {playerError && <p className="text-red-400 text-xs">{playerError}</p>}
@@ -170,7 +170,7 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
         <label className="text-xs text-gray-400">Milestone Description</label>
         <textarea
           className="input min-h-[80px] resize-y"
-          placeholder="Describe the player\u2019s achievement\u2026"
+          placeholder="Describe the player’s achievement…"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           required
@@ -201,7 +201,7 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
         disabled={submitting || !!urlError}
         className="bg-brand-green text-black font-semibold py-2 rounded-lg hover:opacity-90 transition disabled:opacity-50"
       >
-        {submitting ? 'Submitting\u2026' : 'Approve Milestone'}
+        {submitting ? 'Submitting…' : 'Approve Milestone'}
       </button>
     </form>
   );
