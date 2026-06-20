@@ -56,7 +56,7 @@ function makeMilestone(
   };
 }
 
-describe('MilestoneSection \u2014 wrapper delegation to MilestoneList', () => {
+describe('MilestoneSection — wrapper delegation to MilestoneList', () => {
   it('renders the translated section heading for the empty case', () => {
     render(<MilestoneSection milestones={[]} />);
     // Exact-string match: MilestoneList's delegated EmptyState also
@@ -109,7 +109,7 @@ describe('MilestoneSection \u2014 wrapper delegation to MilestoneList', () => {
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
   });
 
-  it('passes the level prop through to MilestoneList\u2019s level badge', () => {
+  it('passes the level prop through to MilestoneList’s level badge', () => {
     const milestones = [makeMilestone('m1', 'A milestone', 1_700_000_000)];
 
     // level=3 ("Elite") produces different badge label than the default
@@ -127,8 +127,8 @@ describe('MilestoneSection \u2014 wrapper delegation to MilestoneList', () => {
   });
 
   it('renders milestones whose description contains HTML-unsafe characters safely', () => {
-    // Smoke test: descriptions come through MilestoneList \u2192 React\u2019s
-    // text encoder. A raw <script> must render as literal text \u2014 not
+    // Smoke test: descriptions come through MilestoneList → React’s
+    // text encoder. A raw <script> must render as literal text — not
     // parsed as markup. Guards against future regressions that might
     // switch to dangerouslySetInnerHTML on either component.
     const milestones = [

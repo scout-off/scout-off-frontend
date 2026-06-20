@@ -35,10 +35,10 @@ describe('PlayerVitalsCard', () => {
     // them across sibling text nodes. The regex preserves the test's
     // intent (both values present, separator between them) without
     // coupling to internal text-node boundaries.
-    expect(screen.getByText(/ST\s*\u00b7\s*NG/)).toBeInTheDocument();
+    expect(screen.getByText(/ST\s*·\s*NG/)).toBeInTheDocument();
   });
 
-  it('passes progressLevel through to ProgressBar\u2019s aria-valuenow', () => {
+  it('passes progressLevel through to ProgressBar’s aria-valuenow', () => {
     render(
       <PlayerVitalsCard vitals={makeVitals()} progressLevel={3} />,
     );
@@ -71,8 +71,8 @@ describe('PlayerVitalsCard', () => {
   });
 
   it('renders name/position/region values containing HTML-unsafe characters as literal text', () => {
-    // Smoke test: values come through React\u2019s text encoder. A raw
-    // <script> in props must end up as literal text \u2014 not parsed as
+    // Smoke test: values come through React’s text encoder. A raw
+    // <script> in props must end up as literal text — not parsed as
     // markup. Guards against future regressions that might switch to
     // dangerouslySetInnerHTML.
     const vitals = makeVitals({

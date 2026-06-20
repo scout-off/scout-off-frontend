@@ -13,7 +13,7 @@ import { useToast } from '@/components/ui/Toast';
 const LEVEL_VARIANT = ['level0', 'level1', 'level2', 'level3'] as const;
 
 function truncateAddress(addr: string): string {
-  return `${addr.slice(0, 8)}\u2026${addr.slice(-4)}`;
+  return `${addr.slice(0, 8)}…${addr.slice(-4)}`;
 }
 
 function formatFull(ts: number): string {

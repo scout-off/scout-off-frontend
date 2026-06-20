@@ -69,7 +69,7 @@ beforeEach(() => {
   writeTextMock.mockClear();
 });
 
-describe('MilestoneList \u2014 rich rendering', () => {
+describe('MilestoneList — rich rendering', () => {
   it('renders EmptyState with localized title + description when milestones is empty', () => {
     render(<MilestoneList milestones={[]} />);
     expect(screen.getByText(/no milestones yet/i)).toBeInTheDocument();
@@ -100,7 +100,7 @@ describe('MilestoneList \u2014 rich rendering', () => {
     expect(items[1]).toHaveTextContent('Older milestone');
   });
 
-  it('renders the default level-2 (\u201cPerformance\u201d) badge when no level is passed', () => {
+  it('renders the default level-2 (“Performance”) badge when no level is passed', () => {
     render(
       <MilestoneList
         milestones={[makeMilestone('m1', 'A milestone', 1_700_000_000)]}
@@ -123,7 +123,7 @@ describe('MilestoneList \u2014 rich rendering', () => {
     },
   );
 
-  it('renders the validator address truncated to first-8\u2026last-4 with copy button', () => {
+  it('renders the validator address truncated to first-8…last-4 with copy button', () => {
     render(
       <MilestoneList
         milestones={[
@@ -136,7 +136,7 @@ describe('MilestoneList \u2014 rich rendering', () => {
         ]}
       />,
     );
-    expect(screen.getByText('GABCDEFG\u20261234')).toBeInTheDocument();
+    expect(screen.getByText('GABCDEFG…1234')).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: /copy validator address/i }),
     ).toBeInTheDocument();
