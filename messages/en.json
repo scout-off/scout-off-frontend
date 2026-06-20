@@ -54,7 +54,29 @@
     "milestones": "Milestones",
     "achievements": "Achievements",
     "progress": "Progress",
-    "stats": "Statistics"
+    "stats": "Statistics",
+    "form": {
+      "name": "Name",
+      "name_placeholder": "Full name",
+      "name_required": "Name is required",
+      "position": "Position",
+      "position_placeholder": "Position (e.g. ST, CM)",
+      "position_required": "Position is required",
+      "region": "Region / Country",
+      "region_placeholder": "Region / Country",
+      "region_required": "Region is required",
+      "age": "Age",
+      "age_placeholder": "Age",
+      "age_required": "Age is required",
+      "age_out_of_range": "Age must be between 14 and 45",
+      "nationality": "Nationality",
+      "nationality_placeholder": "Enter your nationality (e.g. Nigerian)",
+      "nationality_required": "Nationality is required",
+      "highlight": "Highlight reel / photo",
+      "highlight_required": "Highlight reel is required",
+      "submit": "Register on Stellar",
+      "submitting": "Registering…"
+    }
   },
   "wallet": {
     "connect": "Connect Wallet",

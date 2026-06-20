@@ -54,7 +54,29 @@
     "milestones": "Miikukuu",
     "achievements": "Mafanikio",
     "progress": "Maendeleo",
-    "stats": "Takwimu"
+    "stats": "Takwimu",
+    "form": {
+      "name": "Jina",
+      "name_placeholder": "Jina kamili",
+      "name_required": "Jina linahitajika",
+      "position": "Nafasi",
+      "position_placeholder": "Nafasi (mfano: SH, KK)",
+      "position_required": "Nafasi inahitajika",
+      "region": "Mkoa / Nchi",
+      "region_placeholder": "Mkoa / Nchi",
+      "region_required": "Mkoa unahitajika",
+      "age": "Umri",
+      "age_placeholder": "Umri",
+      "age_required": "Umri unahitajika",
+      "age_out_of_range": "Umri lazima uwe kati ya miaka 14 na 45",
+      "nationality": "Uraia",
+      "nationality_placeholder": "Weka uraia wako (mfano: Mkenya)",
+      "nationality_required": "Uraia unahitajika",
+      "highlight": "Video ya vipindi / picha",
+      "highlight_required": "Video ya vipindi inahitajika",
+      "submit": "Jisajili kwenye Stellar",
+      "submitting": "Inasajili…"
+    }
   },
   "wallet": {
     "connect": "Unganisha Pochi",
