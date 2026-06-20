@@ -13,7 +13,7 @@ const declared = new Set(example.match(/^[A-Z_]+(?==)/gm) ?? []);
 
 const used = new Set(
   execSync(
-    'grep -roh "process\\.env\\.[A-Z_]\\+" --include="*.ts" --include="*.tsx" .',
+    'grep -roh "process\\.env\\.[A-Z_]\\+" --include="*.ts" --include="*.tsx" --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=coverage .',
   )
     .toString()
     .split('\n')
