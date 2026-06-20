@@ -37,7 +37,10 @@ function PlayerDashboardContent() {
             <ProgressBar level={player.progressLevel} />
           </div>
 
-          <MilestoneSection milestones={player.milestones} />
+          <MilestoneSection
+            milestones={player.milestones}
+            level={player.progressLevel}
+          />
         </>
       ) : (
         <PlayerProfileForm onSuccess={() => refetch()} />

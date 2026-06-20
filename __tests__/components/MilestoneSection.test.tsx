@@ -32,6 +32,16 @@ jest.mock('next-intl', () => {
   };
 });
 
+// Mock the Toast module so rendering MilestoneList (and thus MilestoneSection
+// via its inner delegation) doesn't throw "useToast must be used within a
+// ToastProvider". Tests on this file don't exercise clipboard behaviour,
+// so a no-op show is fine.
+jest.mock('@/components/ui/Toast', () => ({
+  __esModule: true,
+  ToastProvider: ({ children }: { children: React.ReactNode }) => children,
+  useToast: () => ({ show: jest.fn() }),
+}));
+
 function makeMilestone(
   id: string,
   description: string,
@@ -46,36 +56,27 @@ function makeMilestone(
   };
 }
 
-// Lock the date format so the date assertion isn't brittle to the runtime
-// locale (some node test environments emit "11/14/23" with a 2-digit year,
-// which would defeat the more naive /2023/ regex). Restoring in afterEach
-// keeps the spy from leaking into other test files.
-let toLocaleDateStringSpy: jest.SpyInstance;
-
-beforeEach(() => {
-  toLocaleDateStringSpy = jest
-    .spyOn(Date.prototype, 'toLocaleDateString')
-    .mockReturnValue('2024-01-15');
-});
-
-afterEach(() => {
-  toLocaleDateStringSpy.mockRestore();
-});
-
-describe('MilestoneSection', () => {
+describe('MilestoneSection — wrapper delegation to MilestoneList', () => {
   it('renders the translated section heading for the empty case', () => {
     render(<MilestoneSection milestones={[]} />);
+    // Exact-string match: MilestoneList\u2019s delegated EmptyState also renders
+    // an <h3>, and its title ("No milestones yet") used to substring-match
+    // the looser /milestones/i regex. Pinning to the literal "Milestones"
+    // makes this assertion target the section heading specifically.
     expect(
-      screen.getByRole('heading', { name: /milestones/i, level: 3 }),
+      screen.getByRole('heading', { name: 'Milestones', level: 3 }),
     ).toBeInTheDocument();
   });
 
-  it('shows the translated empty-state copy when milestones is empty', () => {
+  it('shows the EmptyState copy from MilestoneList when milestones is empty', () => {
     render(<MilestoneSection milestones={[]} />);
     expect(screen.getByText(/no milestones yet/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/verified milestones from approved validators/i),
+    ).toBeInTheDocument();
   });
 
-  it('renders a list item with description and human-readable date for each milestone', () => {
+  it('renders the milestone descriptions from MilestoneList when populated', () => {
     const milestones = [
       makeMilestone('m1', 'First verified trial', 1_700_000_000),
       makeMilestone('m2', 'Scored in regional cup', 1_700_100_000),
@@ -85,33 +86,31 @@ describe('MilestoneSection', () => {
 
     expect(screen.getByText('First verified trial')).toBeInTheDocument();
     expect(screen.getByText('Scored in regional cup')).toBeInTheDocument();
-
-    // Each description is wrapped in a <li> — assert the list membership.
-    const items = screen.getAllByRole('listitem');
-    expect(items).toHaveLength(2);
-
-    // Both timestamps are mocked to "2024-01-15" via the beforeEach spy,
-    // so we can assert deterministically against that exact string. The
-    // mock guards against locale-dependent short-year formatting that
-    // would defeat a "2023" regex.
-    expect(screen.getAllByText('2024-01-15')).toHaveLength(2);
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
   });
 
-  it('does not render the empty-state copy when milestones are populated', () => {
+  it('passes the level prop through to MilestoneList\u2019s level badge', () => {
     const milestones = [makeMilestone('m1', 'A milestone', 1_700_000_000)];
 
-    render(<MilestoneSection milestones={milestones} />);
+    // level=3 ("Elite") produces different badge label than the default
+    // level=2 ("Performance"). Both come from MilestoneList, so asserting
+    // on the rendered label verifies the level passed through the
+    // MilestoneSection wrapper.
+    render(<MilestoneSection milestones={milestones} level={3} />);
+    expect(screen.getByText('Elite')).toBeInTheDocument();
+  });
 
+  it('does not render the EmptyState copy when milestones are populated', () => {
+    const milestones = [makeMilestone('m1', 'A milestone', 1_700_000_000)];
+    render(<MilestoneSection milestones={milestones} />);
     expect(screen.queryByText(/no milestones yet/i)).not.toBeInTheDocument();
   });
 
   it('renders milestones whose description contains HTML-unsafe characters safely', () => {
-    // Smoke test: descriptions go through React's text encoder, so a raw
-    // <script> in props must end up as literal text \u2014 not be parsed as
-    // markup. This guards against future regressions that might switch to
-    // dangerouslySetInnerHTML. The single getByText assertion is the
-    // load-bearing one: if React had parsed the description as markup,
-    // getByText would not find the literal "<script>alert(1)</script>".
+    // Smoke test: descriptions come through MilestoneList \u2192 React\u2019s
+    // text encoder. A raw <script> must render as literal text \u2014 not
+    // parsed as markup. Guards against future regressions that might
+    // switch to dangerouslySetInnerHTML on either component.
     const milestones = [
       makeMilestone('m1', '<script>alert(1)</script>', 1_700_000_000),
     ];

@@ -1,52 +1,40 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import type { Milestone } from '@/types';
+import type { Milestone, ProgressLevel } from '@/types';
+import MilestoneList from '@/components/player/MilestoneList';
 
 interface MilestoneSectionProps {
   milestones: Milestone[];
+  /**
+   * Level badge variant applied to every milestone row. Defaults to 2
+   * ("Performance") which matches the typical case of a player who has
+   * at least one verified milestone. Pass `player.progressLevel` so the
+   * badge reflects the player's actual tier.
+   */
+  level?: ProgressLevel;
 }
 
 /**
- * Card section that renders a player's verified-milestone history, or an
- * empty-state copy when there are none.
+ * Dashboard section chrome that delegates inner rendering to the rich
+ * `MilestoneList` (badges, copyable validator address, relative timestamps
+ * via Tooltip). Extracted so this section can be reused in scout views or
+ * other player-related pages and tested without PlayerProfileForm mount.
  *
- * Extracted from app/[locale]/player/page.tsx so it can be reused in scout
- * views, other player-related pages, and tested without the full
- * PlayerProfileForm mount. The rendered DOM matches the inline JSX it
- * replaced \u2014 no behaviour change.
- *
- * Note: a richer `components/player/MilestoneList.tsx` (badges, copyable
- * validator address, relative timestamps via Tooltip) already exists in
- * the codebase. It is intentionally left decoupled from the dashboard so
- * this section's chrome stays minimal. Swap-in is a one-line change in
- * this component if richer cards are desired.
+ * The empty case is delegated too — `MilestoneList` renders the
+ * `EmptyState` itself when `milestones.length === 0`. This component
+ * only renders the section card + translated heading.
  */
 export default function MilestoneSection({
   milestones,
+  level = 2,
 }: MilestoneSectionProps) {
   const t = useTranslations('player_dashboard');
 
   return (
     <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
       <h3 className="font-semibold text-white mb-4">{t('milestones')}</h3>
-      {milestones.length === 0 ? (
-        <p className="text-gray-500 text-sm">{t('no_milestones')}</p>
-      ) : (
-        <ul className="flex flex-col gap-3">
-          {milestones.map((m) => (
-            <li
-              key={m.id}
-              className="text-sm text-gray-300 border-l-2 border-brand-green pl-3"
-            >
-              {m.description}
-              <span className="block text-xs text-gray-500 mt-0.5">
-                {new Date(m.timestamp * 1000).toLocaleDateString()}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
+      <MilestoneList milestones={milestones} level={level} />
     </div>
   );
 }
