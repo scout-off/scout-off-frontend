@@ -120,13 +120,12 @@ function fillAllFields({
   });
   fireEvent.change(screen.getByPlaceholderText(/region/i), {
     target: { value: REGION },
-  });
-  fireEvent.change(screen.getByPlaceholderText(/^age$/i), {
-    target: { value: age },
-  });
-  fireEvent.change(screen.getByPlaceholderText(/nationality/i), {
-    target: { value: nationality },
-  });
+  });    fireEvent.change(screen.getByPlaceholderText(/enter your age/i), {
+      target: { value: age },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/nationality/i), {
+      target: { value: nationality },
+    });
   fireEvent.change(screen.getByLabelText(/highlight reel/i), {
     target: { files: [new File(['x'], 'clip.mp4', { type: 'video/mp4' })] },
   });

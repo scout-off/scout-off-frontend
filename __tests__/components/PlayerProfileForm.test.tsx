@@ -9,6 +9,34 @@ import { buildRegisterPlayer } from '@/lib/contract';
 import { useWallet } from '@/hooks/useWallet';
 import useIsPaused from '@/hooks/useIsPaused';
 
+// Mock next-intl so the component can resolve translations without loading its
+// ESM runtime. We resolve against the real messages/en.json so DOM queries
+// match rendered English strings rather than i18n key paths.
+jest.mock('next-intl', () => {
+  const en = require('@/messages/en.json');
+  function lookup(obj: any, parts: string[]): string {
+    let cur = obj;
+    for (const p of parts) {
+      if (cur && typeof cur === 'object' && p in cur) cur = cur[p];
+      else return parts.join('.');
+    }
+    return typeof cur === 'string' ? cur : parts.join('.');
+  }
+  return {
+    __esModule: true,
+    useTranslations:
+      (namespace = '') =>
+      (key: string): string => {
+        const parts = namespace
+          ? [...namespace.split('.'), ...key.split('.')]
+          : key.split('.');
+        return lookup(en, parts);
+      },
+    NextIntlClientProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
+  };
+});
+
 jest.mock('@/components/ui/VideoUpload', () => ({
   __esModule: true,
   default: ({ onUpload }: { onUpload: (cid: string) => void }) => (
@@ -76,6 +104,9 @@ beforeEach(() => {
   } as any);
   mockedUseIsPaused.mockReturnValue(false);
 });
+// Submit button label after the i18n migration uses the same
+// `form.submit` key as the inline form ("Register on Stellar").
+const SUBMIT_REGEX = /register on stellar/i;
 
 function renderForm(onSuccess = jest.fn()) {
   return render(<PlayerProfileForm onSuccess={onSuccess} />);
@@ -113,9 +144,7 @@ describe('PlayerProfileForm — nationality field (Issue #301)', () => {
 
     fillRequiredFields({ nationality: '' });
 
-    const submit = screen.getByRole('button', {
-      name: /register as player/i,
-    });
+    const submit = screen.getByRole('button', { name: SUBMIT_REGEX });
     await act(async () => {
       fireEvent.click(submit);
     });
@@ -131,9 +160,7 @@ describe('PlayerProfileForm — nationality field (Issue #301)', () => {
     fillRequiredFields({ nationality: '   ' });
 
     await act(async () => {
-      fireEvent.click(
-        screen.getByRole('button', { name: /register as player/i }),
-      );
+      fireEvent.click(screen.getByRole('button', { name: SUBMIT_REGEX }));
     });
 
     expect(
@@ -148,9 +175,7 @@ describe('PlayerProfileForm — nationality field (Issue #301)', () => {
     fillRequiredFields({ nationality: 'Nigerian' });
 
     await act(async () => {
-      fireEvent.click(
-        screen.getByRole('button', { name: /register as player/i }),
-      );
+      fireEvent.click(screen.getByRole('button', { name: SUBMIT_REGEX }));
     });
 
     await waitFor(() =>
@@ -174,9 +199,7 @@ describe('PlayerProfileForm — nationality field (Issue #301)', () => {
     fillRequiredFields({ nationality: 'Kenyan' });
 
     await act(async () => {
-      fireEvent.click(
-        screen.getByRole('button', { name: /register as player/i }),
-      );
+      fireEvent.click(screen.getByRole('button', { name: SUBMIT_REGEX }));
     });
 
     await waitFor(() =>
