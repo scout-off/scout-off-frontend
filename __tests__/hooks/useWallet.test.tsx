@@ -5,6 +5,21 @@ import {
   useWalletContext as useWallet,
 } from '@/context/WalletContext';
 
+// Mock @albedo-link/intent (requires browser fetch at module load time)
+jest.mock('@albedo-link/intent', () => ({
+  albedo: {
+    publicKey: jest.fn(),
+    tx: jest.fn(),
+  },
+}));
+
+// Mock @lobstrco/signer-extension-api
+jest.mock('@lobstrco/signer-extension-api', () => ({
+  isConnected: jest.fn(),
+  getPublicKey: jest.fn(),
+  signTransaction: jest.fn(),
+}));
+
 // Mock @stellar/freighter-api
 jest.mock('@stellar/freighter-api', () => ({
   getPublicKey: jest.fn(),
@@ -46,6 +61,11 @@ describe('useWallet', () => {
   beforeEach(() => {
     jest.resetAllMocks();
     (global.fetch as jest.Mock) = jest.fn();
+    localStorage.setItem('scoutoff_wallet_provider', 'freighter');
+  });
+
+  afterEach(() => {
+    localStorage.clear();
   });
 
   test('session is restored from /api/auth/session on mount', async () => {
@@ -76,6 +96,7 @@ describe('useWallet', () => {
     (signTransaction as jest.Mock).mockResolvedValue(mockSignedXdr);
 
     (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({ ok: false }) // session restoration on mount (no active session)
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ transaction: mockChallengeXdr }),
@@ -86,6 +107,10 @@ describe('useWallet', () => {
       });
 
     const { result } = renderHook(() => useWallet(), { wrapper });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     await act(async () => {
       await result.current.connect();
@@ -101,7 +126,7 @@ describe('useWallet', () => {
     const { result } = renderHook(() => useWallet(), { wrapper });
 
     await expect(act(async () => result.current.connect())).rejects.toThrow(
-      'Freighter not installed',
+      'freighter is not installed',
     );
 
     expect(result.current.publicKey).toBeNull();

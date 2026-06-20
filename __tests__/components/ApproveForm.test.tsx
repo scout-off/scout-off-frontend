@@ -81,7 +81,9 @@ describe('ApproveForm', () => {
 
   it('displays the form when isValidator=true', () => {
     renderComponent(true);
-    expect(screen.getByText('Approve Milestone')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Approve Milestone' }),
+    ).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Enter player ID')).toBeInTheDocument();
     expect(
       screen.getByPlaceholderText(/Describe the player's achievement/i),
