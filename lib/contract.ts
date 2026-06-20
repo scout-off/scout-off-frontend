@@ -340,6 +340,77 @@ export async function payToContact(
   throw new Error(`ContractError: payToContact did not return contact details`);
 }
 
+/**
+ * Build a transaction to log a trial offer for a player, advancing them to Level 3 (Elite Tier).
+ *
+ * @param scout - The scout's Stellar public key.
+ * @param playerId - The unique player ID.
+ * @param details - A JSON string containing trial offer details (must be serialized before calling).
+ * @returns The prepared transaction XDR for signing.
+ */
+export async function buildLogTrialOffer(
+  scout: string,
+  playerId: string,
+  details: string,
+) {
+  return buildTx(
+    'log_trial_offer',
+    [
+      nativeToScVal(scout, { type: 'address' }),
+      nativeToScVal(playerId, { type: 'string' }),
+      nativeToScVal(details, { type: 'string' }),
+    ],
+    scout,
+  );
+}
+
+/**
+ * Log a trial offer for a player on-chain, advancing them to Level 3 (Elite Tier).
+ *
+ * The function handles signing and submitting the transaction via Freighter.
+ *
+ * @param scout - The scout's Stellar public key (source account + auth signer).
+ * @param playerId - The unique player ID to log a trial offer for.
+ * @param details - A JSON string containing trial offer details: { location, startDate, description }.
+ * @returns A Promise that resolves when the transaction is confirmed.
+ *
+ * @throws {ContractError} ContractPaused (9) — All write operations are blocked while
+ *                                               the contract is administratively paused.
+ * @throws {ContractError} Unauthorized (10) — The caller is not authorized as a scout
+ *                                              or the player does not exist.
+ */
+export async function logTrialOffer(
+  scout: string,
+  playerId: string,
+  details: string,
+): Promise<void> {
+  const { signTransaction } = await import('@stellar/freighter-api');
+  const xdrTx = await buildTx(
+    'log_trial_offer',
+    [
+      nativeToScVal(scout, { type: 'address' }),
+      nativeToScVal(playerId, { type: 'string' }),
+      nativeToScVal(details, { type: 'string' }),
+    ],
+    scout,
+  );
+  const signedTxXdr = await signTransaction(xdrTx, {
+    networkPassphrase: NETWORK,
+  });
+  const { Transaction } = await import('@stellar/stellar-sdk');
+  const result = await rpc.sendTransaction(
+    new Transaction(signedTxXdr, NETWORK),
+  );
+  if (result.status === 'ERROR') {
+    throw new Error(`ContractError: ${JSON.stringify(result)}`);
+  }
+  // Wait for confirmation
+  const getResult = await rpc.getTransaction(result.hash);
+  if ('status' in getResult && getResult.status === 'FAILED') {
+    throw new Error(`ContractError: logTrialOffer transaction failed`);
+  }
+}
+
 export async function filterPlayers(
   region: string,
   position: string,

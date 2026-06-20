@@ -1,17 +1,22 @@
 'use client';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
 import { usePlayer } from '@/hooks/usePlayer';
+import { useSubscription } from '@/hooks/useSubscription';
 import ProgressBar from '@/components/ProgressBar';
 import PlayerProfileSkeleton from '@/components/PlayerProfileSkeleton';
+import TrialOfferModal from '@/components/scout/TrialOfferModal';
 import { buildPayToContact } from '@/lib/contract';
 
 export default function PlayerProfile() {
   const { id } = useParams<{ id: string }>();
   const { publicKey, signAndSubmit } = useWallet();
-  const { player, loading } = usePlayer(id ?? null);
+  const { player, loading, refetch } = usePlayer(id ?? null);
+  const { subscription, isExpired } = useSubscription();
   const [contacting, setContacting] = useState(false);
+
+  const isScoutWithActiveSubscription = publicKey && subscription && !isExpired;
 
   async function handleContact() {
     if (!publicKey) return;
@@ -23,6 +28,11 @@ export default function PlayerProfile() {
       setContacting(false);
     }
   }
+
+  // Callback to refetch player data after trial offer is logged
+  const handleTrialOfferSuccess = useCallback(async () => {
+    await refetch?.();
+  }, [refetch]);
 
   if (loading) {
     return <PlayerProfileSkeleton showContactButton={!!publicKey} />;
@@ -90,6 +100,23 @@ export default function PlayerProfile() {
         >
           {contacting ? 'Processing…' : 'Pay to Contact (1 XLM)'}
         </button>
+      )}
+
+      {/* Trial Offer - Scout with active subscription and player not at Level 3 */}
+      {isScoutWithActiveSubscription && player.progressLevel < 3 && (
+        <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
+          <div className="flex flex-col gap-4">
+            <div>
+              <h2 className="font-semibold text-white mb-2">
+                Advance Player to Elite Tier
+              </h2>
+              <p className="text-sm text-gray-400">
+                Log a trial offer to advance this player to Level 3 (Elite Tier).
+              </p>
+            </div>
+            <TrialOfferModal playerId={id} onSuccess={handleTrialOfferSuccess} />
+          </div>
+        </div>
       )}
     </div>
   );
