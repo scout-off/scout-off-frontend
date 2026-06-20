@@ -80,9 +80,11 @@
       "highlight_required": "Highlight reel is required",
       "submit": "Register on Stellar",
       "submitting": "Registering…",
+      "confirming": "Confirming on Stellar…",
       "wallet_not_connected": "Wallet not connected",
       "transactions_disabled": "Transactions are currently disabled",
-      "registration_failed": "Registration failed"
+      "registration_failed": "Registration failed",
+      "confirmation_failed": "Confirmation failed. Please refresh or retry in a moment."
     }
   },
   "wallet": {

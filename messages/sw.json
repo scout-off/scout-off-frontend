@@ -80,9 +80,11 @@
       "highlight_required": "Video ya vipindi inahitajika",
       "submit": "Jisajili kwenye Stellar",
       "submitting": "Inasajili…",
+      "confirming": "Inathibitisha kwenye Stellar…",
       "wallet_not_connected": "Pochi haijaunganishwa",
       "transactions_disabled": "Miamala imezimwa kwa sasa",
-      "registration_failed": "Usajili umeshindwa"
+      "registration_failed": "Usajili umeshindwa",
+      "confirmation_failed": "Uthibitisho umeshindwa. Tafadhali onyesha upya au jaribu tena."
     }
   },
   "wallet": {

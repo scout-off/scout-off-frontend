@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, useRef, useEffect, FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { sanitize } from '@/lib/sanitize';
 import { useWallet } from '@/hooks/useWallet';
 import useIsPaused from '@/hooks/useIsPaused';
 import { buildRegisterPlayer } from '@/lib/contract';
+import { waitForInclusion } from '@/lib/tx';
 import Button from '@/components/ui/Button';
 import Select from '@/components/ui/Select';
 import VideoUpload from '@/components/ui/VideoUpload';
@@ -49,6 +50,7 @@ export default function PlayerProfileForm({
   const { publicKey, signAndSubmit } = useWallet();
   const isPaused = useIsPaused();
   const [isLoading, setIsLoading] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [txStatus, setTxStatus] = useState<TxStatus | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
@@ -62,6 +64,14 @@ export default function PlayerProfileForm({
     bio: '',
     ipfsHash: '',
   });
+
+  // Abort any in-flight inclusion poll when the form unmounts so a user
+  // navigating away doesn't keep hitting the RPC after the page is gone and
+  // so we never call setState on an unmounted component.
+  const abortRef = useRef<AbortController | null>(null);
+  useEffect(() => {
+    return () => abortRef.current?.abort();
+  }, []);
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -104,7 +114,6 @@ export default function PlayerProfileForm({
 
     // Sanitize free-text fields (player bio) before any submission
     const sanitizedBio = sanitize(formData.bio);
-    // Update local state synchronously so subsequent flows see sanitized value
     setFormData((prev: typeof formData) => ({ ...prev, bio: sanitizedBio }));
 
     if (!validate()) return;
@@ -118,11 +127,25 @@ export default function PlayerProfileForm({
       return;
     }
 
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setIsLoading(true);
+    setIsConfirming(false);
     setErrors({});
     setTxStatus('pending');
     setTxHash(null);
 
+    // Single try/catch/finally that runs through submit → confirm → success.
+    // Two invariants enforced simultaneously:
+    //  1. `succeeded` flips true when waitForInclusion resolves SUCCESS;
+    //     while true, the finally block leaves the form in busy=true so the
+    //     user can't accidentally double-pay during the brief window between
+    //     onSuccess firing and the parent's SWR refetch unmounting the form.
+    //  2. The `signal.aborted` check guards every cleanup setState, so the
+    //     abort-cleanup path can never touch a torn-down component (React 18
+    //     won't warn, but the very next React major may).
+    let succeeded = false;
     try {
       const vitals: PlayerVitals = {
         name: formData.name,
@@ -137,21 +160,53 @@ export default function PlayerProfileForm({
         vitals,
         formData.ipfsHash,
       );
+
+      // Submitting phase. The tx is being signed by the wallet and sent to the
+      // Soroban RPC, which only confirms the network has *accepted* it.
       const result = await signAndSubmit(xdr);
 
       const hash = (result as any)?.hash ?? null;
       setTxHash(hash);
-      setTxStatus('success');
 
+      // Hard-won refinement: do not declare success or call onSuccess until
+      // the tx has actually been included in a closed ledger. Without this
+      // wait, a page that calls refetch() right away can briefly re-show the
+      // registration form because contract state hasn't yet updated.
+      setIsLoading(false);
+      setIsConfirming(true);
+
+      await waitForInclusion(hash, { signal: controller.signal });
+      setTxStatus('success');
+      succeeded = true;
       const playerId = (result as any)?.id || publicKey;
       onSuccess(playerId);
     } catch (error) {
+      // AbortError is unmount / navigation — clean and silent.
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return;
+      }
       setTxStatus('error');
       setErrors({
-        form: error instanceof Error ? error.message : t('form.registration_failed'),
+        form:
+          error instanceof Error
+            ? error.message
+            : t('form.confirmation_failed'),
       });
     } finally {
-      setIsLoading(false);
+      if (!controller.signal.aborted) {
+        setIsLoading(false);
+        // On the success path we deliberately leave isConfirming=true so
+        // the submit button stays locked through the SWR-refetch window;
+        // the parent unmounts the form once the freshly-registered player
+        // data arrives, so we never need to manually unlock it. Unlocking
+        // here would re-open the original double-pay race.
+        if (!succeeded) {
+          setIsConfirming(false);
+        }
+      }
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+      }
     }
   };
 
@@ -171,6 +226,8 @@ export default function PlayerProfileForm({
       });
     }
   };
+
+  const busy = isLoading || isConfirming;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -284,11 +341,15 @@ export default function PlayerProfileForm({
 
       <Button
         type="submit"
-        isLoading={isLoading}
-        disabled={isLoading}
+        isLoading={busy}
+        disabled={busy}
         className="w-full"
       >
-        {isLoading ? t('form.submitting') : t('form.submit')}
+        {isConfirming
+          ? t('form.confirming')
+          : isLoading
+            ? t('form.submitting')
+            : t('form.submit')}
       </Button>
     </form>
   );

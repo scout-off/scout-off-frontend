@@ -80,9 +80,11 @@
       "highlight_required": "Une vidéo de présentation est requise",
       "submit": "S'inscrire sur Stellar",
       "submitting": "Inscription…",
+      "confirming": "Confirmation sur Stellar…",
       "wallet_not_connected": "Portefeuille non connecté",
       "transactions_disabled": "Les transactions sont actuellement désactivées",
-      "registration_failed": "L'inscription a échoué"
+      "registration_failed": "L'inscription a échoué",
+      "confirmation_failed": "La confirmation a échoué. Veuillez actualiser ou réessayer."
     }
   },
   "wallet": {
