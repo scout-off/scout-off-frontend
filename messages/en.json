@@ -52,6 +52,7 @@
     "description": "View your profile and progress",
     "profile": "Profile",
     "milestones": "Milestones",
+    "no_milestones": "No milestones yet",
     "achievements": "Achievements",
     "progress": "Progress",
     "stats": "Statistics",

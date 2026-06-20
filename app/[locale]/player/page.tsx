@@ -6,6 +6,7 @@ import { usePlayer } from '@/hooks/usePlayer';
 import ProgressBar from '@/components/ProgressBar';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import PlayerProfileForm from '@/components/player/PlayerProfileForm';
+import MilestoneSection from '@/components/player/MilestoneSection';
 
 function PlayerDashboardContent() {
   const t = useTranslations('player_dashboard');
@@ -36,28 +37,7 @@ function PlayerDashboardContent() {
             <ProgressBar level={player.progressLevel} />
           </div>
 
-          <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
-            <h3 className="font-semibold text-white mb-4">
-              Milestone History
-            </h3>
-            {player.milestones.length === 0 ? (
-              <p className="text-gray-500 text-sm">No milestones yet.</p>
-            ) : (
-              <ul className="flex flex-col gap-3">
-                {player.milestones.map((m) => (
-                  <li
-                    key={m.id}
-                    className="text-sm text-gray-300 border-l-2 border-brand-green pl-3"
-                  >
-                    {m.description}
-                    <span className="block text-xs text-gray-500 mt-0.5">
-                      {new Date(m.timestamp * 1000).toLocaleDateString()}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          <MilestoneSection milestones={player.milestones} />
         </>
       ) : (
         <PlayerProfileForm onSuccess={() => refetch()} />

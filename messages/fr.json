@@ -52,6 +52,7 @@
     "description": "Voir votre profil et vos progrès",
     "profile": "Profil",
     "milestones": "Jalons",
+    "no_milestones": "Aucun jalon pour le moment",
     "achievements": "Réalisations",
     "progress": "Progrès",
     "stats": "Statistiques",
