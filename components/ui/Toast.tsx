@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -57,6 +58,42 @@ function generateToastId() {
   return `toast-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+interface ToastItemProps {
+  toast: ToastItem;
+  onRemove: () => void;
+}
+
+function ToastItemView({ toast, onRemove }: ToastItemProps) {
+  const meta = VARIANT_META[toast.variant];
+  return (
+    <div
+      data-testid="toast"
+      className={`pointer-events-auto flex items-start gap-3 rounded-xl border border-gray-800 border-l-4 bg-brand-card p-4 shadow-2xl ${meta.border}`}
+    >
+      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5">
+        <span className={`${meta.iconClass} text-lg`} aria-hidden="true">
+          {toast.variant === 'success' && '✓'}
+          {toast.variant === 'error' && '✕'}
+          {toast.variant === 'info' && 'ℹ'}
+          {toast.variant === 'warning' && '⚠'}
+        </span>
+      </div>
+      <div className="flex-1 text-sm leading-6 text-gray-200">
+        <p className="font-semibold text-white">{meta.label}</p>
+        <p>{toast.message}</p>
+      </div>
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label="Dismiss notification"
+        className="ml-1 inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-700 bg-gray-900 text-gray-400 transition hover:bg-gray-800 hover:text-white"
+      >
+        <span aria-hidden="true">×</span>
+      </button>
+    </div>
+  );
+}
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const toastTimers = useRef<Record<string, number>>({});
@@ -103,46 +140,47 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const contextValue = useMemo(() => ({ show }), [show]);
+
+  const politeToasts = toasts.filter((t) => t.variant !== 'error');
+  const errorToasts = toasts.filter((t) => t.variant === 'error');
+
   return (
-    <ToastContext.Provider value={{ show }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
       <div className="pointer-events-none fixed inset-x-0 bottom-5 z-50 flex justify-end px-4 sm:px-6">
         <div className="flex w-full max-w-sm flex-col gap-3">
-          {toasts.map((toast) => {
-            const meta = VARIANT_META[toast.variant];
-            return (
-              <div
+          {/*
+           * Two persistent live regions: browsers only honour aria-live on
+           * elements that are already in the DOM when content changes, so both
+           * containers are always rendered even when empty.
+           */}
+          <div
+            aria-live="polite"
+            aria-atomic="true"
+            className="flex flex-col gap-3"
+          >
+            {politeToasts.map((toast) => (
+              <ToastItemView
                 key={toast.id}
-                role="alert"
-                aria-live="polite"
-                className={`pointer-events-auto flex items-start gap-3 rounded-xl border border-gray-800 border-l-4 bg-brand-card p-4 shadow-2xl ${meta.border}`}
-              >
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5">
-                  <span
-                    className={`${meta.iconClass} text-lg`}
-                    aria-hidden="true"
-                  >
-                    {toast.variant === 'success' && '✓'}
-                    {toast.variant === 'error' && '✕'}
-                    {toast.variant === 'info' && 'ℹ'}
-                    {toast.variant === 'warning' && '⚠'}
-                  </span>
-                </div>
-                <div className="flex-1 text-sm leading-6 text-gray-200">
-                  <p className="font-semibold text-white">{meta.label}</p>
-                  <p>{toast.message}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => removeToast(toast.id)}
-                  aria-label="Dismiss notification"
-                  className="ml-1 inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-700 bg-gray-900 text-gray-400 transition hover:bg-gray-800 hover:text-white"
-                >
-                  <span aria-hidden="true">×</span>
-                </button>
-              </div>
-            );
-          })}
+                toast={toast}
+                onRemove={() => removeToast(toast.id)}
+              />
+            ))}
+          </div>
+          <div
+            aria-live="assertive"
+            aria-atomic="true"
+            className="flex flex-col gap-3"
+          >
+            {errorToasts.map((toast) => (
+              <ToastItemView
+                key={toast.id}
+                toast={toast}
+                onRemove={() => removeToast(toast.id)}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </ToastContext.Provider>
