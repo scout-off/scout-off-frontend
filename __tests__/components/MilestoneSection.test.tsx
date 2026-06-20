@@ -56,16 +56,36 @@ function makeMilestone(
   };
 }
 
-describe('MilestoneSection — wrapper delegation to MilestoneList', () => {
+describe('MilestoneSection \u2014 wrapper delegation to MilestoneList', () => {
   it('renders the translated section heading for the empty case', () => {
     render(<MilestoneSection milestones={[]} />);
-    // Exact-string match: MilestoneList\u2019s delegated EmptyState also renders
-    // an <h3>, and its title ("No milestones yet") used to substring-match
-    // the looser /milestones/i regex. Pinning to the literal "Milestones"
-    // makes this assertion target the section heading specifically.
+    // Exact-string match: MilestoneList's delegated EmptyState also
+    // renders an <h3>, and its title ("No milestones yet") used to
+    // substring-match the looser /milestones/i regex. Pinning to the
+    // literal "Milestones" makes this assertion target the section
+    // heading specifically.
     expect(
       screen.getByRole('heading', { name: 'Milestones', level: 3 }),
     ).toBeInTheDocument();
+  });
+
+  it('exposes the section as a navigable region via aria-labelledby + heading id', () => {
+    render(<MilestoneSection milestones={[]} />);
+
+    const heading = screen.getByRole('heading', {
+      name: 'Milestones',
+      level: 3,
+    });
+    // The heading carries the id that the outer <section> references.
+    expect(heading).toHaveAttribute('id', 'milestones-heading');
+
+    // <section> with an aria-label or aria-labelledby is exposed in the
+    // accessibility tree as a "region" with the heading text as its
+    // accessible name. This is the AT-discovery contract the landmark
+    // upgrade delivers.
+    const region = screen.getByRole('region', { name: 'Milestones' });
+    expect(region.tagName).toBe('SECTION');
+    expect(region).toHaveAttribute('aria-labelledby', 'milestones-heading');
   });
 
   it('shows the EmptyState copy from MilestoneList when milestones is empty', () => {

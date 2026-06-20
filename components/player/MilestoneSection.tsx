@@ -32,9 +32,19 @@ export default function MilestoneSection({
   const t = useTranslations('player_dashboard');
 
   return (
-    <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
-      <h3 className="font-semibold text-white mb-4">{t('milestones')}</h3>
-      <MilestoneList milestones={milestones} level={level} />
-    </div>
+    // ARIA landmark: the outer <section> with aria-labelledby pointing at
+    // the heading id exposes the milestones area as a navigable region in
+    // screen-readers, alongside the implicit heading landmark.
+    <section aria-labelledby="milestones-heading">
+      <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
+        <h3
+          id="milestones-heading"
+          className="font-semibold text-white mb-4"
+        >
+          {t('milestones')}
+        </h3>
+        <MilestoneList milestones={milestones} level={level} />
+      </div>
+    </section>
   );
 }
