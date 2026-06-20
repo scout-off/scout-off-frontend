@@ -81,10 +81,20 @@ describe('ApproveForm', () => {
 
   it('displays the form when isValidator=true', () => {
     renderComponent(true);
-    expect(screen.getByText('Approve Milestone')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Enter player ID')).toBeInTheDocument();
+    // "Approve Milestone" appears as both the <h2> form heading and
+    // the submit button's text content, so naive getByText throws
+    // "Multiple elements found". Scope to role=heading so the query
+    // disambiguates from the same-text <button>.
     expect(
-      screen.getByPlaceholderText(/Describe the player's achievement/i),
+      screen.getByRole('heading', { name: 'Approve Milestone' }),
+    ).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Enter player ID')).toBeInTheDocument();
+    // The textarea placeholder uses the smart apostrophe (U+2019) and
+    // an ellipsis (U+2026). The regex char class accepts either
+    // apostrophe form so the test is stable across placeholder
+    // rewrites that switch between straight ' and smart U+2019.
+    expect(
+      screen.getByPlaceholderText(/Describe the player['’]s achievement/i),
     ).toBeInTheDocument();
     expect(
       screen.getByPlaceholderText('https://example.com/evidence'),
@@ -130,8 +140,11 @@ describe('ApproveForm', () => {
     render(<ApproveForm onSuccess={onSuccess} />);
 
     const playerIdInput = screen.getByPlaceholderText('Enter player ID');
+    // See the smart-apostrophe note in "displays the form when
+    // isValidator=true" — the textarea placeholder can have either
+    // straight ' or smart U+2019, and this regex accepts both.
     const descriptionInput = screen.getByPlaceholderText(
-      /Describe the player's achievement/i,
+      /Describe the player['’]s achievement/i,
     );
     const evidenceUrlInput = screen.getByPlaceholderText(
       'https://example.com/evidence',
@@ -146,6 +159,15 @@ describe('ApproveForm', () => {
       target: { value: 'https://example.com/evidence' },
     });
 
+    // fireEvent.click on a <button type="submit"> dispatches the click
+    // event but does NOT trigger jsdom's form-submission default action,
+    // so the form's onSubmit handler never runs. Firing `submit` on the
+    // submit button doesn't reliably bubble through React's synthetic
+    // event system either. The canonical fix is to fire `submit` on
+    // the form element itself (button.form points to the owning <form>
+    // and is the most reliable way to grab it without introducing a
+    // new selector). (userEvent.click would also work but requires an
+    // extra dependency.)
     await act(async () => {
       fireEvent.click(submitButton);
     });
