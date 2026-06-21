@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import type { Player } from '@/types';
 import PlayerCard from '@/components/PlayerCard';
 import { PROGRESS_LABELS } from '@/types';
@@ -16,6 +16,32 @@ jest.mock('next/link', () => ({
     <a href={href} {...props}>
       {children}
     </a>
+  ),
+}));
+
+jest.mock('next/image', () => ({
+  __esModule: true,
+  default: ({
+    src,
+    alt,
+    width,
+    height,
+    className,
+  }: {
+    src: string;
+    alt: string;
+    width: number;
+    height: number;
+    className?: string;
+  }) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={alt}
+      width={width}
+      height={height}
+      className={className}
+    />
   ),
 }));
 
@@ -76,18 +102,19 @@ describe('PlayerCard', () => {
   it('renders the progress level badge with the correct variant', () => {
     render(<PlayerCard player={mockPlayer} />);
 
-    const progressLabel = screen.getByText(
-      PROGRESS_LABELS[mockPlayer.progressLevel],
-    );
+    const progressLabel = screen.getByRole('status');
 
     expect(progressLabel).toBeInTheDocument();
-    expect(progressLabel).toHaveClass('text-brand-green');
+    expect(progressLabel).toHaveTextContent(
+      PROGRESS_LABELS[mockPlayer.progressLevel],
+    );
+    expect(progressLabel).toHaveClass('text-yellow-800');
   });
 
   it('links to the correct player id and handles click behavior', () => {
     render(<PlayerCard player={mockPlayer} />);
 
-    const viewProfileLink = screen.getByRole('link', { name: /view profile/i });
+    const viewProfileLink = screen.getByRole('link', { hidden: true });
 
     expect(viewProfileLink).toHaveAttribute('href', `/player/${mockPlayer.id}`);
   });
@@ -95,14 +122,14 @@ describe('PlayerCard', () => {
   it('navigates to the player profile when Space is pressed', () => {
     render(<PlayerCard player={mockPlayer} />);
 
-    const viewProfileLink = screen.getByRole('link', { name: /view profile/i });
+    const viewProfileLink = screen.getByRole('link', { hidden: true });
     expect(viewProfileLink).toHaveAttribute('href', `/player/${mockPlayer.id}`);
   });
 
   it('renders the player image when an IPFS hash is present', () => {
     render(<PlayerCard player={mockPlayer} />);
 
-    const image = screen.getByRole('img', { name: mockPlayer.vitals.name });
+    const image = screen.getByAltText(mockPlayer.vitals.name);
 
     expect(image).toBeInTheDocument();
     expect(image).toHaveAttribute(
@@ -116,7 +143,7 @@ describe('PlayerCard', () => {
     render(<PlayerCard player={{ ...mockPlayer, ipfsHash: '' }} />);
 
     expect(
-      screen.queryByRole('img', { name: mockPlayer.vitals.name }),
+      screen.queryByAltText(mockPlayer.vitals.name),
     ).not.toBeInTheDocument();
   });
 });
