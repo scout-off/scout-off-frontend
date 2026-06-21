@@ -109,7 +109,8 @@ describe('UpdateProfileForm', () => {
     const link = screen.getByRole('link', { name: truncated });
 
     expect(link).toBeInTheDocument();
-    expect(link).toHaveAttribute('href', ipfsUrl(player.ipfsHash));
+    const expectedHref = `${process.env.NEXT_PUBLIC_IPFS_GATEWAY}/${player.ipfsHash}`;
+    expect(link).toHaveAttribute('href', expectedHref);
   });
 
   it('keeps the submit button disabled until a new CID is obtained', () => {

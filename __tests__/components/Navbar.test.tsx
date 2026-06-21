@@ -8,6 +8,12 @@ jest.mock('@/hooks/useWallet', () => ({
 
 jest.mock('next/navigation', () => ({
   usePathname: jest.fn(),
+  useRouter: jest.fn(() => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    prefetch: jest.fn(),
+    back: jest.fn(),
+  })),
 }));
 
 jest.mock('@/hooks/useContractHealth', () => ({
@@ -103,8 +109,11 @@ describe('Navbar', () => {
 
     render(<Navbar />);
 
-    const expected = `${publicKey.slice(0, 4)}…${publicKey.slice(-4)}`;
-    expect(screen.getByRole('button', { name: expected })).toBeInTheDocument();
+    const truncated = `${publicKey.slice(0, 4)}…${publicKey.slice(-4)}`;
+    // accessible name includes appended balance text, so use a partial match
+    expect(
+      screen.getByRole('button', { name: new RegExp(truncated) }),
+    ).toBeInTheDocument();
   });
 
   test('active route link has aria-current="page"', () => {
@@ -115,7 +124,8 @@ describe('Navbar', () => {
       disconnect: jest.fn(),
       signAndSubmit: jest.fn(),
     });
-    mockUsePathname.mockReturnValue('/player');
+    // Component prefixes locale, so pathname must also be locale-prefixed
+    mockUsePathname.mockReturnValue('/en/player');
 
     render(<Navbar />);
 
@@ -124,13 +134,13 @@ describe('Navbar', () => {
   });
 
   test('inactive route link does not have aria-current', () => {
-    setup('/player');
+    setup('/en/player');
     const scoutLink = screen.getByRole('link', { name: /Scout Dashboard/i });
     expect(scoutLink).not.toHaveAttribute('aria-current');
   });
 
   test('logo link has aria-current="page" when on home route', () => {
-    setup('/');
+    setup('/en');
     const logo = screen.getByRole('link', { name: /ScoutOff/i });
     expect(logo).toHaveAttribute('aria-current', 'page');
   });

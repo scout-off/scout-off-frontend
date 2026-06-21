@@ -170,7 +170,7 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
         <label className="text-xs text-gray-400">Milestone Description</label>
         <textarea
           className="input min-h-[80px] resize-y"
-          placeholder="Describe the player\u2019s achievement\u2026"
+          placeholder="Describe the player's achievement"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           required

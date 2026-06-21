@@ -1,4 +1,4 @@
-import { SorobanRpc, Networks } from '@stellar/stellar-sdk';
+import { Networks } from '@stellar/stellar-sdk';
 
 jest.mock('@stellar/stellar-sdk', () => {
   const original = jest.requireActual('@stellar/stellar-sdk');
@@ -11,11 +11,8 @@ jest.mock('@stellar/stellar-sdk', () => {
 });
 
 describe('lib/stellar', () => {
-  const mockSorobanRpcServer = SorobanRpc.Server as jest.Mock;
-
   beforeEach(() => {
     jest.resetModules();
-    mockSorobanRpcServer.mockClear();
   });
 
   test('uses NEXT_PUBLIC_SOROBAN_RPC for SorobanRpc.Server', () => {
@@ -25,7 +22,8 @@ describe('lib/stellar', () => {
 
     require('@/lib/stellar');
 
-    expect(mockSorobanRpcServer).toHaveBeenCalledWith(mockRpcUrl, {
+    const { SorobanRpc } = require('@stellar/stellar-sdk');
+    expect(SorobanRpc.Server).toHaveBeenCalledWith(mockRpcUrl, {
       allowHttp: false,
     });
   });

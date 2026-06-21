@@ -32,4 +32,16 @@ const customJestConfig = {
   ],
 };
 
-module.exports = createJestConfig(customJestConfig);
+// Wrap to override transformIgnorePatterns after next/jest applies its defaults
+async function jestConfig() {
+  const nextJestConfig = await createJestConfig(customJestConfig)();
+  return {
+    ...nextJestConfig,
+    transformIgnorePatterns: [
+      '/node_modules/(?!(next-intl|use-intl|@formatjs|intl-messageformat)/)',
+      '^.+\\.module\\.(css|sass|scss)$',
+    ],
+  };
+}
+
+module.exports = jestConfig;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState, ReactNode } from 'react';
+import { useCallback, useEffect, useId, useState, ReactNode } from 'react';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -16,6 +16,8 @@ export default function Modal({
   children,
   title,
 }: ModalProps) {
+  const titleId = useId();
+
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -38,19 +40,28 @@ export default function Modal({
 
   return (
     <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
       className="fixed inset-0 z-50 flex items-center justify-center"
       onClick={onClose}
     >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
         className="relative bg-brand-card border border-gray-700 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
+        <button
+          aria-label="Close modal"
+          className="absolute top-3 right-3 text-gray-400 hover:text-white transition"
+          onClick={onClose}
+        >
+          ✕
+        </button>
         {title && (
-          <h2 className="text-lg font-semibold text-white mb-4">{title}</h2>
+          <h2 id={titleId} className="text-lg font-semibold text-white mb-4">
+            {title}
+          </h2>
         )}
         {children}
       </div>

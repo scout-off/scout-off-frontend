@@ -1,4 +1,7 @@
+import axios from 'axios';
 import { ipfsUrl, uploadToIPFS, DEFAULT_IPFS_FALLBACKS } from '../../lib/ipfs';
+
+jest.mock('axios');
 
 describe('lib/ipfs', () => {
   const mockCid = 'QmTest123';
@@ -45,9 +48,7 @@ describe('lib/ipfs', () => {
         .mockResolvedValueOnce({ ok: false, status: 500 })
         .mockResolvedValueOnce({ ok: false, status: 500 });
 
-      await expect(ipfsUrl(mockCid)).rejects.toThrow(
-        'All IPFS gateways exhausted',
-      );
+      await expect(ipfsUrl(mockCid)).rejects.toThrow(/gateways exhausted/);
       expect(global.fetch).toHaveBeenCalledTimes(3);
     });
   });
@@ -59,20 +60,16 @@ describe('lib/ipfs', () => {
       });
       const mockCidResponse = { cid: 'QmUpload123' };
 
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockCidResponse,
+      (axios.post as jest.Mock).mockResolvedValueOnce({
+        data: mockCidResponse,
       });
 
       const result = await uploadToIPFS(mockFile);
 
       expect(result).toBe(mockCidResponse.cid);
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(axios.post).toHaveBeenCalledWith(
         '/api/ipfs/upload',
-        expect.objectContaining({
-          method: 'POST',
-          body: expect.any(FormData),
-        }),
+        expect.any(FormData),
       );
     });
   });

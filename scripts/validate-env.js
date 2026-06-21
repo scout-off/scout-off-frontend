@@ -11,6 +11,8 @@ const example = fs.readFileSync(
 );
 const declared = new Set(example.match(/^[A-Z_]+(?==)/gm) ?? []);
 
+const SYSTEM_VARS = new Set(['NODE_ENV']);
+
 const used = new Set(
   execSync(
     'grep -roh "process\\.env\\.[A-Z_]\\+" --include="*.ts" --include="*.tsx" --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=coverage .',
@@ -18,7 +20,8 @@ const used = new Set(
     .toString()
     .split('\n')
     .filter(Boolean)
-    .map((m) => m.replace('process.env.', '')),
+    .map((m) => m.replace('process.env.', ''))
+    .filter((v) => !SYSTEM_VARS.has(v)),
 );
 
 const missing = [...used].filter((v) => !declared.has(v));
