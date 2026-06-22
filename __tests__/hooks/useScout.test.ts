@@ -15,14 +15,24 @@ const mockFilterPlayers = filterPlayers as jest.Mock;
 
 const wrapper = ({ children }: { children: React.ReactNode }) =>
   React.createElement(SWRConfig, {
-    value: { provider: () => new Map(), dedupingInterval: 0, onErrorRetry: () => {} },
+    value: {
+      provider: () => new Map(),
+      dedupingInterval: 0,
+      onErrorRetry: () => {},
+    },
     children,
   });
 
 const mockPlayer: Player = {
   id: 'player-1',
   wallet: 'GABC123',
-  vitals: { name: 'Alice', age: 22, position: 'FW', region: 'EU', nationality: 'DE' },
+  vitals: {
+    name: 'Alice',
+    age: 22,
+    position: 'FW',
+    region: 'EU',
+    nationality: 'DE',
+  },
   ipfsHash: 'QmTestHash',
   progressLevel: 1,
   milestones: [],

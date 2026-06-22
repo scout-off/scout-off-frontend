@@ -35,7 +35,11 @@ describe('usePayToContact', () => {
       email: 'alice@example.com',
       phone: '+1234567890',
     };
-    mockGetSubscription.mockResolvedValue({ scout: PUBLIC_KEY, tier: 'pro', expiresAt: FUTURE_EXPIRY });
+    mockGetSubscription.mockResolvedValue({
+      scout: PUBLIC_KEY,
+      tier: 'pro',
+      expiresAt: FUTURE_EXPIRY,
+    });
     mockPayToContact.mockResolvedValue(mockContact);
 
     const { result } = renderHook(() => usePayToContact());
@@ -53,7 +57,11 @@ describe('usePayToContact', () => {
   });
 
   test('subscription expired (error code 8) sets correct error message', async () => {
-    mockGetSubscription.mockResolvedValue({ scout: PUBLIC_KEY, tier: 'basic', expiresAt: PAST_EXPIRY });
+    mockGetSubscription.mockResolvedValue({
+      scout: PUBLIC_KEY,
+      tier: 'basic',
+      expiresAt: PAST_EXPIRY,
+    });
 
     const { result } = renderHook(() => usePayToContact());
 
@@ -71,7 +79,11 @@ describe('usePayToContact', () => {
   });
 
   test('contract paused (error code 9) sets correct error message', async () => {
-    mockGetSubscription.mockResolvedValue({ scout: PUBLIC_KEY, tier: 'pro', expiresAt: FUTURE_EXPIRY });
+    mockGetSubscription.mockResolvedValue({
+      scout: PUBLIC_KEY,
+      tier: 'pro',
+      expiresAt: FUTURE_EXPIRY,
+    });
     mockPayToContact.mockRejectedValue(new Error('ContractPaused'));
 
     const { result } = renderHook(() => usePayToContact());

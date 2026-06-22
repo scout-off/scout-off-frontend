@@ -116,7 +116,12 @@ export default function TrialOfferModal({
           {txStatus && (
             <TransactionStatus
               status={txStatus}
-              error={error || (txStatus === 'error' ? 'Please fill in all fields' : undefined)}
+              error={
+                error ||
+                (txStatus === 'error'
+                  ? 'Please fill in all fields'
+                  : undefined)
+              }
               onHide={() => {
                 if (txStatus === 'success') {
                   setTxStatus(null);
@@ -129,7 +134,9 @@ export default function TrialOfferModal({
           <div className="flex gap-3 mt-2">
             <button
               type="submit"
-              disabled={loading || !description.trim() || !startDate || !location.trim()}
+              disabled={
+                loading || !description.trim() || !startDate || !location.trim()
+              }
               className="flex-1 bg-brand-green text-black font-semibold py-2 rounded-lg hover:opacity-90 transition disabled:opacity-50"
             >
               {loading ? 'Submitting...' : 'Submit'}

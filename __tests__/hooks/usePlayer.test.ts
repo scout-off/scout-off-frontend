@@ -15,14 +15,24 @@ const mockGetPlayer = getPlayer as jest.Mock;
 
 const wrapper = ({ children }: { children: React.ReactNode }) =>
   React.createElement(SWRConfig, {
-    value: { provider: () => new Map(), dedupingInterval: 0, onErrorRetry: () => {} },
+    value: {
+      provider: () => new Map(),
+      dedupingInterval: 0,
+      onErrorRetry: () => {},
+    },
     children,
   });
 
 const mockPlayer: Player = {
   id: 'player-1',
   wallet: 'GABC123',
-  vitals: { name: 'Bob', age: 25, position: 'MF', region: 'AF', nationality: 'NG' },
+  vitals: {
+    name: 'Bob',
+    age: 25,
+    position: 'MF',
+    region: 'AF',
+    nationality: 'NG',
+  },
   ipfsHash: 'QmPlayerHash',
   progressLevel: 2,
   milestones: [],
@@ -52,7 +62,9 @@ describe('usePlayer', () => {
   test('player not found returns null player without error', async () => {
     mockGetPlayer.mockResolvedValue(null);
 
-    const { result } = renderHook(() => usePlayer('unknown-player'), { wrapper });
+    const { result } = renderHook(() => usePlayer('unknown-player'), {
+      wrapper,
+    });
 
     await act(async () => {
       await new Promise((r) => setTimeout(r, 0));

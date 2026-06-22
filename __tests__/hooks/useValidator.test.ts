@@ -15,7 +15,11 @@ jest.mock('@/lib/contract', () => ({
 }));
 
 import { useWallet } from '@/hooks/useWallet';
-import { getValidators, buildApproveMilestone, buildRevokeMilestone } from '@/lib/contract';
+import {
+  getValidators,
+  buildApproveMilestone,
+  buildRevokeMilestone,
+} from '@/lib/contract';
 
 const mockUseWallet = useWallet as jest.Mock;
 const mockGetValidators = getValidators as jest.Mock;
@@ -32,7 +36,13 @@ const mockValidators: ValidatorInfo[] = [
 const mockPlayer: Player = {
   id: 'player-1',
   wallet: 'GABC123',
-  vitals: { name: 'Charlie', age: 20, position: 'GK', region: 'SA', nationality: 'BR' },
+  vitals: {
+    name: 'Charlie',
+    age: 20,
+    position: 'GK',
+    region: 'SA',
+    nationality: 'BR',
+  },
   ipfsHash: 'QmPlayerHash',
   progressLevel: 1,
   milestones: [],
