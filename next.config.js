@@ -51,6 +51,24 @@ const nextConfig = {
   images: {
     domains: ['ipfs.io', 'gateway.pinata.cloud'],
   },
+  webpack(config, { isServer }) {
+    // @sentry/nextjs is an optional peer dep used only in production.
+    // Mark it as external so webpack doesn't try to bundle it when the
+    // package isn't installed locally (e.g. CI / contributor machines).
+    config.externals = [
+      ...(Array.isArray(config.externals)
+        ? config.externals
+        : config.externals
+          ? [config.externals]
+          : []),
+      ({ request }, callback) => {
+        if (request === '@sentry/nextjs')
+          return callback(null, 'commonjs @sentry/nextjs');
+        callback();
+      },
+    ];
+    return config;
+  },
   async headers() {
     // Get environment variables with defaults for development
     const ipfsGateway =

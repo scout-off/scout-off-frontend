@@ -27,22 +27,8 @@ jest.mock('@stellar/freighter-api', () => ({
   signTransaction: jest.fn(),
 }));
 
-// Mock @stellar/stellar-sdk
-jest.mock('@stellar/stellar-sdk', () => {
-  const original = jest.requireActual('@stellar/stellar-sdk');
-  return {
-    ...original,
-    TransactionBuilder: {
-      fromXDR: jest.fn().mockReturnValue({}),
-    },
-  };
-});
-
 // Mock @/lib/stellar
 jest.mock('@/lib/stellar', () => ({
-  rpc: {
-    sendTransaction: jest.fn(),
-  },
   NETWORK: 'Test SDF Network ; September 2015',
 }));
 
@@ -51,7 +37,6 @@ import {
   isConnected,
   signTransaction,
 } from '@stellar/freighter-api';
-import { rpc } from '@/lib/stellar';
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <WalletProvider>{children}</WalletProvider>

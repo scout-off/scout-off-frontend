@@ -145,6 +145,7 @@ describe('UpdateProfileForm', () => {
       player.wallet,
       player.id,
       'new-cid-1234567890',
+      expect.any(Function),
     );
     expect(onSuccess).toHaveBeenCalledTimes(1);
   });

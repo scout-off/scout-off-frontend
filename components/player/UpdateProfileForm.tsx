@@ -18,7 +18,7 @@ export default function UpdateProfileForm({
   player,
   onSuccess,
 }: UpdateProfileFormProps) {
-  const { publicKey } = useWallet();
+  const { publicKey, signAndSubmit } = useWallet();
   const { show } = useToast();
   const isPaused = useIsPaused();
   const [newCid, setNewCid] = useState<string>('');
@@ -45,7 +45,7 @@ export default function UpdateProfileForm({
 
     setIsSubmitting(true);
     try {
-      await updateProfile(publicKey, player.id, newCid);
+      await updateProfile(publicKey, player.id, newCid, signAndSubmit);
       show({
         message: 'Profile media updated successfully',
         variant: 'success',

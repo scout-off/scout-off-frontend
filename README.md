@@ -343,6 +343,8 @@ sequenceDiagram
 
 ## Quick Start
 
+> For a complete end-to-end local development guide (clone → contracts → backend → frontend → wallet), see [DEVELOPMENT.md](DEVELOPMENT.md).
+
 ### 1. Install Dependencies
 
 ```bash

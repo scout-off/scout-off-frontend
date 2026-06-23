@@ -100,6 +100,15 @@ export interface ContactDetails {
   telegram?: string;
 }
 
+// ── Trial Offer ───────────────────────────────────────────────────────────────
+export type TrialOfferType = 'trial' | 'loan' | 'transfer';
+
+export interface TrialOfferDetails {
+  clubName: string;
+  offerType: TrialOfferType;
+  message?: string;
+}
+
 // ── Contract call helpers ─────────────────────────────────────────────────────
 export interface ContractCallResult<T = unknown> {
   success: boolean;

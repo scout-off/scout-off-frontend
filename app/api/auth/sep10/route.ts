@@ -1,15 +1,22 @@
 import { Keypair, WebAuth, Networks } from '@stellar/stellar-sdk';
 import { NextRequest, NextResponse } from 'next/server';
 
-const SECRET_KEY =
-  process.env.STELLAR_SECRET_KEY ||
-  'SDAV7XESHT63OQQ3Q6L27W462O4ZORZCOV4UOOXF6S2A6SST2YJXY63G';
-const serverKeypair = Keypair.fromSecret(SECRET_KEY);
-const NETWORK =
-  process.env.NEXT_PUBLIC_NETWORK === 'mainnet'
-    ? Networks.PUBLIC
-    : Networks.TESTNET;
-const DOMAIN = process.env.NEXT_PUBLIC_DOMAIN || 'localhost:3000';
+// Initialise lazily so module-level evaluation during Next.js build does not
+// throw when STELLAR_SECRET_KEY is absent (the fallback placeholder is not a
+// valid Stellar secret and would fail the checksum on Keypair.fromSecret).
+function getServerConfig() {
+  const SECRET_KEY = process.env.STELLAR_SECRET_KEY;
+  if (!SECRET_KEY) {
+    throw new Error('STELLAR_SECRET_KEY environment variable is not set');
+  }
+  const serverKeypair = Keypair.fromSecret(SECRET_KEY);
+  const NETWORK =
+    process.env.NEXT_PUBLIC_NETWORK === 'mainnet'
+      ? Networks.PUBLIC
+      : Networks.TESTNET;
+  const DOMAIN = process.env.NEXT_PUBLIC_DOMAIN || 'localhost:3000';
+  return { serverKeypair, NETWORK, DOMAIN };
+}
 
 export async function GET(req: NextRequest) {
   const account = req.nextUrl.searchParams.get('account');
@@ -21,6 +28,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const { serverKeypair, NETWORK, DOMAIN } = getServerConfig();
     const challengeXdr = WebAuth.buildChallengeTx(
       serverKeypair,
       account,
@@ -49,6 +57,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const { serverKeypair, NETWORK, DOMAIN } = getServerConfig();
     // readChallengeTx validates the server signature and extracts the client account ID
     const { clientAccountID } = WebAuth.readChallengeTx(
       transaction,

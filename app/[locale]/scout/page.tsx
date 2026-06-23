@@ -1,16 +1,15 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useRequireWallet } from '@/hooks/useRequireWallet';
 import { useScout } from '@/hooks/useScout';
 import { getPlayer } from '@/lib/contract';
 import PlayerCard from '@/components/PlayerCard';
 import PlayerCardSkeleton from '@/components/PlayerCardSkeleton';
+import PlayerFilterForm from '@/components/scout/PlayerFilterForm';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
-import { AFRICAN_REGIONS } from '@/lib/regions';
-import type { Player, PlayerFilter, ProgressLevel } from '@/types';
+import type { Player, PlayerFilter } from '@/types';
 
-const POSITIONS = ['GK', 'CB', 'LB', 'RB', 'CM', 'CAM', 'LW', 'RW', 'ST'];
 const PAGE_SIZE = 12;
 
 function isStellarKey(v: string) {
@@ -22,7 +21,6 @@ function ScoutDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [filter, setFilter] = useState<PlayerFilter>({});
   const { players, loading, search } = useScout();
   const hasLoaded = useRef(false);
 
@@ -46,12 +44,6 @@ function ScoutDashboardContent() {
     const params = new URLSearchParams(searchParams.toString());
     params.set('page', String(p));
     router.replace(`?${params.toString()}`);
-  }
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    hasLoaded.current = false;
-    setPage(1);
-    search(filter);
   }
 
   useEffect(() => {
@@ -88,6 +80,14 @@ function ScoutDashboardContent() {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [walletQuery]);
+
+  const handleSearch = useCallback(
+    (filter: PlayerFilter) => {
+      hasLoaded.current = false;
+      search(filter);
+    },
+    [search],
+  );
 
   if (!publicKey) return null;
 
@@ -141,65 +141,9 @@ function ScoutDashboardContent() {
       </div>
 
       {/* Filter bar */}
-      <form
-        onSubmit={handleSearch}
-        className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-wrap gap-4 items-end"
-      >
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-400">Region</label>
-          <select
-            className="input w-40"
-            value={filter.region ?? ''}
-            onChange={(e) =>
-              setFilter((f) => ({ ...f, region: e.target.value }))
-            }
-          >
-            <option value="">All regions</option>
-            {AFRICAN_REGIONS.map(({ label, value }) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-400">Position</label>
-          <select
-            className="input w-32"
-            onChange={(e) =>
-              setFilter((f) => ({ ...f, position: e.target.value }))
-            }
-          >
-            <option value="">Any</option>
-            {POSITIONS.map((p) => (
-              <option key={p}>{p}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-400">Min Level</label>
-          <select
-            className="input w-32"
-            onChange={(e) =>
-              setFilter((f) => ({
-                ...f,
-                minLevel: Number(e.target.value) as ProgressLevel,
-              }))
-            }
-          >
-            <option value="0">Any</option>
-            <option value="1">Verified</option>
-            <option value="2">Performance</option>
-            <option value="3">Elite</option>
-          </select>
-        </div>
-        <button
-          type="submit"
-          className="bg-brand-green text-black font-semibold px-5 py-2 rounded-lg hover:opacity-90 transition"
-        >
-          Search
-        </button>
-      </form>
+      <div className="bg-brand-card border border-gray-800 rounded-xl p-5">
+        <PlayerFilterForm onSearch={handleSearch} />
+      </div>
 
       {/* Results */}
       {showSkeletons ? (

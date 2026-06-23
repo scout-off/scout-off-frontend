@@ -5,7 +5,7 @@ import { payToContact, getSubscription } from '@/lib/contract';
 import type { ContactDetails } from '@/types';
 
 export function usePayToContact() {
-  const { publicKey } = useWallet();
+  const { publicKey, signAndSubmit } = useWallet();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,7 +43,7 @@ export function usePayToContact() {
         }
 
         // Call the contract function
-        const contactDetails = await payToContact(publicKey, playerId);
+        const contactDetails = await payToContact(publicKey, playerId, signAndSubmit);
         return contactDetails;
       } catch (e: any) {
         const friendlyError = mapErrorMessage(e.message);
@@ -53,7 +53,7 @@ export function usePayToContact() {
         setLoading(false);
       }
     },
-    [publicKey],
+    [publicKey, signAndSubmit],
   );
 
   return { unlock, loading, error };

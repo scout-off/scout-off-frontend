@@ -13,6 +13,8 @@ The typical contribution workflow is:
 
 ## Local Development Setup
 
+> For a complete end-to-end guide covering contracts, backend, and wallet setup, see [DEVELOPMENT.md](DEVELOPMENT.md).
+
 ### Prerequisites
 
 - Git
