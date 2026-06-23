@@ -164,6 +164,9 @@ export default memo(
   ScoutProfileCard,
   (prev, next) =>
     prev.scout.id === next.scout.id &&
+    prev.scout.name === next.scout.name &&
+    prev.scout.organisation === next.scout.organisation &&
+    prev.scout.wallet === next.scout.wallet &&
     prev.scout.subscriptionTier === next.scout.subscriptionTier &&
     prev.scout.subscriptionExpiry === next.scout.subscriptionExpiry,
 );
