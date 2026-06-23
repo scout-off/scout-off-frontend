@@ -6,3 +6,4 @@ out/
 *.tsbuildinfo
 # Jest coverage output (issue #108)
 coverage/
+storybook-static/
