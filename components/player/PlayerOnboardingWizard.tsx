@@ -1,0 +1,452 @@
+'use client';
+
+import { useState } from 'react';
+import { sanitize } from '@/lib/sanitize';
+import { useWallet } from '@/hooks/useWallet';
+import useIsPaused from '@/hooks/useIsPaused';
+import { buildRegisterPlayer } from '@/lib/contract';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
+import VideoUpload from '@/components/ui/VideoUpload';
+import TransactionStatus from '@/components/ui/TransactionStatus';
+import { AFRICAN_REGIONS } from '@/lib/regions';
+import type { PlayerVitals } from '@/types';
+import type { TxStatus } from '@/components/ui/TransactionStatus';
+
+const STEPS = [
+  { id: 1, label: 'Personal Info' },
+  { id: 2, label: 'Highlight Reel' },
+  { id: 3, label: 'Review & Confirm' },
+] as const;
+
+export const FOOTBALL_POSITIONS: { value: string; label: string }[] = [
+  { value: 'GK', label: 'Goalkeeper' },
+  { value: 'CB', label: 'Centre-Back' },
+  { value: 'LB', label: 'Left-Back' },
+  { value: 'RB', label: 'Right-Back' },
+  { value: 'CM', label: 'Central Midfielder' },
+  { value: 'CAM', label: 'Attacking Midfielder' },
+  { value: 'LW', label: 'Left Winger' },
+  { value: 'RW', label: 'Right Winger' },
+  { value: 'ST', label: 'Striker' },
+];
+
+interface WizardData {
+  name: string;
+  age: string;
+  nationality: string;
+  region: string;
+  position: string;
+  bio: string;
+  ipfsHash: string;
+}
+
+export interface PlayerOnboardingWizardProps {
+  onSuccess: (playerId: string) => void;
+}
+
+// ── Progress Stepper ──────────────────────────────────────────────────────────
+
+function StepIndicator({ currentStep }: { currentStep: number }) {
+  return (
+    <nav aria-label="Registration progress">
+      <ol className="flex items-center w-full">
+        {STEPS.map((step, index) => {
+          const isCompleted = currentStep > step.id;
+          const isCurrent = currentStep === step.id;
+          return (
+            <li
+              key={step.id}
+              className={`flex items-center ${index < STEPS.length - 1 ? 'flex-1' : ''}`}
+            >
+              <div className="flex flex-col items-center flex-shrink-0">
+                <div
+                  aria-current={isCurrent ? 'step' : undefined}
+                  className={[
+                    'w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors',
+                    isCompleted
+                      ? 'bg-brand-green text-black'
+                      : isCurrent
+                        ? 'border-2 border-brand-green text-brand-green'
+                        : 'border-2 border-gray-600 text-gray-500',
+                  ].join(' ')}
+                >
+                  {isCompleted ? '✓' : step.id}
+                </div>
+                <span
+                  className={`text-xs mt-1 whitespace-nowrap ${
+                    isCurrent ? 'text-white font-medium' : 'text-gray-500'
+                  }`}
+                >
+                  {step.label}
+                </span>
+              </div>
+              {index < STEPS.length - 1 && (
+                <div
+                  aria-hidden="true"
+                  className={`flex-1 h-px mx-3 mb-4 transition-colors ${
+                    isCompleted ? 'bg-brand-green' : 'bg-gray-700'
+                  }`}
+                />
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
+
+export default function PlayerOnboardingWizard({
+  onSuccess,
+}: PlayerOnboardingWizardProps) {
+  const { publicKey, signAndSubmit } = useWallet();
+  const isPaused = useIsPaused();
+
+  const [step, setStep] = useState(1);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [txStatus, setTxStatus] = useState<TxStatus | null>(null);
+  const [txHash, setTxHash] = useState<string | null>(null);
+
+  const [data, setData] = useState<WizardData>({
+    name: '',
+    age: '',
+    nationality: '',
+    region: '',
+    position: '',
+    bio: '',
+    ipfsHash: '',
+  });
+
+  const updateField = (field: keyof WizardData, value: string) => {
+    setData((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) => {
+    updateField(e.target.name as keyof WizardData, e.target.value);
+  };
+
+  // ── Per-step validation ───────────────────────────────────────────────────
+
+  const validateStep1 = (): boolean => {
+    const errs: Record<string, string> = {};
+    if (!data.name.trim()) errs.name = 'Name is required';
+    if (!data.age) {
+      errs.age = 'Age is required';
+    } else {
+      const n = parseInt(data.age);
+      if (isNaN(n) || n < 14 || n > 45) errs.age = 'Age must be between 14 and 45';
+    }
+    if (!data.nationality.trim()) errs.nationality = 'Nationality is required';
+    if (!data.region) errs.region = 'Region is required';
+    if (!data.position) errs.position = 'Position is required';
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const validateStep2 = (): boolean => {
+    if (!data.ipfsHash) {
+      setErrors({
+        ipfsHash: 'Please upload your highlight reel before continuing',
+      });
+      return false;
+    }
+    return true;
+  };
+
+  // ── Navigation ────────────────────────────────────────────────────────────
+
+  const handleNext = () => {
+    if (step === 1 && !validateStep1()) return;
+    if (step === 2 && !validateStep2()) return;
+    setErrors({});
+    setStep((s) => s + 1);
+  };
+
+  const handleBack = () => {
+    setErrors({});
+    setStep((s) => s - 1);
+  };
+
+  // ── Contract submission ───────────────────────────────────────────────────
+
+  const handleSubmit = async () => {
+    if (!publicKey) {
+      setErrors({ form: 'Wallet not connected' });
+      return;
+    }
+    if (isPaused) {
+      setErrors({ form: 'Transactions are currently disabled' });
+      return;
+    }
+
+    setIsLoading(true);
+    setErrors({});
+    setTxStatus('pending');
+    setTxHash(null);
+
+    try {
+      const vitals: PlayerVitals = {
+        name: data.name,
+        age: parseInt(data.age),
+        position: data.position,
+        region: data.region,
+        nationality: data.nationality,
+      };
+
+      const xdr = await buildRegisterPlayer(publicKey, vitals, data.ipfsHash);
+      const result = await signAndSubmit(xdr);
+
+      const hash = (result as any)?.hash ?? null;
+      setTxHash(hash);
+      setTxStatus('success');
+
+      const playerId = (result as any)?.id || publicKey;
+      onSuccess(playerId);
+    } catch (error) {
+      setTxStatus('error');
+      setErrors({
+        form: error instanceof Error ? error.message : 'Registration failed',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ── Display labels for review ─────────────────────────────────────────────
+
+  const positionLabel =
+    FOOTBALL_POSITIONS.find((p) => p.value === data.position)?.label ??
+    data.position;
+  const regionLabel =
+    AFRICAN_REGIONS.find((r) => r.value === data.region)?.label ?? data.region;
+  const shortCid = data.ipfsHash
+    ? `${data.ipfsHash.slice(0, 8)}…${data.ipfsHash.slice(-6)}`
+    : '';
+
+  return (
+    <div className="space-y-8">
+      <StepIndicator currentStep={step} />
+
+      {/* ── Step 1: Personal Info ─────────────────────────────────────────── */}
+      {step === 1 && (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-semibold text-white">
+              Personal Information
+            </h2>
+            <p className="text-sm text-gray-400 mt-1">
+              Basic details used to create your on-chain profile.
+            </p>
+          </div>
+
+          <Input
+            id="wizard-name"
+            label="Name *"
+            type="text"
+            name="name"
+            value={data.name}
+            onChange={handleChange}
+            error={errors.name}
+            placeholder="Enter your full name"
+            autoComplete="name"
+          />
+
+          <Input
+            id="wizard-age"
+            label="Age *"
+            type="number"
+            name="age"
+            value={data.age}
+            onChange={handleChange}
+            error={errors.age}
+            placeholder="Enter your age (14–45)"
+            min="14"
+            max="45"
+          />
+
+          <Input
+            id="wizard-nationality"
+            label="Nationality *"
+            type="text"
+            name="nationality"
+            value={data.nationality}
+            onChange={handleChange}
+            error={errors.nationality}
+            placeholder="Enter your nationality"
+          />
+
+          <Select
+            label="Region *"
+            name="region"
+            value={data.region}
+            onChange={handleChange}
+            error={errors.region}
+          >
+            <option value="">Select region</option>
+            {AFRICAN_REGIONS.map(({ label, value }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </Select>
+
+          <Select
+            label="Position *"
+            name="position"
+            value={data.position}
+            onChange={handleChange}
+            error={errors.position}
+          >
+            <option value="">Select position</option>
+            {FOOTBALL_POSITIONS.map((pos) => (
+              <option key={pos.value} value={pos.value}>
+                {pos.label}
+              </option>
+            ))}
+          </Select>
+
+          <div className="space-y-1">
+            <label
+              htmlFor="wizard-bio"
+              className="block text-sm font-medium text-gray-300"
+            >
+              Bio
+            </label>
+            <textarea
+              id="wizard-bio"
+              name="bio"
+              value={data.bio}
+              onChange={handleChange}
+              className="input resize-none"
+              rows={3}
+              placeholder="Tell us about yourself (optional)"
+            />
+          </div>
+
+          <Button type="button" onClick={handleNext} className="w-full">
+            Continue
+          </Button>
+        </div>
+      )}
+
+      {/* ── Step 2: Highlight Reel ────────────────────────────────────────── */}
+      {step === 2 && (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-semibold text-white">Highlight Reel</h2>
+            <p className="text-sm text-gray-400 mt-1">
+              Upload a video showcasing your skills. The upload must complete
+              before you can continue.
+            </p>
+          </div>
+
+          <VideoUpload
+            onUpload={(cid) => updateField('ipfsHash', cid)}
+            error={errors.ipfsHash}
+          />
+
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleBack}
+              className="flex-1"
+            >
+              Back
+            </Button>
+            <Button type="button" onClick={handleNext} className="flex-1">
+              Continue
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Step 3: Review & Confirm ──────────────────────────────────────── */}
+      {step === 3 && (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-semibold text-white">
+              Review &amp; Confirm
+            </h2>
+            <p className="text-sm text-gray-400 mt-1">
+              Check your details before submitting to the Stellar blockchain.
+            </p>
+          </div>
+
+          <dl className="rounded-xl border border-gray-800 bg-gray-900/50 divide-y divide-gray-800">
+            {(
+              [
+                ['Name', data.name],
+                ['Age', data.age],
+                ['Nationality', data.nationality],
+                ['Region', regionLabel],
+                ['Position', positionLabel],
+                ...(data.bio.trim()
+                  ? [['Bio', sanitize(data.bio)] as [string, string]]
+                  : []),
+                ['Highlight Reel (IPFS)', shortCid],
+              ] as [string, string][]
+            ).map(([label, value]) => (
+              <div key={label} className="flex justify-between px-4 py-3 gap-4">
+                <dt className="text-sm text-gray-400 shrink-0">{label}</dt>
+                <dd className="text-sm text-white text-right break-all">
+                  {value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+
+          {txStatus && (
+            <TransactionStatus
+              status={txStatus}
+              txHash={txHash}
+              error={errors.form}
+            />
+          )}
+
+          {!txStatus && errors.form && (
+            <p role="alert" className="text-sm text-red-500 text-center">
+              {errors.form}
+            </p>
+          )}
+
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleBack}
+              disabled={isLoading}
+              className="flex-1"
+            >
+              Back
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSubmit}
+              isLoading={isLoading}
+              disabled={isLoading}
+              className="flex-1"
+            >
+              {isLoading ? 'Registering...' : 'Register as Player'}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,43 +1,16 @@
 'use client';
-import { useState } from 'react';
 import { useRequireWallet } from '@/hooks/useRequireWallet';
-import { useWallet } from '@/hooks/useWallet';
 import { usePlayer } from '@/hooks/usePlayer';
 import ProgressBar from '@/components/ProgressBar';
-import { uploadToIPFS } from '@/lib/ipfs';
-import { buildRegisterPlayer } from '@/lib/contract';
+import PlayerOnboardingWizard from '@/components/player/PlayerOnboardingWizard';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 
 function PlayerDashboardContent() {
   const { walletAddress: publicKey } = useRequireWallet();
-  const { signAndSubmit } = useWallet();
-  const { player, loading } = usePlayer(publicKey);
-  const [file, setFile] = useState<File | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [name, setName] = useState('');
-  const [position, setPosition] = useState('');
-  const [region, setRegion] = useState('');
-  const [age, setAge] = useState('');
+  const { player, loading, refetch } = usePlayer(publicKey);
 
   if (!publicKey) {
-    return null; // Redirect handled by useRequireWallet
-  }
-
-  async function handleRegister(e: React.FormEvent) {
-    e.preventDefault();
-    if (!file || !publicKey) return;
-    setSubmitting(true);
-    try {
-      const cid = await uploadToIPFS(file);
-      const xdr = await buildRegisterPlayer(
-        publicKey,
-        { name, position, region, age: Number(age), nationality: '' },
-        cid,
-      );
-      await signAndSubmit(xdr);
-    } finally {
-      setSubmitting(false);
-    }
+    return null;
   }
 
   if (loading)
@@ -81,60 +54,9 @@ function PlayerDashboardContent() {
           </div>
         </>
       ) : (
-        <form
-          onSubmit={handleRegister}
-          className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4"
-        >
-          <h2 className="text-xl font-semibold text-white">
-            Create Your Profile
-          </h2>
-          <input
-            className="input"
-            placeholder="Full name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-          <input
-            className="input"
-            placeholder="Position (e.g. ST, CM)"
-            value={position}
-            onChange={(e) => setPosition(e.target.value)}
-            required
-          />
-          <input
-            className="input"
-            placeholder="Region / Country"
-            value={region}
-            onChange={(e) => setRegion(e.target.value)}
-            required
-          />
-          <input
-            className="input"
-            type="number"
-            placeholder="Age"
-            value={age}
-            onChange={(e) => setAge(e.target.value)}
-            required
-          />
-          <label className="text-sm text-gray-400">
-            Highlight reel / photo
-            <input
-              type="file"
-              accept="video/*,image/*"
-              className="mt-1 block"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              required
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="bg-brand-green text-black font-semibold py-2 rounded-lg hover:opacity-90 transition disabled:opacity-50"
-          >
-            {submitting ? 'Registering…' : 'Register on Stellar'}
-          </button>
-        </form>
+        <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
+          <PlayerOnboardingWizard onSuccess={() => refetch()} />
+        </div>
       )}
     </div>
   );
