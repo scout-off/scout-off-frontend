@@ -7,6 +7,7 @@ import { getPlayer } from '@/lib/contract';
 import PlayerCard from '@/components/PlayerCard';
 import PlayerCardSkeleton from '@/components/PlayerCardSkeleton';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
+import EmptyState from '@/components/ui/EmptyState';
 import { AFRICAN_REGIONS } from '@/lib/regions';
 import type { Player, PlayerFilter, ProgressLevel } from '@/types';
 
@@ -52,6 +53,12 @@ function ScoutDashboardContent() {
     hasLoaded.current = false;
     setPage(1);
     search(filter);
+  }
+  function resetFilters() {
+    setFilter({});
+    hasLoaded.current = false;
+    setPage(1);
+    search({});
   }
 
   useEffect(() => {
@@ -126,7 +133,26 @@ function ScoutDashboardContent() {
               </p>
             )}
             {!searchLoading && searchResult === 'not-found' && (
-              <p className="text-sm text-gray-500">Player not found.</p>
+              <EmptyState
+                title="Player not found"
+                description="No player is registered with this wallet address."
+                icon={
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-10 h-10 mx-auto"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={1.5}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
+                    />
+                  </svg>
+                }
+              />
             )}
             {!searchLoading &&
               searchResult &&
@@ -166,6 +192,7 @@ function ScoutDashboardContent() {
           <label className="text-xs text-gray-400">Position</label>
           <select
             className="input w-32"
+            value={filter.position ?? ''}
             onChange={(e) =>
               setFilter((f) => ({ ...f, position: e.target.value }))
             }
@@ -180,6 +207,7 @@ function ScoutDashboardContent() {
           <label className="text-xs text-gray-400">Min Level</label>
           <select
             className="input w-32"
+            value={filter.minLevel ?? 0}
             onChange={(e) =>
               setFilter((f) => ({
                 ...f,
@@ -220,9 +248,29 @@ function ScoutDashboardContent() {
               <PlayerCard key={p.id} player={p} />
             ))}
             {players.length === 0 && (
-              <p className="text-gray-500 col-span-3">
-                No players found. Try adjusting your filters.
-              </p>
+              <div className="col-span-3">
+                <EmptyState
+                  title="No players found"
+                  description="Try adjusting your filters"
+                  icon={
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="w-10 h-10 mx-auto"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={1.5}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+                      />
+                    </svg>
+                  }
+                  action={{ label: 'Reset Filters', onClick: resetFilters }}
+                />
+              </div>
             )}
           </div>
           {players.length > PAGE_SIZE && (
