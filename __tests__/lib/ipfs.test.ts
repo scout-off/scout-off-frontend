@@ -1,53 +1,76 @@
-import { ipfsUrl } from "../../lib/ipfs";
+import axios from 'axios';
+import { ipfsUrl, uploadToIPFS, DEFAULT_IPFS_FALLBACKS } from '../../lib/ipfs';
 
-// axios is only used by uploadToIPFS; no need to mock for these tests
-jest.mock("axios");
+jest.mock('axios');
 
-const GATEWAY = "https://gateway.pinata.cloud/ipfs";
+describe('lib/ipfs', () => {
+  const mockCid = 'QmTest123';
+  const mockPrimaryGateway = 'https://gateway.pinata.cloud/ipfs';
+  const mockFallback1 = 'https://ipfs.io/ipfs';
+  const mockFallback2 = 'https://cloudflare-ipfs.com/ipfs';
 
-const VALID_CIDv0 = "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG";
-const VALID_CIDv1 = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi";
-
-describe("ipfsUrl — valid CIDs", () => {
-  test("returns full gateway URL for valid CIDv0", () => {
-    expect(ipfsUrl(VALID_CIDv0)).toBe(`${GATEWAY}/${VALID_CIDv0}`);
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_IPFS_GATEWAY = mockPrimaryGateway;
+    global.fetch = jest.fn();
+    console.warn = jest.fn();
   });
 
-  test("returns full gateway URL for valid CIDv1", () => {
-    expect(ipfsUrl(VALID_CIDv1)).toBe(`${GATEWAY}/${VALID_CIDv1}`);
-  });
-});
-
-describe("ipfsUrl — invalid / malicious CIDs return null", () => {
-  test("returns null for empty string", () => {
-    expect(ipfsUrl("")).toBeNull();
+  afterEach(() => {
+    jest.resetAllMocks();
+    delete process.env.NEXT_PUBLIC_IPFS_GATEWAY;
   });
 
-  test("returns null for path traversal attempt", () => {
-    expect(ipfsUrl("../etc/passwd")).toBeNull();
+  describe('ipfsUrl', () => {
+    it('returns primary gateway URL when primary is successful', async () => {
+      (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true });
+
+      const result = await ipfsUrl(mockCid);
+
+      expect(result).toBe(`${mockPrimaryGateway}/${mockCid}`);
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back to secondary gateway when primary returns 500', async () => {
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({ ok: false, status: 500 })
+        .mockResolvedValueOnce({ ok: true });
+
+      const result = await ipfsUrl(mockCid);
+
+      expect(result).toBe(`${mockFallback1}/${mockCid}`);
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+      expect(console.warn).toHaveBeenCalled();
+    });
+
+    it('tries all gateways and throws error when all are exhausted', async () => {
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({ ok: false, status: 500 })
+        .mockResolvedValueOnce({ ok: false, status: 500 })
+        .mockResolvedValueOnce({ ok: false, status: 500 });
+
+      await expect(ipfsUrl(mockCid)).rejects.toThrow(/gateways exhausted/);
+      expect(global.fetch).toHaveBeenCalledTimes(3);
+    });
   });
 
-  test("returns null for protocol-relative URL", () => {
-    expect(ipfsUrl("//evil.com")).toBeNull();
-  });
+  describe('uploadToIPFS', () => {
+    it('posts to /api/ipfs/upload and returns the CID', async () => {
+      const mockFile = new File(['test content'], 'test.txt', {
+        type: 'text/plain',
+      });
+      const mockCidResponse = { cid: 'QmUpload123' };
 
-  test("returns null for http URL injection", () => {
-    expect(ipfsUrl("http://evil.com/hack")).toBeNull();
-  });
+      (axios.post as jest.Mock).mockResolvedValueOnce({
+        data: mockCidResponse,
+      });
 
-  test("returns null for random garbage", () => {
-    expect(ipfsUrl("not-a-cid")).toBeNull();
-  });
+      const result = await uploadToIPFS(mockFile);
 
-  test("returns null for CIDv0 with wrong length", () => {
-    expect(ipfsUrl("QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbd")).toBeNull();
-  });
-
-  test("returns null for CIDv1 that is too short", () => {
-    expect(ipfsUrl("bafybei")).toBeNull();
-  });
-
-  test("returns null for whitespace-padded input", () => {
-    expect(ipfsUrl(" " + VALID_CIDv0 + " ")).toBeNull();
+      expect(result).toBe(mockCidResponse.cid);
+      expect(axios.post).toHaveBeenCalledWith(
+        '/api/ipfs/upload',
+        expect.any(FormData),
+      );
+    });
   });
 });

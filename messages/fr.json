@@ -1,0 +1,86 @@
+{
+  "app_title": "ScoutOff",
+  "nav": {
+    "scout_dashboard": "Tableau de bord des scouts",
+    "player_dashboard": "Tableau de bord des joueurs",
+    "maintenance_warning": "ScoutOff est actuellement en maintenance. Les actions d'écriture sont temporairement désactivées."
+  },
+  "common": {
+    "connect_wallet": "Connecter le portefeuille",
+    "disconnect": "Déconnecter",
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès",
+    "warning": "Avertissement",
+    "info": "Information",
+    "close": "Fermer",
+    "submit": "Soumettre",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "back": "Retour",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "sort": "Trier",
+    "clear": "Effacer"
+  },
+  "language": {
+    "select_language": "Sélectionner la langue",
+    "english": "English",
+    "french": "Français",
+    "swahili": "Kiswahili"
+  },
+  "scout_dashboard": {
+    "title": "Tableau de bord des scouts",
+    "welcome": "Bienvenue sur le tableau de bord des scouts",
+    "description": "Gérer les joueurs et les essais",
+    "recent_activity": "Activité récente",
+    "players": "Joueurs",
+    "trials": "Essais",
+    "statistics": "Statistiques",
+    "milestones": "Jalons",
+    "search_player": "Rechercher un joueur par adresse de portefeuille",
+    "player_not_found": "Joueur non trouvé",
+    "no_players": "Aucun joueur trouvé"
+  },
+  "player_dashboard": {
+    "title": "Tableau de bord des joueurs",
+    "welcome": "Bienvenue sur le tableau de bord des joueurs",
+    "description": "Voir votre profil et vos progrès",
+    "profile": "Profil",
+    "milestones": "Jalons",
+    "achievements": "Réalisations",
+    "progress": "Progrès",
+    "stats": "Statistiques"
+  },
+  "wallet": {
+    "connect": "Connecter le portefeuille",
+    "connected": "Connecté",
+    "disconnect": "Déconnecter le portefeuille",
+    "balance": "Solde",
+    "address": "Adresse",
+    "invalid_address": "Adresse Stellar invalide",
+    "connection_failed": "Échec de la connexion au portefeuille"
+  },
+  "errors": {
+    "not_found": "Non trouvé",
+    "unauthorized": "Non autorisé",
+    "forbidden": "Interdit",
+    "internal_error": "Erreur interne du serveur",
+    "network_error": "Erreur réseau",
+    "contract_error": "L'appel du contrat a échoué",
+    "wallet_error": "L'opération du portefeuille a échoué"
+  },
+  "actions": {
+    "refresh": "Actualiser",
+    "export": "Exporter",
+    "import": "Importer",
+    "download": "Télécharger",
+    "upload": "Télécharger",
+    "view_details": "Afficher les détails",
+    "view_more": "Afficher plus"
+  }
+}
