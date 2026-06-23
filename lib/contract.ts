@@ -12,6 +12,7 @@ import type {
   ValidatorInfo,
   ContactDetails,
   SubscriptionTier,
+  TrialOfferDetails,
 } from '@/types';
 
 const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID!;
@@ -228,6 +229,22 @@ export async function buildPayToContact(scoutKey: string, playerId: string) {
     [
       nativeToScVal(scoutKey, { type: 'address' }),
       nativeToScVal(playerId, { type: 'string' }),
+    ],
+    scoutKey,
+  );
+}
+
+export async function buildLogTrialOffer(
+  scoutKey: string,
+  playerId: string,
+  details: TrialOfferDetails,
+) {
+  return buildTx(
+    'log_trial_offer',
+    [
+      nativeToScVal(scoutKey, { type: 'address' }),
+      nativeToScVal(playerId, { type: 'string' }),
+      nativeToScVal(details),
     ],
     scoutKey,
   );

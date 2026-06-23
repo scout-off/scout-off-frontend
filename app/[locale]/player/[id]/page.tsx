@@ -5,6 +5,7 @@ import { useWallet } from '@/hooks/useWallet';
 import { usePlayer } from '@/hooks/usePlayer';
 import ProgressBar from '@/components/ProgressBar';
 import PlayerProfileSkeleton from '@/components/PlayerProfileSkeleton';
+import TrialOfferForm from '@/components/scout/TrialOfferForm';
 import { buildPayToContact } from '@/lib/contract';
 
 export default function PlayerProfile() {
@@ -90,6 +91,14 @@ export default function PlayerProfile() {
         >
           {contacting ? 'Processing…' : 'Pay to Contact (1 XLM)'}
         </button>
+      )}
+
+      {/* Trial offer */}
+      {publicKey && id && (
+        <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
+          <h2 className="font-semibold text-white mb-4">Log Trial Offer</h2>
+          <TrialOfferForm playerId={id} />
+        </div>
       )}
     </div>
   );
