@@ -5,7 +5,7 @@ import { getSubscription, subscribe as contractSubscribe } from '@/lib/contract'
 import type { Subscription, SubscriptionTier } from '@/types';
 
 export function useSubscription() {
-  const { publicKey, signAndSubmit } = useWallet();
+  const { publicKey } = useWallet();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +37,7 @@ export function useSubscription() {
       setLoading(true);
       setError(null);
       try {
-        await contractSubscribe(publicKey, tier, signAndSubmit);
+        await contractSubscribe(publicKey, tier);
         await fetchSubscription();
       } catch (e: any) {
         setError(e.message);
@@ -46,7 +46,7 @@ export function useSubscription() {
         setLoading(false);
       }
     },
-    [publicKey, signAndSubmit, fetchSubscription],
+    [publicKey, fetchSubscription],
   );
 
   const isExpired = subscription
