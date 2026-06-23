@@ -1,22 +1,42 @@
-"use client";
-import { useState, useEffect } from "react";
-import { getPlayer } from "@/lib/contract";
-import type { Player } from "@/types";
+'use client';
+import useSWR from 'swr';
+import { getPlayer } from '@/lib/contract';
+import type { Player } from '@/types';
+
+/**
+ * Cache key scheme for usePlayer:
+ *   "player:{walletOrId}"
+ *
+ * Keys are fully deterministic — same walletOrId always produces the same key.
+ * SWR deduplicates concurrent requests for the same key, preventing duplicate RPC calls.
+ */
+function playerKey(walletOrId: string | null): string | null {
+  return walletOrId ? `player:${walletOrId}` : null;
+}
 
 export function usePlayer(walletOrId: string | null) {
-  const [player, setPlayer] = useState<Player | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: player,
+    error,
+    isValidating,
+    mutate,
+  } = useSWR<Player | null>(
+    playerKey(walletOrId),
+    async () => {
+      const result = await getPlayer(walletOrId!);
+      return result as Player | null;
+    },
+    {
+      dedupingInterval: 60_000, // 60-second stale time — no duplicate RPC calls within this window
+      revalidateOnFocus: false,
+      errorRetryCount: 2,
+    },
+  );
 
-  useEffect(() => {
-    if (!walletOrId) return;
-    setLoading(true);
-    setError(null);
-    getPlayer(walletOrId)
-      .then(setPlayer)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, [walletOrId]);
-
-  return { player, loading, error };
+  return {
+    player: player ?? null,
+    loading: isValidating && !player,
+    error: error?.message ?? null,
+    refetch: () => mutate(),
+  };
 }

@@ -1,104 +1,88 @@
-import { NextRequest, NextResponse } from "next/server";
-import { WebAuth, Networks, Keypair } from "@stellar/stellar-sdk";
-import { checkRateLimit } from "@/lib/rateLimit";
+import { Keypair, WebAuth, Networks } from '@stellar/stellar-sdk';
+import { NextRequest, NextResponse } from 'next/server';
 
+const SECRET_KEY =
+  process.env.STELLAR_SECRET_KEY ||
+  'SDAV7XESHT63OQQ3Q6L27W462O4ZORZCOV4UOOXF6S2A6SST2YJXY63G';
+const serverKeypair = Keypair.fromSecret(SECRET_KEY);
 const NETWORK =
-  process.env.NEXT_PUBLIC_NETWORK === "mainnet" ? Networks.PUBLIC : Networks.TESTNET;
-
-const CHALLENGE_LIMIT = 10;
-const WINDOW_MS = 60_000;
-
-function getIp(req: NextRequest): string {
-  return (
-    req.ip ??
-    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
-    "unknown"
-  );
-}
-
-function allowedOrigin(req: NextRequest): string {
-  if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL;
-  const proto = req.headers.get("x-forwarded-proto") ?? "http";
-  const host = req.headers.get("host") ?? "localhost:3000";
-  return `${proto}://${host}`;
-}
+  process.env.NEXT_PUBLIC_NETWORK === 'mainnet'
+    ? Networks.PUBLIC
+    : Networks.TESTNET;
+const DOMAIN = process.env.NEXT_PUBLIC_DOMAIN || 'localhost:3000';
 
 export async function GET(req: NextRequest) {
-  const { allowed, retryAfter } = checkRateLimit(
-    `sep10:${getIp(req)}`,
-    CHALLENGE_LIMIT,
-    WINDOW_MS
-  );
-  if (!allowed) {
+  const account = req.nextUrl.searchParams.get('account');
+  if (!account) {
     return NextResponse.json(
-      { error: "Too Many Requests" },
-      { status: 429, headers: { "Retry-After": String(retryAfter) } }
+      { error: 'Missing account parameter' },
+      { status: 400 },
     );
   }
 
-  const account = req.nextUrl.searchParams.get("account");
-  if (!account) {
-    return NextResponse.json({ error: "Missing account parameter" }, { status: 400 });
-  }
-
-  const serverSecret = process.env.SEP10_SERVER_SECRET!;
-  const homeDomain = process.env.SEP10_HOME_DOMAIN!;
-
   try {
-    const serverKeypair = Keypair.fromSecret(serverSecret);
     const challengeXdr = WebAuth.buildChallengeTx(
       serverKeypair,
       account,
-      homeDomain,
+      DOMAIN,
       300,
       NETWORK,
-      homeDomain
+      DOMAIN,
     );
     return NextResponse.json({ transaction: challengeXdr });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Challenge generation failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch (error) {
+    console.error('SEP-10 Challenge Error:', error);
+    return NextResponse.json(
+      { error: 'Failed to generate challenge' },
+      { status: 500 },
+    );
   }
 }
 
 export async function POST(req: NextRequest) {
-  const origin = req.headers.get("origin");
-  if (!origin || origin !== allowedOrigin(req)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  let signedXdr: string;
-  let publicKey: string;
   try {
-    ({ signedXdr, publicKey } = await req.json());
-  } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-  }
+    const { transaction } = await req.json();
+    if (!transaction) {
+      return NextResponse.json(
+        { error: 'Missing transaction' },
+        { status: 400 },
+      );
+    }
 
-  const serverPublicKey = process.env.SEP10_SERVER_KEY!;
-  const homeDomain = process.env.SEP10_HOME_DOMAIN!;
-
-  try {
-    WebAuth.verifyChallengeTxSigners(
-      signedXdr,
-      serverPublicKey,
+    // readChallengeTx validates the server signature and extracts the client account ID
+    const { clientAccountID } = WebAuth.readChallengeTx(
+      transaction,
+      serverKeypair.publicKey(),
       NETWORK,
-      [publicKey],
-      homeDomain,
-      homeDomain
+      DOMAIN,
+      DOMAIN,
     );
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Verification failed";
-    return NextResponse.json({ error: message }, { status: 401 });
-  }
 
-  const res = NextResponse.json({ success: true });
-  res.cookies.set("session", publicKey, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    path: "/",
-    maxAge: 60 * 60 * 24,
-  });
-  return res;
+    const response = NextResponse.json({
+      success: true,
+      publicKey: clientAccountID,
+    });
+
+    response.cookies.set('session', clientAccountID, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 60 * 60 * 24, // 24 hours
+      path: '/',
+    });
+
+    return response;
+  } catch (error) {
+    console.error('SEP-10 Verification Error:', error);
+    return NextResponse.json(
+      { error: 'Invalid challenge transaction' },
+      { status: 401 },
+    );
+  }
+}
+
+export async function DELETE() {
+  const response = NextResponse.json({ success: true });
+  response.cookies.delete('session');
+  return response;
 }

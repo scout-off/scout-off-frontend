@@ -1,0 +1,17 @@
+'use client';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useWallet } from './useWallet';
+
+export function useRequireWallet() {
+  const { publicKey, isAuthenticated, isConnecting } = useWallet();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isConnecting && (!publicKey || !isAuthenticated)) {
+      router.replace('/');
+    }
+  }, [publicKey, isAuthenticated, isConnecting, router]);
+
+  return { walletAddress: publicKey };
+}

@@ -1,0 +1,86 @@
+{
+  "app_title": "ScoutOff",
+  "nav": {
+    "scout_dashboard": "Scout Dashboard",
+    "player_dashboard": "Player Dashboard",
+    "maintenance_warning": "ScoutOff is currently under maintenance. Write actions are temporarily disabled."
+  },
+  "common": {
+    "connect_wallet": "Connect Wallet",
+    "disconnect": "Disconnect",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning",
+    "info": "Info",
+    "close": "Close",
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "clear": "Clear"
+  },
+  "language": {
+    "select_language": "Select Language",
+    "english": "English",
+    "french": "Français",
+    "swahili": "Kiswahili"
+  },
+  "scout_dashboard": {
+    "title": "Scout Dashboard",
+    "welcome": "Welcome to Scout Dashboard",
+    "description": "Manage players and trials",
+    "recent_activity": "Recent Activity",
+    "players": "Players",
+    "trials": "Trials",
+    "statistics": "Statistics",
+    "milestones": "Milestones",
+    "search_player": "Search player by wallet address",
+    "player_not_found": "Player not found",
+    "no_players": "No players found"
+  },
+  "player_dashboard": {
+    "title": "Player Dashboard",
+    "welcome": "Welcome to Player Dashboard",
+    "description": "View your profile and progress",
+    "profile": "Profile",
+    "milestones": "Milestones",
+    "achievements": "Achievements",
+    "progress": "Progress",
+    "stats": "Statistics"
+  },
+  "wallet": {
+    "connect": "Connect Wallet",
+    "connected": "Connected",
+    "disconnect": "Disconnect Wallet",
+    "balance": "Balance",
+    "address": "Address",
+    "invalid_address": "Invalid Stellar address",
+    "connection_failed": "Failed to connect wallet"
+  },
+  "errors": {
+    "not_found": "Not found",
+    "unauthorized": "Unauthorized",
+    "forbidden": "Forbidden",
+    "internal_error": "Internal server error",
+    "network_error": "Network error",
+    "contract_error": "Contract call failed",
+    "wallet_error": "Wallet operation failed"
+  },
+  "actions": {
+    "refresh": "Refresh",
+    "export": "Export",
+    "import": "Import",
+    "download": "Download",
+    "upload": "Upload",
+    "view_details": "View Details",
+    "view_more": "View More"
+  }
+}
