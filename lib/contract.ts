@@ -416,18 +416,6 @@ export async function getSubscription(scout: string) {
   ]);
 }
 
-/** @deprecated Use {@link subscribe} for the full signed write flow. */
-export async function buildSubscribe(scoutKey: string, tier: string) {
-  return buildTx(
-    'subscribe',
-    [
-      nativeToScVal(scoutKey, { type: 'address' }),
-      nativeToScVal(tier, { type: 'string' }),
-    ],
-    scoutKey,
-  );
-}
-
 // ── Admin ─────────────────────────────────────────────────────────────────────
 export async function getPlatformFees(): Promise<number> {
   return simulateTx('get_platform_fees', []);
