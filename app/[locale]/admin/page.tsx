@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
 import { useToast } from '@/components/ui/Toast';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import {
   getValidators,
   buildAddValidator,
@@ -20,7 +21,7 @@ const ADMIN_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_ADDRESS;
 
 type DialogAction = 'add' | 'remove' | 'withdraw' | 'pause' | 'unpause' | null;
 
-export default function AdminDashboard() {
+function AdminDashboardContent() {
   const { publicKey, signAndSubmit } = useWallet();
   const router = useRouter();
   const { show } = useToast();
@@ -258,5 +259,13 @@ export default function AdminDashboard() {
         />
       )}
     </div>
+  );
+}
+
+export default function AdminDashboard() {
+  return (
+    <ErrorBoundary>
+      <AdminDashboardContent />
+    </ErrorBoundary>
   );
 }

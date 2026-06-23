@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -103,8 +104,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const contextValue = useMemo(() => ({ show }), [show]);
+
   return (
-    <ToastContext.Provider value={{ show }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
       <div className="pointer-events-none fixed inset-x-0 bottom-5 z-50 flex justify-end px-4 sm:px-6">
         <div className="flex w-full max-w-sm flex-col gap-3">

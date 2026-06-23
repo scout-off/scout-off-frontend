@@ -8,8 +8,7 @@ import {
   ReactNode,
 } from 'react';
 import albedo from '@albedo-link/intent';
-import { TransactionBuilder } from '@stellar/stellar-sdk';
-import { rpc, NETWORK } from '@/lib/stellar';
+import { NETWORK } from '@/lib/stellar';
 
 // ── Wallet provider types ─────────────────────────────────────────────────────
 
@@ -156,7 +155,7 @@ interface WalletContextValue {
   connectWithProvider: (provider: WalletProvider) => Promise<void>;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
-  signAndSubmit: (xdr: string) => Promise<unknown>;
+  signAndSubmit: (xdr: string) => Promise<string>;
   refreshBalance: () => Promise<void>;
 }
 
@@ -323,13 +322,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signAndSubmit = useCallback(
-    async (xdr: string) => {
+    async (xdr: string): Promise<string> => {
       if (!publicKey) throw new Error('Wallet not connected');
       if (!walletProvider) throw new Error('No wallet provider selected');
       const adapter = ADAPTERS[walletProvider];
-      const signed = await adapter.signTransaction(xdr);
-      const tx = TransactionBuilder.fromXDR(signed, NETWORK);
-      return rpc.sendTransaction(tx);
+      return adapter.signTransaction(xdr);
     },
     [publicKey, walletProvider],
   );
