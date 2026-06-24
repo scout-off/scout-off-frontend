@@ -18,6 +18,9 @@ import type {
 const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID!;
 const contract = new Contract(CONTRACT_ID);
 
+/** XLM required to unlock a player's contact details via pay_to_contact. */
+export const PLATFORM_CONTACT_FEE_XLM = 1;
+
 /** Lazily import Sentry so it is never loaded in test/development environments. */
 async function captureContractError(
   error: unknown,

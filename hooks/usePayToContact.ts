@@ -27,14 +27,22 @@ export function usePayToContact() {
   }
 
   const unlock = useCallback(
-    async (playerId: string): Promise<ContactDetails> => {
-      if (!publicKey) throw new Error('Wallet not connected');
+    async (playerId: string): Promise<void> => {
+      function fail(msg: string): void {
+        setError(msg);
+        show({ message: msg, variant: 'error' });
+      }
+
+      if (!publicKey) {
+        fail('Wallet not connected.');
+        return;
+      }
 
       setLoading(true);
       setError(null);
 
       try {
-        // Check subscription status before calling contract
+        // ── 1. Subscription gate ──────────────────────────────────────────────
         const subscription = await getSubscription(publicKey);
         const now = Date.now() / 1000;
         if (!subscription || subscription.expiresAt < now) {
@@ -45,8 +53,9 @@ export function usePayToContact() {
         const contactDetails = await payToContact(publicKey, playerId, signAndSubmit);
         return contactDetails;
       } catch (e: any) {
-        const friendlyError = mapErrorMessage(e.message);
-        setError(friendlyError);
+        const msg = e?.message ?? 'An error occurred while contacting the player.';
+        setError(msg);
+        show({ message: msg, variant: 'error' });
         throw e;
       } finally {
         setLoading(false);
