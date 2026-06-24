@@ -13,6 +13,10 @@ const NETWORK =
 
 export const rpc = new SorobanRpc.Server(RPC_URL, { allowHttp: false });
 
+export function isValidStellarAddress(key: string): boolean {
+  return StrKey.isValidEd25519PublicKey(key);
+}
+
 export { NETWORK, BASE_FEE, TransactionBuilder };
 
 async function pollTransaction(hash: string) {
