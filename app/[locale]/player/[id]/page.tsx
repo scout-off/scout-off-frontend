@@ -1,27 +1,20 @@
 'use client';
-import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
 import { usePlayer } from '@/hooks/usePlayer';
+import { usePayToContact } from '@/hooks/usePayToContact';
+import { PLATFORM_CONTACT_FEE_XLM } from '@/lib/contract';
 import ProgressBar from '@/components/ProgressBar';
 import PlayerProfileSkeleton from '@/components/PlayerProfileSkeleton';
-import { buildPayToContact } from '@/lib/contract';
 
 export default function PlayerProfile() {
   const { id } = useParams<{ id: string }>();
-  const { publicKey, signAndSubmit } = useWallet();
+  const { publicKey } = useWallet();
   const { player, loading } = usePlayer(id ?? null);
-  const [contacting, setContacting] = useState(false);
+  const { unlock, loading: contacting } = usePayToContact();
 
   async function handleContact() {
-    if (!publicKey) return;
-    setContacting(true);
-    try {
-      const xdr = await buildPayToContact(publicKey, id);
-      await signAndSubmit(xdr);
-    } finally {
-      setContacting(false);
-    }
+    await unlock(id);
   }
 
   if (loading) {
@@ -88,7 +81,7 @@ export default function PlayerProfile() {
           disabled={contacting}
           className="bg-brand-green text-black font-semibold py-3 rounded-xl hover:opacity-90 transition disabled:opacity-50"
         >
-          {contacting ? 'Processing…' : 'Pay to Contact (1 XLM)'}
+          {contacting ? 'Processing…' : `Pay to Contact (${PLATFORM_CONTACT_FEE_XLM} XLM)`}
         </button>
       )}
     </div>
