@@ -1,10 +1,13 @@
-"use client";
-import { useState } from "react";
-import { useWallet } from "@/hooks/useWallet";
-import { useValidator } from "@/hooks/useValidator";
-import { getPlayer } from "@/lib/contract";
-import { PROGRESS_LABELS } from "@/types";
-import type { Player } from "@/types";
+'use client';
+import { useState, useRef, useEffect } from 'react';
+import { sanitize } from '@/lib/sanitize';
+import { useWallet } from '@/hooks/useWallet';
+import useIsPaused from '@/hooks/useIsPaused';
+import { useValidator } from '@/hooks/useValidator';
+import { getPlayer } from '@/lib/contract';
+import { PROGRESS_LABELS } from '@/types';
+import type { Player } from '@/types';
+import TransactionStatus, { TxStatus } from '@/components/ui/TransactionStatus';
 
 interface ApproveFormProps {
   onSuccess: () => void;
@@ -13,19 +16,34 @@ interface ApproveFormProps {
 export default function ApproveForm({ onSuccess }: ApproveFormProps) {
   const { publicKey, signAndSubmit } = useWallet();
   const { isValidator, checking, approveMilestone } = useValidator(publicKey);
-  const [playerId, setPlayerId] = useState("");
-  const [description, setDescription] = useState("");
-  const [evidenceUrl, setEvidenceUrl] = useState("");
+  const isPaused = useIsPaused();
+  const [playerId, setPlayerId] = useState('');
+  const [description, setDescription] = useState('');
+  const [evidenceUrl, setEvidenceUrl] = useState('');
   const [urlError, setUrlError] = useState<string | null>(null);
   const [player, setPlayer] = useState<Player | null>(null);
   const [playerLoading, setPlayerLoading] = useState(false);
   const [playerError, setPlayerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [txStatus, setTxStatus] = useState<TxStatus | null>(null);
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  const playerIdRef = useRef<HTMLInputElement>(null);
+  const evidenceUrlRef = useRef<HTMLInputElement>(null);
+  const summaryRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (submitError) {
+      summaryRef.current?.focus();
+    }
+  }, [submitError]);
 
   function validateUrl(url: string): boolean {
     try {
       const parsed = new URL(url);
-      return parsed.protocol === "http:" || parsed.protocol === "https:";
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
     } catch {
       return false;
     }
@@ -34,7 +52,7 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
   function handleUrlChange(value: string) {
     setEvidenceUrl(value);
     if (value && !validateUrl(value)) {
-      setUrlError("Evidence URL must be a valid http/https URL");
+      setUrlError('Evidence URL must be a valid http/https URL');
     } else {
       setUrlError(null);
     }
@@ -57,16 +75,33 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setSubmitAttempted(true);
     if (!publicKey || !isValidator) return;
-    if (evidenceUrl && !validateUrl(evidenceUrl)) return;
+    if (evidenceUrl && !validateUrl(evidenceUrl)) {
+      evidenceUrlRef.current?.focus();
+      return;
+    }
+
+    if (isPaused) {
+      setSubmitError('Transactions are currently disabled');
+      return;
+    }
 
     setSubmitting(true);
+    setTxStatus('pending');
+    setTxHash(null);
+    setSubmitError(null);
     try {
-      const xdr = await approveMilestone(playerId.trim(), description);
-      await signAndSubmit(xdr);
+      const sanitizedDescription = sanitize(description);
+      const xdr = await approveMilestone(playerId.trim(), sanitizedDescription);
+      const result = await signAndSubmit(xdr);
+      const hash = (result as any)?.hash ?? null;
+      setTxHash(hash);
+      setTxStatus('success');
       onSuccess();
-    } catch {
-      // Error handled by hook state
+    } catch (e: any) {
+      setTxStatus('error');
+      setSubmitError(e?.message ?? 'Approval failed');
     } finally {
       setSubmitting(false);
     }
@@ -81,7 +116,11 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
   }
 
   if (checking) {
-    return <p className="text-center text-gray-400 mt-20">Checking validator status&hellip;</p>;
+    return (
+      <p className="text-center text-gray-400 mt-20">
+        Checking validator status&hellip;
+      </p>
+    );
   }
 
   if (!isValidator) {
@@ -96,18 +135,44 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
+    <form
+      onSubmit={handleSubmit}
+      className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4"
+    >
       <h2 className="text-xl font-semibold text-white">Approve Milestone</h2>
 
+      {submitAttempted && submitError && (
+        <div
+          ref={summaryRef}
+          role="alert"
+          aria-label="Form submission error"
+          tabIndex={-1}
+          className="rounded-md border border-red-500 bg-red-950/30 p-3 outline-none"
+        >
+          <p className="text-sm text-red-400 font-medium">
+            Submission failed. Please review the error and try again.
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-col gap-1">
-        <label className="text-xs text-gray-400">Player ID</label>
+        <label
+          htmlFor="approve-player-id"
+          className="text-xs text-gray-400"
+        >
+          Player ID
+        </label>
         <div className="flex gap-2">
           <input
+            ref={playerIdRef}
+            id="approve-player-id"
             className="input flex-1"
             placeholder="Enter player ID"
             value={playerId}
             onChange={(e) => setPlayerId(e.target.value)}
             required
+            aria-invalid={playerError ? true : undefined}
+            aria-describedby={playerError ? 'approve-player-id-error' : undefined}
           />
           <button
             type="button"
@@ -115,29 +180,45 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
             disabled={playerLoading}
             className="bg-brand-green text-black font-semibold px-3 py-2 rounded-lg hover:opacity-90 transition disabled:opacity-50 text-sm"
           >
-            {playerLoading ? "\u2026" : "Look up"}
+            {playerLoading ? '\u2026' : 'Look up'}
           </button>
         </div>
-        {playerError && <p className="text-red-400 text-xs">{playerError}</p>}
+        {playerError && (
+          <p id="approve-player-id-error" role="alert" className="text-red-400 text-xs">
+            {playerError}
+          </p>
+        )}
       </div>
 
       {player && (
         <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 text-sm text-gray-300 flex flex-col gap-1">
-          <p><span className="text-gray-500">Name:</span> {player.vitals.name}</p>
-          <p><span className="text-gray-500">Level:</span> {PROGRESS_LABELS[player.progressLevel]}</p>
-          <p><span className="text-gray-500">Last milestone:</span>{" "}
+          <p>
+            <span className="text-gray-500">Name:</span> {player.vitals.name}
+          </p>
+          <p>
+            <span className="text-gray-500">Level:</span>{' '}
+            {PROGRESS_LABELS[player.progressLevel]}
+          </p>
+          <p>
+            <span className="text-gray-500">Last milestone:</span>{' '}
             {player.milestones.length > 0
               ? player.milestones[player.milestones.length - 1].description
-              : "None"}
+              : 'None'}
           </p>
         </div>
       )}
 
       <div className="flex flex-col gap-1">
-        <label className="text-xs text-gray-400">Milestone Description</label>
+        <label
+          htmlFor="approve-description"
+          className="text-xs text-gray-400"
+        >
+          Milestone Description
+        </label>
         <textarea
+          id="approve-description"
           className="input min-h-[80px] resize-y"
-          placeholder="Describe the player\u2019s achievement\u2026"
+          placeholder="Describe the player's achievement"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           required
@@ -145,23 +226,43 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-xs text-gray-400">Evidence URL</label>
+        <label
+          htmlFor="approve-evidence-url"
+          className="text-xs text-gray-400"
+        >
+          Evidence URL
+        </label>
         <input
+          ref={evidenceUrlRef}
+          id="approve-evidence-url"
           className="input"
           placeholder="https://example.com/evidence"
           value={evidenceUrl}
           onChange={(e) => handleUrlChange(e.target.value)}
           required
+          aria-invalid={urlError ? true : undefined}
+          aria-describedby={urlError ? 'approve-url-error' : undefined}
         />
-        {urlError && <p className="text-red-400 text-xs">{urlError}</p>}
+        {urlError && (
+          <p id="approve-url-error" role="alert" className="text-red-400 text-xs">
+            {urlError}
+          </p>
+        )}
       </div>
+
+      <TransactionStatus
+        status={txStatus}
+        txHash={txHash}
+        error={submitError}
+        onHide={() => setTxStatus(null)}
+      />
 
       <button
         type="submit"
         disabled={submitting || !!urlError}
         className="bg-brand-green text-black font-semibold py-2 rounded-lg hover:opacity-90 transition disabled:opacity-50"
       >
-        {submitting ? "Submitting\u2026" : "Approve Milestone"}
+        {submitting ? 'Submitting\u2026' : 'Approve Milestone'}
       </button>
     </form>
   );

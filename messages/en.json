@@ -1,0 +1,108 @@
+{
+  "app_title": "ScoutOff",
+  "nav": {
+    "scout_dashboard": "Scout Dashboard",
+    "player_dashboard": "Player Dashboard",
+    "maintenance_warning": "ScoutOff is currently under maintenance. Write actions are temporarily disabled."
+  },
+  "common": {
+    "connect_wallet": "Connect Wallet",
+    "disconnect": "Disconnect",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning",
+    "info": "Info",
+    "close": "Close",
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "clear": "Clear"
+  },
+  "language": {
+    "select_language": "Select Language",
+    "english": "English",
+    "french": "Français",
+    "swahili": "Kiswahili"
+  },
+  "scout_dashboard": {
+    "title": "Scout Dashboard",
+    "welcome": "Welcome to Scout Dashboard",
+    "description": "Manage players and trials",
+    "recent_activity": "Recent Activity",
+    "players": "Players",
+    "trials": "Trials",
+    "statistics": "Statistics",
+    "milestones": "Milestones",
+    "search_player": "Search player by wallet address",
+    "player_not_found": "Player not found",
+    "no_players": "No players found"
+  },
+  "player_dashboard": {
+    "title": "Player Dashboard",
+    "welcome": "Welcome to Player Dashboard",
+    "description": "View your profile and progress",
+    "profile": "Profile",
+    "milestones": "Milestones",
+    "achievements": "Achievements",
+    "progress": "Progress",
+    "stats": "Statistics"
+  },
+  "wallet": {
+    "connect": "Connect Wallet",
+    "connecting": "Connecting…",
+    "connected": "Connected",
+    "disconnect": "Disconnect Wallet",
+    "selectProvider": "Select Wallet",
+    "selectProviderHint": "Choose a Stellar wallet to connect with ScoutOff.",
+    "install": "Browser extension",
+    "installMobile": "Browser extension / mobile",
+    "cancel": "Cancel",
+    "noWalletDetected": "No wallet detected. Please install a Stellar wallet extension.",
+    "balance": "Balance",
+    "address": "Address",
+    "invalid_address": "Invalid Stellar address",
+    "connection_failed": "Failed to connect wallet"
+  },
+  "errors": {
+    "not_found": "Not found",
+    "unauthorized": "Unauthorized",
+    "forbidden": "Forbidden",
+    "internal_error": "Internal server error",
+    "network_error": "Network error",
+    "contract_error": "Contract call failed",
+    "wallet_error": "Wallet operation failed"
+  },
+  "actions": {
+    "refresh": "Refresh",
+    "export": "Export",
+    "import": "Import",
+    "download": "Download",
+    "upload": "Upload",
+    "view_details": "View Details",
+    "view_more": "View More"
+  },
+  "contractErrors": {
+    "AlreadyInitialized": "This player is already registered.",
+    "NotInitialized": "The contract has not been set up yet. Please contact support.",
+    "PlayerNotFound": "Player not found. Please check the player ID and try again.",
+    "UnauthorizedValidator": "You are not authorised as a validator to perform this action.",
+    "InvalidMilestone": "The specified milestone is invalid. Please verify the details.",
+    "AlreadyAtLevel": "The player is already at this level.",
+    "InsufficientFee": "Insufficient balance. Please add funds to your wallet.",
+    "SubscriptionExpired": "Your subscription has expired. Please renew it to continue.",
+    "ContractPaused": "The contract is currently paused. Please try again later.",
+    "Unauthorized": "You are not authorised to perform this action.",
+    "NoFeesToWithdraw": "There are no fees available to withdraw at this time.",
+    "Overflow": "A calculation error occurred. Please try again.",
+    "unknown": "An unexpected error occurred. Please try again."
+  }
+}
