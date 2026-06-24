@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { sanitize } from '@/lib/sanitize';
 import { useWallet } from '@/hooks/useWallet';
 import useIsPaused from '@/hooks/useIsPaused';
@@ -108,9 +108,25 @@ export default function PlayerOnboardingWizard({
 
   const [step, setStep] = useState(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [validationAttempted, setValidationAttempted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [txStatus, setTxStatus] = useState<TxStatus | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
+
+  const nameRef = useRef<HTMLInputElement>(null);
+  const ageRef = useRef<HTMLInputElement>(null);
+  const nationalityRef = useRef<HTMLInputElement>(null);
+  const regionRef = useRef<HTMLSelectElement>(null);
+  const positionRef = useRef<HTMLSelectElement>(null);
+  const step2SummaryRef = useRef<HTMLDivElement>(null);
+  const [step2FocusTrigger, setStep2FocusTrigger] = useState(0);
+
+  // Focus the step 2 summary after it mounts (element is conditionally rendered)
+  useEffect(() => {
+    if (step2FocusTrigger > 0) {
+      step2SummaryRef.current?.focus();
+    }
+  }, [step2FocusTrigger]);
 
   const [data, setData] = useState<WizardData>({
     name: '',
@@ -155,6 +171,16 @@ export default function PlayerOnboardingWizard({
     if (!data.region) errs.region = 'Region is required';
     if (!data.position) errs.position = 'Position is required';
     setErrors(errs);
+
+    if (Object.keys(errs).length > 0) {
+      setValidationAttempted(true);
+      if (errs.name) nameRef.current?.focus();
+      else if (errs.age) ageRef.current?.focus();
+      else if (errs.nationality) nationalityRef.current?.focus();
+      else if (errs.region) regionRef.current?.focus();
+      else if (errs.position) positionRef.current?.focus();
+    }
+
     return Object.keys(errs).length === 0;
   };
 
@@ -163,6 +189,8 @@ export default function PlayerOnboardingWizard({
       setErrors({
         ipfsHash: 'Please upload your highlight reel before continuing',
       });
+      setValidationAttempted(true);
+      setStep2FocusTrigger((t) => t + 1);
       return false;
     }
     return true;
@@ -174,11 +202,13 @@ export default function PlayerOnboardingWizard({
     if (step === 1 && !validateStep1()) return;
     if (step === 2 && !validateStep2()) return;
     setErrors({});
+    setValidationAttempted(false);
     setStep((s) => s + 1);
   };
 
   const handleBack = () => {
     setErrors({});
+    setValidationAttempted(false);
     setStep((s) => s - 1);
   };
 
@@ -254,7 +284,22 @@ export default function PlayerOnboardingWizard({
             </p>
           </div>
 
+          {validationAttempted && Object.keys(errors).length > 0 && (
+            <div
+              role="alert"
+              aria-label="Form validation summary"
+              className="rounded-md border border-red-500 bg-red-950/30 p-3"
+            >
+              <p className="text-sm text-red-400 font-medium">
+                Please correct the {Object.keys(errors).length} error
+                {Object.keys(errors).length !== 1 ? 's' : ''} below before
+                continuing.
+              </p>
+            </div>
+          )}
+
           <Input
+            ref={nameRef}
             id="wizard-name"
             label="Name *"
             type="text"
@@ -267,6 +312,7 @@ export default function PlayerOnboardingWizard({
           />
 
           <Input
+            ref={ageRef}
             id="wizard-age"
             label="Age *"
             type="number"
@@ -280,6 +326,7 @@ export default function PlayerOnboardingWizard({
           />
 
           <Input
+            ref={nationalityRef}
             id="wizard-nationality"
             label="Nationality *"
             type="text"
@@ -291,6 +338,8 @@ export default function PlayerOnboardingWizard({
           />
 
           <Select
+            ref={regionRef}
+            id="wizard-region"
             label="Region *"
             name="region"
             value={data.region}
@@ -306,6 +355,8 @@ export default function PlayerOnboardingWizard({
           </Select>
 
           <Select
+            ref={positionRef}
+            id="wizard-position"
             label="Position *"
             name="position"
             value={data.position}
@@ -354,6 +405,20 @@ export default function PlayerOnboardingWizard({
               before you can continue.
             </p>
           </div>
+
+          {validationAttempted && errors.ipfsHash && (
+            <div
+              ref={step2SummaryRef}
+              role="alert"
+              aria-label="Form validation summary"
+              tabIndex={-1}
+              className="rounded-md border border-red-500 bg-red-950/30 p-3 outline-none"
+            >
+              <p className="text-sm text-red-400 font-medium">
+                Please correct the error below before continuing.
+              </p>
+            </div>
+          )}
 
           <VideoUpload
             onUpload={(cid) => updateField('ipfsHash', cid)}

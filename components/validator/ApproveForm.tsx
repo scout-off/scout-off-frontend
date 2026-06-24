@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { sanitize } from '@/lib/sanitize';
 import { useWallet } from '@/hooks/useWallet';
 import useIsPaused from '@/hooks/useIsPaused';
@@ -28,6 +28,17 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
   const [txStatus, setTxStatus] = useState<TxStatus | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  const playerIdRef = useRef<HTMLInputElement>(null);
+  const evidenceUrlRef = useRef<HTMLInputElement>(null);
+  const summaryRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (submitError) {
+      summaryRef.current?.focus();
+    }
+  }, [submitError]);
 
   function validateUrl(url: string): boolean {
     try {
@@ -64,8 +75,12 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setSubmitAttempted(true);
     if (!publicKey || !isValidator) return;
-    if (evidenceUrl && !validateUrl(evidenceUrl)) return;
+    if (evidenceUrl && !validateUrl(evidenceUrl)) {
+      evidenceUrlRef.current?.focus();
+      return;
+    }
 
     if (isPaused) {
       setSubmitError('Transactions are currently disabled');
@@ -126,15 +141,38 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
     >
       <h2 className="text-xl font-semibold text-white">Approve Milestone</h2>
 
+      {submitAttempted && submitError && (
+        <div
+          ref={summaryRef}
+          role="alert"
+          aria-label="Form submission error"
+          tabIndex={-1}
+          className="rounded-md border border-red-500 bg-red-950/30 p-3 outline-none"
+        >
+          <p className="text-sm text-red-400 font-medium">
+            Submission failed. Please review the error and try again.
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-col gap-1">
-        <label className="text-xs text-gray-400">Player ID</label>
+        <label
+          htmlFor="approve-player-id"
+          className="text-xs text-gray-400"
+        >
+          Player ID
+        </label>
         <div className="flex gap-2">
           <input
+            ref={playerIdRef}
+            id="approve-player-id"
             className="input flex-1"
             placeholder="Enter player ID"
             value={playerId}
             onChange={(e) => setPlayerId(e.target.value)}
             required
+            aria-invalid={playerError ? true : undefined}
+            aria-describedby={playerError ? 'approve-player-id-error' : undefined}
           />
           <button
             type="button"
@@ -145,7 +183,11 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
             {playerLoading ? '\u2026' : 'Look up'}
           </button>
         </div>
-        {playerError && <p className="text-red-400 text-xs">{playerError}</p>}
+        {playerError && (
+          <p id="approve-player-id-error" role="alert" className="text-red-400 text-xs">
+            {playerError}
+          </p>
+        )}
       </div>
 
       {player && (
@@ -167,8 +209,14 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
       )}
 
       <div className="flex flex-col gap-1">
-        <label className="text-xs text-gray-400">Milestone Description</label>
+        <label
+          htmlFor="approve-description"
+          className="text-xs text-gray-400"
+        >
+          Milestone Description
+        </label>
         <textarea
+          id="approve-description"
           className="input min-h-[80px] resize-y"
           placeholder="Describe the player's achievement"
           value={description}
@@ -178,15 +226,28 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-xs text-gray-400">Evidence URL</label>
+        <label
+          htmlFor="approve-evidence-url"
+          className="text-xs text-gray-400"
+        >
+          Evidence URL
+        </label>
         <input
+          ref={evidenceUrlRef}
+          id="approve-evidence-url"
           className="input"
           placeholder="https://example.com/evidence"
           value={evidenceUrl}
           onChange={(e) => handleUrlChange(e.target.value)}
           required
+          aria-invalid={urlError ? true : undefined}
+          aria-describedby={urlError ? 'approve-url-error' : undefined}
         />
-        {urlError && <p className="text-red-400 text-xs">{urlError}</p>}
+        {urlError && (
+          <p id="approve-url-error" role="alert" className="text-red-400 text-xs">
+            {urlError}
+          </p>
+        )}
       </div>
 
       <TransactionStatus

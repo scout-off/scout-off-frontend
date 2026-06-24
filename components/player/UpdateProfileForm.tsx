@@ -23,6 +23,7 @@ export default function UpdateProfileForm({
   const isPaused = useIsPaused();
   const [newCid, setNewCid] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [inlineError, setInlineError] = useState<string | null>(null);
 
   if (!publicKey || publicKey !== player.wallet) {
     return null;
@@ -30,6 +31,7 @@ export default function UpdateProfileForm({
 
   const handleUpload = (cid: string) => {
     setNewCid(cid);
+    setInlineError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,6 +46,7 @@ export default function UpdateProfileForm({
     if (!newCid || isSubmitting) return;
 
     setIsSubmitting(true);
+    setInlineError(null);
     try {
       await updateProfile(publicKey, player.id, newCid, signAndSubmit);
       show({
@@ -55,6 +58,7 @@ export default function UpdateProfileForm({
     } catch (err) {
       console.error('Update profile failed:', err);
       show({ message: 'Failed to update profile media', variant: 'error' });
+      setInlineError('Failed to update profile media. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -99,6 +103,15 @@ export default function UpdateProfileForm({
         <VideoUpload onUpload={handleUpload} />
 
         <form onSubmit={handleSubmit}>
+          {inlineError && (
+            <div
+              role="alert"
+              aria-label="Form submission error"
+              className="mb-4 rounded-md border border-red-500 bg-red-950/30 p-3"
+            >
+              <p className="text-sm text-red-400">{inlineError}</p>
+            </div>
+          )}
           <Button
             type="submit"
             disabled={!newCid || isSubmitting}
