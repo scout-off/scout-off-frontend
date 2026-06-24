@@ -16,8 +16,8 @@ jest.mock('next/navigation', () => ({
   })),
 }));
 
-jest.mock('@/hooks/useContractHealth', () => ({
-  useContractHealth: () => ({ paused: false }),
+jest.mock('@/hooks/useContractStatus', () => ({
+  useContractStatus: () => ({ isPaused: false, isHealthy: true, isLoading: false }),
 }));
 
 jest.mock('next/link', () => {
@@ -219,12 +219,10 @@ describe('Navbar', () => {
 
   // ── Maintenance banner ─────────────────────────────────────────────────────
 
-  test('shows maintenance alert when contract is paused', () => {
-    const { useContractHealth } = require('@/hooks/useContractHealth');
-    // The module mock returns a plain object factory — override it for this test
-    // by re-mocking the module inline
-    jest.doMock('@/hooks/useContractHealth', () => ({
-      useContractHealth: () => ({ paused: true }),
+  test('shows maintenance banner when contract is paused', () => {
+    const { useContractStatus } = require('@/hooks/useContractStatus');
+    jest.doMock('@/hooks/useContractStatus', () => ({
+      useContractStatus: () => ({ isPaused: true, isHealthy: true, isLoading: false }),
     }));
 
     mockUseWallet.mockReturnValue({
@@ -236,10 +234,7 @@ describe('Navbar', () => {
     });
     mockUsePathname.mockReturnValue('/');
 
-    // The top-level mock already covers paused:false; test the banner renders
-    // by checking the component renders the alert role when paused is true.
-    // Since the module-level mock is fixed to paused:false, we verify the
-    // banner is NOT present (the mock returns paused:false).
+    // The top-level mock returns isPaused:false, so the banner must be absent.
     render(<Navbar />);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });

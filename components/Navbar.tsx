@@ -4,7 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import WalletButton from './WalletButton';
-import { useContractHealth } from '@/hooks/useContractHealth';
+import { useContractStatus } from '@/hooks/useContractStatus';
 
 const NAV_LINKS = [
   { href: '/scout', labelKey: 'nav.scout_dashboard' },
@@ -17,7 +17,7 @@ const LOCALES = [
 ];
 
 export default function Navbar() {
-  const { paused } = useContractHealth();
+  const { isPaused } = useContractStatus();
   const t = useTranslations();
   const router = useRouter();
   const pathname = usePathname() ?? '/';
@@ -44,7 +44,7 @@ export default function Navbar() {
 
   return (
     <>
-      {paused && (
+      {isPaused && (
         <div className="bg-yellow-500 text-black text-center text-sm font-medium py-2 px-4">
           {t('nav.maintenance_warning')}
         </div>
