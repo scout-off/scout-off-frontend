@@ -21,7 +21,7 @@
     "@lobstrco/signer-extension-api": "2.0.0",
     "@sentry/nextjs": "^10.59.0",
     "@stellar/freighter-api": "2.0.0",
-    "@stellar/stellar-sdk": "12.1.0",
+    "@stellar/stellar-sdk": "12.3.0",
     "@vercel/analytics": "^2.0.0",
     "axios": "1.7.2",
     "dompurify": "^3.4.11",
