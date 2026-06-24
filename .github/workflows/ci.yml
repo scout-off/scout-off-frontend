@@ -19,3 +19,43 @@ jobs:
       - run: npm run lint
       - run: npm run test
       - run: node scripts/validate-env.js
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Run tests with coverage
+        run: npm run test -- --coverage --passWithNoTests
+      - name: Upload coverage report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 14
+      - name: Post coverage summary
+        if: always()
+        run: |
+          SUMMARY_FILE="coverage/coverage-summary.json"
+          if [ -f "$SUMMARY_FILE" ]; then
+            LINES=$(node -e "const s=require('./$SUMMARY_FILE').total; console.log(s.lines.pct+'%')")
+            BRANCHES=$(node -e "const s=require('./$SUMMARY_FILE').total; console.log(s.branches.pct+'%')")
+            FUNCTIONS=$(node -e "const s=require('./$SUMMARY_FILE').total; console.log(s.functions.pct+'%')")
+            STATEMENTS=$(node -e "const s=require('./$SUMMARY_FILE').total; console.log(s.statements.pct+'%')")
+            echo "## Coverage Report" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Coverage |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|----------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Lines | $LINES |" >> $GITHUB_STEP_SUMMARY
+            echo "| Branches | $BRANCHES |" >> $GITHUB_STEP_SUMMARY
+            echo "| Functions | $FUNCTIONS |" >> $GITHUB_STEP_SUMMARY
+            echo "| Statements | $STATEMENTS |" >> $GITHUB_STEP_SUMMARY
+          fi
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage/lcov.info
+          fail_ci_if_error: false

@@ -1,6 +1,7 @@
 # ScoutOff
 
 [![Frontend CI](https://github.com/your-org/scout-off-frontend/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/scout-off-frontend/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/your-org/scout-off-frontend/branch/main/graph/badge.svg)](https://codecov.io/gh/your-org/scout-off-frontend)
 
 Decentralized football scouting platform on Stellar with tamper-proof player profiles, on-chain milestone verification, and direct scout-to-player connections via Soroban smart contracts.
 
