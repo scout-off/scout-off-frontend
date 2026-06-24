@@ -58,8 +58,15 @@
   },
   "wallet": {
     "connect": "Unganisha Pochi",
+    "connecting": "Inaunganisha…",
     "connected": "Imeunganishwa",
     "disconnect": "Tenganisha Pochi",
+    "selectProvider": "Chagua Pochi",
+    "selectProviderHint": "Chagua pochi ya Stellar kuunganisha na ScoutOff.",
+    "install": "Nyongeza ya kivinjari",
+    "installMobile": "Nyongeza ya kivinjari / simu",
+    "cancel": "Ghairi",
+    "noWalletDetected": "Hakuna pochi iliyogunduliwa. Tafadhali sakinisha nyongeza ya pochi ya Stellar.",
     "balance": "Salio",
     "address": "Anwani",
     "invalid_address": "TODO: Machine-translated - Anwani ya Stellar sio sahihi",
@@ -82,5 +89,20 @@
     "upload": "TODO: Machine-translated - Pakua",
     "view_details": "TODO: Machine-translated - Tazama Maelezo",
     "view_more": "TODO: Machine-translated - Tazama Zaidi"
+  },
+  "contractErrors": {
+    "AlreadyInitialized": "Mchezaji huyu ameshasajiliwa.",
+    "NotInitialized": "Mkataba bado haujasanidiwa. Tafadhali wasiliana na usaidizi.",
+    "PlayerNotFound": "Mchezaji hajapatikana. Tafadhali angalia kitambulisho cha mchezaji na ujaribu tena.",
+    "UnauthorizedValidator": "Huna ruhusa kama mthibitishaji kufanya kitendo hiki.",
+    "InvalidMilestone": "Kiwango kilichoainishwa si halali. Tafadhali thibitisha maelezo.",
+    "AlreadyAtLevel": "Mchezaji yuko tayari katika kiwango hiki.",
+    "InsufficientFee": "Salio haitoshi. Tafadhali ongeza fedha kwenye pochi yako.",
+    "SubscriptionExpired": "Usajili wako umekwisha muda. Tafadhali uhuishe ili kuendelea.",
+    "ContractPaused": "Mkataba umesimamishwa kwa sasa. Tafadhali jaribu tena baadaye.",
+    "Unauthorized": "Huna ruhusa kufanya kitendo hiki.",
+    "NoFeesToWithdraw": "Hakuna ada zinazopatikana kwa uchukuzi kwa sasa.",
+    "Overflow": "Kosa la hesabu limetokea. Tafadhali jaribu tena.",
+    "unknown": "Kosa lisilotarajiwa limetokea. Tafadhali jaribu tena."
   }
 }

@@ -58,8 +58,15 @@
   },
   "wallet": {
     "connect": "Connecter le portefeuille",
+    "connecting": "Connexion en cours…",
     "connected": "Connecté",
     "disconnect": "Déconnecter le portefeuille",
+    "selectProvider": "Sélectionner un portefeuille",
+    "selectProviderHint": "Choisissez un portefeuille Stellar pour vous connecter à ScoutOff.",
+    "install": "Extension de navigateur",
+    "installMobile": "Extension de navigateur / mobile",
+    "cancel": "Annuler",
+    "noWalletDetected": "Aucun portefeuille détecté. Veuillez installer une extension de portefeuille Stellar.",
     "balance": "Solde",
     "address": "Adresse",
     "invalid_address": "Adresse Stellar invalide",
@@ -82,5 +89,20 @@
     "upload": "Télécharger",
     "view_details": "Afficher les détails",
     "view_more": "Afficher plus"
+  },
+  "contractErrors": {
+    "AlreadyInitialized": "Ce joueur est déjà inscrit.",
+    "NotInitialized": "Le contrat n'a pas encore été configuré. Veuillez contacter le support.",
+    "PlayerNotFound": "Joueur introuvable. Veuillez vérifier l'identifiant du joueur et réessayer.",
+    "UnauthorizedValidator": "Vous n'êtes pas autorisé en tant que validateur à effectuer cette action.",
+    "InvalidMilestone": "Le jalon spécifié est invalide. Veuillez vérifier les détails.",
+    "AlreadyAtLevel": "Le joueur est déjà à ce niveau.",
+    "InsufficientFee": "Solde insuffisant. Veuillez alimenter votre portefeuille.",
+    "SubscriptionExpired": "Votre abonnement a expiré. Veuillez le renouveler pour continuer.",
+    "ContractPaused": "Le contrat est actuellement suspendu. Veuillez réessayer plus tard.",
+    "Unauthorized": "Vous n'êtes pas autorisé à effectuer cette action.",
+    "NoFeesToWithdraw": "Aucun frais n'est disponible pour le retrait pour le moment.",
+    "Overflow": "Une erreur de calcul s'est produite. Veuillez réessayer.",
+    "unknown": "Une erreur inattendue s'est produite. Veuillez réessayer."
   }
 }

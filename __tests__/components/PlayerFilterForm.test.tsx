@@ -365,4 +365,70 @@ describe('PlayerFilterForm', () => {
     expect(getPositionSelect()).toHaveAttribute('id', 'filter-position');
     expect(getLevelSelect()).toHaveAttribute('id', 'filter-level');
   });
+
+  // ── resetKey prop ─────────────────────────────────────────────────────────
+
+  it('does not fire an extra onSearch on initial render when resetKey is 0', () => {
+    const onSearch = jest.fn();
+    render(<PlayerFilterForm onSearch={onSearch} resetKey={0} />);
+    // Only the single mount-time call should have fired
+    expect(onSearch).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not fire an extra onSearch on initial render when resetKey is omitted', () => {
+    const onSearch = jest.fn();
+    render(<PlayerFilterForm onSearch={onSearch} />);
+    expect(onSearch).toHaveBeenCalledTimes(1);
+  });
+
+  it('resets all selects to defaults and calls onSearch when resetKey increments', () => {
+    const onSearch = jest.fn();
+    const { rerender } = render(<PlayerFilterForm onSearch={onSearch} resetKey={0} />);
+    onSearch.mockClear();
+
+    // Put the form into a non-default state
+    fireEvent.change(getRegionSelect(), { target: { value: 'nigeria' } });
+    fireEvent.change(getPositionSelect(), { target: { value: 'ST' } });
+    fireEvent.change(getLevelSelect(), { target: { value: '2' } });
+    act(() => jest.advanceTimersByTime(300));
+    onSearch.mockClear();
+
+    // Increment resetKey as the parent would do when "Clear Filters" is clicked
+    act(() => {
+      rerender(<PlayerFilterForm onSearch={onSearch} resetKey={1} />);
+    });
+
+    expect(getRegionSelect()).toHaveValue('');
+    expect(getPositionSelect()).toHaveValue('');
+    expect(getLevelSelect()).toHaveValue('0');
+    expect(onSearch).toHaveBeenCalledTimes(1);
+    expect(onSearch).toHaveBeenCalledWith({
+      region: undefined,
+      position: undefined,
+      minLevel: 0,
+    });
+  });
+
+  it('does not call onSearch again when rerendered with the same resetKey', () => {
+    const onSearch = jest.fn();
+    const { rerender } = render(<PlayerFilterForm onSearch={onSearch} resetKey={1} />);
+    onSearch.mockClear();
+
+    rerender(<PlayerFilterForm onSearch={onSearch} resetKey={1} />);
+
+    expect(onSearch).not.toHaveBeenCalled();
+  });
+
+  it('fires onSearch each time resetKey increments (supports multiple clears)', () => {
+    const onSearch = jest.fn();
+    const { rerender } = render(<PlayerFilterForm onSearch={onSearch} resetKey={0} />);
+    onSearch.mockClear();
+
+    act(() => { rerender(<PlayerFilterForm onSearch={onSearch} resetKey={1} />); });
+    act(() => { rerender(<PlayerFilterForm onSearch={onSearch} resetKey={2} />); });
+
+    expect(onSearch).toHaveBeenCalledTimes(2);
+    expect(onSearch).toHaveBeenNthCalledWith(1, { region: undefined, position: undefined, minLevel: 0 });
+    expect(onSearch).toHaveBeenNthCalledWith(2, { region: undefined, position: undefined, minLevel: 0 });
+  });
 });

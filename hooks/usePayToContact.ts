@@ -1,17 +1,30 @@
 'use client';
 import { useState, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { useWallet } from '@/hooks/useWallet';
-import { useToast } from '@/components/ui/Toast';
-import {
-  buildPayToContact,
-  getSubscription,
-  PLATFORM_CONTACT_FEE_XLM,
-} from '@/lib/contract';
+import { payToContact, getSubscription } from '@/lib/contract';
+import { extractContractErrorKey } from '@/lib/contractErrorMessage';
+import type { ContactDetails } from '@/types';
 
 export function usePayToContact() {
   const { publicKey, signAndSubmit } = useWallet();
+  const t = useTranslations('contractErrors');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function mapErrorMessage(errorText: string): string {
+    if (errorText.includes('code 3') || errorText.includes('InsufficientFee')) {
+      return t('InsufficientFee');
+    }
+    if (
+      errorText.includes('code 11') ||
+      errorText.includes('SubscriptionExpired')
+    ) {
+      return t('SubscriptionExpired');
+    }
+    const key = extractContractErrorKey(errorText);
+    return key ? t(key) : (errorText || t('unknown'));
+  }
 
   const unlock = useCallback(
     async (playerId: string): Promise<void> => {
@@ -33,19 +46,7 @@ export function usePayToContact() {
         const subscription = await getSubscription(publicKey);
         const now = Date.now() / 1000;
         if (!subscription || subscription.expiresAt < now) {
-          fail(
-            'An active subscription is required to contact players. Please subscribe or renew.',
-          );
-          return;
-        }
-
-        // ── 2. Balance gate ───────────────────────────────────────────────────
-        const balance = parseFloat(xlmBalance ?? '0');
-        if (balance < PLATFORM_CONTACT_FEE_XLM) {
-          fail(
-            `Insufficient XLM. You need at least ${PLATFORM_CONTACT_FEE_XLM} XLM to contact this player.`,
-          );
-          return;
+          throw new Error('SubscriptionExpired');
         }
 
         // Call the contract function

@@ -1,7 +1,9 @@
 'use client';
 import { useState, useCallback, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { useWallet } from '@/hooks/useWallet';
 import { buildLogTrialOffer } from '@/lib/contract';
+import { extractContractErrorKey } from '@/lib/contractErrorMessage';
 import type { TrialOfferDetails } from '@/types';
 
 export interface UseTrialOfferReturn {
@@ -13,6 +15,7 @@ export interface UseTrialOfferReturn {
 
 export function useTrialOffer(): UseTrialOfferReturn {
   const { publicKey, signAndSubmit } = useWallet();
+  const t = useTranslations('contractErrors');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
@@ -43,7 +46,9 @@ export function useTrialOffer(): UseTrialOfferReturn {
         setTxHash((result as any)?.hash ?? null);
       } catch (err) {
         if (myCallId !== callIdRef.current) return;
-        setError(err instanceof Error ? err.message : 'Transaction failed');
+        const msg = err instanceof Error ? err.message : null;
+        const key = msg ? extractContractErrorKey(msg) : null;
+        setError(key ? t(key) : (msg ?? 'Transaction failed'));
       } finally {
         // Only the most-recent call is allowed to flip loading back to false
         if (myCallId === callIdRef.current) {

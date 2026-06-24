@@ -7,6 +7,7 @@ import { getPlayer } from '@/lib/contract';
 import PlayerCard from '@/components/PlayerCard';
 import PlayerCardSkeleton from '@/components/PlayerCardSkeleton';
 import PlayerFilterForm from '@/components/scout/PlayerFilterForm';
+import EmptyState from '@/components/ui/EmptyState';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import type { Player, PlayerFilter } from '@/types';
 
@@ -23,6 +24,11 @@ function ScoutDashboardContent() {
 
   const { players, loading, search } = useScout();
   const hasLoaded = useRef(false);
+  // True once loading has ever flipped true→false, confirming a search completed.
+  const loadingEverStarted = useRef(false);
+  const [searchHasCompleted, setSearchHasCompleted] = useState(false);
+  // Incrementing this tells PlayerFilterForm to reset its controls and re-search.
+  const [resetKey, setResetKey] = useState(0);
 
   // Wallet search state
   const [walletQuery, setWalletQuery] = useState('');
@@ -47,8 +53,13 @@ function ScoutDashboardContent() {
   }
 
   useEffect(() => {
-    if (!loading && players.length >= 0) hasLoaded.current = true;
-  }, [loading, players]);
+    if (loading) {
+      loadingEverStarted.current = true;
+    } else if (loadingEverStarted.current) {
+      hasLoaded.current = true;
+      setSearchHasCompleted(true);
+    }
+  }, [loading]);
 
   // Debounced wallet search
   useEffect(() => {
@@ -89,9 +100,14 @@ function ScoutDashboardContent() {
     [search],
   );
 
+  const handleClearFilters = useCallback(() => {
+    setResetKey((k) => k + 1);
+  }, []);
+
   if (!publicKey) return null;
 
   const showSkeletons = loading && !hasLoaded.current;
+  const showEmptyState = searchHasCompleted && !loading && players.length === 0;
 
   return (
     <div className="flex flex-col gap-8">
@@ -142,7 +158,7 @@ function ScoutDashboardContent() {
 
       {/* Filter bar */}
       <div className="bg-brand-card border border-gray-800 rounded-xl p-5">
-        <PlayerFilterForm onSearch={handleSearch} />
+        <PlayerFilterForm onSearch={handleSearch} resetKey={resetKey} />
       </div>
 
       {/* Results */}
@@ -152,6 +168,28 @@ function ScoutDashboardContent() {
             <PlayerCardSkeleton key={i} />
           ))}
         </div>
+      ) : showEmptyState ? (
+        <EmptyState
+          title="No players found"
+          description="Try adjusting your region, position, or level filter."
+          icon={
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-12 h-12 mx-auto"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.5}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"
+              />
+            </svg>
+          }
+          action={{ label: 'Clear Filters', onClick: handleClearFilters }}
+        />
       ) : (
         <>
           {players.length > 0 && (
@@ -163,11 +201,6 @@ function ScoutDashboardContent() {
             {paginated.map((p) => (
               <PlayerCard key={p.id} player={p} />
             ))}
-            {players.length === 0 && (
-              <p className="text-gray-500 col-span-3">
-                No players found. Try adjusting your filters.
-              </p>
-            )}
           </div>
           {players.length > PAGE_SIZE && (
             <div className="flex items-center justify-center gap-4">

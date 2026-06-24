@@ -1,11 +1,13 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { useWallet } from '@/hooks/useWallet';
 import {
   getValidators,
   buildApproveMilestone,
   buildRevokeMilestone,
 } from '@/lib/contract';
+import { extractContractErrorKey } from '@/lib/contractErrorMessage';
 import type { ValidatorInfo, Player } from '@/types';
 
 const CACHE_TTL_MS = 60_000;
@@ -32,6 +34,7 @@ export function useValidator(walletAddress?: string | null) {
   const { publicKey: ctxKey, signAndSubmit } = useWallet();
   const publicKey = walletAddress !== undefined ? walletAddress : ctxKey;
 
+  const t = useTranslations('contractErrors');
   const [isValidator, setIsValidator] = useState(false);
   const [checking, setChecking] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -57,7 +60,8 @@ export function useValidator(walletAddress?: string | null) {
       try {
         return await buildApproveMilestone(publicKey, playerId, milestone);
       } catch (e: any) {
-        setError(e.message);
+        const key = extractContractErrorKey(e.message ?? '');
+        setError(key ? t(key) : e.message);
         throw e;
       } finally {
         setLoading(false);
@@ -80,7 +84,8 @@ export function useValidator(walletAddress?: string | null) {
         const result = await signAndSubmit(xdr);
         return result as Player;
       } catch (e: any) {
-        setError(e.message);
+        const key = extractContractErrorKey(e.message ?? '');
+        setError(key ? t(key) : e.message);
         throw e;
       } finally {
         setLoading(false);

@@ -58,8 +58,15 @@
   },
   "wallet": {
     "connect": "Connect Wallet",
+    "connecting": "Connecting…",
     "connected": "Connected",
     "disconnect": "Disconnect Wallet",
+    "selectProvider": "Select Wallet",
+    "selectProviderHint": "Choose a Stellar wallet to connect with ScoutOff.",
+    "install": "Browser extension",
+    "installMobile": "Browser extension / mobile",
+    "cancel": "Cancel",
+    "noWalletDetected": "No wallet detected. Please install a Stellar wallet extension.",
     "balance": "Balance",
     "address": "Address",
     "invalid_address": "Invalid Stellar address",
@@ -82,5 +89,20 @@
     "upload": "Upload",
     "view_details": "View Details",
     "view_more": "View More"
+  },
+  "contractErrors": {
+    "AlreadyInitialized": "This player is already registered.",
+    "NotInitialized": "The contract has not been set up yet. Please contact support.",
+    "PlayerNotFound": "Player not found. Please check the player ID and try again.",
+    "UnauthorizedValidator": "You are not authorised as a validator to perform this action.",
+    "InvalidMilestone": "The specified milestone is invalid. Please verify the details.",
+    "AlreadyAtLevel": "The player is already at this level.",
+    "InsufficientFee": "Insufficient balance. Please add funds to your wallet.",
+    "SubscriptionExpired": "Your subscription has expired. Please renew it to continue.",
+    "ContractPaused": "The contract is currently paused. Please try again later.",
+    "Unauthorized": "You are not authorised to perform this action.",
+    "NoFeesToWithdraw": "There are no fees available to withdraw at this time.",
+    "Overflow": "A calculation error occurred. Please try again.",
+    "unknown": "An unexpected error occurred. Please try again."
   }
 }

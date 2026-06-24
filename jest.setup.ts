@@ -13,6 +13,16 @@ jest.mock('next-intl', () => ({
       app_title: 'ScoutOff',
       'nav.scout_dashboard': 'Scout Dashboard',
       'nav.player_dashboard': 'Player Dashboard',
+      // wallet namespace
+      connect: 'Connect Wallet',
+      connecting: 'Connecting…',
+      disconnect: 'Disconnect Wallet',
+      selectProvider: 'Select Wallet',
+      selectProviderHint: 'Choose a Stellar wallet to connect with ScoutOff.',
+      install: 'Browser extension',
+      installMobile: 'Browser extension / mobile',
+      cancel: 'Cancel',
+      noWalletDetected: 'No wallet detected. Please install a Stellar wallet extension.',
     };
     return t[key] ?? key;
   },

@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useWallet } from '@/hooks/useWallet';
 import useIsPaused from '@/hooks/useIsPaused';
 import { useValidator } from '@/hooks/useValidator';
@@ -30,6 +30,14 @@ export default function RevokeForm({ player, onSuccess }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [txError, setTxError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  const errorSummaryRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (txError || error) {
+      errorSummaryRef.current?.focus();
+    }
+  }, [txError, error]);
 
   const isAdmin = !!publicKey && publicKey === ADMIN;
   const paused = useIsPaused();
@@ -73,7 +81,6 @@ export default function RevokeForm({ player, onSuccess }: Props) {
       )}
       {/* Warning banner */}
       <div
-        role="alert"
         className="flex items-start gap-2 rounded-lg border border-yellow-700 bg-yellow-950 px-4 py-3 text-sm text-yellow-300"
       >
         <span aria-hidden>⚠️</span>
@@ -81,6 +88,20 @@ export default function RevokeForm({ player, onSuccess }: Props) {
           Revoking a milestone may reduce the player&apos;s progress level.
         </span>
       </div>
+
+      {/* Error summary */}
+      {(error || txError) && (
+        <div
+          ref={errorSummaryRef}
+          id="revoke-error-summary"
+          role="alert"
+          aria-label="Revocation error"
+          tabIndex={-1}
+          className="rounded-md border border-red-500 bg-red-950/30 p-3 outline-none"
+        >
+          <p className="text-sm text-red-400">{txError ?? error}</p>
+        </div>
+      )}
 
       {/* Milestone list */}
       <fieldset disabled={!walletAuthorized || loading || paused}>
@@ -134,13 +155,6 @@ export default function RevokeForm({ player, onSuccess }: Props) {
         </p>
       )}
 
-      {/* Errors */}
-      {(error || txError) && (
-        <p role="alert" className="text-sm text-red-400">
-          {txError ?? error}
-        </p>
-      )}
-
       {/* Success */}
       {success && (
         <p role="status" className="text-sm text-brand-green">
@@ -153,6 +167,7 @@ export default function RevokeForm({ player, onSuccess }: Props) {
         type="button"
         disabled={!selected || !walletAuthorized || loading}
         onClick={() => setConfirmOpen(true)}
+        aria-describedby={(error || txError) ? 'revoke-error-summary' : undefined}
         className="self-start rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
       >
         {loading ? 'Revoking…' : 'Revoke Selected Milestone'}

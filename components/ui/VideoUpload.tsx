@@ -31,17 +31,25 @@ export default function VideoUpload({ onUpload, error }: VideoUploadProps) {
     }
   };
 
+  const errorId = error ? 'video-upload-error' : undefined;
+
   return (
     <div className="space-y-1">
-      <label className="block text-sm font-medium text-gray-300">
+      <label
+        htmlFor="video-upload-input"
+        className="block text-sm font-medium text-gray-300"
+      >
         Highlight Reel
       </label>
       <div className="relative">
         <input
+          id="video-upload-input"
           type="file"
           accept="video/*"
           onChange={handleFileChange}
           disabled={isUploading}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={errorId}
           className={`w-full bg-gray-900 border border-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-green transition file:mr-4 file:py-1 file:px-4 file:rounded-lg file:border-0 file:bg-brand-green file:text-black file:font-medium hover:file:opacity-90 disabled:opacity-50 ${
             error ? 'border-red-500' : ''
           }`}
@@ -74,7 +82,11 @@ export default function VideoUpload({ onUpload, error }: VideoUploadProps) {
           </div>
         )}
       </div>
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      {error && (
+        <p id={errorId} role="alert" className="text-sm text-red-500">
+          {error}
+        </p>
+      )}
       {fileName && !isUploading && (
         <p className="text-sm text-gray-400">Uploaded: {fileName}</p>
       )}

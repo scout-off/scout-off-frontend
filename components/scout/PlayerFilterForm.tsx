@@ -34,11 +34,14 @@ function toPlayerFilter(state: FilterState): PlayerFilter {
 export interface PlayerFilterFormProps {
   onSearch: (filter: PlayerFilter) => void;
   className?: string;
+  /** Increment to imperatively reset all controls and retrigger the search with defaults. */
+  resetKey?: number;
 }
 
 export default function PlayerFilterForm({
   onSearch,
   className = '',
+  resetKey = 0,
 }: PlayerFilterFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -62,6 +65,14 @@ export default function PlayerFilterForm({
     onSearch(toPlayerFilter(filter));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // When the parent increments resetKey, reset controls and immediately search defaults.
+  const prevResetKey = useRef(resetKey);
+  useEffect(() => {
+    if (prevResetKey.current === resetKey) return;
+    prevResetKey.current = resetKey;
+    handleReset();
+  }, [resetKey, handleReset]);
 
   const updateURL = useCallback(
     (next: FilterState) => {
