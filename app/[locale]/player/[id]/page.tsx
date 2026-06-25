@@ -1,4 +1,5 @@
 'use client';
+import { useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
 import { usePlayer } from '@/hooks/usePlayer';
@@ -9,6 +10,7 @@ import ProgressBar from '@/components/ProgressBar';
 import PlayerProfileSkeleton from '@/components/PlayerProfileSkeleton';
 import TrialOfferForm from '@/components/scout/TrialOfferForm';
 import { buildPayToContact } from '@/lib/contract';
+import QRModal from '@/components/ui/QRModal';
 
 export default function PlayerProfile() {
   const { id } = useParams<{ id: string }>();
@@ -16,6 +18,10 @@ export default function PlayerProfile() {
   const { player, loading } = usePlayer(id ?? null);
   const { unlock, loading: contacting } = usePayToContact();
   const { milestones } = useMilestoneHistory(id ?? null);
+  const [qrOpen, setQrOpen] = useState(false);
+  const shareButtonRef = useRef<HTMLButtonElement>(null);
+
+  const profileUrl = typeof window !== 'undefined' ? window.location.href : '';
 
   async function handleContact() {
     await unlock(id);
@@ -111,6 +117,23 @@ export default function PlayerProfile() {
           Download Milestones
         </button>
       )}
+
+      {/* Share via QR */}
+      <button
+        ref={shareButtonRef}
+        onClick={() => setQrOpen(true)}
+        className="self-start text-sm text-gray-400 border border-gray-700 px-3 py-1.5 rounded-lg hover:border-gray-500 hover:text-white transition"
+      >
+        Share via QR
+      </button>
+      <QRModal
+        isOpen={qrOpen}
+        onClose={() => {
+          setQrOpen(false);
+          shareButtonRef.current?.focus();
+        }}
+        url={profileUrl}
+      />
 
       {/* Pay to contact */}
       {publicKey && (
