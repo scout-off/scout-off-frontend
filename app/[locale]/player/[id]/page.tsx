@@ -1,5 +1,6 @@
 'use client';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useWallet } from '@/hooks/useWallet';
 import { usePlayer } from '@/hooks/usePlayer';
 import { usePayToContact } from '@/hooks/usePayToContact';
@@ -7,6 +8,7 @@ import { PLATFORM_CONTACT_FEE_XLM } from '@/lib/contract';
 import ProgressBar from '@/components/ProgressBar';
 import PlayerProfileSkeleton from '@/components/PlayerProfileSkeleton';
 import TrialOfferForm from '@/components/scout/TrialOfferForm';
+import Badge from '@/components/ui/Badge';
 import { buildPayToContact } from '@/lib/contract';
 
 export default function PlayerProfile() {
@@ -14,6 +16,8 @@ export default function PlayerProfile() {
   const { publicKey } = useWallet();
   const { player, loading } = usePlayer(id ?? null);
   const { unlock, loading: contacting } = usePayToContact();
+  const t = useTranslations('common');
+  const isElite = player?.progressLevel === 3;
 
   async function handleContact() {
     await unlock(id);
@@ -27,6 +31,18 @@ export default function PlayerProfile() {
 
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-8">
+      {/* Elite Tier Banner */}
+      {isElite && (
+        <div className="bg-gradient-to-r from-amber-500 to-amber-600 border border-amber-400 rounded-xl p-4 flex items-center justify-center">
+          <Badge
+            variant="elite"
+            label={t('elite_tier')}
+            aria-label={t('elite_tier')}
+            size="md"
+          />
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-brand-card border border-gray-800 rounded-xl p-6 flex gap-6 items-start">
         <div className="w-20 h-20 rounded-full bg-gray-700 overflow-hidden shrink-0">

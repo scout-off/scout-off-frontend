@@ -3,6 +3,7 @@ import { memo, useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { mutate } from 'swr';
 import type { Player, ProgressLevel } from '@/types';
 import { PROGRESS_LABELS } from '@/types';
@@ -24,11 +25,13 @@ const PREFETCH_DELAY_MS = 200;
 function PlayerCard({ player }: { player: Player }) {
   const { id, vitals, progressLevel, ipfsHash } = player;
   const router = useRouter();
+  const t = useTranslations('common');
 
   const href = `/player/${id}`;
   const cacheKey = `player:${id}`;
   const levelLabel = PROGRESS_LABELS[progressLevel];
   const cardLabel = `${vitals.name}, ${vitals.position}, Level ${progressLevel} – ${levelLabel}`;
+  const isElite = progressLevel === 3;
 
   const prefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -119,13 +122,22 @@ function PlayerCard({ player }: { player: Player }) {
           {vitals.position} · {vitals.region}
         </p>
 
-        <Badge
-          variant={LEVEL_VARIANT[progressLevel]}
-          label={levelLabel}
-          aria-label={`Level ${progressLevel}: ${levelLabel}`}
-          size="sm"
-          className="mt-1"
-        />
+        <div className="flex gap-2 mt-1">
+          <Badge
+            variant={LEVEL_VARIANT[progressLevel]}
+            label={levelLabel}
+            aria-label={`Level ${progressLevel}: ${levelLabel}`}
+            size="sm"
+          />
+          {isElite && (
+            <Badge
+              variant="elite"
+              label={t('elite_tier')}
+              aria-label={t('elite_tier')}
+              size="sm"
+            />
+          )}
+        </div>
       </div>
 
       <ProgressBar level={progressLevel} />

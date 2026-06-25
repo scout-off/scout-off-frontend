@@ -37,4 +37,11 @@ describe('Badge', () => {
     expect(el).toHaveAttribute('role', 'status');
     expect(el.className).not.toMatch(/undefined|\[|\]/);
   });
+
+  test('elite variant applies gold/amber color classes', () => {
+    render(<Badge variant="elite" label="Elite Tier" />);
+    const el = screen.getByText('Elite Tier');
+    expect(el).toHaveClass('bg-amber-400');
+    expect(el).toHaveClass('text-amber-950');
+  });
 });

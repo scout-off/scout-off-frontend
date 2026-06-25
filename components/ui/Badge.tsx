@@ -5,6 +5,7 @@ type Variant =
   | 'level1'
   | 'level2'
   | 'level3'
+  | 'elite'
   | 'position'
   | 'region';
 type Size = 'sm' | 'md';
@@ -22,6 +23,7 @@ const VARIANT_CLASSES: Record<Variant, string> = {
   level1: 'bg-blue-100 text-blue-800',
   level2: 'bg-yellow-100 text-yellow-800',
   level3: 'bg-green-100 text-green-800',
+  elite: 'bg-amber-400 text-amber-950',
   position: 'bg-indigo-100 text-indigo-800',
   region: 'bg-purple-100 text-purple-800',
 };
