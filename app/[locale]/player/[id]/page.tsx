@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
 import { usePlayer } from '@/hooks/usePlayer';
@@ -8,15 +9,18 @@ import ProgressBar from '@/components/ProgressBar';
 import PlayerProfileSkeleton from '@/components/PlayerProfileSkeleton';
 import TrialOfferForm from '@/components/scout/TrialOfferForm';
 import { buildPayToContact } from '@/lib/contract';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 export default function PlayerProfile() {
   const { id } = useParams<{ id: string }>();
   const { publicKey } = useWallet();
   const { player, loading } = usePlayer(id ?? null);
   const { unlock, loading: contacting } = usePayToContact();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
-  async function handleContact() {
+  async function handleConfirm() {
     await unlock(id);
+    setConfirmOpen(false);
   }
 
   if (loading) {
@@ -78,13 +82,24 @@ export default function PlayerProfile() {
 
       {/* Pay to contact */}
       {publicKey && (
-        <button
-          onClick={handleContact}
-          disabled={contacting}
-          className="bg-brand-green text-black font-semibold py-3 rounded-xl hover:opacity-90 transition disabled:opacity-50"
-        >
-          {contacting ? 'Processing…' : `Pay to Contact (${PLATFORM_CONTACT_FEE_XLM} XLM)`}
-        </button>
+        <>
+          <button
+            onClick={() => setConfirmOpen(true)}
+            disabled={contacting}
+            className="bg-brand-green text-black font-semibold py-3 rounded-xl hover:opacity-90 transition disabled:opacity-50"
+          >
+            {contacting ? 'Processing…' : `Pay to Contact (${PLATFORM_CONTACT_FEE_XLM} XLM)`}
+          </button>
+          <ConfirmDialog
+            isOpen={confirmOpen}
+            onConfirm={handleConfirm}
+            onCancel={() => setConfirmOpen(false)}
+            title="Contact Player"
+            message={`Unlock contact details for ${player.vitals.name}? Fee: ${PLATFORM_CONTACT_FEE_XLM} XLM will be deducted from your wallet.`}
+            confirmLabel="Confirm"
+            loading={contacting}
+          />
+        </>
       )}
 
       {/* Trial offer */}
