@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
 import { usePlayer } from '@/hooks/usePlayer';
 import { usePayToContact } from '@/hooks/usePayToContact';
+import { useMilestoneHistory } from '@/hooks/useMilestoneHistory';
 import { PLATFORM_CONTACT_FEE_XLM } from '@/lib/contract';
 import ProgressBar from '@/components/ProgressBar';
 import PlayerProfileSkeleton from '@/components/PlayerProfileSkeleton';
@@ -16,11 +17,36 @@ export default function PlayerProfile() {
   const { publicKey } = useWallet();
   const { player, loading } = usePlayer(id ?? null);
   const { unlock, loading: contacting } = usePayToContact();
+  const { milestones } = useMilestoneHistory(id ?? null);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   async function handleConfirm() {
     await unlock(id);
     setConfirmOpen(false);
+  }
+
+  function handleDownload() {
+    const payload = {
+      playerId: player!.id,
+      wallet: player!.wallet,
+      progressLevel: player!.progressLevel,
+      milestones: milestones.map((m) => ({
+        id: m.id,
+        description: m.description,
+        validator: m.validator,
+        timestamp: m.timestamp,
+      })),
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `player-${player!.id}-milestones.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   if (loading) {
@@ -79,6 +105,16 @@ export default function PlayerProfile() {
           </ul>
         )}
       </div>
+
+      {/* Download milestones */}
+      {milestones.length > 0 && (
+        <button
+          onClick={handleDownload}
+          className="self-start text-sm text-brand-green underline underline-offset-2 hover:opacity-80 transition"
+        >
+          Download Milestones
+        </button>
+      )}
 
       {/* Pay to contact */}
       {publicKey && (
