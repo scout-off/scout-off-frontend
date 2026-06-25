@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Button from '@/components/ui/Button';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
+import useIsPaused from '@/hooks/useIsPaused';
 import { useSubscription } from '@/hooks/useSubscription';
 import type { SubscriptionTier } from '@/types';
 
@@ -52,6 +53,7 @@ function formatExpiry(timestamp: number) {
 
 function SubscribeContent() {
   const router = useRouter();
+  const isPaused = useIsPaused();
   const { subscription, isExpired, subscribe, loading, error } =
     useSubscription();
   const [successMessage, setSuccessMessage] = useState('');
@@ -85,7 +87,7 @@ function SubscribeContent() {
   }, [subscription, isExpired, loading]);
 
   async function handleSubscribe(tier: SubscriptionTier) {
-    if (loading) {
+    if (loading || isPaused) {
       return;
     }
 
@@ -194,7 +196,8 @@ function SubscribeContent() {
                 className="mt-8 w-full"
                 isLoading={loading && isSelected}
                 onClick={() => handleSubscribe(plan.tier)}
-                disabled={loading}
+                disabled={loading || isPaused}
+                title={isPaused ? 'Contract is currently paused' : undefined}
               >
                 {loading && isSelected
                   ? 'Processing…'

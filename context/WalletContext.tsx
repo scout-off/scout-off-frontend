@@ -27,6 +27,13 @@ export const WALLET_PROVIDERS: WalletProviderInfo[] = [
   { provider: 'lobstr', label: 'LOBSTR', icon: '🌐' },
 ];
 
+/** Official install page for each wallet provider, used by the "Install" prompt. */
+export const WALLET_INSTALL_URLS: Record<WalletProvider, string> = {
+  freighter: 'https://freighter.app',
+  albedo: 'https://albedo.link',
+  lobstr: 'https://lobstr.co',
+};
+
 interface WalletAdapter {
   isInstalled: () => Promise<boolean>;
   getPublicKey: () => Promise<string>;
@@ -111,6 +118,17 @@ const ADAPTERS: Record<WalletProvider, WalletAdapter> = {
     },
   },
 };
+
+/** Checks whether a given wallet provider's extension/app is installed. */
+export async function isWalletInstalled(
+  provider: WalletProvider,
+): Promise<boolean> {
+  try {
+    return await ADAPTERS[provider].isInstalled();
+  } catch {
+    return false;
+  }
+}
 
 const PROVIDER_STORAGE_KEY = 'scoutoff_wallet_provider';
 

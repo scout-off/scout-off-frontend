@@ -165,9 +165,10 @@ export default function RevokeForm({ player, onSuccess }: Props) {
       {/* Revoke button */}
       <button
         type="button"
-        disabled={!selected || !walletAuthorized || loading}
+        disabled={!selected || !walletAuthorized || loading || paused}
         onClick={() => setConfirmOpen(true)}
         aria-describedby={(error || txError) ? 'revoke-error-summary' : undefined}
+        title={paused ? 'Contract is currently paused' : undefined}
         className="self-start rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
       >
         {loading ? 'Revoking…' : 'Revoke Selected Milestone'}

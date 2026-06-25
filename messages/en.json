@@ -3,6 +3,8 @@
   "nav": {
     "scout_dashboard": "Scout Dashboard",
     "player_dashboard": "Player Dashboard",
+    "sponsorship": "Sponsorship",
+    "soon": "Soon",
     "maintenance_warning": "ScoutOff is currently under maintenance. Write actions are temporarily disabled."
   },
   "common": {
@@ -67,6 +69,9 @@
     "installMobile": "Browser extension / mobile",
     "cancel": "Cancel",
     "noWalletDetected": "No wallet detected. Please install a Stellar wallet extension.",
+    "noWalletInstalledBanner": "No Stellar wallet detected. Install one of the options below to get started.",
+    "notInstalled": "Not installed",
+    "installLink": "Install",
     "balance": "Balance",
     "address": "Address",
     "invalid_address": "Invalid Stellar address",
@@ -89,6 +94,14 @@
     "upload": "Upload",
     "view_details": "View Details",
     "view_more": "View More"
+  },
+  "sponsorship": {
+    "badge": "Coming Soon",
+    "title": "Fractionalized Player Sponsorship",
+    "description": "Fans and investors will soon be able to buy \"Player Tokens\" to fund a player's training and travel — with revenue routed transparently back on-chain.",
+    "howItWorksTitle": "How it will work",
+    "howItWorksDescription": "Sponsors will purchase fractional Player Tokens representing a stake in a player's future earnings. Funds raised go directly toward training, travel, and development costs, while a share of the player's future on-chain revenue is routed back to token holders — all enforced by Soroban smart contracts.",
+    "notice": "This page is a placeholder. No tokens can be purchased yet and no blockchain interaction is available here."
   },
   "contractErrors": {
     "AlreadyInitialized": "This player is already registered.",

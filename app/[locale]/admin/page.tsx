@@ -169,7 +169,7 @@ function AdminDashboardContent() {
           <span className="text-white font-medium">{fees ?? 0} XLM</span>
         </p>
         <button
-          disabled={!fees || fees <= 0}
+          disabled={!fees || fees <= 0 || paused}
           onClick={() =>
             setDialog({
               action: 'withdraw',
@@ -177,6 +177,7 @@ function AdminDashboardContent() {
               message: `Withdraw ${fees} XLM to your wallet?`,
             })
           }
+          title={paused ? 'Contract is currently paused' : undefined}
           className="w-fit px-5 py-2 rounded-lg bg-brand-green text-black font-semibold hover:opacity-90 transition disabled:opacity-40"
         >
           Withdraw Fees
@@ -195,7 +196,9 @@ function AdminDashboardContent() {
           />
           <button
             disabled={
-              !validatorInput.startsWith('G') || validatorInput.length !== 56
+              !validatorInput.startsWith('G') ||
+              validatorInput.length !== 56 ||
+              paused
             }
             onClick={() =>
               setDialog({
@@ -204,6 +207,7 @@ function AdminDashboardContent() {
                 message: `Add ${validatorInput} as a validator?`,
               })
             }
+            title={paused ? 'Contract is currently paused' : undefined}
             className="px-5 py-2 rounded-lg bg-brand-green text-black font-semibold hover:opacity-90 transition disabled:opacity-40"
           >
             Add
@@ -229,6 +233,7 @@ function AdminDashboardContent() {
                   {v.address}
                 </span>
                 <button
+                  disabled={paused}
                   onClick={() => {
                     setRemoveTarget(v.address);
                     setDialog({
@@ -237,7 +242,8 @@ function AdminDashboardContent() {
                       message: `Remove ${v.address.slice(0, 8)}… from validators?`,
                     });
                   }}
-                  className="text-red-400 hover:text-red-300 transition shrink-0"
+                  title={paused ? 'Contract is currently paused' : undefined}
+                  className="text-red-400 hover:text-red-300 transition shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Remove
                 </button>

@@ -259,7 +259,8 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
 
       <button
         type="submit"
-        disabled={submitting || !!urlError}
+        disabled={submitting || !!urlError || isPaused}
+        title={isPaused ? 'Contract is currently paused' : undefined}
         className="bg-brand-green text-black font-semibold py-2 rounded-lg hover:opacity-90 transition disabled:opacity-50"
       >
         {submitting ? 'Submitting\u2026' : 'Approve Milestone'}

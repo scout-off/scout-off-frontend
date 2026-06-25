@@ -3,6 +3,8 @@
   "nav": {
     "scout_dashboard": "Tableau de bord des scouts",
     "player_dashboard": "Tableau de bord des joueurs",
+    "sponsorship": "Parrainage",
+    "soon": "Bientôt",
     "maintenance_warning": "ScoutOff est actuellement en maintenance. Les actions d'écriture sont temporairement désactivées."
   },
   "common": {
@@ -67,6 +69,9 @@
     "installMobile": "Extension de navigateur / mobile",
     "cancel": "Annuler",
     "noWalletDetected": "Aucun portefeuille détecté. Veuillez installer une extension de portefeuille Stellar.",
+    "noWalletInstalledBanner": "Aucun portefeuille Stellar détecté. Installez l'une des options ci-dessous pour commencer.",
+    "notInstalled": "Non installé",
+    "installLink": "Installer",
     "balance": "Solde",
     "address": "Adresse",
     "invalid_address": "Adresse Stellar invalide",
@@ -89,6 +94,14 @@
     "upload": "Télécharger",
     "view_details": "Afficher les détails",
     "view_more": "Afficher plus"
+  },
+  "sponsorship": {
+    "badge": "Bientôt disponible",
+    "title": "Parrainage fractionné de joueurs",
+    "description": "Les fans et investisseurs pourront bientôt acheter des « Jetons Joueur » pour financer l'entraînement et les déplacements d'un joueur — avec les revenus reversés de manière transparente sur la chaîne.",
+    "howItWorksTitle": "Comment cela fonctionnera",
+    "howItWorksDescription": "Les parrains achèteront des Jetons Joueur fractionnés représentant une participation aux revenus futurs d'un joueur. Les fonds collectés financent directement l'entraînement, les déplacements et le développement, tandis qu'une part des revenus futurs du joueur sur la chaîne est reversée aux détenteurs de jetons — tout cela appliqué par des contrats intelligents Soroban.",
+    "notice": "Cette page est un espace réservé. Aucun jeton ne peut encore être acheté et aucune interaction blockchain n'est disponible ici."
   },
   "contractErrors": {
     "AlreadyInitialized": "Ce joueur est déjà inscrit.",

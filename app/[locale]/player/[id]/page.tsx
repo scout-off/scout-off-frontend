@@ -3,6 +3,7 @@ import { useParams } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
 import { usePlayer } from '@/hooks/usePlayer';
 import { usePayToContact } from '@/hooks/usePayToContact';
+import useIsPaused from '@/hooks/useIsPaused';
 import { PLATFORM_CONTACT_FEE_XLM } from '@/lib/contract';
 import ProgressBar from '@/components/ProgressBar';
 import PlayerProfileSkeleton from '@/components/PlayerProfileSkeleton';
@@ -14,8 +15,10 @@ export default function PlayerProfile() {
   const { publicKey } = useWallet();
   const { player, loading } = usePlayer(id ?? null);
   const { unlock, loading: contacting } = usePayToContact();
+  const isPaused = useIsPaused();
 
   async function handleContact() {
+    if (isPaused) return;
     await unlock(id);
   }
 
@@ -80,7 +83,8 @@ export default function PlayerProfile() {
       {publicKey && (
         <button
           onClick={handleContact}
-          disabled={contacting}
+          disabled={contacting || isPaused}
+          title={isPaused ? 'Contract is currently paused' : undefined}
           className="bg-brand-green text-black font-semibold py-3 rounded-xl hover:opacity-90 transition disabled:opacity-50"
         >
           {contacting ? 'Processing…' : `Pay to Contact (${PLATFORM_CONTACT_FEE_XLM} XLM)`}

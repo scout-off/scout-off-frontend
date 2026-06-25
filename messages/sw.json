@@ -3,6 +3,8 @@
   "nav": {
     "scout_dashboard": "Dashibodi ya Scout",
     "player_dashboard": "Dashibodi ya Mchezaji",
+    "sponsorship": "TODO: Machine-translated - Ufadhili",
+    "soon": "TODO: Machine-translated - Hivi Karibuni",
     "maintenance_warning": "ScoutOff iko chini ya matengenezo sasa. Vitendo vya kuandika vimezimwa kwa sasa."
   },
   "common": {
@@ -67,6 +69,9 @@
     "installMobile": "Nyongeza ya kivinjari / simu",
     "cancel": "Ghairi",
     "noWalletDetected": "Hakuna pochi iliyogunduliwa. Tafadhali sakinisha nyongeza ya pochi ya Stellar.",
+    "noWalletInstalledBanner": "TODO: Machine-translated - Hakuna pochi ya Stellar iliyogunduliwa. Sakinisha mojawapo ya chaguo hapa chini kuanza.",
+    "notInstalled": "TODO: Machine-translated - Haijasakinishwa",
+    "installLink": "TODO: Machine-translated - Sakinisha",
     "balance": "Salio",
     "address": "Anwani",
     "invalid_address": "TODO: Machine-translated - Anwani ya Stellar sio sahihi",
@@ -89,6 +94,14 @@
     "upload": "TODO: Machine-translated - Pakua",
     "view_details": "TODO: Machine-translated - Tazama Maelezo",
     "view_more": "TODO: Machine-translated - Tazama Zaidi"
+  },
+  "sponsorship": {
+    "badge": "TODO: Machine-translated - Inakuja Hivi Karibuni",
+    "title": "TODO: Machine-translated - Ufadhili wa Tokeni za Wachezaji",
+    "description": "TODO: Machine-translated - Mashabiki na wawekezaji hivi karibuni wataweza kununua \"Tokeni za Mchezaji\" kufadhili mafunzo na usafiri wa mchezaji — huku mapato yakirejeshwa kwa uwazi kwenye blockchain.",
+    "howItWorksTitle": "TODO: Machine-translated - Jinsi itakavyofanya kazi",
+    "howItWorksDescription": "TODO: Machine-translated - Wafadhili watanunua Tokeni za Mchezaji zinazowakilisha hisa katika mapato ya baadaye ya mchezaji. Fedha zilizokusanywa zinaelekezwa moja kwa moja kwenye mafunzo, usafiri, na maendeleo, huku sehemu ya mapato ya baadaye ya mchezaji kwenye blockchain ikirejeshwa kwa wamiliki wa tokeni — yote yakisimamiwa na mikataba mahiri ya Soroban.",
+    "notice": "TODO: Machine-translated - Ukurasa huu ni nafasi ya muda. Hakuna tokeni zinazoweza kununuliwa bado na hakuna mwingiliano wa blockchain unaopatikana hapa."
   },
   "contractErrors": {
     "AlreadyInitialized": "Mchezaji huyu ameshasajiliwa.",

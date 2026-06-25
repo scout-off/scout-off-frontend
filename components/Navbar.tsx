@@ -11,6 +11,8 @@ const NAV_LINKS = [
   { href: '/player', labelKey: 'nav.player_dashboard' },
 ];
 
+const SPONSORSHIP_LINK = { href: '/sponsorship', labelKey: 'nav.sponsorship' };
+
 const LOCALES = [
   { code: 'en', label: 'EN' },
   { code: 'fr', label: 'FR' },
@@ -72,22 +74,41 @@ export default function Navbar() {
               </Link>
             ))}
 
+            <Link
+              href={`/${currentLocale}${SPONSORSHIP_LINK.href}`}
+              className="flex items-center gap-1.5 text-gray-500 hover:text-gray-300 transition"
+            >
+              {t(SPONSORSHIP_LINK.labelKey)}
+              <span className="text-[10px] uppercase tracking-wide border border-gray-700 rounded-full px-1.5 py-0.5">
+                {t('nav.soon')}
+              </span>
+            </Link>
+
             <div className="relative">
               <button
                 onClick={() => setLocaleOpen(!localeOpen)}
                 className="hover:text-white transition flex items-center gap-1"
                 type="button"
+                aria-haspopup="true"
+                aria-expanded={localeOpen}
+                aria-label={t('language.select_language')}
               >
                 {locales.find((l) => l.code === currentLocale)?.label ||
                   t('language.select_language')}
                 <span className="text-xs">▼</span>
               </button>
               {localeOpen && (
-                <div className="absolute right-0 mt-2 w-40 bg-brand-dark border border-gray-800 rounded-lg shadow-lg z-50">
+                <div
+                  role="menu"
+                  aria-label={t('language.select_language')}
+                  className="absolute right-0 mt-2 w-40 bg-brand-dark border border-gray-800 rounded-lg shadow-lg z-50"
+                >
                   {locales.map((locale) => (
                     <button
                       key={locale.code}
                       type="button"
+                      role="menuitem"
+                      aria-current={currentLocale === locale.code}
                       onClick={() => handleLanguageChange(locale.code)}
                       className={`w-full text-left px-4 py-2 text-sm hover:bg-brand-green hover:text-black transition ${
                         currentLocale === locale.code
@@ -160,11 +181,27 @@ export default function Navbar() {
                 {t(labelKey)}
               </Link>
             ))}
+            <Link
+              href={`/${currentLocale}${SPONSORSHIP_LINK.href}`}
+              aria-current={
+                pathname === `/${currentLocale}${SPONSORSHIP_LINK.href}`
+                  ? 'page'
+                  : undefined
+              }
+              className="flex items-center gap-1.5 text-gray-500 hover:text-gray-300 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green rounded py-1"
+              onClick={() => setMenuOpen(false)}
+            >
+              {t(SPONSORSHIP_LINK.labelKey)}
+              <span className="text-[10px] uppercase tracking-wide border border-gray-700 rounded-full px-1.5 py-0.5">
+                {t('nav.soon')}
+              </span>
+            </Link>
             <div className="border-t border-gray-800 pt-3">
               {locales.map((locale) => (
                 <button
                   key={locale.code}
                   type="button"
+                  aria-current={currentLocale === locale.code}
                   onClick={() => handleLanguageChange(locale.code)}
                   className={`w-full text-left px-4 py-2 text-sm hover:bg-brand-green hover:text-black transition ${
                     currentLocale === locale.code

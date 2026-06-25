@@ -114,8 +114,9 @@ export default function UpdateProfileForm({
           )}
           <Button
             type="submit"
-            disabled={!newCid || isSubmitting}
+            disabled={!newCid || isSubmitting || isPaused}
             isLoading={isSubmitting}
+            title={isPaused ? 'Contract is currently paused' : undefined}
             className="w-full"
           >
             Update Profile

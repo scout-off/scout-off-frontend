@@ -509,7 +509,8 @@ export default function PlayerOnboardingWizard({
               type="button"
               onClick={handleSubmit}
               isLoading={isLoading}
-              disabled={isLoading}
+              disabled={isLoading || isPaused}
+              title={isPaused ? 'Contract is currently paused' : undefined}
               className="flex-1"
             >
               {isLoading ? 'Registering...' : 'Register as Player'}
