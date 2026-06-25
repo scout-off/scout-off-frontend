@@ -468,13 +468,13 @@ Add a Share Profile button to the public player profile page that copies the URL
 - [ ] \`og:url\` meta tag is present on the player profile page"
 
 u 129 "## Description
-Add a tooltip to each milestone badge in \`MilestoneList\` showing the full validator wallet address and block timestamp on hover/focus.
+Add a tooltip to each milestone badge in \`MilestoneTimeline\` showing the full validator wallet address and block timestamp on hover/focus.
 
 ## Tasks
 - Create \`components/ui/Tooltip.tsx\` as a primitive built on top of \`Badge\`
 - Accept \`content\` (string) and \`children\` props
 - Show the tooltip on hover and on keyboard focus
-- Apply the tooltip to each milestone's validator badge in \`MilestoneList\`
+- Apply the tooltip to each milestone's validator badge in \`MilestoneTimeline\`
 
 ## Additional Requirements
 - Tooltip must be accessible: use \`role=\"tooltip\"\` and \`aria-describedby\`
