@@ -6,6 +6,7 @@ import { usePayToContact } from '@/hooks/usePayToContact';
 import { PLATFORM_CONTACT_FEE_XLM } from '@/lib/contract';
 import ProgressBar from '@/components/ProgressBar';
 import PlayerProfileSkeleton from '@/components/PlayerProfileSkeleton';
+import PlayerStatsCard from '@/components/player/PlayerStatsCard';
 import TrialOfferForm from '@/components/scout/TrialOfferForm';
 import { buildPayToContact } from '@/lib/contract';
 
@@ -52,6 +53,9 @@ export default function PlayerProfile() {
           </div>
         </div>
       </div>
+
+      {/* Stats */}
+      <PlayerStatsCard stats={player.stats} position={player.vitals.position} />
 
       {/* Milestones */}
       <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
