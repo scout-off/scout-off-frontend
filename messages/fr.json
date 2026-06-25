@@ -25,7 +25,8 @@
     "search": "Rechercher",
     "filter": "Filtrer",
     "sort": "Trier",
-    "clear": "Effacer"
+    "clear": "Effacer",
+    "elite_tier": "Niveau Élite"
   },
   "language": {
     "select_language": "Sélectionner la langue",

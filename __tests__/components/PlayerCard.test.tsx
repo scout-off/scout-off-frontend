@@ -52,6 +52,15 @@ jest.mock('swr', () => ({
   mutate: jest.fn(),
 }));
 
+jest.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => {
+    const translations: Record<string, string> = {
+      'common.elite_tier': 'Elite Tier',
+    };
+    return translations[key] || key;
+  },
+}));
+
 // ── Typed mock handles ────────────────────────────────────────────────────────
 
 import { useRouter } from 'next/navigation';
@@ -300,5 +309,41 @@ describe('PlayerCard — no idle RPC traffic', () => {
 
     expect(mockUseRouter().prefetch).not.toHaveBeenCalled();
     expect(mockMutate).not.toHaveBeenCalled();
+  });
+});
+
+// ── Elite Tier badge rendering ─────────────────────────────────────────────────
+
+describe('PlayerCard — Elite Tier badge', () => {
+  it('renders Elite Tier badge for level 3 players', () => {
+    const elitePlayer = { ...mockPlayer, progressLevel: 3 as const };
+    render(<PlayerCard player={elitePlayer} />);
+    expect(screen.getByText('Elite Tier')).toBeInTheDocument();
+  });
+
+  it('does not render Elite Tier badge for level 0 players', () => {
+    const level0Player = { ...mockPlayer, progressLevel: 0 as const };
+    render(<PlayerCard player={level0Player} />);
+    expect(screen.queryByText('Elite Tier')).not.toBeInTheDocument();
+  });
+
+  it('does not render Elite Tier badge for level 1 players', () => {
+    const level1Player = { ...mockPlayer, progressLevel: 1 as const };
+    render(<PlayerCard player={level1Player} />);
+    expect(screen.queryByText('Elite Tier')).not.toBeInTheDocument();
+  });
+
+  it('does not render Elite Tier badge for level 2 players', () => {
+    const level2Player = { ...mockPlayer, progressLevel: 2 as const };
+    render(<PlayerCard player={level2Player} />);
+    expect(screen.queryByText('Elite Tier')).not.toBeInTheDocument();
+  });
+
+  it('Elite Tier badge has correct styling', () => {
+    const elitePlayer = { ...mockPlayer, progressLevel: 3 as const };
+    render(<PlayerCard player={elitePlayer} />);
+    const eliteBadge = screen.getByText('Elite Tier');
+    expect(eliteBadge).toHaveClass('bg-amber-400');
+    expect(eliteBadge).toHaveClass('text-amber-950');
   });
 });
