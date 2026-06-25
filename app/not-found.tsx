@@ -1,8 +1,8 @@
-import Link from "next/link";
-import Navbar from "@/components/Navbar";
+import Link from 'next/link';
+import Navbar from '@/components/Navbar';
 
 export const metadata = {
-  title: "Page Not Found – ScoutOff",
+  title: 'Page Not Found – ScoutOff',
 };
 
 export default function NotFound() {
@@ -34,7 +34,7 @@ export default function NotFound() {
                 Page Not Found
               </h2>
               <p className="text-gray-400 max-w-md mx-auto">
-                The page you're looking for doesn't exist or has been moved.
+                The page you are looking for does not exist or has been moved.
               </p>
             </div>
             <Link

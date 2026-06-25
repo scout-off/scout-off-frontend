@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import Modal from "./Modal";
-import Button from "./Button";
+import Modal from './Modal';
+import Button from './Button';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -20,8 +20,8 @@ export default function ConfirmDialog({
   onCancel,
   title,
   message,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
   loading = false,
 }: ConfirmDialogProps) {
   const handleConfirm = async () => {
