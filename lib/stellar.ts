@@ -19,22 +19,48 @@ export function isValidStellarAddress(key: string): boolean {
 
 export { NETWORK, BASE_FEE, TransactionBuilder };
 
-async function pollTransaction(hash: string) {
-  const MAX_ATTEMPTS = 10;
-  const POLL_DELAY_MS = 1500;
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+// 21 attempts with 1.5s between each = 30s of total wait before timing out.
+const DEFAULT_MAX_ATTEMPTS = 21;
+const DEFAULT_DELAY_MS = 1500;
+
+export class TransactionTimeoutError extends Error {
+  constructor(hash: string) {
+    super(`Transaction ${hash} was not confirmed within the allotted time.`);
+    this.name = 'TransactionTimeoutError';
+  }
+}
+
+export class TransactionFailedError extends Error {
+  constructor(hash: string) {
+    super(`Transaction ${hash} failed.`);
+    this.name = 'TransactionFailedError';
+  }
+}
+
+/**
+ * Polls `rpc.getTransaction` until the transaction is confirmed, fails, or
+ * `maxAttempts` is exhausted. Stellar takes a few seconds to confirm a
+ * transaction, so calling `getTransaction` immediately after `sendTransaction`
+ * almost always returns `NOT_FOUND`.
+ */
+export async function pollTransaction(
+  hash: string,
+  maxAttempts: number = DEFAULT_MAX_ATTEMPTS,
+  delayMs: number = DEFAULT_DELAY_MS,
+) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const result = await rpc.getTransaction(hash);
     if (result.status !== 'NOT_FOUND') {
       if (result.status === 'FAILED') {
-        throw new Error(`ContractError: transaction ${hash} failed`);
+        throw new TransactionFailedError(hash);
       }
       return result;
     }
-    if (attempt < MAX_ATTEMPTS - 1) {
-      await new Promise<void>((r) => setTimeout(r, POLL_DELAY_MS));
+    if (attempt < maxAttempts - 1) {
+      await new Promise<void>((r) => setTimeout(r, delayMs));
     }
   }
-  throw new Error(`ContractError: transaction ${hash} was not confirmed`);
+  throw new TransactionTimeoutError(hash);
 }
 
 /**

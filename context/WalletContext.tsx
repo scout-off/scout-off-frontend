@@ -5,6 +5,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   ReactNode,
 } from 'react';
 import albedo from '@albedo-link/intent';
@@ -331,28 +332,45 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     [publicKey, walletProvider],
   );
 
+  const value = useMemo(
+    () => ({
+      publicKey,
+      isAuthenticated,
+      isConnecting,
+      xlmBalance,
+      isLoadingBalance,
+      walletProvider,
+      walletProviderInfo,
+      showWalletModal,
+      openWalletModal,
+      closeWalletModal,
+      connectWithProvider,
+      connect,
+      disconnect,
+      signAndSubmit,
+      refreshBalance,
+    }),
+    [
+      publicKey,
+      isAuthenticated,
+      isConnecting,
+      xlmBalance,
+      isLoadingBalance,
+      walletProvider,
+      walletProviderInfo,
+      showWalletModal,
+      openWalletModal,
+      closeWalletModal,
+      connectWithProvider,
+      connect,
+      disconnect,
+      signAndSubmit,
+      refreshBalance,
+    ],
+  );
+
   return (
-    <WalletContext.Provider
-      value={{
-        publicKey,
-        isAuthenticated,
-        isConnecting,
-        xlmBalance,
-        isLoadingBalance,
-        walletProvider,
-        walletProviderInfo,
-        showWalletModal,
-        openWalletModal,
-        closeWalletModal,
-        connectWithProvider,
-        connect,
-        disconnect,
-        signAndSubmit,
-        refreshBalance,
-      }}
-    >
-      {children}
-    </WalletContext.Provider>
+    <WalletContext.Provider value={value}>{children}</WalletContext.Provider>
   );
 }
 
