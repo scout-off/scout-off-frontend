@@ -23,22 +23,38 @@ export function isValidStellarAddress(key: string): boolean {
 
 export { NETWORK, BASE_FEE, TransactionBuilder };
 
-async function pollTransaction(hash: string) {
-  const MAX_ATTEMPTS = 10;
-  const POLL_DELAY_MS = 1500;
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+export class TransactionFailedError extends Error {
+  constructor(hash: string) {
+    super(`Transaction ${hash} failed on-chain`);
+    this.name = 'TransactionFailedError';
+  }
+}
+
+export class TransactionTimeoutError extends Error {
+  constructor(hash: string, attempts: number) {
+    super(`Transaction ${hash} was not confirmed after ${attempts} attempts`);
+    this.name = 'TransactionTimeoutError';
+  }
+}
+
+export async function pollTransaction(
+  hash: string,
+  maxAttempts = 10,
+  delayMs = 3000,
+) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const result = await rpc.getTransaction(hash);
     if (result.status !== 'NOT_FOUND') {
       if (result.status === 'FAILED') {
-        throw new Error(`ContractError: transaction ${hash} failed`);
+        throw new TransactionFailedError(hash);
       }
       return result;
     }
-    if (attempt < MAX_ATTEMPTS - 1) {
-      await new Promise<void>((r) => setTimeout(r, POLL_DELAY_MS));
+    if (attempt < maxAttempts - 1) {
+      await new Promise<void>((r) => setTimeout(r, delayMs));
     }
   }
-  throw new Error(`ContractError: transaction ${hash} was not confirmed`);
+  throw new TransactionTimeoutError(hash, maxAttempts);
 }
 
 /**
