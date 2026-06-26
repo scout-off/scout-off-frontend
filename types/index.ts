@@ -8,6 +8,14 @@ export const PROGRESS_LABELS: Record<ProgressLevel, string> = {
   3: 'Elite Tier',
 };
 
+// ── Player Stats ──────────────────────────────────────────────────────────────
+export interface PlayerStats {
+  goals: number;
+  assists: number;
+  appearances: number;
+  clean_sheets?: number;
+}
+
 // ── Player ────────────────────────────────────────────────────────────────────
 export interface PlayerVitals {
   name: string;
@@ -29,6 +37,7 @@ export interface Player {
   id: string;
   wallet: string;
   vitals: PlayerVitals;
+  stats?: PlayerStats;
   ipfsHash: string; // Latest highlight reel CID
   progressLevel: ProgressLevel;
   milestones: Milestone[];

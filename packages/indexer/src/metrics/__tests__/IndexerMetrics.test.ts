@@ -277,3 +277,53 @@ describe('IndexerMetrics — sliding window eviction', () => {
     expect(metrics.snapshot().ingestionRatePerSec).toBeGreaterThan(0);
   });
 });
+
+describe('IndexerMetrics — JSON serialization', () => {
+  test('snapshot serializes to valid JSON for the health endpoint', () => {
+    const metrics = IndexerMetrics.getInstance(now);
+    fakeClock = 1000;
+    metrics.recordSuccess('player_registered', 10, 256);
+    metrics.recordFailure(5);
+    metrics.recordRetry();
+
+    const snap = metrics.snapshot();
+    const json = JSON.stringify(snap);
+    const parsed = JSON.parse(json);
+
+    expect(parsed.totalProcessed).toBe(snap.totalProcessed);
+    expect(parsed.totalSuccesses).toBe(snap.totalSuccesses);
+    expect(parsed.totalFailures).toBe(snap.totalFailures);
+    expect(parsed.totalRetries).toBe(snap.totalRetries);
+    expect(parsed.totalBytesIngested).toBe(snap.totalBytesIngested);
+    expect(parsed.isHealthy).toBe(snap.isHealthy);
+    expect(parsed.lastProcessedAt).toBe(snap.lastProcessedAt);
+    expect(parsed.eventCounts).toEqual(snap.eventCounts);
+  });
+
+  test('snapshot JSON contains all required health endpoint fields', () => {
+    const metrics = IndexerMetrics.getInstance(now);
+    const snap = metrics.snapshot();
+    const keys = Object.keys(JSON.parse(JSON.stringify(snap)));
+
+    const required = [
+      'totalProcessed',
+      'totalSuccesses',
+      'totalFailures',
+      'totalRetries',
+      'totalBytesIngested',
+      'eventCounts',
+      'lastProcessedAt',
+      'consecutiveErrors',
+      'isHealthy',
+      'ingestionRatePerSec',
+      'errorRatePercent',
+      'successRatePercent',
+      'latencyAvgMs',
+      'latencyP95Ms',
+      'throughputBytesPerSec',
+    ];
+    for (const field of required) {
+      expect(keys).toContain(field);
+    }
+  });
+});
