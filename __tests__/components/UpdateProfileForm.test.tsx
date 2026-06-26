@@ -149,4 +149,21 @@ describe('UpdateProfileForm', () => {
     );
     expect(onSuccess).toHaveBeenCalledTimes(1);
   });
+  it('displays an error message when updateProfile fails', async () => {
+    const onSuccess = jest.fn();
+    mockedUpdateProfile.mockRejectedValue(new Error('Transaction failed'));
+
+    renderComponent(onSuccess);
+
+    fireEvent.click(screen.getByRole('button', { name: /upload new media/i }));
+    const submit = screen.getByRole('button', { name: /update profile/i });
+    await act(async () => {
+      fireEvent.click(submit);
+    });
+
+    expect(mockedUpdateProfile).toHaveBeenCalled();
+    // error message should be displayed
+    expect(screen.getByText(/Failed to update profile media/i)).toBeInTheDocument();
+    expect(onSuccess).not.toHaveBeenCalled();
+  });
 });
