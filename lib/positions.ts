@@ -9,4 +9,5 @@ export const FOOTBALL_POSITIONS = [
   { label: 'Left Winger', value: 'LW' },
   { label: 'Right Winger', value: 'RW' },
   { label: 'Striker', value: 'ST' },
+  { label: 'Center Forward', value: 'CF' },
 ];
