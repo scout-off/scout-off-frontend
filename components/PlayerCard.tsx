@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { mutate } from 'swr';
 import type { Player, ProgressLevel } from '@/types';
-import { PROGRESS_LABELS } from '@/types';
+import { getProgressLabel } from '@/lib/progress';
 import ProgressBar from './ProgressBar';
 import Badge from '@/components/ui/Badge';
 
@@ -27,7 +27,7 @@ function PlayerCard({ player }: { player: Player }) {
 
   const href = `/player/${id}`;
   const cacheKey = `player:${id}`;
-  const levelLabel = PROGRESS_LABELS[progressLevel];
+  const levelLabel = getProgressLabel(progressLevel);
   const cardLabel = `${vitals.name}, ${vitals.position}, Level ${progressLevel} – ${levelLabel}`;
 
   const prefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

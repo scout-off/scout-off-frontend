@@ -1,5 +1,5 @@
 import type { ProgressLevel } from '@/types';
-import { PROGRESS_LABELS } from '@/types';
+import { PROGRESS_LEVELS, getProgressLabel, getProgressColor } from '@/lib/progress';
 
 /*
  * WCAG 2.1 AA Contrast Audit
@@ -16,27 +16,18 @@ import { PROGRESS_LABELS } from '@/types';
  *   Inactive — #9CA3AF (gray-400)  vs #0A0F1E → 5.74:1  ✅ (>4.5:1)
  */
 
-const STEPS: ProgressLevel[] = [0, 1, 2, 3];
-
-const FILL_COLOUR: Record<ProgressLevel, string> = {
-  0: 'bg-gray-600',
-  1: 'bg-blue-400',
-  2: 'bg-amber-400',
-  3: 'bg-emerald-400',
-};
-
 export default function ProgressBar({ level }: { level: ProgressLevel }) {
   const pct = (level / 3) * 100;
 
   return (
     <div className="w-full">
       <div className="flex justify-between mb-1">
-        {STEPS.map((step) => (
+        {PROGRESS_LEVELS.map(({ level: step, label }) => (
           <span
             key={step}
             className={`text-xs ${step <= level ? 'text-gray-50' : 'text-gray-400'}`}
           >
-            {PROGRESS_LABELS[step]}
+            {label}
           </span>
         ))}
       </div>
@@ -45,11 +36,11 @@ export default function ProgressBar({ level }: { level: ProgressLevel }) {
         aria-valuenow={level}
         aria-valuemin={0}
         aria-valuemax={3}
-        aria-label={`Progress level: ${PROGRESS_LABELS[level]}`}
+        aria-label={`Progress level: ${getProgressLabel(level)}`}
         className="h-2 bg-gray-800 rounded-full overflow-hidden"
       >
         <div
-          className={`h-full ${FILL_COLOUR[level]} rounded-full transition-all duration-500`}
+          className={`h-full ${getProgressColor(level)} rounded-full transition-all duration-500`}
           style={{ width: `${pct}%` }}
         />
       </div>
