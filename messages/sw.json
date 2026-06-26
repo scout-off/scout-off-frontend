@@ -73,7 +73,8 @@
     "balance": "Salio",
     "address": "Anwani",
     "invalid_address": "TODO: Machine-translated - Anwani ya Stellar sio sahihi",
-    "connection_failed": "TODO: Machine-translated - Kushindwa kuunganisha pochi"
+    "connection_failed": "TODO: Machine-translated - Kushindwa kuunganisha pochi",
+    "balanceError": "TODO: Machine-translated - Salio halipatikani — kosa la mtandao"
   },
   "errors": {
     "not_found": "Haijafikiwa",

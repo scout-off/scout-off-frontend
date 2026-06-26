@@ -73,7 +73,8 @@
     "balance": "Solde",
     "address": "Adresse",
     "invalid_address": "Adresse Stellar invalide",
-    "connection_failed": "Échec de la connexion au portefeuille"
+    "connection_failed": "Échec de la connexion au portefeuille",
+    "balanceError": "Solde indisponible — erreur réseau"
   },
   "errors": {
     "not_found": "Non trouvé",

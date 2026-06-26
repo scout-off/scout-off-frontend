@@ -78,6 +78,7 @@ export default function WalletButton() {
     disconnect,
     isConnecting,
     xlmBalance,
+    balanceError,
     isLoadingBalance,
     walletProviderInfo,
     showWalletModal,
@@ -108,6 +109,14 @@ export default function WalletButton() {
         <span className="border-l border-current pl-2 opacity-80">
           {isLoadingBalance ? (
             <Spinner size="sm" />
+          ) : balanceError ? (
+            <span
+              className="text-yellow-400"
+              title={t('balanceError')}
+              aria-label={t('balanceError')}
+            >
+              ⚠ XLM
+            </span>
           ) : (
             <span>{xlmBalance ?? '0.00'} XLM</span>
           )}

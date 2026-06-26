@@ -73,7 +73,8 @@
     "balance": "Balance",
     "address": "Address",
     "invalid_address": "Invalid Stellar address",
-    "connection_failed": "Failed to connect wallet"
+    "connection_failed": "Failed to connect wallet",
+    "balanceError": "Balance unavailable — network error"
   },
   "errors": {
     "not_found": "Not found",
