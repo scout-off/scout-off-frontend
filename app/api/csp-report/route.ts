@@ -8,6 +8,12 @@ import { NextRequest, NextResponse } from 'next/server';
  * and logs them for monitoring and debugging purposes.
  */
 export async function POST(request: NextRequest) {
+  const contentType = request.headers.get('content-type') ?? '';
+  const mediaType = contentType.split(';')[0].trim().toLowerCase();
+  if (mediaType !== 'application/csp-report' && mediaType !== 'application/json') {
+    return new NextResponse('Unsupported Media Type', { status: 415 });
+  }
+
   try {
     const report = await request.json();
 
