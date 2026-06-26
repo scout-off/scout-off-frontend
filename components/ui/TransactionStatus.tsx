@@ -77,7 +77,7 @@ export default function TransactionStatus({
             className="ml-auto text-brand-green underline hover:opacity-80 transition"
             aria-label="View transaction on Stellar Expert"
           >
-            View on Explorer
+            View on Stellar Expert →
           </a>
         )}
       </div>

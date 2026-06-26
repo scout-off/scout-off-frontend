@@ -1,25 +1,57 @@
 'use client';
+import { useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
 import { usePlayer } from '@/hooks/usePlayer';
 import { usePayToContact } from '@/hooks/usePayToContact';
+import { useSubscription } from '@/hooks/useSubscription';
 import { PLATFORM_CONTACT_FEE_XLM } from '@/lib/contract';
 import ProgressBar from '@/components/ProgressBar';
 import PlayerProfileSkeleton from '@/components/PlayerProfileSkeleton';
+import PlayerStatsCard from '@/components/player/PlayerStatsCard';
 import TrialOfferForm from '@/components/scout/TrialOfferForm';
-import { buildPayToContact } from '@/lib/contract';
+import Button from '@/components/ui/Button';
 
 export default function PlayerProfile() {
   const { id } = useParams<{ id: string }>();
   const { publicKey } = useWallet();
-  const { player, loading } = usePlayer(id ?? null);
+  const { player, loading: playerLoading, refetch } = usePlayer(id ?? null);
   const { unlock, loading: contacting } = usePayToContact();
+  const { subscription, isExpired, loading: subscriptionLoading } = useSubscription();
 
-  async function handleContact() {
+  async function handleConfirm() {
     await unlock(id);
+    setConfirmOpen(false);
   }
 
-  if (loading) {
+  function handleDownload() {
+    const payload = {
+      playerId: player!.id,
+      wallet: player!.wallet,
+      progressLevel: player!.progressLevel,
+      milestones: milestones.map((m) => ({
+        id: m.id,
+        description: m.description,
+        validator: m.validator,
+        timestamp: m.timestamp,
+      })),
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `player-${player!.id}-milestones.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const isScoutWithActiveSubscription = publicKey && subscription && !isExpired;
+  const canLogTrialOffer = isScoutWithActiveSubscription && player && player.progressLevel < 3;
+
+  if (playerLoading) {
     return <PlayerProfileSkeleton showContactButton={!!publicKey} />;
   }
   if (!player)
@@ -53,6 +85,9 @@ export default function PlayerProfile() {
         </div>
       </div>
 
+      {/* Stats */}
+      <PlayerStatsCard stats={player.stats} position={player.vitals.position} />
+
       {/* Milestones */}
       <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
         <h2 className="font-semibold text-white mb-4">On-Chain Milestones</h2>
@@ -76,23 +111,93 @@ export default function PlayerProfile() {
         )}
       </div>
 
+      {/* Download milestones */}
+      {milestones.length > 0 && (
+        <button
+          onClick={handleDownload}
+          className="self-start text-sm text-brand-green underline underline-offset-2 hover:opacity-80 transition"
+        >
+          Download Milestones
+        </button>
+      )}
+
+      {/* Share via QR */}
+      <button
+        ref={shareButtonRef}
+        onClick={() => setQrOpen(true)}
+        className="self-start text-sm text-gray-400 border border-gray-700 px-3 py-1.5 rounded-lg hover:border-gray-500 hover:text-white transition"
+      >
+        Share via QR
+      </button>
+      <QRModal
+        isOpen={qrOpen}
+        onClose={() => {
+          setQrOpen(false);
+          shareButtonRef.current?.focus();
+        }}
+        url={profileUrl}
+      />
+
       {/* Pay to contact */}
       {publicKey && (
         <button
-          onClick={handleContact}
-          disabled={contacting}
-          className="bg-brand-green text-black font-semibold py-3 rounded-xl hover:opacity-90 transition disabled:opacity-50"
+          onClick={handleDownload}
+          className="self-start text-sm text-brand-green underline underline-offset-2 hover:opacity-80 transition"
         >
-          {contacting ? 'Processing…' : `Pay to Contact (${PLATFORM_CONTACT_FEE_XLM} XLM)`}
+          Download Milestones
         </button>
+      )}
+
+      {/* Pay to contact */}
+      {publicKey && (
+        <>
+          <button
+            onClick={() => setConfirmOpen(true)}
+            disabled={contacting}
+            className="bg-brand-green text-black font-semibold py-3 rounded-xl hover:opacity-90 transition disabled:opacity-50"
+          >
+            {contacting ? 'Processing…' : `Pay to Contact (${PLATFORM_CONTACT_FEE_XLM} XLM)`}
+          </button>
+          <ConfirmDialog
+            isOpen={confirmOpen}
+            onConfirm={handleConfirm}
+            onCancel={() => setConfirmOpen(false)}
+            title="Contact Player"
+            message={`Unlock contact details for ${player.vitals.name}? Fee: ${PLATFORM_CONTACT_FEE_XLM} XLM will be deducted from your wallet.`}
+            confirmLabel="Confirm"
+            loading={contacting}
+          />
+        </>
       )}
 
       {/* Trial offer */}
       {publicKey && id && (
-        <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
-          <h2 className="font-semibold text-white mb-4">Log Trial Offer</h2>
-          <TrialOfferForm playerId={id} />
-        </div>
+        <>
+          {canLogTrialOffer ? (
+            <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
+              <h2 className="font-semibold text-white mb-4">Log Trial Offer</h2>
+              <TrialOfferForm playerId={id} onSuccess={refetch} />
+            </div>
+          ) : player.progressLevel === 3 ? (
+            <div className="bg-brand-card border border-brand-green rounded-xl p-6">
+              <p className="text-sm text-brand-green">
+                ✓ This player is already at Elite Tier (Level 3).
+              </p>
+            </div>
+          ) : !subscriptionLoading && !subscription ? (
+            <div className="bg-brand-card border border-gray-700 rounded-xl p-6">
+              <p className="text-sm text-gray-400">
+                Subscribe to log trial offers and advance players to Elite Tier.
+              </p>
+            </div>
+          ) : !subscriptionLoading && isExpired ? (
+            <div className="bg-brand-card border border-gray-700 rounded-xl p-6">
+              <p className="text-sm text-gray-400">
+                Your subscription has expired. Renew your subscription to log trial offers.
+              </p>
+            </div>
+          ) : null}
+        </>
       )}
     </div>
   );

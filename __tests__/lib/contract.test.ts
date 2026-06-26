@@ -49,6 +49,23 @@ const mockRpc = rpc as jest.Mocked<typeof rpc>;
 
 beforeEach(() => jest.clearAllMocks());
 
+describe("contract configuration", () => {
+  test("does not crash on import when NEXT_PUBLIC_CONTRACT_ID is missing and fails on use with a clear error", async () => {
+    const previousContractId = process.env.NEXT_PUBLIC_CONTRACT_ID;
+
+    delete process.env.NEXT_PUBLIC_CONTRACT_ID;
+    jest.resetModules();
+
+    const { getPlayer } = require("../../lib/contract");
+
+    await expect(getPlayer("player_1")).rejects.toThrow(
+      /NEXT_PUBLIC_CONTRACT_ID/
+    );
+
+    process.env.NEXT_PUBLIC_CONTRACT_ID = previousContractId;
+  });
+});
+
 // ── buildRegisterPlayer ───────────────────────────────────────────────────────
 
 describe("buildRegisterPlayer", () => {

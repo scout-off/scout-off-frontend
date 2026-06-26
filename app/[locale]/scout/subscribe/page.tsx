@@ -42,7 +42,11 @@ const TIERS: Array<{
   },
 ];
 
-const TIER_ORDER: Record<SubscriptionTier, number> = { basic: 0, pro: 1, elite: 2 };
+const TIER_ORDER: Record<SubscriptionTier, number> = {
+  basic: 0,
+  pro: 1,
+  elite: 2,
+};
 
 function formatExpiry(timestamp: number) {
   return new Date(timestamp * 1000).toLocaleDateString(undefined, {
@@ -52,8 +56,11 @@ function formatExpiry(timestamp: number) {
   });
 }
 
-function daysRemaining(expiresAt: number): number {
-  return Math.ceil((expiresAt - Date.now() / 1000) / 86400);
+function remainingDays(expiresAt: number): number {
+  return Math.max(
+    0,
+    Math.ceil((expiresAt - Date.now() / 1000) / 86400),
+  );
 }
 
 function SubscribeContent() {
@@ -90,6 +97,24 @@ function SubscribeContent() {
     return `Current subscription: ${subscription.tier.toUpperCase()} — active until ${formatExpiry(subscription.expiresAt)}.`;
   }, [subscription, isExpired, loading]);
 
+  function getCtaLabel(planTier: SubscriptionTier, isProcessing: boolean): string {
+    if (isProcessing) return 'Processing…';
+
+    if (!subscription || isExpired) {
+      // Expired: same tier = Renew, higher tier = Upgrade, no sub = Subscribe
+      if (subscription && isExpired) {
+        if (planTier === subscription.tier) return 'Renew';
+        if (TIER_ORDER[planTier] > TIER_ORDER[subscription.tier]) return 'Upgrade';
+      }
+      return 'Subscribe';
+    }
+
+    // Active subscription
+    if (planTier === subscription.tier) return 'Renew';
+    if (TIER_ORDER[planTier] > TIER_ORDER[subscription.tier]) return 'Upgrade';
+    return 'Subscribe';
+  }
+
   async function handleSubscribe(tier: SubscriptionTier) {
     if (loading) {
       return;
@@ -112,8 +137,34 @@ function SubscribeContent() {
     }
   }
 
+  const hasActiveSub = subscription && !isExpired;
+
   return (
     <div className="flex flex-col gap-8">
+      {/* Active subscription banner */}
+      {hasActiveSub && (
+        <div
+          role="status"
+          aria-label="Active subscription"
+          className="rounded-xl border border-brand-green/40 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.10),_transparent)] px-5 py-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="flex items-center gap-3">
+            <span className="rounded-full bg-brand-green px-3 py-1 text-xs font-semibold uppercase text-black">
+              {subscription.tier}
+            </span>
+            <span className="text-sm text-gray-200">
+              Active until{' '}
+              <strong className="text-white">
+                {formatExpiry(subscription.expiresAt)}
+              </strong>
+            </span>
+          </div>
+          <span className="text-sm text-emerald-400 font-medium">
+            {remainingDays(subscription.expiresAt)} days remaining
+          </span>
+        </div>
+      )}
+
       <div className="flex flex-col gap-4">
         <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -186,36 +237,15 @@ function SubscribeContent() {
         {TIERS.map((plan) => {
           const isRecommended = plan.recommended ?? false;
           const isSelected = selectedTier === plan.tier;
-          const isActiveTier =
-            subscription && !isExpired && subscription.tier === plan.tier;
-
-          const ctaLabel = (() => {
-            if (loading && isSelected) return 'Processing…';
-            if (!subscription) return `Subscribe to ${plan.title}`;
-            const nearingExpiry =
-              !isExpired &&
-              subscription.tier === plan.tier &&
-              daysRemaining(subscription.expiresAt) <= 7;
-            if (
-              (isExpired || nearingExpiry) &&
-              subscription.tier === plan.tier
-            ) {
-              return `Renew ${plan.title}`;
-            }
-            if (
-              TIER_ORDER[plan.tier] > TIER_ORDER[subscription.tier]
-            ) {
-              return `Upgrade to ${plan.title}`;
-            }
-            return `Subscribe to ${plan.title}`;
-          })();
+          const isActiveTier = hasActiveSub && subscription.tier === plan.tier;
+          const ctaLabel = getCtaLabel(plan.tier, loading && isSelected);
 
           return (
             <div
               key={plan.tier}
               className={`bg-brand-card border rounded-xl p-6 shadow-sm transition ${
                 isActiveTier
-                  ? 'border-brand-green ring-2 ring-brand-green/30 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.12),_transparent)]'
+                  ? 'border-brand-green ring-2 ring-brand-green/50 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.08),_transparent)]'
                   : isRecommended
                     ? 'border-brand-green bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.08),_transparent)]'
                     : 'border-gray-800'
@@ -230,13 +260,13 @@ function SubscribeContent() {
                     {plan.price}
                   </p>
                 </div>
-                <div className="flex flex-col items-end gap-1.5">
+                <div className="flex flex-col items-end gap-2">
                   {isActiveTier && (
-                    <span className="rounded-full bg-brand-green/20 border border-brand-green/50 px-3 py-1 text-xs font-semibold uppercase text-brand-green">
-                      Active
+                    <span className="rounded-full bg-brand-green px-3 py-1 text-xs font-semibold uppercase text-black">
+                      Current Plan
                     </span>
                   )}
-                  {isRecommended && !isActiveTier && (
+                  {!isActiveTier && isRecommended && (
                     <span className="rounded-full bg-brand-green px-3 py-1 text-xs font-semibold uppercase text-black">
                       Recommended
                     </span>
