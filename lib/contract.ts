@@ -5,6 +5,7 @@ import {
   xdr,
   TransactionBuilder as TB,
   Account,
+  StrKey,
 } from '@stellar/stellar-sdk';
 import { rpc, NETWORK, BASE_FEE, signAndSubmitTx } from './stellar';
 import { ContractPausedError } from './errors';
@@ -14,6 +15,7 @@ import type {
   ContactDetails,
   SubscriptionTier,
   TrialOfferDetails,
+  TrialOfferType,
 } from '@/types';
 
 function getContract() {
@@ -414,7 +416,8 @@ export async function buildLogTrialOffer(
   scoutKey: string,
   playerId: string,
   details: TrialOfferDetails,
-) {
+): Promise<string> {
+  validateTrialOfferInputs(scoutKey, playerId, details);
   return buildTx(
     'log_trial_offer',
     [
@@ -424,6 +427,58 @@ export async function buildLogTrialOffer(
     ],
     scoutKey,
   );
+}
+
+/**
+ * Builds, signs, and submits a `log_trial_offer` transaction, then polls the
+ * Soroban Testnet RPC until the transaction is confirmed.
+ *
+ * This is the full end-to-end helper for recording a trial offer on-chain.
+ * It reuses {@link buildLogTrialOffer} for construction (including input
+ * validation) and {@link signAndSubmitTx} for signing, submission, and
+ * confirmation polling — matching the patterns used by {@link payToContact}
+ * and {@link subscribe}.
+ *
+ * @param scoutKey - The scout's Stellar public key (source account and auth
+ *   signer). Must be a valid Ed25519 G-prefixed Stellar public key.
+ * @param playerId - Unique identifier of the player receiving the offer.
+ *   Must be a non-empty, non-whitespace string.
+ * @param details - Structured on-chain record of the offer.
+ *   `details.clubName` must be a non-empty string; `details.offerType` must
+ *   be one of `"trial"`, `"loan"`, or `"transfer"`.
+ * @param signFn - Wallet-agnostic signing callback that receives the unsigned
+ *   transaction XDR and returns the signed XDR. For Testnet usage, pass the
+ *   Freighter adapter's `signTransaction` (e.g. from `WalletContext`) or any
+ *   compatible signer.
+ * @returns A Promise that resolves when the trial offer is confirmed on-chain.
+ *   Throws on validation failure, signing rejection, submission error, or
+ *   confirmation timeout.
+ *
+ * @throws {TypeError} If `scoutKey` is not a valid Stellar Ed25519 public key.
+ * @throws {TypeError} If `playerId` is empty or contains only whitespace.
+ * @throws {TypeError} If `details.clubName` is empty or contains only whitespace.
+ * @throws {TypeError} If `details.offerType` is not `"trial"`, `"loan"`, or
+ *   `"transfer"`.
+ * @throws {ContractError} SubscriptionExpired (8) — The scout's active
+ *   subscription has passed its expiry timestamp and must be renewed before
+ *   trial offers can be logged.
+ * @throws {ContractError} ContractPaused (9) — All write operations are blocked
+ *   while the contract is administratively paused; try again after it is
+ *   unpaused.
+ * @throws {Error} If `signFn` rejects (e.g. user dismissed the Freighter
+ *   popup or the wallet is not connected).
+ * @throws {Error} If the RPC node rejects the submitted transaction.
+ * @throws {Error} If the transaction is not confirmed within the polling window
+ *   (10 attempts × 1 500 ms).
+ */
+export async function logTrialOffer(
+  scoutKey: string,
+  playerId: string,
+  details: TrialOfferDetails,
+  signFn: (xdr: string) => Promise<string>,
+): Promise<void> {
+  const xdrTx = await buildLogTrialOffer(scoutKey, playerId, details);
+  await signAndSubmitTx(xdrTx, signFn);
 }
 
 /**
