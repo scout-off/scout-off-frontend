@@ -322,6 +322,11 @@ export async function updateProfile(
   await signAndSubmitTx(xdrTx, signFn);
 }
 
+// ── Milestones ────────────────────────────────────────────────────────────────
+export async function getMilestoneHistory(playerId: string) {
+  return simulateTx("get_milestone_history", [nativeToScVal(playerId, { type: "string" })]);
+}
+
 // ── Scout ─────────────────────────────────────────────────────────────────────
 
 /**
