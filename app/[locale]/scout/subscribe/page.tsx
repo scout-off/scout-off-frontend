@@ -203,6 +203,36 @@ function SubscribeContent() {
         )}
       </div>
 
+      {subscription && !isExpired && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="rounded-xl border border-brand-green/40 bg-brand-green/10 px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+        >
+          <div>
+            <span className="text-xs uppercase tracking-widest text-brand-green font-semibold">
+              Active Subscription
+            </span>
+            <p className="text-white font-semibold mt-0.5">
+              {subscription.tier.charAt(0).toUpperCase() +
+                subscription.tier.slice(1)}{' '}
+              Plan
+            </p>
+          </div>
+          <div className="text-sm text-gray-300">
+            Expires{' '}
+            <span className="text-white font-medium">
+              {formatExpiry(subscription.expiresAt)}
+            </span>{' '}
+            &middot;{' '}
+            <span className="text-brand-green font-medium">
+              {daysRemaining(subscription.expiresAt)} day
+              {daysRemaining(subscription.expiresAt) !== 1 ? 's' : ''} remaining
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-6 md:grid-cols-2">
         {TIERS.map((plan) => {
           const isRecommended = plan.recommended ?? false;
