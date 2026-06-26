@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import api from '@/lib/api';
+import { useContractEvents, type FeedEvent as LiveFeedEvent } from '@/hooks/useContractEvents';
 
 type EventType =
   | 'player_registered'
@@ -62,6 +63,31 @@ export default function ActivityFeed({ scoutId }: ActivityFeedProps) {
   const [events, setEvents] = useState<FeedEvent[] | null>(null);
   const [loading, setLoading] = useState(true);
   const intervalRef = useRef<number | null>(null);
+  const seenRef = useRef<Set<string>>(new Set());
+  const [freshIds, setFreshIds] = useState<Set<string>>(new Set());
+
+  const { events: liveEvents, isLive } = useContractEvents();
+
+  // Merge live events into the top of the feed, deduplicated.
+  useEffect(() => {
+    if (liveEvents.length === 0) return;
+    setEvents((prev) => {
+      const base = prev ?? [];
+      const novel = liveEvents.filter((e) => !seenRef.current.has(e.id));
+      if (novel.length === 0) return prev;
+      novel.forEach((e) => seenRef.current.add(e.id));
+      const newIds = new Set(novel.map((e) => e.id));
+      setFreshIds((ids) => new Set([...ids, ...newIds]));
+      // Remove animation class after 2 s
+      setTimeout(() => setFreshIds((ids) => {
+        const next = new Set(ids);
+        newIds.forEach((id) => next.delete(id));
+        return next;
+      }), 2000);
+      return [...novel, ...base].slice(0, 20);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveEvents]);
 
   async function fetchEvents() {
     setLoading(true);
@@ -101,7 +127,14 @@ export default function ActivityFeed({ scoutId }: ActivityFeedProps) {
 
   return (
     <section className="bg-brand-card border border-gray-800 rounded-xl p-5">
-      <h2 className="text-lg font-semibold text-white mb-3">Activity Feed</h2>
+      <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+        Activity Feed
+        {isLive && (
+          <span className="text-xs bg-green-600 text-white px-1.5 py-0.5 rounded-full">
+            Live
+          </span>
+        )}
+      </h2>
 
       {loading && (
         <ul className="space-y-3">
@@ -130,7 +163,7 @@ export default function ActivityFeed({ scoutId }: ActivityFeedProps) {
                 ? ev.createdAt * 1000
                 : new Date(ev.createdAt).getTime();
             return (
-              <li key={ev.id} className="py-3 flex items-start gap-3">
+              <li key={ev.id} className={`py-3 flex items-start gap-3 transition-colors duration-700${freshIds.has(ev.id) ? ' bg-green-950/40' : ''}`}>
                 <div className="shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-gray-900 text-white text-sm">
                   {ICONS[ev.type] ?? 'ℹ️'}
                 </div>

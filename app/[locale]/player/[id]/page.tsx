@@ -19,8 +19,33 @@ export default function PlayerProfile() {
   const { unlock, loading: contacting } = usePayToContact();
   const { subscription, isExpired, loading: subscriptionLoading } = useSubscription();
 
-  async function handleContact() {
+  async function handleConfirm() {
     await unlock(id);
+    setConfirmOpen(false);
+  }
+
+  function handleDownload() {
+    const payload = {
+      playerId: player!.id,
+      wallet: player!.wallet,
+      progressLevel: player!.progressLevel,
+      milestones: milestones.map((m) => ({
+        id: m.id,
+        description: m.description,
+        validator: m.validator,
+        timestamp: m.timestamp,
+      })),
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `player-${player!.id}-milestones.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   const isScoutWithActiveSubscription = publicKey && subscription && !isExpired;
@@ -116,12 +141,33 @@ export default function PlayerProfile() {
       {/* Pay to contact */}
       {publicKey && (
         <button
-          onClick={handleContact}
-          disabled={contacting}
-          className="bg-brand-green text-black font-semibold py-3 rounded-xl hover:opacity-90 transition disabled:opacity-50"
+          onClick={handleDownload}
+          className="self-start text-sm text-brand-green underline underline-offset-2 hover:opacity-80 transition"
         >
-          {contacting ? 'Processing…' : `Pay to Contact (${PLATFORM_CONTACT_FEE_XLM} XLM)`}
+          Download Milestones
         </button>
+      )}
+
+      {/* Pay to contact */}
+      {publicKey && (
+        <>
+          <button
+            onClick={() => setConfirmOpen(true)}
+            disabled={contacting}
+            className="bg-brand-green text-black font-semibold py-3 rounded-xl hover:opacity-90 transition disabled:opacity-50"
+          >
+            {contacting ? 'Processing…' : `Pay to Contact (${PLATFORM_CONTACT_FEE_XLM} XLM)`}
+          </button>
+          <ConfirmDialog
+            isOpen={confirmOpen}
+            onConfirm={handleConfirm}
+            onCancel={() => setConfirmOpen(false)}
+            title="Contact Player"
+            message={`Unlock contact details for ${player.vitals.name}? Fee: ${PLATFORM_CONTACT_FEE_XLM} XLM will be deducted from your wallet.`}
+            confirmLabel="Confirm"
+            loading={contacting}
+          />
+        </>
       )}
 
       {/* Trial offer */}
