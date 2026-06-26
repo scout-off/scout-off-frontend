@@ -64,6 +64,7 @@
     "next-sitemap": "4.2.3",
     "prettier": "^3.8.1",
     "storybook": "^8.6.18",
+    "typescript": "^6.0.3",
     "vite": "^8.1.0",
     "vite-tsconfig-paths": "^6.1.1"
   },
