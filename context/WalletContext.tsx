@@ -12,6 +12,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   ReactNode,
 } from 'react';
 import { mutate } from 'swr';
@@ -426,6 +427,43 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       return adapter.signTransaction(xdr);
     },
     [publicKey, walletProvider],
+  );
+
+  const value = useMemo(
+    () => ({
+      publicKey,
+      isAuthenticated,
+      isConnecting,
+      xlmBalance,
+      isLoadingBalance,
+      walletProvider,
+      walletProviderInfo,
+      showWalletModal,
+      openWalletModal,
+      closeWalletModal,
+      connectWithProvider,
+      connect,
+      disconnect,
+      signAndSubmit,
+      refreshBalance,
+    }),
+    [
+      publicKey,
+      isAuthenticated,
+      isConnecting,
+      xlmBalance,
+      isLoadingBalance,
+      walletProvider,
+      walletProviderInfo,
+      showWalletModal,
+      openWalletModal,
+      closeWalletModal,
+      connectWithProvider,
+      connect,
+      disconnect,
+      signAndSubmit,
+      refreshBalance,
+    ],
   );
 
   return (
