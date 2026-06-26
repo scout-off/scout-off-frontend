@@ -203,7 +203,10 @@ function ScoutDashboardContent() {
               </p>
             )}
             {!searchLoading && searchResult === 'not-found' && (
-              <p className="text-sm text-gray-500">Player not found.</p>
+              <EmptyState
+                title="No players found"
+                description="No player is registered with that wallet address."
+              />
             )}
             {!searchLoading &&
               searchResult &&
@@ -232,7 +235,7 @@ function ScoutDashboardContent() {
       ) : showEmptyState ? (
         <EmptyState
           title="No players found"
-          description="Try adjusting your region, position, or level filter."
+          description="Try adjusting your filters."
           icon={
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -249,7 +252,7 @@ function ScoutDashboardContent() {
               />
             </svg>
           }
-          action={{ label: 'Clear Filters', onClick: handleClearFilters }}
+          action={{ label: 'Reset Filters', onClick: handleClearFilters }}
         />
       ) : (
         <>
