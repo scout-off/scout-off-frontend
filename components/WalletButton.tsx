@@ -5,6 +5,7 @@ import { useWallet } from '@/hooks/useWallet';
 import { WALLET_PROVIDERS } from '@/context/WalletContext';
 import Modal from '@/components/ui/Modal';
 import Spinner from '@/components/ui/Spinner';
+import { useToast } from '@/components/ui/Toast';
 import type { WalletProvider } from '@/context/WalletContext';
 
 async function copyToClipboard(text: string): Promise<boolean> {
@@ -72,11 +73,13 @@ function CopyButton({ text }: { text: string }) {
 
 export default function WalletButton() {
   const t = useTranslations('wallet');
+  const { show: showToast } = useToast();
   const {
     publicKey,
     connect,
     disconnect,
     isConnecting,
+    connectingProvider,
     xlmBalance,
     balanceError,
     isLoadingBalance,
@@ -85,6 +88,16 @@ export default function WalletButton() {
     closeWalletModal,
     connectWithProvider,
   } = useWallet();
+
+  async function handleConnectWithProvider(provider: WalletProvider) {
+    try {
+      await connectWithProvider(provider);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to connect wallet';
+      showToast({ variant: 'error', message });
+    }
+  }
 
   if (publicKey) {
     return (
@@ -145,28 +158,40 @@ export default function WalletButton() {
             {WALLET_PROVIDERS.length === 0 ? (
               <p className="text-sm text-gray-400">{t('noWalletDetected')}</p>
             ) : (
-              WALLET_PROVIDERS.map((wp) => (
-                <button
-                  key={wp.provider}
-                  type="button"
-                  onClick={() =>
-                    connectWithProvider(wp.provider as WalletProvider)
-                  }
-                  className="flex items-center gap-3 w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-left text-white hover:border-brand-green hover:bg-gray-800 transition"
-                >
-                  <span className="text-2xl" aria-hidden="true">
-                    {wp.icon}
-                  </span>
-                  <div>
-                    <p className="font-medium">{wp.label}</p>
-                    <p className="text-xs text-gray-500">
-                      {wp.provider === 'albedo'
-                        ? t('installMobile')
-                        : t('install')}
-                    </p>
-                  </div>
-                </button>
-              ))
+              WALLET_PROVIDERS.map((wp) => {
+                const isThisConnecting = connectingProvider === wp.provider;
+                const isOtherConnecting =
+                  isConnecting && connectingProvider !== wp.provider;
+                return (
+                  <button
+                    key={wp.provider}
+                    type="button"
+                    onClick={() =>
+                      handleConnectWithProvider(wp.provider as WalletProvider)
+                    }
+                    disabled={isThisConnecting || isOtherConnecting}
+                    className="flex items-center gap-3 w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-left text-white hover:border-brand-green hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="text-2xl shrink-0" aria-hidden="true">
+                      {wp.icon}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium">{wp.label}</p>
+                      <p className="text-xs text-gray-500">
+                        {wp.provider === 'albedo'
+                          ? t('installMobile')
+                          : t('install')}
+                      </p>
+                    </div>
+                    {isThisConnecting && (
+                      <span className="flex items-center gap-2 text-sm text-brand-green shrink-0">
+                        <Spinner size="sm" />
+                        {t('connecting')}
+                      </span>
+                    )}
+                  </button>
+                );
+              })
             )}
           </div>
           <button

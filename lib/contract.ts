@@ -16,8 +16,17 @@ import type {
   TrialOfferDetails,
 } from '@/types';
 
-const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID!;
-const contract = new Contract(CONTRACT_ID);
+function getContract() {
+  const contractId = process.env.NEXT_PUBLIC_CONTRACT_ID;
+
+  if (!contractId) {
+    throw new Error(
+      'Missing NEXT_PUBLIC_CONTRACT_ID. Set the deployed Soroban contract ID in your environment before making contract calls.',
+    );
+  }
+
+  return new Contract(contractId);
+}
 
 /** XLM required to unlock a player's contact details via pay_to_contact. */
 export const PLATFORM_CONTACT_FEE_XLM = 1;
@@ -42,6 +51,7 @@ async function buildTx(
   args: xdr.ScVal[],
   sourcePublicKey: string,
 ) {
+  const contract = getContract();
   const account = await rpc.getAccount(sourcePublicKey);
   const tx = new TB(account, { fee: BASE_FEE, networkPassphrase: NETWORK })
     .addOperation(contract.call(method, ...args))
@@ -61,6 +71,7 @@ async function buildTx(
 
 // ── Read-only helper (uses a dummy account — no ledger lookup needed) ─────────
 async function simulateTx(method: string, args: xdr.ScVal[]) {
+  const contract = getContract();
   const dummyAccount = new Account(
     'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN',
     '0',

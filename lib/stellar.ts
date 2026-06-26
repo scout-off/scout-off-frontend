@@ -3,9 +3,13 @@ import {
   TransactionBuilder,
   Networks,
   BASE_FEE,
+  StrKey,
 } from '@stellar/stellar-sdk';
 
-const RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC!;
+const DEFAULT_SOROBAN_RPC_URL = 'https://soroban-testnet.stellar.org';
+
+const RPC_URL =
+  process.env.NEXT_PUBLIC_SOROBAN_RPC ?? DEFAULT_SOROBAN_RPC_URL;
 const NETWORK =
   process.env.NEXT_PUBLIC_NETWORK === 'mainnet'
     ? Networks.PUBLIC
