@@ -284,10 +284,10 @@ Add unit tests for the \`Toast\` component and \`useToast\` hook.
 - [ ] All tests pass"
 
 u 73 "## Description
-Add unit tests for the \`MilestoneList\` component.
+Add unit tests for the \`MilestoneTimeline\` component.
 
 ## Tasks
-- Create \`__tests__/components/MilestoneList.test.tsx\`
+- Create \`__tests__/components/MilestoneTimeline.test.tsx\`
 - Provide mock \`Milestone\` array
 
 ## Acceptance Criteria

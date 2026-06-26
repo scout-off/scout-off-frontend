@@ -110,10 +110,53 @@ describe('Navbar', () => {
     render(<Navbar />);
 
     const truncated = `${publicKey.slice(0, 4)}…${publicKey.slice(-4)}`;
-    // accessible name includes appended balance text, so use a partial match
     expect(
       screen.getByRole('button', { name: new RegExp(truncated) }),
     ).toBeInTheDocument();
+  });
+
+  test('shows copy address button when wallet is connected', () => {
+    const publicKey = 'GABCDEF1234567890XYZ';
+    mockUseWallet.mockReturnValue({
+      publicKey,
+      isConnecting: false,
+      connect: jest.fn(),
+      disconnect: jest.fn(),
+      signAndSubmit: jest.fn(),
+    });
+    mockUsePathname.mockReturnValue('/');
+
+    render(<Navbar />);
+
+    expect(
+      screen.getByRole('button', { name: /Copy wallet address/i }),
+    ).toBeInTheDocument();
+  });
+
+  test('clicking copy button copies full address to clipboard', async () => {
+    const publicKey = 'GABCDEF1234567890XYZ';
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: { writeText },
+    });
+
+    mockUseWallet.mockReturnValue({
+      publicKey,
+      isConnecting: false,
+      connect: jest.fn(),
+      disconnect: jest.fn(),
+      signAndSubmit: jest.fn(),
+    });
+    mockUsePathname.mockReturnValue('/');
+
+    render(<Navbar />);
+
+    const user = userEvent.setup({ delay: null });
+    const copyBtn = screen.getByRole('button', { name: /Copy wallet address/i });
+    await user.click(copyBtn);
+
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(writeText).toHaveBeenCalledWith(publicKey);
   });
 
   test('active route link has aria-current="page"', () => {

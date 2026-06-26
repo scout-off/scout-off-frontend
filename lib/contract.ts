@@ -7,6 +7,7 @@ import {
   Account,
 } from '@stellar/stellar-sdk';
 import { rpc, NETWORK, BASE_FEE, signAndSubmitTx } from './stellar';
+import { ContractPausedError } from './errors';
 import type {
   PlayerVitals,
   ValidatorInfo,
@@ -46,8 +47,16 @@ async function buildTx(
     .addOperation(contract.call(method, ...args))
     .setTimeout(30)
     .build();
-  const prepared = await rpc.prepareTransaction(tx);
-  return prepared.toXDR();
+  try {
+    const prepared = await rpc.prepareTransaction(tx);
+    return prepared.toXDR();
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes('Error(Contract, #9)') || msg.includes('ContractPaused')) {
+      throw new ContractPausedError();
+    }
+    throw err;
+  }
 }
 
 // ── Read-only helper (uses a dummy account — no ledger lookup needed) ─────────
@@ -311,6 +320,11 @@ export async function updateProfile(
     wallet,
   );
   await signAndSubmitTx(xdrTx, signFn);
+}
+
+// ── Milestones ────────────────────────────────────────────────────────────────
+export async function getMilestoneHistory(playerId: string) {
+  return simulateTx("get_milestone_history", [nativeToScVal(playerId, { type: "string" })]);
 }
 
 // ── Scout ─────────────────────────────────────────────────────────────────────
