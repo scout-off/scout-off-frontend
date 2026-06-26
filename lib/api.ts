@@ -37,4 +37,29 @@ export const postChatMessage = (
   sender: string,
 ) => api.post(`/chat/${roomId}`, { message, sender }).then((r) => r.data);
 
+// Admin activity feed
+export type ActivityEventType =
+  | 'player_registered'
+  | 'milestone_approved'
+  | 'milestone_revoked'
+  | 'scout_subscribed'
+  | 'player_contacted'
+  | 'fees_withdrawn';
+
+export interface ActivityEvent {
+  id: string;
+  type: ActivityEventType;
+  timestamp: number;
+  actor: string;
+  subjectId?: string;
+}
+
+export const fetchActivityEvents = (
+  page = 1,
+  pageSize = 20,
+): Promise<{ events: ActivityEvent[]; total: number }> =>
+  api
+    .get('/admin/activity', { params: { page, pageSize } })
+    .then((r) => r.data);
+
 export default api;

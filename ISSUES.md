@@ -352,7 +352,7 @@ When a SEP-10 session cookie expires the `restoreSession` call in `WalletContext
 
 ---
 
-## Issue #21 — `MilestoneList` vs `MilestoneTimeline`: Consolidate Usage
+## Issue #21 — `MilestoneList` vs `MilestoneTimeline`: Consolidate Usage ✅ RESOLVED
 
 **Labels:** `refactor`, `player`
 
@@ -360,11 +360,15 @@ When a SEP-10 session cookie expires the `restoreSession` call in `WalletContext
 
 Both `MilestoneList` and `MilestoneTimeline` render a player's milestones. `MilestoneTimeline` is more featureful (timestamps, validator address, animated transitions) but the player dashboard uses a hand-rolled list. There is risk of milestone display diverging.
 
+### Resolution
+
+`MilestoneList` provided no distinct UX — it was a plain `<ul>` with no timestamps, validator display, or expand/collapse. `MilestoneTimeline` is a strict superset. `MilestoneList.tsx` has been deleted and all milestone rendering is consolidated on `MilestoneTimeline`. The player dashboard (`app/[locale]/player/page.tsx`) uses `MilestoneTimeline` exclusively.
+
 ### Acceptance Criteria
 
-- [ ] Audit where each component is used
-- [ ] Either remove `MilestoneList` and replace all usages with `MilestoneTimeline`, or document the intentional distinction
-- [ ] No duplicate milestone rendering logic across the codebase
+- [x] Audit where each component is used
+- [x] Removed `MilestoneList` and standardized all usages on `MilestoneTimeline`
+- [x] No duplicate milestone rendering logic across the codebase
 
 ---
 

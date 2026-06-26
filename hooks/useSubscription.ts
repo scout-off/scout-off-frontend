@@ -7,7 +7,7 @@ import { extractContractErrorKey } from '@/lib/contractErrorMessage';
 import type { Subscription, SubscriptionTier } from '@/types';
 
 export function useSubscription() {
-  const { publicKey } = useWallet();
+  const { publicKey, signAndSubmit } = useWallet();
   const t = useTranslations('contractErrors');
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(false);
@@ -41,7 +41,7 @@ export function useSubscription() {
       setLoading(true);
       setError(null);
       try {
-        await contractSubscribe(publicKey, tier);
+        await contractSubscribe(publicKey, tier, signAndSubmit);
         await fetchSubscription();
       } catch (e: any) {
         const key = extractContractErrorKey(e.message ?? '');
@@ -51,7 +51,7 @@ export function useSubscription() {
         setLoading(false);
       }
     },
-    [publicKey, fetchSubscription],
+    [publicKey, signAndSubmit, fetchSubscription],
   );
 
   const isExpired = subscription

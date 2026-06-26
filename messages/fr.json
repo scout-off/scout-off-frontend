@@ -50,6 +50,9 @@
     "title": "Tableau de bord des joueurs",
     "welcome": "Bienvenue sur le tableau de bord des joueurs",
     "description": "Voir votre profil et vos progrès",
+    "tab_register": "S'inscrire",
+    "tab_profile": "Mon Profil",
+    "register_prompt": "Inscrivez-vous d'abord pour voir votre profil.",
     "profile": "Profil",
     "milestones": "Jalons",
     "achievements": "Réalisations",
@@ -70,7 +73,8 @@
     "balance": "Solde",
     "address": "Adresse",
     "invalid_address": "Adresse Stellar invalide",
-    "connection_failed": "Échec de la connexion au portefeuille"
+    "connection_failed": "Échec de la connexion au portefeuille",
+    "balanceError": "Solde indisponible — erreur réseau"
   },
   "errors": {
     "not_found": "Non trouvé",

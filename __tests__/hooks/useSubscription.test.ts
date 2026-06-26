@@ -68,7 +68,11 @@ describe('useSubscription', () => {
 
   test('subscribe(tier) calls subscribe from contract then fetchSubscription', async () => {
     const mockPublicKey = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890';
-    mockUseWallet.mockReturnValue({ publicKey: mockPublicKey });
+    const mockSignAndSubmit = jest.fn();
+    mockUseWallet.mockReturnValue({
+      publicKey: mockPublicKey,
+      signAndSubmit: mockSignAndSubmit,
+    });
 
     const mockSubscription = {
       scout: mockPublicKey,
@@ -88,7 +92,11 @@ describe('useSubscription', () => {
       await result.current.subscribe('pro');
     });
 
-    expect(mockSubscribe).toHaveBeenCalledWith(mockPublicKey, 'pro');
+    expect(mockSubscribe).toHaveBeenCalledWith(
+      mockPublicKey,
+      'pro',
+      mockSignAndSubmit,
+    );
     expect(mockGetSubscription).toHaveBeenCalledTimes(2);
   });
 
