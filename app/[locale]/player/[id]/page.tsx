@@ -85,6 +85,16 @@ export default function PlayerProfile() {
         )}
       </div>
 
+      {/* Download milestones */}
+      {milestones.length > 0 && (
+        <button
+          onClick={handleDownload}
+          className="self-start text-sm text-brand-green underline underline-offset-2 hover:opacity-80 transition"
+        >
+          Download Milestones
+        </button>
+      )}
+
       {/* Pay to contact */}
       {publicKey && (
         <button
