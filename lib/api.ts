@@ -1,8 +1,8 @@
-import axios from "axios";
+import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000",
-  headers: { "Content-Type": "application/json" },
+  baseURL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000',
+  headers: { 'Content-Type': 'application/json' },
 });
 
 // Players
@@ -19,11 +19,47 @@ export const fetchScoutProfile = (scoutId: string) =>
 export const fetchScoutContacts = (scoutId: string) =>
   api.get(`/scouts/${scoutId}/contacts`).then((r) => r.data);
 
+export interface ScoutStats {
+  contactedCount: number;
+  trialOffersCount: number;
+}
+
+export const fetchScoutStats = (scoutId: string): Promise<ScoutStats> =>
+  api.get(`/scouts/${scoutId}/stats`).then((r) => r.data);
+
 // Chat
 export const fetchChatHistory = (roomId: string) =>
   api.get(`/chat/${roomId}`).then((r) => r.data);
 
-export const postChatMessage = (roomId: string, message: string, sender: string) =>
-  api.post(`/chat/${roomId}`, { message, sender }).then((r) => r.data);
+export const postChatMessage = (
+  roomId: string,
+  message: string,
+  sender: string,
+) => api.post(`/chat/${roomId}`, { message, sender }).then((r) => r.data);
+
+// Admin activity feed
+export type ActivityEventType =
+  | 'player_registered'
+  | 'milestone_approved'
+  | 'milestone_revoked'
+  | 'scout_subscribed'
+  | 'player_contacted'
+  | 'fees_withdrawn';
+
+export interface ActivityEvent {
+  id: string;
+  type: ActivityEventType;
+  timestamp: number;
+  actor: string;
+  subjectId?: string;
+}
+
+export const fetchActivityEvents = (
+  page = 1,
+  pageSize = 20,
+): Promise<{ events: ActivityEvent[]; total: number }> =>
+  api
+    .get('/admin/activity', { params: { page, pageSize } })
+    .then((r) => r.data);
 
 export default api;
