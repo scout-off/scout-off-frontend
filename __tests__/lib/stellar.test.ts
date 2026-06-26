@@ -117,3 +117,83 @@ describe('pollTransaction', () => {
     await expect(pollTransaction('cafebabe', 2, 0)).rejects.toThrow('cafebabe');
   });
 });
+
+describe('getXLMBalance', () => {
+  const mockFetch = jest.fn();
+  const originalEnv = process.env.NEXT_PUBLIC_HORIZON_URL;
+
+  beforeAll(() => {
+    process.env.NEXT_PUBLIC_HORIZON_URL = 'https://horizon-testnet.stellar.org';
+    global.fetch = mockFetch as any;
+  });
+
+  afterAll(() => {
+    if (originalEnv) {
+      process.env.NEXT_PUBLIC_HORIZON_URL = originalEnv;
+    } else {
+      delete process.env.NEXT_PUBLIC_HORIZON_URL;
+    }
+  });
+
+  beforeEach(() => {
+    jest.resetModules();
+    mockFetch.mockReset();
+  });
+
+  it('returns the native XLM balance for a funded account', async () => {
+    mockFetch.mockResolvedValueOnce({
+      status: 200,
+      ok: true,
+      json: async () => ({
+        balances: [
+          { asset_type: 'native', balance: '42.567891234' },
+          { asset_type: 'credit_alphanum4', balance: '10.00' },
+        ],
+      }),
+    });
+
+    const { getXLMBalance } = require('@/lib/stellar');
+    const balance = await getXLMBalance('GABCDEF1234567890');
+
+    expect(balance).toBe(42.5678912);
+  });
+
+  it('returns 0 for an unfunded account (404)', async () => {
+    mockFetch.mockResolvedValueOnce({
+      status: 404,
+      ok: false,
+    });
+
+    const { getXLMBalance } = require('@/lib/stellar');
+    const balance = await getXLMBalance('GUNFUNDED123456789');
+
+    expect(balance).toBe(0);
+  });
+
+  it('throws on non-404 server errors', async () => {
+    mockFetch.mockResolvedValueOnce({
+      status: 500,
+      ok: false,
+    });
+
+    const { getXLMBalance } = require('@/lib/stellar');
+    await expect(
+      getXLMBalance('GERROR1234567890'),
+    ).rejects.toThrow('Horizon error: 500');
+  });
+
+  it('returns 0 when no native balance is found', async () => {
+    mockFetch.mockResolvedValueOnce({
+      status: 200,
+      ok: true,
+      json: async () => ({
+        balances: [{ asset_type: 'credit_alphanum4', balance: '100.00' }],
+      }),
+    });
+
+    const { getXLMBalance } = require('@/lib/stellar');
+    const balance = await getXLMBalance('GNONATIVE12345678');
+
+    expect(balance).toBe(0);
+  });
+});

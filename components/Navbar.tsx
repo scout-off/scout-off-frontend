@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import WalletButton from './WalletButton';
 import { useContractStatus } from '@/hooks/useContractStatus';
+import { useWallet } from '@/hooks/useWallet';
 
 const NAV_LINKS = [
   { href: '/scout', labelKey: 'nav.scout_dashboard' },
@@ -20,6 +21,7 @@ const LOCALES = [
 
 export default function Navbar() {
   const { isPaused } = useContractStatus();
+  const { xlmBalance, isLoadingBalance, isAuthenticated } = useWallet();
   const t = useTranslations();
   const router = useRouter();
   const pathname = usePathname() ?? '/';
@@ -123,6 +125,15 @@ export default function Navbar() {
               )}
             </div>
 
+            {isAuthenticated && (
+              <span className="text-sm text-gray-300">
+                {isLoadingBalance ? (
+                  <span className="text-gray-500">⟳</span>
+                ) : (
+                  <span>{xlmBalance ?? '0.00'} XLM</span>
+                )}
+              </span>
+            )}
             <WalletButton />
           </div>
 
