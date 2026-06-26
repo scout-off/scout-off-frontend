@@ -50,6 +50,9 @@
     "title": "Dashibodi ya Mchezaji",
     "welcome": "TODO: Machine-translated - Karibu kwenye dashibodi ya mchezaji",
     "description": "TODO: Machine-translated - Tazama profili yako na maendeleo",
+    "tab_register": "Jiandikisha",
+    "tab_profile": "Wasifu Wangu",
+    "register_prompt": "Jiandikisha kwanza ili kuona wasifu wako.",
     "profile": "Wasifu",
     "milestones": "Miikukuu",
     "achievements": "Mafanikio",
@@ -70,7 +73,8 @@
     "balance": "Salio",
     "address": "Anwani",
     "invalid_address": "TODO: Machine-translated - Anwani ya Stellar sio sahihi",
-    "connection_failed": "TODO: Machine-translated - Kushindwa kuunganisha pochi"
+    "connection_failed": "TODO: Machine-translated - Kushindwa kuunganisha pochi",
+    "balanceError": "TODO: Machine-translated - Salio halipatikani — kosa la mtandao"
   },
   "errors": {
     "not_found": "Haijafikiwa",
