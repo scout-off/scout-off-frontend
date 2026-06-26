@@ -1,8 +1,11 @@
 'use client';
 import { useState, useCallback, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useRequireWallet } from '@/hooks/useRequireWallet';
+import { useRequireSubscription } from '@/hooks/useRequireSubscription';
 import { useScout } from '@/hooks/useScout';
+import { useSubscription } from '@/hooks/useSubscription';
 import { getPlayer } from '@/lib/contract';
 import PlayerCard from '@/components/PlayerCard';
 import PlayerCardSkeleton from '@/components/PlayerCardSkeleton';
@@ -19,10 +22,18 @@ function isStellarKey(v: string) {
 
 function ScoutDashboardContent() {
   const { walletAddress: publicKey } = useRequireWallet();
+  const { isProtected, loading: subscriptionLoading } = useRequireSubscription();
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const { players, loading, search } = useScout();
+  const { subscription } = useSubscription();
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
   const hasLoaded = useRef(false);
   // True once loading has ever flipped true→false, confirming a search completed.
   const loadingEverStarted = useRef(false);
@@ -106,12 +117,62 @@ function ScoutDashboardContent() {
 
   if (!publicKey) return null;
 
+  // Show nothing while subscription is loading or redirecting
+  if (subscriptionLoading || !isProtected) return null;
+
   const showSkeletons = loading && !hasLoaded.current;
   const showEmptyState = searchHasCompleted && !loading && players.length === 0;
 
   return (
     <div className="flex flex-col gap-8">
       <h1 className="text-3xl font-bold text-white">Scout Dashboard</h1>
+
+      {/* Subscription status */}
+      {subscription && (() => {
+        const daysRemaining = Math.floor(
+          (subscription.expiresAt - now / 1000) / 86400,
+        );
+        const tierLabel =
+          subscription.tier.charAt(0).toUpperCase() +
+          subscription.tier.slice(1);
+
+        if (daysRemaining <= 0) {
+          return (
+            <div className="flex items-center gap-3 rounded-xl border border-red-500 bg-brand-card px-4 py-3 text-sm">
+              <span className="text-red-400">Subscription expired</span>
+              <Link
+                href="/scout/subscribe"
+                className="ml-auto text-brand-green underline hover:opacity-80 transition"
+              >
+                Renew
+              </Link>
+            </div>
+          );
+        }
+
+        if (daysRemaining <= 7) {
+          return (
+            <div className="flex items-center gap-3 rounded-xl border border-orange-400 bg-brand-card px-4 py-3 text-sm text-gray-200">
+              <span>
+                {tierLabel} — expires in {daysRemaining} day
+                {daysRemaining !== 1 ? 's' : ''}
+              </span>
+              <Link
+                href="/scout/subscribe"
+                className="ml-auto text-brand-green underline hover:opacity-80 transition"
+              >
+                Renew
+              </Link>
+            </div>
+          );
+        }
+
+        return (
+          <div className="flex items-center gap-3 rounded-xl border border-brand-green bg-brand-card px-4 py-3 text-sm text-gray-200">
+            {tierLabel} — {daysRemaining} days remaining
+          </div>
+        );
+      })()}
 
       {/* Wallet address search */}
       <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
@@ -142,7 +203,10 @@ function ScoutDashboardContent() {
               </p>
             )}
             {!searchLoading && searchResult === 'not-found' && (
-              <p className="text-sm text-gray-500">Player not found.</p>
+              <EmptyState
+                title="No players found"
+                description="No player is registered with that wallet address."
+              />
             )}
             {!searchLoading &&
               searchResult &&
@@ -171,7 +235,7 @@ function ScoutDashboardContent() {
       ) : showEmptyState ? (
         <EmptyState
           title="No players found"
-          description="Try adjusting your region, position, or level filter."
+          description="Try adjusting your filters."
           icon={
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -188,7 +252,7 @@ function ScoutDashboardContent() {
               />
             </svg>
           }
-          action={{ label: 'Clear Filters', onClick: handleClearFilters }}
+          action={{ label: 'Reset Filters', onClick: handleClearFilters }}
         />
       ) : (
         <>

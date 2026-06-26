@@ -32,11 +32,18 @@ jest.mock('@/lib/stellar', () => ({
   NETWORK: 'Test SDF Network ; September 2015',
 }));
 
+// Mock swr so we can spy on the global mutate
+jest.mock('swr', () => {
+  const actual = jest.requireActual('swr');
+  return { ...actual, mutate: jest.fn() };
+});
+
 import {
   getPublicKey,
   isConnected,
   signTransaction,
 } from '@stellar/freighter-api';
+import { mutate as swrMutate } from 'swr';
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <WalletProvider>{children}</WalletProvider>
@@ -55,10 +62,16 @@ describe('useWallet', () => {
 
   test('session is restored from /api/auth/session on mount', async () => {
     const mockPublicKey = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890';
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ publicKey: mockPublicKey }),
-    });
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ publicKey: mockPublicKey }),
+      })
+      // balance fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ balances: [{ asset_type: 'native', balance: '10.0000000' }] }),
+      });
 
     const { result } = renderHook(() => useWallet(), { wrapper });
 
@@ -68,6 +81,47 @@ describe('useWallet', () => {
 
     expect(global.fetch).toHaveBeenCalledWith('/api/auth/session');
     expect(result.current.publicKey).toBe(mockPublicKey);
+    expect(result.current.isAuthenticated).toBe(true);
+  });
+
+  test('isRestoringSession is true during restore and false after', async () => {
+    let resolveSession: (v: unknown) => void;
+    const sessionPromise = new Promise((res) => { resolveSession = res; });
+
+    (global.fetch as jest.Mock).mockReturnValueOnce(sessionPromise);
+
+    const { result } = renderHook(() => useWallet(), { wrapper });
+
+    // Still restoring before fetch resolves
+    expect(result.current.isRestoringSession).toBe(true);
+
+    await act(async () => {
+      resolveSession!({ ok: false });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(result.current.isRestoringSession).toBe(false);
+  });
+
+  test('isRestoringSession is false after successful session restore', async () => {
+    const mockPublicKey = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890';
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ publicKey: mockPublicKey }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ balances: [{ asset_type: 'native', balance: '5.0000000' }] }),
+      });
+
+    const { result } = renderHook(() => useWallet(), { wrapper });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(result.current.isRestoringSession).toBe(false);
     expect(result.current.isAuthenticated).toBe(true);
   });
 
@@ -151,5 +205,61 @@ describe('useWallet', () => {
 
     expect(result.current.publicKey).toBeNull();
     expect(result.current.isAuthenticated).toBe(false);
+  });
+
+  test('disconnect() clears SWR cache', async () => {
+    const { result } = renderHook(() => useWallet(), { wrapper });
+
+    (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true });
+
+    await act(async () => {
+      await result.current.disconnect();
+    });
+
+    expect(swrMutate).toHaveBeenCalledWith(
+      expect.any(Function),
+      undefined,
+      { revalidate: false },
+    );
+  });
+
+  test('balanceError is set when Horizon returns a server error', async () => {
+    const mockPublicKey = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890';
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ publicKey: mockPublicKey }),
+      })
+      // Horizon 500
+      .mockResolvedValueOnce({ ok: false, status: 500 });
+
+    const { result } = renderHook(() => useWallet(), { wrapper });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(result.current.xlmBalance).toBeNull();
+    expect(result.current.balanceError).toMatch(/Horizon error/);
+  });
+
+  test('xlmBalance is "0.00" for a 404 unfunded account (not an error)', async () => {
+    const mockPublicKey = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890';
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ publicKey: mockPublicKey }),
+      })
+      // Horizon 404 — unfunded account
+      .mockResolvedValueOnce({ ok: false, status: 404 });
+
+    const { result } = renderHook(() => useWallet(), { wrapper });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(result.current.xlmBalance).toBe('0.00');
+    expect(result.current.balanceError).toBeNull();
   });
 });

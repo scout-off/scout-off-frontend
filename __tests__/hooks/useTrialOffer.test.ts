@@ -176,6 +176,30 @@ describe('useTrialOffer', () => {
     expect(result.current.error).toBe('Transaction failed');
   });
 
+  it('maps ContractPaused error (code 9) to human-readable message', async () => {
+    mockBuildLogTrialOffer.mockRejectedValue(new Error('ContractPaused'));
+
+    const { result } = renderHook(() => useTrialOffer());
+
+    await act(async () => {
+      await result.current.logTrialOffer(PLAYER_ID, DETAILS);
+    });
+
+    expect(result.current.error).toBeDefined();
+  });
+
+  it('maps Unauthorized error (code 10) to human-readable message', async () => {
+    mockBuildLogTrialOffer.mockRejectedValue(new Error('Unauthorized'));
+
+    const { result } = renderHook(() => useTrialOffer());
+
+    await act(async () => {
+      await result.current.logTrialOffer(PLAYER_ID, DETAILS);
+    });
+
+    expect(result.current.error).toBeDefined();
+  });
+
   it('throws when the wallet is not connected', async () => {
     mockUseWallet.mockReturnValue({ publicKey: null, signAndSubmit: mockSignAndSubmit });
 

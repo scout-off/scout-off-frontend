@@ -1,3 +1,10 @@
+"use client";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { TransactionBuilder } from "@stellar/stellar-sdk";
+import { rpc, NETWORK } from "@/lib/stellar";
+import { walletAdapters, type WalletProvider } from "@/lib/walletAdapters";
+
+const STORAGE_KEY = "wallet_session";
 'use client';
 import {
   createContext,
@@ -7,6 +14,7 @@ import {
   useCallback,
   ReactNode,
 } from 'react';
+import { mutate } from 'swr';
 import albedo from '@albedo-link/intent';
 import { NETWORK } from '@/lib/stellar';
 
@@ -144,9 +152,13 @@ function removeStoredProvider() {
 interface WalletContextValue {
   publicKey: string | null;
   isAuthenticated: boolean;
+  xlmBalance: string | null;
+  walletProvider: WalletProvider | null;
   isConnecting: boolean;
   connectingProvider: WalletProvider | null;
+  isRestoringSession: boolean;
   xlmBalance: string | null;
+  balanceError: string | null;
   isLoadingBalance: boolean;
   walletProvider: WalletProvider | null;
   walletProviderInfo: WalletProviderInfo | null;
@@ -155,6 +167,9 @@ interface WalletContextValue {
   closeWalletModal: () => void;
   connectWithProvider: (provider: WalletProvider) => Promise<void>;
   connect: () => Promise<void>;
+  connectWithProvider: (provider: WalletProvider) => Promise<void>;
+  disconnect: () => void;
+  signAndSubmit: (xdr: string) => Promise<unknown>;
   disconnect: () => Promise<void>;
   signAndSubmit: (xdr: string) => Promise<string>;
   refreshBalance: () => Promise<void>;
@@ -162,41 +177,94 @@ interface WalletContextValue {
 
 const WalletContext = createContext<WalletContextValue | null>(null);
 
+async function sep10Auth(publicKey: string, signXdr: (xdr: string) => Promise<string>) {
+  const challengeRes = await fetch(`/api/auth/sep10?account=${publicKey}`);
+  if (!challengeRes.ok) throw new Error("SEP-10 challenge failed");
+  const { transaction } = await challengeRes.json();
+
+  const signed = await signXdr(transaction);
+
+  const tokenRes = await fetch("/api/auth/sep10", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ transaction: signed }),
+  });
+  if (!tokenRes.ok) throw new Error("SEP-10 token exchange failed");
+  return tokenRes.json();
 const HORIZON_URL =
   process.env.NEXT_PUBLIC_HORIZON_URL ?? 'https://horizon-testnet.stellar.org';
 
-/** Fetch the native XLM balance for a Stellar account via Horizon.
- *  Returns "0.00" for unfunded (404) accounts, null on other errors. */
-async function fetchXlmBalance(address: string): Promise<string> {
-  try {
-    const res = await fetch(`${HORIZON_URL}/accounts/${address}`);
-    if (res.status === 404) {
-      return '0.00';
-    }
-    if (!res.ok) throw new Error(`Horizon error: ${res.status}`);
-    const data = await res.json();
-    const native = (
-      data.balances as Array<{ asset_type: string; balance: string }>
-    ).find((b) => b.asset_type === 'native');
-    const raw = native ? parseFloat(native.balance) : 0;
-    return raw.toFixed(2);
-  } catch {
-    return '0.00';
-  }
+/**
+ * Fetch the native XLM balance for a Stellar account via Horizon.
+ * Returns "0.00" for unfunded (404) accounts.
+ * Returns null on network/server errors so callers can surface an error indicator.
+ */
+async function fetchXlmBalance(address: string): Promise<string | null> {
+  const res = await fetch(`${HORIZON_URL}/accounts/${address}`);
+  if (res.status === 404) return '0.00';
+  if (!res.ok) throw new Error(`Horizon error: ${res.status}`);
+  const data = await res.json();
+  const native = (
+    data.balances as Array<{ asset_type: string; balance: string }>
+  ).find((b) => b.asset_type === 'native');
+  const raw = native ? parseFloat(native.balance) : 0;
+  return raw.toFixed(2);
 }
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [xlmBalance, setXlmBalance] = useState<string | null>(null);
+  const [walletProvider, setWalletProvider] = useState<WalletProvider | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectingProvider, setConnectingProvider] = useState<WalletProvider | null>(null);
+  const [isRestoringSession, setIsRestoringSession] = useState(true);
   const [xlmBalance, setXlmBalance] = useState<string | null>(null);
+  const [balanceError, setBalanceError] = useState<string | null>(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const [walletProvider, setWalletProvider] = useState<WalletProvider | null>(
     null,
   );
   const [showWalletModal, setShowWalletModal] = useState(false);
 
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const { key, provider } = JSON.parse(saved);
+        setPublicKey(key);
+        setWalletProvider(provider);
+        setIsAuthenticated(true);
+      } catch {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    }
+  }, []);
+
+  const loadBalance = useCallback(async (key: string) => {
+    try {
+      const account = await rpc.getAccount(key);
+      const native = (account.balances as { asset_type: string; balance: string }[])
+        .find((b) => b.asset_type === "native");
+      setXlmBalance(native?.balance ?? null);
+    } catch {
+      setXlmBalance(null);
+    }
+  }, []);
+
+  const connectWithProvider = useCallback(async (provider: WalletProvider) => {
+    setIsConnecting(true);
+    try {
+      const adapter = walletAdapters[provider];
+      const key = await adapter.getPublicKey();
+
+      await sep10Auth(key, (xdr) => adapter.signTransaction(xdr, NETWORK));
+
+      setPublicKey(key);
+      setWalletProvider(provider);
+      setIsAuthenticated(true);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ key, provider }));
+      await loadBalance(key);
   const walletProviderInfo: WalletProviderInfo | null = walletProvider
     ? (WALLET_PROVIDERS.find((wp) => wp.provider === walletProvider) ?? null)
     : null;
@@ -204,9 +272,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   /** Fetch and store the XLM balance for the given address. */
   const loadBalance = useCallback(async (address: string) => {
     setIsLoadingBalance(true);
+    setBalanceError(null);
     try {
       const balance = await fetchXlmBalance(address);
       setXlmBalance(balance);
+    } catch (err: unknown) {
+      setXlmBalance(null);
+      setBalanceError(
+        err instanceof Error ? err.message : 'Failed to load balance',
+      );
     } finally {
       setIsLoadingBalance(false);
     }
@@ -230,6 +304,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         }
       } catch {
         // Silently fail session restore
+      } finally {
+        setIsRestoringSession(false);
       }
     }
     restoreSession();
@@ -320,11 +396,32 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       setPublicKey(null);
       setIsAuthenticated(false);
       setXlmBalance(null);
+      setBalanceError(null);
       setWalletProvider(null);
       removeStoredProvider();
+      // Clear all SWR caches so stale data from the previous session isn't
+      // shown briefly if a different wallet connects immediately after.
+      mutate(() => true, undefined, { revalidate: false });
     }
+  }, [loadBalance]);
+
+  const connect = useCallback(() => connectWithProvider("freighter"), [connectWithProvider]);
+
+  const disconnect = useCallback(() => {
+    setPublicKey(null);
+    setIsAuthenticated(false);
+    setXlmBalance(null);
+    setWalletProvider(null);
+    localStorage.removeItem(STORAGE_KEY);
   }, []);
 
+  const signAndSubmit = useCallback(async (xdr: string) => {
+    if (!publicKey || !walletProvider) throw new Error("Wallet not connected");
+    const adapter = walletAdapters[walletProvider];
+    const signed = await adapter.signTransaction(xdr, NETWORK);
+    const tx = TransactionBuilder.fromXDR(signed, NETWORK);
+    return rpc.sendTransaction(tx);
+  }, [publicKey, walletProvider]);
   const signAndSubmit = useCallback(
     async (xdr: string): Promise<string> => {
       if (!publicKey) throw new Error('Wallet not connected');
@@ -340,9 +437,18 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       value={{
         publicKey,
         isAuthenticated,
+        xlmBalance,
+        walletProvider,
+        isConnecting,
+        connect,
+        connectWithProvider,
+        disconnect,
+        signAndSubmit,
         isConnecting,
         connectingProvider,
+        isRestoringSession,
         xlmBalance,
+        balanceError,
         isLoadingBalance,
         walletProvider,
         walletProviderInfo,

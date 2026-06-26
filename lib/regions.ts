@@ -8,6 +8,7 @@ export const AFRICAN_REGIONS: { label: string; value: string }[] = [
   { label: 'Central Africa', value: 'central-africa' },
   { label: "Côte d'Ivoire", value: 'cote-divoire' },
   { label: 'East Africa', value: 'east-africa' },
+  { label: 'Egypt', value: 'egypt' },
   { label: 'Ethiopia', value: 'ethiopia' },
   { label: 'Ghana', value: 'ghana' },
   { label: 'Kenya', value: 'kenya' },
