@@ -54,7 +54,11 @@ function renderDescription(ev: FeedEvent) {
   }
 }
 
-export default function ActivityFeed() {
+interface ActivityFeedProps {
+  scoutId?: string;
+}
+
+export default function ActivityFeed({ scoutId }: ActivityFeedProps) {
   const [events, setEvents] = useState<FeedEvent[] | null>(null);
   const [loading, setLoading] = useState(true);
   const intervalRef = useRef<number | null>(null);
@@ -62,10 +66,20 @@ export default function ActivityFeed() {
   async function fetchEvents() {
     setLoading(true);
     try {
-      // backend should expose an events endpoint returning recent events
-      const resp = await api.get('/events?limit=20');
+      const params = new URLSearchParams({ limit: '20' });
+      if (scoutId) {
+        params.set('scoutId', scoutId);
+      }
+
+      const resp = await api.get(`/events?${params.toString()}`);
       const data = Array.isArray(resp.data) ? resp.data : [];
-      setEvents(data.slice(0, 20));
+      const filtered = scoutId
+        ? data.filter((event) => {
+            const payload = event.payload ?? {};
+            return payload.scoutId === scoutId;
+          })
+        : data;
+      setEvents(filtered.slice(0, 20));
     } catch (err) {
       // fail quietly and show no events
       // eslint-disable-next-line no-console

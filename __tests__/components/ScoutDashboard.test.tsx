@@ -169,40 +169,40 @@ describe('ScoutDashboard — empty state', () => {
     const { rerender } = render(<ScoutDashboard />);
     simulateSearchCycle(rerender, []);
     expect(
-      screen.getByText('Try adjusting your region, position, or level filter.'),
+      screen.getByText('Try adjusting your filters.'),
     ).toBeInTheDocument();
   });
 
-  it('renders a "Clear Filters" button inside the empty state', () => {
+  it('renders a "Reset Filters" button inside the empty state', () => {
     const { rerender } = render(<ScoutDashboard />);
     simulateSearchCycle(rerender, []);
     expect(
-      screen.getByRole('button', { name: /clear filters/i }),
+      screen.getByRole('button', { name: /reset filters/i }),
     ).toBeInTheDocument();
   });
 
   // ── Clear Filters interaction ─────────────────────────────────────────────
 
-  it('clicking "Clear Filters" retriggers the filter search with defaults', () => {
+  it('clicking "Reset Filters" retriggers the filter search with defaults', () => {
     const { rerender } = render(<ScoutDashboard />);
     simulateSearchCycle(rerender, []);
 
     mockSearch.mockClear();
 
     act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /clear filters/i }));
+      fireEvent.click(screen.getByRole('button', { name: /reset filters/i }));
     });
 
     // PlayerFilterForm's resetKey effect fires onSearch, which calls handleSearch → search
     expect(mockSearch).toHaveBeenCalledTimes(1);
   });
 
-  it('hides the empty state after "Clear Filters" triggers a new loading cycle', () => {
+  it('hides the empty state after "Reset Filters" triggers a new loading cycle', () => {
     const { rerender } = render(<ScoutDashboard />);
     simulateSearchCycle(rerender, []);
 
     act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /clear filters/i }));
+      fireEvent.click(screen.getByRole('button', { name: /reset filters/i }));
     });
 
     // New search starts loading — empty state must hide

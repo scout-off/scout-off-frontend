@@ -138,4 +138,31 @@ describe('useDebounce', () => {
     });
     expect(result.current).toBe('end');
   });
+  it('changing delay resets timer', () => {
+    const { result, rerender } = renderHook(
+      ({ value, delay }) => useDebounce(value, delay),
+      { initialProps: { value: 'first', delay: 300 } },
+    );
+
+    // change value
+    rerender({ value: 'second', delay: 300 });
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+
+    // change delay
+    rerender({ value: 'second', delay: 500 });
+    // advance time less than new delay
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
+    // should still be original value because timer reset
+    expect(result.current).toBe('first');
+
+    // advance remaining time to exceed new delay
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+    expect(result.current).toBe('second');
+  });
 });

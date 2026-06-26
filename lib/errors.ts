@@ -4,3 +4,10 @@ export class ValidationError extends Error {
     this.name = "ValidationError";
   }
 }
+
+export class ContractPausedError extends Error {
+  constructor() {
+    super('ContractPaused');
+    this.name = 'ContractPausedError';
+  }
+}
