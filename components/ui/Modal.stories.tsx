@@ -43,23 +43,26 @@ export const Closed: Story = {
 export const WithInteraction: Story = {
   name: 'Interactive (open/close)',
   render: () => {
-    const [open, setOpen] = useState(false);
-    return (
-      <div className="p-8">
-        <Button onClick={() => setOpen(true)}>Open Modal</Button>
-        <Modal
-          isOpen={open}
-          onClose={() => setOpen(false)}
-          title="Interactive Modal"
-        >
-          <p className="text-gray-300 mb-4">
-            Press Escape or click outside to close.
-          </p>
-          <Button variant="secondary" onClick={() => setOpen(false)}>
-            Close
-          </Button>
-        </Modal>
-      </div>
-    );
+    function Demo() {
+      const [open, setOpen] = useState(false);
+      return (
+        <div className="p-8">
+          <Button onClick={() => setOpen(true)}>Open Modal</Button>
+          <Modal
+            isOpen={open}
+            onClose={() => setOpen(false)}
+            title="Interactive Modal"
+          >
+            <p className="text-gray-300 mb-4">
+              Press Escape or click outside to close.
+            </p>
+            <Button variant="secondary" onClick={() => setOpen(false)}>
+              Close
+            </Button>
+          </Modal>
+        </div>
+      );
+    }
+    return <Demo />;
   },
 };

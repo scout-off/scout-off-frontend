@@ -11,6 +11,8 @@ import PlayerProfileSkeleton from '@/components/PlayerProfileSkeleton';
 import PlayerStatsCard from '@/components/player/PlayerStatsCard';
 import TrialOfferForm from '@/components/scout/TrialOfferForm';
 import Button from '@/components/ui/Button';
+import QRModal from '@/components/ui/QRModal';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 export default function PlayerProfile() {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +24,11 @@ export default function PlayerProfile() {
     isExpired,
     loading: subscriptionLoading,
   } = useSubscription();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const shareButtonRef = useRef<HTMLButtonElement>(null);
+  const milestones = player?.milestones ?? [];
+  const profileUrl = typeof window !== 'undefined' ? window.location.href : '';
 
   async function handleConfirm() {
     await unlock(id);
@@ -142,16 +149,6 @@ export default function PlayerProfile() {
         }}
         url={profileUrl}
       />
-
-      {/* Pay to contact */}
-      {publicKey && (
-        <button
-          onClick={handleDownload}
-          className="self-start text-sm text-brand-green underline underline-offset-2 hover:opacity-80 transition"
-        >
-          Download Milestones
-        </button>
-      )}
 
       {/* Pay to contact */}
       {publicKey && (

@@ -69,41 +69,44 @@ export const Warning: Story = {
 export const AllVariants: Story = {
   name: 'All Variants (trigger all)',
   render: () => {
-    const { show } = useToast();
-    return (
-      <div className="flex flex-wrap gap-3">
-        <Button
-          onClick={() =>
-            show({ message: 'Player registered.', variant: 'success' })
-          }
-        >
-          Success
-        </Button>
-        <Button
-          variant="danger"
-          onClick={() =>
-            show({ message: 'Transaction failed.', variant: 'error' })
-          }
-        >
-          Error
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={() =>
-            show({ message: 'Subscription expires soon.', variant: 'info' })
-          }
-        >
-          Info
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={() =>
-            show({ message: 'Low XLM balance.', variant: 'warning' })
-          }
-        >
-          Warning
-        </Button>
-      </div>
-    );
+    function Demo() {
+      const { show } = useToast();
+      return (
+        <div className="flex flex-wrap gap-3">
+          <Button
+            onClick={() =>
+              show({ message: 'Player registered.', variant: 'success' })
+            }
+          >
+            Success
+          </Button>
+          <Button
+            variant="danger"
+            onClick={() =>
+              show({ message: 'Transaction failed.', variant: 'error' })
+            }
+          >
+            Error
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() =>
+              show({ message: 'Subscription expires soon.', variant: 'info' })
+            }
+          >
+            Info
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() =>
+              show({ message: 'Low XLM balance.', variant: 'warning' })
+            }
+          >
+            Warning
+          </Button>
+        </div>
+      );
+    }
+    return <Demo />;
   },
 };

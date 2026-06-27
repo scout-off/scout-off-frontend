@@ -69,29 +69,34 @@ export const AllStates: Story = {
 export const Interactive: Story = {
   name: 'Interactive Flow',
   render: () => {
-    const [status, setStatus] = useState<
-      'pending' | 'success' | 'error' | null
-    >(null);
+    function Demo() {
+      const [status, setStatus] = useState<
+        'pending' | 'success' | 'error' | null
+      >(null);
 
-    const simulate = async (outcome: 'success' | 'error') => {
-      setStatus('pending');
-      await new Promise((r) => setTimeout(r, 1500));
-      setStatus(outcome);
-    };
+      const simulate = async (outcome: 'success' | 'error') => {
+        setStatus('pending');
+        await new Promise((r) => setTimeout(r, 1500));
+        setStatus(outcome);
+      };
 
-    return (
-      <div className="flex flex-col gap-4 max-w-lg">
-        <div className="flex gap-3">
-          <Button onClick={() => simulate('success')}>Simulate Success</Button>
-          <Button variant="danger" onClick={() => simulate('error')}>
-            Simulate Error
-          </Button>
-          <Button variant="secondary" onClick={() => setStatus(null)}>
-            Reset
-          </Button>
+      return (
+        <div className="flex flex-col gap-4 max-w-lg">
+          <div className="flex gap-3">
+            <Button onClick={() => simulate('success')}>
+              Simulate Success
+            </Button>
+            <Button variant="danger" onClick={() => simulate('error')}>
+              Simulate Error
+            </Button>
+            <Button variant="secondary" onClick={() => setStatus(null)}>
+              Reset
+            </Button>
+          </div>
+          <TransactionStatus status={status} onHide={() => setStatus(null)} />
         </div>
-        <TransactionStatus status={status} onHide={() => setStatus(null)} />
-      </div>
-    );
+      );
+    }
+    return <Demo />;
   },
 };
