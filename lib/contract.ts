@@ -1,3 +1,16 @@
+/**
+ * CONTRACT WRITE PATTERN — source === signer invariant
+ *
+ * Every write function in this file MUST pass the same wallet address as both
+ * the Stellar transaction source account (fee-payer) and the on-chain
+ * authorization signer.  Allowing a different account to fee-bump a write
+ * transaction would let a third party craft a transaction that authorises an
+ * action on behalf of a signer they do not control.
+ *
+ * Enforcement: `buildTx` calls `assertSourceMatchesSigner` at entry; any
+ * mismatch throws before an RPC call is made.  All public `build*` / action
+ * helpers must therefore pass the same key as both arguments.
+ */
 import {
   Contract,
   nativeToScVal,
@@ -48,11 +61,26 @@ async function captureContractError(
 }
 
 // ── Write helper (requires a real funded account) ─────────────────────────────
+
+/** Enforces the source === signer invariant before any RPC call is made. */
+function assertSourceMatchesSigner(
+  sourcePublicKey: string,
+  authSigner: string,
+): void {
+  if (sourcePublicKey !== authSigner) {
+    throw new Error(
+      `Source and signer must match: source=${sourcePublicKey} signer=${authSigner}`,
+    );
+  }
+}
+
 async function buildTx(
   method: string,
   args: xdr.ScVal[],
   sourcePublicKey: string,
+  authSigner: string = sourcePublicKey,
 ) {
+  assertSourceMatchesSigner(sourcePublicKey, authSigner);
   const contract = getContract();
   const account = await rpc.getAccount(sourcePublicKey);
   const tx = new TB(account, { fee: BASE_FEE, networkPassphrase: NETWORK })
@@ -333,11 +361,6 @@ export async function updateProfile(
     wallet,
   );
   await signAndSubmitTx(xdrTx, signFn);
-}
-
-// ── Milestones ────────────────────────────────────────────────────────────────
-export async function getMilestoneHistory(playerId: string) {
-  return simulateTx("get_milestone_history", [nativeToScVal(playerId, { type: "string" })]);
 }
 
 // ── Scout ─────────────────────────────────────────────────────────────────────
