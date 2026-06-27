@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Player } from "@/types";
 import { PROGRESS_LABELS } from "@/types";
 import ProgressBar from "./ProgressBar";
+import Badge from "./ui/Badge";
 
 export default function PlayerCard({ player }: { player: Player }) {
   const { id, vitals, progressLevel, ipfsHash } = player;
@@ -20,7 +21,12 @@ export default function PlayerCard({ player }: { player: Player }) {
       </div>
 
       <div>
-        <h3 className="font-semibold text-white">{vitals.name}</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="font-semibold text-white">{vitals.name}</h3>
+          {progressLevel === 3 && (
+            <Badge variant="elite">Elite Tier</Badge>
+          )}
+        </div>
         <p className="text-sm text-gray-400">
           {vitals.position} · {vitals.region}
         </p>

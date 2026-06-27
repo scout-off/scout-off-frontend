@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useWallet } from "@/hooks/useWallet";
 import ProgressBar from "@/components/ProgressBar";
+import Badge from "@/components/ui/Badge";
 import { getPlayer } from "@/lib/contract";
 import { buildPayToContact } from "@/lib/contract";
 import { ipfsUrl } from "@/lib/ipfs";
@@ -35,6 +36,16 @@ export default function PlayerProfile() {
 
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-8">
+      {/* Elite Tier Banner */}
+      {player.progressLevel === 3 && (
+        <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-black rounded-xl p-4 text-center">
+          <Badge variant="elite" className="text-sm py-1 px-3">
+            Elite Tier
+          </Badge>
+          <p className="text-sm font-semibold mt-2">Highest verifiable status achieved</p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-brand-card border border-gray-800 rounded-xl p-6 flex gap-6 items-start">
         <div className="w-20 h-20 rounded-full bg-gray-700 overflow-hidden shrink-0">
@@ -44,7 +55,12 @@ export default function PlayerProfile() {
           )}
         </div>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-white">{player.vitals.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-white">{player.vitals.name}</h1>
+            {player.progressLevel === 3 && (
+              <Badge variant="elite">Elite Tier</Badge>
+            )}
+          </div>
           <p className="text-gray-400 text-sm mt-1">
             {player.vitals.position} · {player.vitals.region} · Age {player.vitals.age}
           </p>
