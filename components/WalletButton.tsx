@@ -9,6 +9,7 @@ import {
 } from '@/context/WalletContext';
 import Modal from '@/components/ui/Modal';
 import Spinner from '@/components/ui/Spinner';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import type { WalletProvider } from '@/context/WalletContext';
 
@@ -93,6 +94,21 @@ export default function WalletButton({ hideBalance = false }: { hideBalance?: bo
     connectWithProvider,
   } = useWallet();
 
+  // ── Disconnect confirmation state ──────────────────────────────────────────
+  const [disconnectOpen, setDisconnectOpen] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
+
+  const handleDisconnectConfirm = useCallback(async () => {
+    setIsDisconnecting(true);
+    try {
+      await disconnect();
+    } finally {
+      setIsDisconnecting(false);
+      setDisconnectOpen(false);
+    }
+  }, [disconnect]);
+
+  // ── Provider connection ────────────────────────────────────────────────────
   async function handleConnectWithProvider(provider: WalletProvider) {
     try {
       await connectWithProvider(provider);
@@ -105,25 +121,26 @@ export default function WalletButton({ hideBalance = false }: { hideBalance?: bo
 
   if (publicKey) {
     return (
-      <div className="flex items-center gap-1 text-sm bg-brand-card border border-brand-green text-brand-green px-3 py-2 rounded-lg">
-        <button
-          onClick={disconnect}
-          title={t('disconnect')}
-          className="flex items-center gap-2 hover:opacity-80 transition"
-        >
-          {walletProviderInfo && (
-            <span className="text-base" aria-hidden="true">
-              {walletProviderInfo.icon}
+      <>
+        <div className="flex items-center gap-1 text-sm bg-brand-card border border-brand-green text-brand-green px-3 py-2 rounded-lg">
+          <button
+            onClick={() => setDisconnectOpen(true)}
+            title={t('disconnect')}
+            aria-label={`${t('disconnect')} — ${publicKey.slice(0, 4)}…${publicKey.slice(-4)}`}
+            className="flex items-center gap-2 hover:opacity-80 transition"
+          >
+            {walletProviderInfo && (
+              <span className="text-base" aria-hidden="true">
+                {walletProviderInfo.icon}
+              </span>
+            )}
+            <span>
+              {publicKey.slice(0, 4)}…{publicKey.slice(-4)}
             </span>
-          )}
-          <span>
-            {publicKey.slice(0, 4)}…{publicKey.slice(-4)}
-          </span>
-        </button>
+          </button>
 
-        <CopyButton text={publicKey} />
+          <CopyButton text={publicKey} />
 
-        {!hideBalance && (
           <span className="border-l border-current pl-2 opacity-80">
             {isLoadingBalance ? (
               <Spinner size="sm" />
@@ -139,8 +156,19 @@ export default function WalletButton({ hideBalance = false }: { hideBalance?: bo
               <span>{xlmBalance ?? '0.00'} XLM</span>
             )}
           </span>
-        )}
-      </div>
+        </div>
+
+        <ConfirmDialog
+          isOpen={disconnectOpen}
+          title="Disconnect wallet?"
+          message="You will need to reconnect and sign again to access your dashboard."
+          confirmLabel="Disconnect"
+          cancelLabel="Cancel"
+          loading={isDisconnecting}
+          onConfirm={handleDisconnectConfirm}
+          onCancel={() => setDisconnectOpen(false)}
+        />
+      </>
     );
   }
 

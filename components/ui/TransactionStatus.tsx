@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import Spinner from '@/components/ui/Spinner';
+import { parseContractError } from '@/lib/contractErrorMessage';
 
 export type TxStatus = 'pending' | 'success' | 'error';
 
@@ -85,6 +86,7 @@ export default function TransactionStatus({
   }
 
   // error
+  const readableError = error ? parseContractError(error) : null;
   return (
     <div
       role="alert"
@@ -94,7 +96,7 @@ export default function TransactionStatus({
       <span className="text-red-500 mt-0.5" aria-hidden="true">
         ✕
       </span>
-      <span className="text-red-300">{error ?? 'Transaction failed.'}</span>
+      <span className="text-red-300">{readableError ?? 'Transaction failed.'}</span>
     </div>
   );
 }

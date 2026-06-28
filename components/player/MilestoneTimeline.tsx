@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { Milestone, ProgressLevel } from '@/types';
 import { PROGRESS_LABELS } from '@/types';
 import Badge from '@/components/ui/Badge';
+import ValidatorChip from '@/components/player/ValidatorChip';
 
 // Map each level to the ProgressBar colour tokens so nodes stay in sync.
 const NODE_COLOUR: Record<ProgressLevel, string> = {
@@ -23,10 +24,6 @@ function formatDate(ts: number): string {
     month: 'short',
     day: 'numeric',
   });
-}
-
-function truncateAddress(addr: string): string {
-  return `${addr.slice(0, 8)}…${addr.slice(-4)}`;
 }
 
 /** Return the most-recent milestone for a given level (levels 1-3 map to index). */
@@ -165,11 +162,9 @@ export default function MilestoneTimeline({
                     <p className="font-medium text-white">
                       {milestone.description}
                     </p>
-                    <p>
-                      <span className="text-gray-500">Validator: </span>
-                      <span className="font-mono" title={milestone.validator}>
-                        {truncateAddress(milestone.validator)}
-                      </span>
+                    <p className="flex flex-col gap-1">
+                      <span className="text-gray-500">Verified by</span>
+                      <ValidatorChip address={milestone.validator} />
                     </p>
                     <p>
                       <span className="text-gray-500">Date: </span>

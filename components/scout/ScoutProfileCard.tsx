@@ -1,18 +1,15 @@
 'use client';
-import { memo, useState, useEffect, useCallback } from 'react';
+import { memo, useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { Scout } from '@/types';
 import { fetchScoutStats, type ScoutStats } from '@/lib/api';
+import TruncatedAddress from '@/components/ui/TruncatedAddress';
 
 const TIER_STYLES: Record<string, string> = {
   basic: 'bg-gray-700 text-gray-200',
   pro: 'bg-blue-900 text-blue-300',
   elite: 'bg-yellow-900 text-yellow-300',
 };
-
-function truncateWallet(wallet: string) {
-  return `${wallet.slice(0, 6)}…${wallet.slice(-4)}`;
-}
 
 function subscriptionStatus(
   tier: string | undefined,
@@ -33,7 +30,6 @@ function formatDate(unix: number) {
 }
 
 function ScoutProfileCard({ scout }: { scout: Scout }) {
-  const [copied, setCopied] = useState(false);
   const [stats, setStats] = useState<ScoutStats | null>(null);
   const [statsError, setStatsError] = useState(false);
   const [statsLoading, setStatsLoading] = useState(true);
@@ -61,16 +57,6 @@ function ScoutProfileCard({ scout }: { scout: Scout }) {
       cancelled = true;
     };
   }, [scout.id]);
-
-  const copyWallet = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(scout.wallet);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // clipboard unavailable — silent fail
-    }
-  }, [scout.wallet]);
 
   return (
     <article
@@ -102,19 +88,10 @@ function ScoutProfileCard({ scout }: { scout: Scout }) {
 
       {/* Wallet */}
       <div className="flex items-center gap-2">
-        <span
-          className="font-mono text-sm text-gray-400 select-all"
-          title={scout.wallet}
-        >
-          {truncateWallet(scout.wallet)}
-        </span>
-        <button
-          onClick={copyWallet}
-          aria-label="Copy wallet address"
-          className="text-xs text-brand-green hover:opacity-75 transition shrink-0"
-        >
-          {copied ? 'Copied!' : 'Copy'}
-        </button>
+        <TruncatedAddress
+          address={scout.wallet}
+          className="text-sm text-gray-400"
+        />
       </div>
 
       {/* Subscription expiry */}
