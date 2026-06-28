@@ -62,4 +62,24 @@ export const fetchActivityEvents = (
     .get('/admin/activity', { params: { page, pageSize } })
     .then((r) => r.data);
 
+// Validators
+/**
+ * Fetches the number of milestones approved by a specific validator from the
+ * indexer. Returns `null` when the indexer is unavailable or returns an
+ * unexpected response so callers can fall back gracefully.
+ */
+export const fetchValidatorMilestoneCount = async (
+  validatorAddress: string,
+): Promise<number | null> => {
+  try {
+    const data = await api
+      .get(`/validators/${encodeURIComponent(validatorAddress)}/stats`)
+      .then((r) => r.data);
+    const count = data?.milestoneCount ?? data?.milestone_count;
+    return typeof count === 'number' ? count : null;
+  } catch {
+    return null;
+  }
+};
+
 export default api;
