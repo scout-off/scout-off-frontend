@@ -75,7 +75,7 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-export default function WalletButton() {
+export default function WalletButton({ hideBalance = false }: { hideBalance?: boolean }) {
   const t = useTranslations('wallet');
   const { show: showToast } = useToast();
   const {
@@ -123,21 +123,23 @@ export default function WalletButton() {
 
         <CopyButton text={publicKey} />
 
-        <span className="border-l border-current pl-2 opacity-80">
-          {isLoadingBalance ? (
-            <Spinner size="sm" />
-          ) : balanceError ? (
-            <span
-              className="text-yellow-400"
-              title={t('balanceError')}
-              aria-label={t('balanceError')}
-            >
-              ⚠ XLM
-            </span>
-          ) : (
-            <span>{xlmBalance ?? '0.00'} XLM</span>
-          )}
-        </span>
+        {!hideBalance && (
+          <span className="border-l border-current pl-2 opacity-80">
+            {isLoadingBalance ? (
+              <Spinner size="sm" />
+            ) : balanceError ? (
+              <span
+                className="text-yellow-400"
+                title={t('balanceError')}
+                aria-label={t('balanceError')}
+              >
+                ⚠ XLM
+              </span>
+            ) : (
+              <span>{xlmBalance ?? '0.00'} XLM</span>
+            )}
+          </span>
+        )}
       </div>
     );
   }
