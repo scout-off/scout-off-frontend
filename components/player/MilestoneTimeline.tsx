@@ -26,10 +26,6 @@ function formatDate(ts: number): string {
   });
 }
 
-function truncateAddress(addr: string): string {
-  return `${addr.slice(0, 8)}…${addr.slice(-4)}`;
-}
-
 /** Return the most-recent milestone for a given level (levels 1-3 map to index). */
 function milestoneForLevel(
   milestones: Milestone[],

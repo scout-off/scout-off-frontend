@@ -24,6 +24,7 @@ import {
   type ActivityEventType,
 } from '@/lib/api';
 import type { ValidatorInfo } from '@/types';
+import TruncatedAddress from '@/components/ui/TruncatedAddress';
 
 const ADMIN_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_ADDRESS;
 const ACTIVITY_PAGE_SIZE = 20;
@@ -286,7 +287,7 @@ function AdminDashboardContent() {
                 className="flex items-center justify-between gap-4 text-sm"
               >
                 <span className="text-gray-300 font-mono truncate">
-                  {v.address}
+                  <TruncatedAddress address={v.address} className="text-gray-300" />
                 </span>
                 <button
                   disabled={paused}
@@ -295,7 +296,7 @@ function AdminDashboardContent() {
                     setDialog({
                       action: 'remove',
                       label: 'Remove Validator',
-                      message: `Remove ${v.address.slice(0, 8)}… from validators?`,
+                      message: `Remove ${v.address.slice(0, 4)}…${v.address.slice(-4)} from validators?`,
                     });
                   }}
                   title={paused ? 'Contract is currently paused' : undefined}
@@ -331,11 +332,11 @@ function AdminDashboardContent() {
                     {EVENT_LABELS[event.type]}
                   </span>
                   <span className="font-mono text-gray-500 truncate">
-                    {event.actor.slice(0, 8)}…
+                    <TruncatedAddress address={event.actor} className="text-gray-500" />
                   </span>
                   {event.subjectId && (
                     <span className="font-mono text-gray-500 truncate">
-                      {event.subjectId.slice(0, 8)}…
+                      <TruncatedAddress address={event.subjectId} className="text-gray-500" />
                     </span>
                   )}
                   <span className="text-gray-500 shrink-0 ml-auto">

@@ -25,7 +25,7 @@ interface ValidatorChipProps {
 type Status = 'loading' | 'active' | 'former' | 'unknown';
 
 function truncateAddress(addr: string): string {
-  return `${addr.slice(0, 8)}…${addr.slice(-4)}`;
+  return `${addr.slice(0, 4)}…${addr.slice(-4)}`;
 }
 
 export default function ValidatorChip({ address }: ValidatorChipProps) {
