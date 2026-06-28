@@ -21,6 +21,19 @@ jobs:
       - run: npm run lint
       - run: npm run test
       - run: node scripts/validate-env.js
+      - name: Verify PWA icons exist
+        run: |
+          node -e "
+            const fs = require('fs');
+            const manifest = JSON.parse(fs.readFileSync('public/manifest.json', 'utf8'));
+            let missing = [];
+            for (const icon of manifest.icons) {
+              const file = 'public' + icon.src;
+              if (!fs.existsSync(file)) missing.push(file);
+            }
+            if (missing.length) { console.error('Missing icons:', missing.join(', ')); process.exit(1); }
+            console.log('All', manifest.icons.length, 'manifest icons present.');
+          "
 
   build-storybook:
     runs-on: ubuntu-latest
