@@ -1,0 +1,93 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ScoutProfileCard — snapshot matches snapshot with a full scout profile 1`] = `
+<article
+  aria-label="Scout profile for Jane Scout"
+  class="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-4 hover:border-brand-green transition"
+>
+  <div
+    class="flex items-start justify-between gap-3"
+  >
+    <div
+      class="min-w-0"
+    >
+      <h3
+        class="font-semibold text-white truncate"
+      >
+        Jane Scout
+      </h3>
+      <p
+        class="text-sm text-gray-400 truncate"
+      >
+        Elite FC
+      </p>
+    </div>
+    <span
+      class="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full capitalize bg-blue-900 text-blue-300"
+    >
+      pro
+    </span>
+  </div>
+  <div
+    class="flex items-center gap-2"
+  >
+    <span
+      class="inline-flex"
+    >
+      <span
+        aria-label="Wallet address GCFW7QAO3WZQ6X4CZ3OYZFXX3A3DL7XVI5DNVTXA5VJUGE5SU6ZRG5OV"
+        class="font-mono cursor-default select-all outline-none text-sm text-gray-400"
+        role="button"
+        tabindex="0"
+      >
+        GCFW…G5OV
+      </span>
+    </span>
+  </div>
+  <p
+    class="text-xs text-gray-500"
+  >
+    Expires
+     
+    <span
+      class="text-gray-300"
+    >
+      Jul 28, 2026
+    </span>
+  </p>
+  <div
+    class="grid grid-cols-2 gap-3"
+  >
+    <div
+      class="bg-gray-900 rounded-lg p-3 text-center"
+    >
+      <div
+        class="h-6 w-10 mx-auto bg-gray-700 rounded animate-pulse"
+      />
+      <p
+        class="text-xs text-gray-500 mt-0.5"
+      >
+        Players Contacted
+      </p>
+    </div>
+    <div
+      class="bg-gray-900 rounded-lg p-3 text-center"
+    >
+      <div
+        class="h-6 w-10 mx-auto bg-gray-700 rounded animate-pulse"
+      />
+      <p
+        class="text-xs text-gray-500 mt-0.5"
+      >
+        Trial Offers
+      </p>
+    </div>
+  </div>
+  <a
+    class="text-center text-sm text-brand-green border border-brand-green rounded-lg py-1.5 hover:bg-brand-green hover:text-black transition"
+    href="/scout/scout-1"
+  >
+    View Profile
+  </a>
+</article>
+`;
