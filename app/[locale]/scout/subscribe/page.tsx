@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Button from '@/components/ui/Button';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
+import TransactionStatus from '@/components/ui/TransactionStatus';
+import type { TxStatus } from '@/components/ui/TransactionStatus';
 import useIsPaused from '@/hooks/useIsPaused';
 import { useSubscription } from '@/hooks/useSubscription';
 import type { SubscriptionTier } from '@/types';
@@ -66,7 +68,8 @@ function SubscribeContent() {
   const isPaused = useIsPaused();
   const { subscription, isExpired, subscribe, loading, error } =
     useSubscription();
-  const [successMessage, setSuccessMessage] = useState('');
+  const [txStatus, setTxStatus] = useState<TxStatus | null>(null);
+  const [feePaid, setFeePaid] = useState<string | undefined>(undefined);
   const [selectedTier, setSelectedTier] = useState<SubscriptionTier | null>(
     null,
   );
@@ -124,16 +127,20 @@ function SubscribeContent() {
     }
 
     setSelectedTier(tier);
-    setSuccessMessage('');
+    setTxStatus('pending');
+    setFeePaid(undefined);
 
     try {
       await subscribe(tier);
-      setSuccessMessage(`Subscribed to ${tier.toUpperCase()} successfully.`);
+      const plan = TIERS.find((p) => p.tier === tier);
+      // price is like "5 XLM" — strip the " XLM" suffix for feePaid
+      setFeePaid(plan ? plan.price.replace(' XLM', '') : undefined);
+      setTxStatus('success');
       redirectTimer.current = window.setTimeout(() => {
         router.push('/scout');
-      }, 1000);
+      }, 8000);
     } catch (err) {
-      // Error state is handled by the hook and displayed in the page.
+      setTxStatus('error');
       console.error(err);
     } finally {
       setSelectedTier(null);
@@ -185,24 +192,13 @@ function SubscribeContent() {
           </div>
         </div>
 
-        {successMessage && (
-          <div
-            role="status"
-            aria-live="polite"
-            className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4 text-emerald-100"
-          >
-            {successMessage}
-          </div>
-        )}
-
-        {error && (
-          <div
-            role="status"
-            aria-live="assertive"
-            className="rounded-xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-red-100"
-          >
-            {error}
-          </div>
+        {txStatus && (
+          <TransactionStatus
+            status={txStatus}
+            feePaid={feePaid}
+            error={error ?? undefined}
+            onHide={() => setTxStatus(null)}
+          />
         )}
       </div>
 

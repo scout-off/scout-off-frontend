@@ -7,3 +7,9 @@ out/
 # Jest coverage output (issue #108)
 coverage/
 storybook-static/
+
+# Kiro IDE directory
+.kiro/
+
+# PR description (local only)
+pr-383.md
