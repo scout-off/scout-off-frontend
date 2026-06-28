@@ -25,6 +25,7 @@ import {
 } from '@/lib/api';
 import type { ValidatorInfo } from '@/types';
 import TruncatedAddress from '@/components/ui/TruncatedAddress';
+import { parseContractError } from '@/lib/contractErrorMessage';
 
 const ADMIN_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_ADDRESS;
 const ACTIVITY_PAGE_SIZE = 20;
@@ -155,7 +156,7 @@ function AdminDashboardContent() {
       }
     } catch (e: any) {
       if (action === 'withdraw') setWithdrawTxStatus('error');
-      show({ message: e.message ?? 'Transaction failed.', variant: 'error' });
+      show({ message: parseContractError(e), variant: 'error' });
     } finally {
       setActionLoading(false);
       setDialog(null);

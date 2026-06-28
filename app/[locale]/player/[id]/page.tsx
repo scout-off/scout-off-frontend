@@ -13,6 +13,7 @@ import TrialOfferForm from '@/components/scout/TrialOfferForm';
 import Button from '@/components/ui/Button';
 import QRModal from '@/components/ui/QRModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import TruncatedAddress from '@/components/ui/TruncatedAddress';
 
 export default function PlayerProfile() {
   const { id } = useParams<{ id: string }>();
@@ -114,8 +115,12 @@ export default function PlayerProfile() {
               >
                 {m.description}
                 <span className="block text-xs text-gray-500 mt-0.5">
-                  Validator: {m.validator.slice(0, 8)}… ·{' '}
-                  {new Date(m.timestamp * 1000).toLocaleDateString()}
+                  Validator:{' '}
+                  <TruncatedAddress
+                    address={m.validator}
+                    className="text-gray-500"
+                  />{' '}
+                  · {new Date(m.timestamp * 1000).toLocaleDateString()}
                 </span>
               </li>
             ))}

@@ -3,6 +3,7 @@
 import { useState, FormEvent } from "react";
 import { useWallet } from "@/hooks/useWallet";
 import { buildRevokeMilestone } from "@/lib/contract";
+import { parseContractError } from "@/lib/contractErrorMessage";
 import Button from "@/components/ui/Button";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
@@ -58,7 +59,7 @@ export default function RevokeForm({ onSuccess }: RevokeFormProps) {
       setPlayerId("");
       setMilestoneId("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to revoke milestone");
+      setError(parseContractError(err));
     } finally {
       setIsLoading(false);
       setShowConfirm(false);

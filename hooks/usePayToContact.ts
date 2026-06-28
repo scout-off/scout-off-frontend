@@ -1,6 +1,5 @@
 'use client';
 import { useState, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
 import { useWallet } from '@/hooks/useWallet';
 import { useToast } from '@/components/ui/Toast';
 import {
@@ -8,28 +7,13 @@ import {
   getSubscription,
   PLATFORM_CONTACT_FEE_XLM,
 } from '@/lib/contract';
-import { extractContractErrorKey } from '@/lib/contractErrorMessage';
+import { parseContractError } from '@/lib/contractErrorMessage';
 
 export function usePayToContact() {
   const { publicKey, signAndSubmit, xlmBalance } = useWallet();
   const { show } = useToast();
-  const t = useTranslations('contractErrors');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  function mapErrorMessage(errorText: string): string {
-    if (errorText.includes('code 3') || errorText.includes('InsufficientFee')) {
-      return t('InsufficientFee');
-    }
-    if (
-      errorText.includes('code 11') ||
-      errorText.includes('SubscriptionExpired')
-    ) {
-      return t('SubscriptionExpired');
-    }
-    const key = extractContractErrorKey(errorText);
-    return key ? t(key) : errorText || t('unknown');
-  }
 
   const unlock = useCallback(
     async (playerId: string): Promise<void> => {
@@ -70,7 +54,7 @@ export function usePayToContact() {
         const xdr = await buildPayToContact(publicKey, playerId);
         await signAndSubmit(xdr);
       } catch (e: any) {
-        fail(mapErrorMessage(e?.message ?? ''));
+        fail(parseContractError(e));
         throw e;
       } finally {
         setLoading(false);
