@@ -7,3 +7,7 @@ out/
 # Jest coverage output (issue #108)
 coverage/
 storybook-static/
+# Kiro IDE directory
+.kiro/
+# Pull request drafts
+pr-*.md

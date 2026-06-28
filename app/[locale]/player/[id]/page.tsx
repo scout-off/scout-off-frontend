@@ -1,6 +1,8 @@
 'use client';
 import { useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useWallet } from '@/hooks/useWallet';
 import { usePlayer } from '@/hooks/usePlayer';
 import { usePayToContact } from '@/hooks/usePayToContact';
@@ -17,6 +19,7 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog';
 export default function PlayerProfile() {
   const { id } = useParams<{ id: string }>();
   const { publicKey } = useWallet();
+  const t = useTranslations('player_profile');
   const { player, loading: playerLoading, refetch } = usePlayer(id ?? null);
   const { unlock, loading: contacting } = usePayToContact();
   const {
@@ -71,6 +74,14 @@ export default function PlayerProfile() {
 
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-8">
+      {/* Back to Scout Dashboard */}
+      <Link
+        href="/scout"
+        className="self-start text-sm text-gray-400 hover:text-white transition flex items-center gap-1"
+      >
+        {t('back_to_scout_dashboard')}
+      </Link>
+
       {/* Header */}
       <div className="bg-brand-card border border-gray-800 rounded-xl p-6 flex gap-6 items-start">
         <div className="w-20 h-20 rounded-full bg-gray-700 overflow-hidden shrink-0">
