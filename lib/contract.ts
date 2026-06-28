@@ -21,7 +21,6 @@ import {
   StrKey,
 } from '@stellar/stellar-sdk';
 import { rpc, NETWORK, BASE_FEE, signAndSubmitTx } from './stellar';
-import { ContractPausedError } from './errors';
 import type {
   PlayerVitals,
   ValidatorInfo,
@@ -45,6 +44,37 @@ function getContract() {
 
 /** XLM required to unlock a player's contact details via pay_to_contact. */
 export const PLATFORM_CONTACT_FEE_XLM = 1;
+
+/** Human-readable messages for every on-chain error code (codes 1–12). */
+export const CONTRACT_ERRORS: Record<number, string> = {
+  1: 'Contract is already initialized',
+  2: 'Contract is not initialized',
+  3: 'Player not found',
+  4: 'Unauthorized validator',
+  5: 'Invalid milestone data',
+  6: 'Player is already at this level',
+  7: 'Insufficient fee',
+  8: 'Subscription expired',
+  9: 'Contract is paused',
+  10: 'Unauthorized',
+  11: 'No fees to withdraw',
+  12: 'Arithmetic overflow',
+};
+
+/**
+ * Extracts a numeric Soroban contract error code from an error message string.
+ * Recognises patterns like `Error(Contract, #9)` and `ContractError(9)`.
+ * Returns `null` when no code is found.
+ */
+export function parseContractError(message: string): Error {
+  const match = message.match(/Error\(Contract,\s*#(\d+)\)|ContractError\((\d+)\)/);
+  if (match) {
+    const code = parseInt(match[1] ?? match[2], 10);
+    const human = CONTRACT_ERRORS[code];
+    return new Error(human ?? `Contract error code ${code}`);
+  }
+  return new Error(message);
+}
 
 /** Lazily import Sentry so it is never loaded in test/development environments. */
 async function captureContractError(
@@ -92,10 +122,7 @@ async function buildTx(
     return prepared.toXDR();
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes('Error(Contract, #9)') || msg.includes('ContractPaused')) {
-      throw new ContractPausedError();
-    }
-    throw err;
+    throw parseContractError(msg);
   }
 }
 
@@ -112,7 +139,8 @@ async function simulateTx(method: string, args: xdr.ScVal[]) {
     .build();
   const result = await rpc.simulateTransaction(tx);
   if ('result' in result) return scValToNative(result.result!.retval);
-  throw new Error(`Simulation failed: ${JSON.stringify(result)}`);
+  const errMsg = (result as { error?: string }).error ?? 'Simulation failed';
+  throw parseContractError(errMsg);
 }
 
 // ── Player ────────────────────────────────────────────────────────────────────

@@ -196,3 +196,124 @@ describe('ValidationError', () => {
     expect(new ValidationError('bad input').message).toBe('bad input');
   });
 });
+
+// ── parseContractError ────────────────────────────────────────────────────────
+
+import { parseContractError, CONTRACT_ERRORS } from '../../lib/contract';
+
+describe('parseContractError', () => {
+  test('maps known Error(Contract, #N) pattern to human-readable message', () => {
+    expect(parseContractError('Error(Contract, #9)').message).toBe(
+      CONTRACT_ERRORS[9],
+    );
+  });
+
+  test('maps known ContractError(N) pattern to human-readable message', () => {
+    expect(parseContractError('ContractError(3)').message).toBe(
+      CONTRACT_ERRORS[3],
+    );
+  });
+
+  test.each(Object.entries(CONTRACT_ERRORS))(
+    'code %s -> "%s"',
+    (code, expected) => {
+      expect(
+        parseContractError(`Error(Contract, #${code})`).message,
+      ).toBe(expected);
+    },
+  );
+
+  test('unknown code includes the numeric code for debugging', () => {
+    const err = parseContractError('Error(Contract, #99)');
+    expect(err.message).toMatch(/99/);
+    expect(err.message).not.toContain('{');
+  });
+
+  test('plain message with no code is returned as-is', () => {
+    expect(parseContractError('network timeout').message).toBe(
+      'network timeout',
+    );
+  });
+
+  test('returns an Error instance in all cases', () => {
+    expect(parseContractError('Error(Contract, #1)')).toBeInstanceOf(Error);
+    expect(parseContractError('something else')).toBeInstanceOf(Error);
+  });
+});
+
+// ── simulateTx error surfacing ────────────────────────────────────────────────
+
+describe('simulateTx — human-readable errors', () => {
+  test('maps contract error code in simulation result to readable message', async () => {
+    mockRpc.simulateTransaction.mockResolvedValueOnce({
+      error: 'Error(Contract, #3)',
+    } as any);
+
+    await expect(filterPlayers('', '', 0)).rejects.toThrow(CONTRACT_ERRORS[3]);
+  });
+
+  test('unknown contract code surfaces the code number, not raw JSON', async () => {
+    mockRpc.simulateTransaction.mockResolvedValueOnce({
+      error: 'Error(Contract, #42)',
+    } as any);
+
+    const err = await filterPlayers('', '', 0).catch((e) => e);
+    expect(err.message).toMatch(/42/);
+    expect(err.message).not.toContain('"error"');
+  });
+
+  test('no raw JSON in error message when error field is absent', async () => {
+    mockRpc.simulateTransaction.mockResolvedValueOnce({ events: [] } as any);
+
+    const err = await filterPlayers('', '', 0).catch((e) => e);
+    expect(err.message).not.toMatch(/\{/); // no JSON object literals
+    expect(err.message).not.toMatch(/"events"/);
+  });
+});
+
+// ── buildTx error surfacing ───────────────────────────────────────────────────
+
+describe('buildTx — human-readable errors', () => {
+  test('maps Error(Contract, #9) to "Contract is paused"', async () => {
+    mockRpc.prepareTransaction.mockRejectedValueOnce(
+      new Error('Error(Contract, #9)'),
+    );
+
+    await expect(
+      buildRegisterPlayer(
+        VALID_ADDRESS,
+        { name: 'A', age: 20, position: 'ST', region: 'AF', nationality: 'NG' },
+        'QmHash',
+      ),
+    ).rejects.toThrow(CONTRACT_ERRORS[9]);
+  });
+
+  test('maps any known code to its human-readable string', async () => {
+    mockRpc.prepareTransaction.mockRejectedValueOnce(
+      new Error('Error(Contract, #7)'),
+    );
+
+    await expect(
+      buildRegisterPlayer(
+        VALID_ADDRESS,
+        { name: 'A', age: 20, position: 'ST', region: 'AF', nationality: 'NG' },
+        'QmHash',
+      ),
+    ).rejects.toThrow(CONTRACT_ERRORS[7]);
+  });
+
+  test('unknown code includes the numeric code, not raw error object', async () => {
+    mockRpc.prepareTransaction.mockRejectedValueOnce(
+      new Error('Error(Contract, #55)'),
+    );
+
+    const err = await buildRegisterPlayer(
+      VALID_ADDRESS,
+      { name: 'A', age: 20, position: 'ST', region: 'AF', nationality: 'NG' },
+      'QmHash',
+    ).catch((e) => e);
+
+    expect(err.message).toMatch(/55/);
+    expect(err.message).not.toContain('[object');
+  });
+});
