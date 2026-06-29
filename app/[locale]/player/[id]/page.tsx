@@ -1,6 +1,8 @@
 'use client';
 import { useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useWallet } from '@/hooks/useWallet';
 import { usePlayer } from '@/hooks/usePlayer';
 import { usePayToContact } from '@/hooks/usePayToContact';
@@ -9,16 +11,17 @@ import { PLATFORM_CONTACT_FEE_XLM } from '@/lib/contract';
 import ProgressBar from '@/components/ProgressBar';
 import PlayerProfileSkeleton from '@/components/PlayerProfileSkeleton';
 import PlayerStatsCard from '@/components/player/PlayerStatsCard';
+import IPFSMediaGallery from '@/components/player/IPFSMediaGallery';
 import TrialOfferForm from '@/components/scout/TrialOfferForm';
 import Button from '@/components/ui/Button';
 import QRModal from '@/components/ui/QRModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
-import TransactionStatus from '@/components/ui/TransactionStatus';
-import type { TxStatus } from '@/components/ui/TransactionStatus';
+import TruncatedAddress from '@/components/ui/TruncatedAddress';
 
 export default function PlayerProfile() {
   const { id } = useParams<{ id: string }>();
   const { publicKey } = useWallet();
+  const t = useTranslations('player_profile');
   const { player, loading: playerLoading, refetch } = usePlayer(id ?? null);
   const { unlock, loading: contacting } = usePayToContact();
   const {
@@ -32,6 +35,13 @@ export default function PlayerProfile() {
   const shareButtonRef = useRef<HTMLButtonElement>(null);
   const milestones = player?.milestones ?? [];
   const profileUrl = typeof window !== 'undefined' ? window.location.href : '';
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const shareButtonRef = useRef<HTMLButtonElement>(null);
+
+  const profileUrl =
+    typeof window !== 'undefined' ? window.location.href : '';
 
   async function handleConfirm() {
     setContactTxStatus('pending');
@@ -49,7 +59,7 @@ export default function PlayerProfile() {
       playerId: player!.id,
       wallet: player!.wallet,
       progressLevel: player!.progressLevel,
-      milestones: milestones.map((m) => ({
+      milestones: player!.milestones.map((m) => ({
         id: m.id,
         description: m.description,
         validator: m.validator,
@@ -80,17 +90,18 @@ export default function PlayerProfile() {
 
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-8">
+      {/* Back to Scout Dashboard */}
+      <Link
+        href="/scout"
+        className="self-start text-sm text-gray-400 hover:text-white transition flex items-center gap-1"
+      >
+        {t('back_to_scout_dashboard')}
+      </Link>
+
       {/* Header */}
       <div className="bg-brand-card border border-gray-800 rounded-xl p-6 flex gap-6 items-start">
         <div className="w-20 h-20 rounded-full bg-gray-700 overflow-hidden shrink-0">
-          {player.ipfsHash && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={`${process.env.NEXT_PUBLIC_IPFS_GATEWAY ?? 'https://gateway.pinata.cloud/ipfs'}/${player.ipfsHash}`}
-              alt={player.vitals.name}
-              className="w-full h-full object-cover"
-            />
-          )}
+          <IPFSMediaGallery cids={player.ipfsHash ? [player.ipfsHash] : []} />
         </div>
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-white">
@@ -123,8 +134,12 @@ export default function PlayerProfile() {
               >
                 {m.description}
                 <span className="block text-xs text-gray-500 mt-0.5">
-                  Validator: {m.validator.slice(0, 8)}… ·{' '}
-                  {new Date(m.timestamp * 1000).toLocaleDateString()}
+                  Validator:{' '}
+                  <TruncatedAddress
+                    address={m.validator}
+                    className="text-gray-500"
+                  />{' '}
+                  · {new Date(m.timestamp * 1000).toLocaleDateString()}
                 </span>
               </li>
             ))}
@@ -133,7 +148,7 @@ export default function PlayerProfile() {
       </div>
 
       {/* Download milestones */}
-      {milestones.length > 0 && (
+      {player.milestones.length > 0 && (
         <button
           onClick={handleDownload}
           className="self-start text-sm text-brand-green underline underline-offset-2 hover:opacity-80 transition"

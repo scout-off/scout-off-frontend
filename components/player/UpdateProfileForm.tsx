@@ -6,6 +6,7 @@ import { useWallet } from '@/hooks/useWallet';
 import useIsPaused from '@/hooks/useIsPaused';
 import { updateProfile } from '@/lib/contract';
 import { useToast } from '@/components/ui/Toast';
+import { parseContractError } from '@/lib/contractErrorMessage';
 import VideoUpload from '@/components/ui/VideoUpload';
 import Button from '@/components/ui/Button';
 
@@ -56,9 +57,9 @@ export default function UpdateProfileForm({
       setNewCid('');
       onSuccess();
     } catch (err) {
-      console.error('Update profile failed:', err);
-      show({ message: 'Failed to update profile media', variant: 'error' });
-      setInlineError('Failed to update profile media. Please try again.');
+      const msg = parseContractError(err);
+      show({ message: msg, variant: 'error' });
+      setInlineError(msg);
     } finally {
       setIsSubmitting(false);
     }

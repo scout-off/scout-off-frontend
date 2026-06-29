@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import WalletButton from './WalletButton';
 import { useContractStatus } from '@/hooks/useContractStatus';
 import { useWallet } from '@/hooks/useWallet';
@@ -14,11 +14,6 @@ const NAV_LINKS = [
 
 const SPONSORSHIP_LINK = { href: '/sponsorship', labelKey: 'nav.sponsorship' };
 
-const LOCALES = [
-  { code: 'en', label: 'EN' },
-  { code: 'fr', label: 'FR' },
-];
-
 export default function Navbar() {
   const { isPaused } = useContractStatus();
   const { xlmBalance, isLoadingBalance, isAuthenticated } = useWallet();
@@ -27,6 +22,9 @@ export default function Navbar() {
   const pathname = usePathname() ?? '/';
   const [localeOpen, setLocaleOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const hamburgerRef = useRef<HTMLButtonElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
 
   const currentLocale = pathname.split('/')[1] || 'en';
   const locales = [
@@ -46,6 +44,56 @@ export default function Navbar() {
     setMenuOpen(false);
   };
 
+  const closeMenu = () => setMenuOpen(false);
+
+  // Return focus to hamburger button when menu closes
+  useEffect(() => {
+    if (!menuOpen) {
+      hamburgerRef.current?.focus();
+    }
+  }, [menuOpen]);
+
+  // Trap focus inside mobile menu and close on Escape
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const menu = mobileMenuRef.current;
+    if (!menu) return;
+
+    // Move focus to first focusable element
+    const focusable = menu.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    );
+    focusable[0]?.focus();
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        closeMenu();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [menuOpen]);
+
   return (
     <>
       {isPaused && (
@@ -57,20 +105,22 @@ export default function Navbar() {
         aria-label="Main navigation"
         className="border-b border-gray-800 bg-brand-dark"
       >
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-2">
+          {/* Logo */}
           <Link
             href={`/${currentLocale}`}
-            className="text-brand-green font-bold text-xl tracking-tight"
+            className="text-brand-green font-bold text-xl tracking-tight shrink-0"
           >
             {t('app_title')}
           </Link>
 
-          <div className="hidden sm:flex items-center gap-6 text-sm text-gray-300">
+          {/* ── Desktop nav (sm and above) ── */}
+          <div className="hidden sm:flex items-center gap-6 text-sm text-gray-300 min-w-0">
             {NAV_LINKS.map(({ href, labelKey }) => (
               <Link
                 key={href}
                 href={`/${currentLocale}${href}`}
-                className="hover:text-white transition"
+                className="hover:text-white transition whitespace-nowrap"
               >
                 {t(labelKey)}
               </Link>
@@ -78,7 +128,7 @@ export default function Navbar() {
 
             <Link
               href={`/${currentLocale}${SPONSORSHIP_LINK.href}`}
-              className="flex items-center gap-1.5 text-gray-500 hover:text-gray-300 transition"
+              className="flex items-center gap-1.5 text-gray-500 hover:text-gray-300 transition whitespace-nowrap"
             >
               {t(SPONSORSHIP_LINK.labelKey)}
               <span className="text-[10px] uppercase tracking-wide border border-gray-700 rounded-full px-1.5 py-0.5">
@@ -86,22 +136,23 @@ export default function Navbar() {
               </span>
             </Link>
 
+            {/* Locale switcher */}
             <div className="relative">
               <button
                 onClick={() => setLocaleOpen(!localeOpen)}
-                className="hover:text-white transition flex items-center gap-1"
+                className="hover:text-white transition flex items-center gap-1 whitespace-nowrap"
                 type="button"
-                aria-haspopup="true"
+                aria-haspopup="listbox"
                 aria-expanded={localeOpen}
                 aria-label={t('language.select_language')}
               >
                 {locales.find((l) => l.code === currentLocale)?.label ||
                   t('language.select_language')}
-                <span className="text-xs">▼</span>
+                <span className="text-xs" aria-hidden="true">▼</span>
               </button>
               {localeOpen && (
                 <div
-                  role="menu"
+                  role="listbox"
                   aria-label={t('language.select_language')}
                   className="absolute right-0 mt-2 w-40 bg-brand-dark border border-gray-800 rounded-lg shadow-lg z-50"
                 >
@@ -109,8 +160,8 @@ export default function Navbar() {
                     <button
                       key={locale.code}
                       type="button"
-                      role="menuitem"
-                      aria-current={currentLocale === locale.code}
+                      role="option"
+                      aria-selected={currentLocale === locale.code}
                       onClick={() => handleLanguageChange(locale.code)}
                       className={`w-full text-left px-4 py-2 text-sm hover:bg-brand-green hover:text-black transition ${
                         currentLocale === locale.code
@@ -125,26 +176,28 @@ export default function Navbar() {
               )}
             </div>
 
+            {/* XLM balance — hidden below md */}
             {isAuthenticated && (
-              <span className="text-sm text-gray-300">
+              <span className="hidden md:inline text-sm text-gray-300 whitespace-nowrap">
                 {isLoadingBalance ? (
-                  <span className="text-gray-500">⟳</span>
+                  <span className="text-gray-500" aria-hidden="true">⟳</span>
                 ) : (
                   <span>{xlmBalance ?? '0.00'} XLM</span>
                 )}
               </span>
             )}
+
             <WalletButton />
           </div>
 
+          {/* ── Hamburger button (mobile only) ── */}
           <button
+            ref={hamburgerRef}
             type="button"
             className="sm:hidden p-2 rounded text-gray-300 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green"
             aria-expanded={menuOpen}
             aria-controls="mobile-menu"
-            aria-label={
-              menuOpen ? 'Close navigation menu' : 'Open navigation menu'
-            }
+            aria-label={menuOpen ? t('common.close') + ' navigation menu' : 'Open navigation menu'}
             onClick={() => setMenuOpen((prev) => !prev)}
           >
             <svg
@@ -174,10 +227,15 @@ export default function Navbar() {
           </button>
         </div>
 
+        {/* ── Mobile menu drawer ── */}
         {menuOpen && (
           <div
+            ref={mobileMenuRef}
             id="mobile-menu"
-            className="sm:hidden border-t border-gray-800 bg-brand-dark px-4 py-3 flex flex-col gap-3 text-sm text-gray-300"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation menu"
+            className="sm:hidden border-t border-gray-800 bg-brand-dark px-4 py-3 flex flex-col gap-1 text-sm text-gray-300"
           >
             {NAV_LINKS.map(({ href, labelKey }) => (
               <Link
@@ -186,12 +244,13 @@ export default function Navbar() {
                 aria-current={
                   pathname === `/${currentLocale}${href}` ? 'page' : undefined
                 }
-                className="hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green rounded py-1"
-                onClick={() => setMenuOpen(false)}
+                className="hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green rounded py-2 px-1"
+                onClick={closeMenu}
               >
                 {t(labelKey)}
               </Link>
             ))}
+
             <Link
               href={`/${currentLocale}${SPONSORSHIP_LINK.href}`}
               aria-current={
@@ -199,22 +258,27 @@ export default function Navbar() {
                   ? 'page'
                   : undefined
               }
-              className="flex items-center gap-1.5 text-gray-500 hover:text-gray-300 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green rounded py-1"
-              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-1.5 text-gray-500 hover:text-gray-300 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green rounded py-2 px-1"
+              onClick={closeMenu}
             >
               {t(SPONSORSHIP_LINK.labelKey)}
               <span className="text-[10px] uppercase tracking-wide border border-gray-700 rounded-full px-1.5 py-0.5">
                 {t('nav.soon')}
               </span>
             </Link>
-            <div className="border-t border-gray-800 pt-3">
+
+            {/* Locale switcher in mobile menu */}
+            <div className="border-t border-gray-800 mt-1 pt-3 flex flex-col gap-0.5">
+              <p className="text-xs text-gray-500 px-1 mb-1">
+                {t('language.select_language')}
+              </p>
               {locales.map((locale) => (
                 <button
                   key={locale.code}
                   type="button"
-                  aria-current={currentLocale === locale.code}
+                  aria-pressed={currentLocale === locale.code}
                   onClick={() => handleLanguageChange(locale.code)}
-                  className={`w-full text-left px-4 py-2 text-sm hover:bg-brand-green hover:text-black transition ${
+                  className={`w-full text-left px-4 py-2 text-sm rounded hover:bg-brand-green hover:text-black transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green ${
                     currentLocale === locale.code
                       ? 'bg-brand-green/20 text-brand-green'
                       : ''
@@ -224,7 +288,11 @@ export default function Navbar() {
                 </button>
               ))}
             </div>
-            <WalletButton />
+
+            {/* Wallet — balance hidden on mobile to prevent overflow */}
+            <div className="border-t border-gray-800 mt-1 pt-3">
+              <WalletButton hideBalance />
+            </div>
           </div>
         )}
       </nav>

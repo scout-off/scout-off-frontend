@@ -1,8 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import type { Scout } from '@/types';
 import ScoutProfileCard from '@/components/scout/ScoutProfileCard';
+import { fetchScoutStats } from '@/lib/api';
 
 // Track how many times the Link inside ScoutProfileCard renders.
 // When memo bails out, React skips the component function entirely, so none of
@@ -68,7 +69,7 @@ describe('ScoutProfileCard', () => {
 
   it('renders the truncated wallet address', () => {
     render(<ScoutProfileCard scout={mockScout} />);
-    expect(screen.getByText('GCFW7Q…G5OV')).toBeInTheDocument();
+    expect(screen.getByText('GCFW…G5OV')).toBeInTheDocument();
   });
 
   it('does not re-render when unrelated parent state changes', async () => {
@@ -166,5 +167,62 @@ describe('ScoutProfileCard memo comparator', () => {
     );
 
     expect(mockLink.mock.calls.length).toBeGreaterThan(before);
+  });
+});
+
+describe('ScoutProfileCard — activity stats', () => {
+  it('renders activity stats when fetchScoutStats resolves', async () => {
+    (fetchScoutStats as jest.Mock).mockResolvedValueOnce({
+      contactedCount: 12,
+      trialOffersCount: 3,
+    });
+
+    await act(async () => {
+      render(<ScoutProfileCard scout={mockScout} />);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('12')).toBeInTheDocument();
+      expect(screen.getByText('3')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Players Contacted')).toBeInTheDocument();
+    expect(screen.getByText('Trial Offers')).toBeInTheDocument();
+  });
+});
+
+describe('ScoutProfileCard — optional fields missing', () => {
+  const minimalScout: Scout = {
+    id: 'scout-2',
+    wallet: 'GCFW7QAO3WZQ6X4CZ3OYZFXX3A3DL7XVI5DNVTXA5VJUGE5SU6ZRG5OV',
+    name: 'Jane Scout',
+    organisation: '',
+    subscriptionTier: 'basic',
+    subscriptionExpiry: 0, // expired / missing
+    contactedPlayers: [],
+  };
+
+  it('shows "No subscription" badge when subscription is missing or expired', () => {
+    render(<ScoutProfileCard scout={minimalScout} />);
+    expect(screen.getByText('No subscription')).toBeInTheDocument();
+  });
+
+  it('shows subscription-inactive text when subscription is missing or expired', () => {
+    render(<ScoutProfileCard scout={minimalScout} />);
+    expect(
+      screen.getByText('Subscription inactive or expired'),
+    ).toBeInTheDocument();
+  });
+
+  it('does not render an organisation line when organisation is empty', () => {
+    render(<ScoutProfileCard scout={minimalScout} />);
+    // The organisation paragraph should not be present
+    expect(screen.queryByText('Elite FC')).not.toBeInTheDocument();
+  });
+});
+
+describe('ScoutProfileCard — snapshot', () => {
+  it('matches snapshot with a full scout profile', () => {
+    const { container } = render(<ScoutProfileCard scout={mockScout} />);
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

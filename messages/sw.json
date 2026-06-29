@@ -48,6 +48,9 @@
     "player_not_found": "TODO: Machine-translated - Mchezaji hajafikiwa",
     "no_players": "TODO: Machine-translated - Hakuna wachezaji waliopatikana"
   },
+  "player_profile": {
+    "back_to_scout_dashboard": "← Rudi kwenye Dashibodi ya Scout"
+  },
   "player_dashboard": {
     "title": "Dashibodi ya Mchezaji",
     "welcome": "TODO: Machine-translated - Karibu kwenye dashibodi ya mchezaji",
