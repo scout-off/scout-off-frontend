@@ -8,6 +8,7 @@ import PlayerProfileForm from '@/components/player/PlayerProfileForm';
 import UpdateProfileForm from '@/components/player/UpdateProfileForm';
 import MilestoneTimeline from '@/components/player/MilestoneTimeline';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
+import type { Player, PlayerVitals } from '@/types';
 
 type TabId = 'register' | 'profile';
 
@@ -16,10 +17,41 @@ const TABS: { id: TabId; labelKey: string }[] = [
   { id: 'profile', labelKey: 'tab_profile' },
 ] as const;
 
+/** Spinner used in the pending-confirmation badge */
+function InlineSpinner() {
+  return (
+    <svg
+      className="animate-spin h-3 w-3"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="4"
+      />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+      />
+    </svg>
+  );
+}
+
 function PlayerDashboardContent() {
   const { walletAddress: publicKey } = useRequireWallet();
-  const { player, loading, refetch } = usePlayer(publicKey);
+  const { player, loading, refetch, optimisticUpdate } = usePlayer(publicKey);
   const t = useTranslations('player_dashboard');
+
+  /** True while we're waiting for on-chain confirmation of a just-registered profile */
+  const [isPendingConfirmation, setIsPendingConfirmation] = useState(false);
+
   const isRegistered = !!player;
 
   const [activeTab, setActiveTab] = useState<TabId>(
@@ -47,6 +79,55 @@ function PlayerDashboardContent() {
       }
     },
     [activeTab],
+  );
+
+  /**
+   * Called by PlayerProfileForm when registerPlayer resolves.
+   * 1. Immediately populate the SWR cache with the submitted vitals (optimistic).
+   * 2. Switch to the profile tab so the user sees their data right away.
+   * 3. Trigger a background re-fetch; replace optimistic data with confirmed data.
+   * 4. On error, discard optimistic data and show the register tab again.
+   */
+  const handleRegistrationSuccess = useCallback(
+    async ({
+      playerId,
+      vitals,
+      ipfsHash,
+    }: {
+      playerId: string;
+      vitals: PlayerVitals;
+      ipfsHash: string;
+    }) => {
+      if (!publicKey) return;
+
+      // Build a minimal optimistic Player from the submitted form data
+      const optimisticPlayer: Player = {
+        id: playerId,
+        wallet: publicKey,
+        vitals,
+        ipfsHash,
+        progressLevel: 0,
+        milestones: [],
+        createdAt: Math.floor(Date.now() / 1000),
+      };
+
+      // 1. Show optimistic data immediately
+      optimisticUpdate(optimisticPlayer);
+      setIsPendingConfirmation(true);
+      setActiveTab('profile');
+
+      // 2. Re-fetch confirmed on-chain data in the background
+      try {
+        await refetch();
+      } catch {
+        // On error, discard the optimistic state so the user is not left with stale data
+        refetch({ discardOptimistic: true });
+        setActiveTab('register');
+      } finally {
+        setIsPendingConfirmation(false);
+      }
+    },
+    [publicKey, optimisticUpdate, refetch],
   );
 
   if (!publicKey) {
@@ -106,7 +187,7 @@ function PlayerDashboardContent() {
             <h2 className="text-xl font-semibold text-white mb-6">
               Create Your Profile
             </h2>
-            <PlayerProfileForm onSuccess={() => refetch()} />
+            <PlayerProfileForm onSuccess={handleRegistrationSuccess} />
           </div>
         )}
       </div>
@@ -119,10 +200,34 @@ function PlayerDashboardContent() {
       >
         {activeTab === 'profile' && isRegistered ? (
           <>
+            {/* Pending-confirmation banner */}
+            {isPendingConfirmation && (
+              <div
+                role="status"
+                aria-live="polite"
+                data-testid="pending-confirmation"
+                className="flex items-center gap-2 rounded-xl border border-yellow-500/40 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-300"
+              >
+                <InlineSpinner />
+                <span>Confirming on-chain… This may take a few seconds.</span>
+              </div>
+            )}
+
             <div className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
-              <h2 className="text-xl font-semibold text-white">
-                {player.vitals.name}
-              </h2>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-xl font-semibold text-white">
+                  {player.vitals.name}
+                </h2>
+                {isPendingConfirmation && (
+                  <span
+                    aria-hidden="true"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-yellow-500/40 bg-yellow-500/10 px-2.5 py-1 text-xs font-medium text-yellow-300"
+                  >
+                    <InlineSpinner />
+                    Pending
+                  </span>
+                )}
+              </div>
               <p className="text-gray-400 text-sm">
                 {player.vitals.position} · {player.vitals.region}
               </p>

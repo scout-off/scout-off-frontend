@@ -45,7 +45,7 @@ interface WizardData {
 }
 
 export interface PlayerOnboardingWizardProps {
-  onSuccess: (playerId: string) => void;
+  onSuccess: (result: { playerId: string; vitals: PlayerVitals; ipfsHash: string }) => void;
 }
 
 // ── Progress Stepper ──────────────────────────────────────────────────────────
@@ -301,7 +301,7 @@ export default function PlayerOnboardingWizard({
       setTxStatus('success');
 
       const playerId = (result as any)?.id || publicKey;
-      onSuccess(playerId);
+      onSuccess({ playerId, vitals, ipfsHash: data.ipfsHash });
     } catch (error) {
       setTxStatus('error');
       const rawMessage = error instanceof Error ? error.message : null;

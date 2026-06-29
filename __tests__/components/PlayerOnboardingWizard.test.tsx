@@ -464,6 +464,19 @@ describe('PlayerOnboardingWizard', () => {
       'QmTestCID1234567890',
     );
     expect(onSuccess).toHaveBeenCalledTimes(1);
+    expect(onSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        playerId: expect.any(String),
+        vitals: expect.objectContaining({
+          name: 'John Doe',
+          age: 22,
+          position: 'ST',
+          region: 'nigeria',
+          nationality: 'Nigerian',
+        }),
+        ipfsHash: 'QmTestCID1234567890',
+      }),
+    );
   });
 
   it('shows an error message when contract submission fails', async () => {

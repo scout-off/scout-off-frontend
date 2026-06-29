@@ -293,7 +293,7 @@ describe('PlayerProfileForm', () => {
 
   // ── Success callback ─────────────────────────────────────────────────────────
 
-  it('calls onSuccess callback with the new player ID on successful registration', async () => {
+  it('calls onSuccess callback with playerId, vitals and ipfsHash on successful registration', async () => {
     mockedBuildRegisterPlayer.mockResolvedValue('mock-xdr');
     const onSuccess = jest.fn();
     const mockSignAndSubmit = jest.fn().mockResolvedValue({
@@ -315,8 +315,20 @@ describe('PlayerProfileForm', () => {
       );
     });
 
-    expect(onSuccess).toHaveBeenCalledWith('player-123');
     expect(onSuccess).toHaveBeenCalledTimes(1);
+    expect(onSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        playerId: 'player-123',
+        vitals: expect.objectContaining({
+          name: 'John Doe',
+          age: 22,
+          position: 'ST',
+          region: 'nigeria',
+          nationality: 'Nigerian',
+        }),
+        ipfsHash: 'QmTestCID1234567890',
+      }),
+    );
   });
 
   // ── Contract failure error toast ──────────────────────────────────────────────
