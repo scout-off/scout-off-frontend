@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { Player } from '@/types';
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000',
@@ -8,6 +9,9 @@ const api = axios.create({
 // Players
 export const fetchPlayerProfile = (playerId: string) =>
   api.get(`/players/${playerId}`).then((r) => r.data);
+
+export const searchPlayersByName = (name: string): Promise<Player[]> =>
+  api.get('/players/search', { params: { name } }).then((r) => r.data);
 
 export const fetchPlayerComments = (playerId: string) =>
   api.get(`/players/${playerId}/comments`).then((r) => r.data);

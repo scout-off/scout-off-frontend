@@ -7,6 +7,7 @@ import { useRequireSubscription } from '@/hooks/useRequireSubscription';
 import { useScout } from '@/hooks/useScout';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { useDebounce } from '@/hooks/useDebounce';
 import { getPlayer } from '@/lib/contract';
 import PlayerCard from '@/components/PlayerCard';
 import PlayerCardSkeleton from '@/components/PlayerCardSkeleton';
@@ -29,7 +30,7 @@ function ScoutDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const { players, loading, search } = useScout();
+  const { players, loading, search, searchByName } = useScout();
   const { subscription } = useSubscription();
   const [now, setNow] = useState(() => Date.now());
 
@@ -50,6 +51,10 @@ function ScoutDashboardContent() {
   >(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Name search state
+  const [nameQuery, setNameQuery] = useState('');
+  const debouncedName = useDebounce(nameQuery, 300);
 
   // Infinite scroll — manages the visible slice of `players`
   const {
@@ -113,8 +118,20 @@ function ScoutDashboardContent() {
     };
   }, [walletQuery]);
 
+  // Fire name search when debounced value changes
+  useEffect(() => {
+    if (debouncedName) {
+      hasLoaded.current = false;
+      setSearchHasCompleted(false);
+      searchByName(debouncedName);
+    } else {
+      searchByName('');
+    }
+  }, [debouncedName, searchByName]);
+
   const handleSearch = useCallback(
     (filter: PlayerFilter) => {
+      setNameQuery('');
       hasLoaded.current = false;
       search(filter);
     },
@@ -122,6 +139,7 @@ function ScoutDashboardContent() {
   );
 
   const handleClearFilters = useCallback(() => {
+    setNameQuery('');
     setResetKey((k) => k + 1);
   }, []);
 
@@ -229,8 +247,29 @@ function ScoutDashboardContent() {
         )}
       </div>
 
+      {/* Name search */}
+      <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
+        <label className="text-sm font-medium text-gray-300" htmlFor="name-search">
+          Search by Player Name
+        </label>
+        <input
+          id="name-search"
+          className="input"
+          placeholder="e.g. Amara Diallo"
+          value={nameQuery}
+          onChange={(e) => setNameQuery(e.target.value)}
+          autoComplete="off"
+        />
+        {nameQuery && !loading && players.length === 0 && searchHasCompleted && (
+          <EmptyState
+            title="No players found"
+            description={`No players match "${nameQuery}".`}
+          />
+        )}
+      </div>
+
       {/* Filter bar */}
-      <div className="bg-brand-card border border-gray-800 rounded-xl p-5">
+      <div className={`bg-brand-card border border-gray-800 rounded-xl p-5${nameQuery ? ' opacity-50 pointer-events-none' : ''}`}>
         <PlayerFilterForm
           onSearch={handleSearch}
           resetKey={resetKey}

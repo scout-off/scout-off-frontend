@@ -2,18 +2,11 @@
 import { useState, useCallback } from 'react';
 import useSWR from 'swr';
 import { filterPlayers } from '@/lib/contract';
+import { searchPlayersByName } from '@/lib/api';
 import type { Player, PlayerFilter } from '@/types';
 
-/**
- * Cache key scheme for useScout:
- *   "scout:search:{region}:{position}:{minLevel}"
- *
- * All filter dimensions are encoded in the key so different filter combos
- * get separate caches. SWR deduplicates concurrent requests for the same
- * key, preventing duplicate RPC calls.
- */
-function scoutSearchKey(filter: PlayerFilter): string {
-  return `scout:search:${filter.region ?? ''}:${filter.position ?? ''}:${filter.minLevel ?? 0}`;
+function contractKey(filter: PlayerFilter): string {
+  return `scout:contract:${filter.region ?? ''}:${filter.position ?? ''}:${filter.minLevel ?? 0}`;
 }
 
 export function useScout() {
@@ -22,25 +15,26 @@ export function useScout() {
   const { data, error, isValidating } = useSWR<Player[]>(
     searchKey,
     async (key: string) => {
+      if (key.startsWith('scout:name:')) {
+        const name = key.slice('scout:name:'.length);
+        return searchPlayersByName(name);
+      }
+      // contract filter key: "scout:contract:{region}:{position}:{minLevel}"
       const parts = key.split(':');
       const region = parts[2] ?? '';
       const position = parts[3] ?? '';
       const minLevel = Number(parts[4] ?? 0);
-      const results = await filterPlayers(region, position, minLevel);
-      return results as Player[];
+      return (await filterPlayers(region, position, minLevel)) as Player[];
     },
-    {
-      dedupingInterval: 60_000, // 60-second stale time — no duplicate RPC calls within this window
-      revalidateOnFocus: false,
-      errorRetryCount: 2,
-    },
+    { dedupingInterval: 60_000, revalidateOnFocus: false, errorRetryCount: 2 },
   );
 
-  /** Trigger a search with the given filter. The returned loading/isValidating
-   *  state can be observed via the reactive `loading` property. */
   const search = useCallback((filter: PlayerFilter) => {
-    const key = scoutSearchKey(filter);
-    setSearchKey(key);
+    setSearchKey(contractKey(filter));
+  }, []);
+
+  const searchByName = useCallback((name: string) => {
+    setSearchKey(name ? `scout:name:${name}` : null);
   }, []);
 
   return {
@@ -48,5 +42,6 @@ export function useScout() {
     loading: isValidating,
     error: error?.message ?? null,
     search,
+    searchByName,
   };
 }
