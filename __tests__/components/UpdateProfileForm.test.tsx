@@ -2,17 +2,50 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import UpdateProfileForm from '@/components/player/UpdateProfileForm';
 import { ToastProvider } from '@/components/ui/Toast';
-import { ipfsUrl } from '@/lib/ipfs';
 import { updateProfile } from '@/lib/contract';
 import { useWallet } from '@/hooks/useWallet';
 import type { Player } from '@/types';
 
+// ── VideoUpload mock ──────────────────────────────────────────────────────────
+// Exposes three buttons so tests can drive the three outcomes:
+//   "Upload new media"   → success path  (calls onUpload)
+//   "Upload invalid type" → type error   (calls onValidationError)
+//   "Upload oversized"   → size error    (calls onValidationError)
+
 jest.mock('@/components/ui/VideoUpload', () => ({
   __esModule: true,
-  default: ({ onUpload }: { onUpload: (cid: string) => void }) => (
-    <button type="button" onClick={() => onUpload('new-cid-1234567890')}>
-      Upload new media
-    </button>
+  default: ({
+    onUpload,
+    onValidationError,
+  }: {
+    onUpload: (cid: string) => void;
+    onValidationError?: (error: string | null) => void;
+  }) => (
+    <div>
+      <button type="button" onClick={() => onUpload('new-cid-1234567890')}>
+        Upload new media
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          onValidationError?.(
+            'File type "application/pdf" is not supported. Please upload MP4, MOV, JPEG, PNG.',
+          )
+        }
+      >
+        Upload invalid type
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          onValidationError?.(
+            'File is too large (60.0 MB). Maximum size is 50 MB.',
+          )
+        }
+      >
+        Upload oversized
+      </button>
+    </div>
   ),
 }));
 
@@ -34,6 +67,11 @@ jest.mock('@/hooks/useWallet', () => ({
 
 jest.mock('@/lib/contract', () => ({
   updateProfile: jest.fn(),
+}));
+
+jest.mock('@/hooks/useIsPaused', () => ({
+  __esModule: true,
+  default: jest.fn().mockReturnValue(false),
 }));
 
 const mockedUseWallet = useWallet as jest.MockedFunction<typeof useWallet>;
@@ -83,6 +121,8 @@ describe('UpdateProfileForm', () => {
     jest.clearAllMocks();
   });
 
+  // ── Visibility ──────────────────────────────────────────────────────────────
+
   it('does not render when the connected wallet does not match the player wallet', () => {
     mockedUseWallet.mockReturnValue({
       publicKey: 'OTHERPUBLICKEY',
@@ -113,6 +153,8 @@ describe('UpdateProfileForm', () => {
     expect(link).toHaveAttribute('href', expectedHref);
   });
 
+  // ── Submit button state ─────────────────────────────────────────────────────
+
   it('keeps the submit button disabled until a new CID is obtained', () => {
     renderComponent();
 
@@ -122,6 +164,80 @@ describe('UpdateProfileForm', () => {
     fireEvent.click(screen.getByRole('button', { name: /upload new media/i }));
     expect(submit).toBeEnabled();
   });
+
+  it('disables submit button when file type is invalid', () => {
+    renderComponent();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /upload invalid type/i }),
+    );
+
+    expect(screen.getByRole('button', { name: /update profile/i })).toBeDisabled();
+  });
+
+  it('disables submit button when file is oversized', () => {
+    renderComponent();
+
+    fireEvent.click(screen.getByRole('button', { name: /upload oversized/i }));
+
+    expect(screen.getByRole('button', { name: /update profile/i })).toBeDisabled();
+  });
+
+  it('re-enables submit after a validation error is followed by a valid upload', () => {
+    renderComponent();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /upload invalid type/i }),
+    );
+    expect(screen.getByRole('button', { name: /update profile/i })).toBeDisabled();
+
+    // Valid upload clears the error and provides a CID
+    fireEvent.click(screen.getByRole('button', { name: /upload new media/i }));
+    expect(screen.getByRole('button', { name: /update profile/i })).toBeEnabled();
+  });
+
+  // ── Inline error messages ───────────────────────────────────────────────────
+
+  it('does not show a file validation error before any file is selected', () => {
+    renderComponent();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('shows an inline error when an invalid file type is selected', () => {
+    renderComponent();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /upload invalid type/i }),
+    );
+
+    expect(
+      screen.getByText(/file type .* is not supported/i),
+    ).toBeInTheDocument();
+  });
+
+  it('shows an inline error when an oversized file is selected', () => {
+    renderComponent();
+
+    fireEvent.click(screen.getByRole('button', { name: /upload oversized/i }));
+
+    expect(screen.getByText(/file is too large/i)).toBeInTheDocument();
+  });
+
+  it('clears the file error once a valid file is uploaded', () => {
+    renderComponent();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /upload invalid type/i }),
+    );
+    expect(screen.getByText(/file type .* is not supported/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /upload new media/i }));
+    expect(
+      screen.queryByText(/file type .* is not supported/i),
+    ).not.toBeInTheDocument();
+  });
+
+  // ── Successful submission ───────────────────────────────────────────────────
 
   it('calls updateProfile with the new CID and invokes onSuccess after a successful transaction', async () => {
     const onSuccess = jest.fn();
@@ -149,6 +265,36 @@ describe('UpdateProfileForm', () => {
     );
     expect(onSuccess).toHaveBeenCalledTimes(1);
   });
+
+  it('does not call updateProfile when no file has been uploaded', async () => {
+    renderComponent();
+
+    // Force-click despite disabled state to confirm the guard
+    const submit = screen.getByRole('button', { name: /update profile/i });
+    await act(async () => {
+      fireEvent.click(submit);
+    });
+
+    expect(mockedUpdateProfile).not.toHaveBeenCalled();
+  });
+
+  it('does not call updateProfile when a file validation error is present', async () => {
+    renderComponent();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /upload invalid type/i }),
+    );
+
+    const submit = screen.getByRole('button', { name: /update profile/i });
+    await act(async () => {
+      fireEvent.click(submit);
+    });
+
+    expect(mockedUpdateProfile).not.toHaveBeenCalled();
+  });
+
+  // ── Contract failure ────────────────────────────────────────────────────────
+
   it('displays an error message when updateProfile fails', async () => {
     const onSuccess = jest.fn();
     mockedUpdateProfile.mockRejectedValue(new Error('Transaction failed'));
@@ -162,7 +308,6 @@ describe('UpdateProfileForm', () => {
     });
 
     expect(mockedUpdateProfile).toHaveBeenCalled();
-    // error message should be displayed
     expect(
       screen.getByText(/Failed to update profile media/i),
     ).toBeInTheDocument();
