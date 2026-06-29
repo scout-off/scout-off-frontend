@@ -154,6 +154,98 @@ describe('PlayerProfileForm', () => {
     expect(screen.getByText('Position is required')).toBeInTheDocument();
   });
 
+  it('shows a name-too-short error for a single-character name', () => {
+    renderForm();
+    fireEvent.change(screen.getByLabelText(/name \*/i), {
+      target: { name: 'name', value: 'A' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    expect(
+      screen.getByText('Name must be at least 2 characters'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows a name-too-long error when name exceeds 50 characters', () => {
+    renderForm();
+    fireEvent.change(screen.getByLabelText(/name \*/i), {
+      target: { name: 'name', value: 'A'.repeat(51) },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    expect(
+      screen.getByText('Name must be 50 characters or fewer'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows a name error on blur when field is left empty', () => {
+    renderForm();
+    const nameInput = screen.getByLabelText(/name \*/i);
+    fireEvent.focus(nameInput);
+    fireEvent.blur(nameInput, { target: { name: 'name', value: '' } });
+    expect(screen.getByText('Name is required')).toBeInTheDocument();
+  });
+
+  it('shows an age error on blur when age is out of range', () => {
+    renderForm();
+    const ageInput = screen.getByLabelText(/age \*/i);
+    fireEvent.focus(ageInput);
+    fireEvent.blur(ageInput, { target: { name: 'age', value: '5' } });
+    expect(screen.getByText('Age must be between 14 and 45')).toBeInTheDocument();
+  });
+
+  it('disables Continue button after failed validation until errors are resolved', () => {
+    renderForm();
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
+  });
+
+  it('re-enables Continue button once all step-1 fields are valid', () => {
+    renderForm();
+    // Trigger validation
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
+
+    // Fill all required fields
+    fireEvent.change(screen.getByLabelText(/name \*/i), {
+      target: { name: 'name', value: 'Jane Doe' },
+    });
+    fireEvent.change(screen.getByLabelText(/age \*/i), {
+      target: { name: 'age', value: '25' },
+    });
+    fireEvent.change(screen.getByLabelText(/nationality \*/i), {
+      target: { name: 'nationality', value: 'Ghanaian' },
+    });
+    const [regionSelect, positionSelect] = screen.getAllByRole('combobox');
+    fireEvent.change(regionSelect, {
+      target: { name: 'region', value: 'ghana' },
+    });
+    fireEvent.change(positionSelect, {
+      target: { name: 'position', value: 'GK' },
+    });
+    expect(screen.getByRole('button', { name: /continue/i })).not.toBeDisabled();
+  });
+
+  // ── aria attributes ──────────────────────────────────────────────────────
+
+  it('sets aria-invalid on the name input when it has an error', () => {
+    renderForm();
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    expect(screen.getByLabelText(/name \*/i)).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+  });
+
+  it('sets aria-describedby on the name input pointing to the error element', () => {
+    renderForm();
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    const nameInput = screen.getByLabelText(/name \*/i);
+    const errorId = nameInput.getAttribute('aria-describedby');
+    expect(errorId).toBeTruthy();
+    expect(document.getElementById(errorId!)).toHaveTextContent(
+      'Name is required',
+    );
+  });
+
   // ── Submit button disabled during operations ───────────────────────────────────
 
   it('disables submit button while upload is in progress', async () => {
