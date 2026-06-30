@@ -1,6 +1,7 @@
 # ScoutOff
 
-[![Frontend CI](https://github.com/your-org/scout-off-frontend/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/scout-off-frontend/actions/workflows/ci.yml)
+[![Frontend CI](https://github.com/scout-off/scout-off-frontend/actions/workflows/ci.yml/badge.svg)](https://github.com/scout-off/scout-off-frontend/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/scout-off/scout-off-frontend/branch/main/graph/badge.svg)](https://codecov.io/gh/scout-off/scout-off-frontend)
 
 Decentralized football scouting platform on Stellar with tamper-proof player profiles, on-chain milestone verification, and direct scout-to-player connections via Soroban smart contracts.
 
@@ -184,6 +185,7 @@ scout-off-frontend/
 │
 ├── packages/
 │   └── indexer/                  # ✅ Off-chain event indexer with metrics (IndexerMetrics.ts)
+│                                 #    → See [packages/indexer/README.md](packages/indexer/README.md)
 │
 ├── __tests__/
 │   ├── components/               # ✅ Modal, Navbar, PlayerCard, Badge, Spinner, Toast,
