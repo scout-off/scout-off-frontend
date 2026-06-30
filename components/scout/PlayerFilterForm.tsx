@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AFRICAN_REGIONS } from '@/lib/regions';
+import { AFRICAN_REGIONS_GROUPED } from '@/lib/regions';
 import { FOOTBALL_POSITIONS } from '@/lib/positions';
 import type { PlayerFilter, ProgressLevel } from '@/types';
 
@@ -134,10 +134,14 @@ export default function PlayerFilterForm({
           onChange={(e) => handleChange('region', e.target.value)}
         >
           <option value="">All regions</option>
-          {AFRICAN_REGIONS.map(({ label, value }) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
+          {Object.entries(AFRICAN_REGIONS_GROUPED).map(([group, regions]) => (
+            <optgroup key={group} label={group}>
+              {regions.map(({ label, value }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
       </div>
