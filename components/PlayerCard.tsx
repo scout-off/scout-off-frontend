@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { mutate } from 'swr';
 import type { Player, ProgressLevel } from '@/types';
-import { getProgressLabel } from '@/lib/progress';
+import { getProgressLabel, getProgressBadgeLabel } from '@/lib/progress';
 import ProgressBar from './ProgressBar';
 import Badge from '@/components/ui/Badge';
 
@@ -24,7 +24,7 @@ const LEVEL_VARIANT: Record<
 const PREFETCH_DELAY_MS = 200;
 
 function PlayerCard({ player }: { player: Player }) {
-  const { id } = player;
+  const { id, vitals, progressLevel, ipfsHash } = player;
   const {
     data: milestones,
     error: milestonesError,
@@ -33,12 +33,12 @@ function PlayerCard({ player }: { player: Player }) {
     revalidateOnFocus: false,
   });
   const milestoneCount = milestones ? milestones.length : 0;
-  const { id, vitals, progressLevel, ipfsHash } = player;
   const router = useRouter();
 
   const href = `/player/${id}`;
   const cacheKey = `player:${id}`;
   const levelLabel = getProgressLabel(progressLevel);
+  const levelBadgeLabel = getProgressBadgeLabel(progressLevel);
   const cardLabel = `${vitals.name}, ${vitals.position}, Level ${progressLevel} – ${levelLabel}`;
 
   const prefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -132,7 +132,7 @@ function PlayerCard({ player }: { player: Player }) {
 
         <Badge
           variant={LEVEL_VARIANT[progressLevel]}
-          label={levelLabel}
+          label={levelBadgeLabel}
           aria-label={`Level ${progressLevel}: ${levelLabel}`}
           size="sm"
           className="mt-1"

@@ -110,6 +110,12 @@
     "howItWorksDescription": "Les parrains achèteront des Jetons Joueur fractionnés représentant une participation aux revenus futurs d'un joueur. Les fonds collectés financent directement l'entraînement, les déplacements et le développement, tandis qu'une part des revenus futurs du joueur sur la chaîne est reversée aux détenteurs de jetons — tout cela appliqué par des contrats intelligents Soroban.",
     "notice": "Cette page est un espace réservé. Aucun jeton ne peut encore être acheté et aucune interaction blockchain n'est disponible ici."
   },
+  "progress_levels": {
+    "level0": "Non vérifié",
+    "level1": "Vérifié",
+    "level2": "Performance",
+    "level3": "Élite"
+  },
   "contractErrors": {
     "AlreadyInitialized": "Ce joueur est déjà inscrit.",
     "NotInitialized": "Le contrat n'a pas encore été configuré. Veuillez contacter le support.",
