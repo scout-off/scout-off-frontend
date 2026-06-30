@@ -10,6 +10,8 @@ export interface TransactionStatusProps {
   status: TxStatus | null;
   txHash?: string | null;
   error?: string | null;
+  /** XLM amount deducted by this transaction, e.g. "5.00". Shown on success. */
+  feePaid?: string;
   /** Milliseconds before success state auto-hides. Defaults to 8000. */
   autoHideMs?: number;
   onHide?: () => void;
@@ -25,6 +27,7 @@ export default function TransactionStatus({
   status,
   txHash,
   error,
+  feePaid,
   autoHideMs = 8000,
   onHide,
 }: TransactionStatusProps) {
@@ -70,6 +73,12 @@ export default function TransactionStatus({
           ✓
         </span>
         <span className="text-gray-200">Transaction confirmed.</span>
+        {feePaid && (
+          <span className="text-gray-400">
+            Fee paid:{' '}
+            <span className="text-white font-medium">{feePaid} XLM</span>
+          </span>
+        )}
         {txHash && (
           <a
             href={explorerUrl(txHash)}

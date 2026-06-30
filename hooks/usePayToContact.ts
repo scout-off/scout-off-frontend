@@ -10,7 +10,7 @@ import {
 import { parseContractError } from '@/lib/contractErrorMessage';
 
 export function usePayToContact() {
-  const { publicKey, signAndSubmit, xlmBalance } = useWallet();
+  const { publicKey, signAndSubmit, xlmBalance, refreshBalance } = useWallet();
   const { show } = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,9 +50,10 @@ export function usePayToContact() {
           return;
         }
 
-        // ── 3. Build and sign ─────────────────────────────────────────────────
+        // ── 3. Build, sign, and refresh ───────────────────────────────────────
         const xdr = await buildPayToContact(publicKey, playerId);
         await signAndSubmit(xdr);
+        await refreshBalance();
       } catch (e: any) {
         fail(parseContractError(e));
         throw e;
@@ -60,7 +61,7 @@ export function usePayToContact() {
         setLoading(false);
       }
     },
-    [publicKey, xlmBalance, signAndSubmit, show],
+    [publicKey, xlmBalance, signAndSubmit, refreshBalance, show],
   );
 
   return { unlock, loading, error };

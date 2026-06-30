@@ -16,7 +16,8 @@ import TrialOfferForm from '@/components/scout/TrialOfferForm';
 import Button from '@/components/ui/Button';
 import QRModal from '@/components/ui/QRModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
-import TruncatedAddress from '@/components/ui/TruncatedAddress';
+import TransactionStatus from '@/components/ui/TransactionStatus';
+import type { TxStatus } from '@/components/ui/TransactionStatus';
 
 export default function PlayerProfile() {
   const { id } = useParams<{ id: string }>();
@@ -31,6 +32,7 @@ export default function PlayerProfile() {
   } = useSubscription();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
+  const [contactTxStatus, setContactTxStatus] = useState<TxStatus | null>(null);
   const shareButtonRef = useRef<HTMLButtonElement>(null);
   const milestones = player?.milestones ?? [];
   const profileUrl = typeof window !== 'undefined' ? window.location.href : '';
@@ -43,7 +45,13 @@ export default function PlayerProfile() {
     typeof window !== 'undefined' ? window.location.href : '';
 
   async function handleConfirm() {
-    await unlock(id);
+    setContactTxStatus('pending');
+    try {
+      await unlock(id);
+      setContactTxStatus('success');
+    } catch {
+      setContactTxStatus('error');
+    }
     setConfirmOpen(false);
   }
 
@@ -179,6 +187,17 @@ export default function PlayerProfile() {
               ? 'Processing…'
               : `Pay to Contact (${PLATFORM_CONTACT_FEE_XLM} XLM)`}
           </button>
+          {contactTxStatus && (
+            <TransactionStatus
+              status={contactTxStatus}
+              feePaid={
+                contactTxStatus === 'success'
+                  ? String(PLATFORM_CONTACT_FEE_XLM)
+                  : undefined
+              }
+              onHide={() => setContactTxStatus(null)}
+            />
+          )}
           <ConfirmDialog
             isOpen={confirmOpen}
             onConfirm={handleConfirm}

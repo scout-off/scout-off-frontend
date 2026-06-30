@@ -23,6 +23,7 @@ export default function UpdateProfileForm({
   const { show } = useToast();
   const isPaused = useIsPaused();
   const [newCid, setNewCid] = useState<string>('');
+  const [fileError, setFileError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inlineError, setInlineError] = useState<string | null>(null);
 
@@ -33,6 +34,17 @@ export default function UpdateProfileForm({
   const handleUpload = (cid: string) => {
     setNewCid(cid);
     setInlineError(null);
+    setFileError(null);
+  };
+
+  const handleValidationError = (error: string | null) => {
+    setFileError(error);
+    // A new file selection always clears any previous submission error
+    setInlineError(null);
+    if (error) {
+      // A validation failure invalidates any previously accepted CID
+      setNewCid('');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,7 +56,7 @@ export default function UpdateProfileForm({
       });
       return;
     }
-    if (!newCid || isSubmitting) return;
+    if (!newCid || fileError || isSubmitting) return;
 
     setIsSubmitting(true);
     setInlineError(null);
@@ -69,6 +81,9 @@ export default function UpdateProfileForm({
     process.env.NEXT_PUBLIC_IPFS_GATEWAY ?? 'https://gateway.pinata.cloud/ipfs';
   const ipfsMediaUrl = `${ipfsGateway}/${player.ipfsHash}`;
   const truncatedCid = `${player.ipfsHash.slice(0, 8)}…${player.ipfsHash.slice(-8)}`;
+
+  // Submit is only enabled when there is a valid CID and no pending file error
+  const canSubmit = Boolean(newCid) && !fileError && !isSubmitting && !isPaused;
 
   return (
     <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 space-y-6">
@@ -101,7 +116,10 @@ export default function UpdateProfileForm({
           </p>
         </div>
 
-        <VideoUpload onUpload={handleUpload} />
+        <VideoUpload
+          onUpload={handleUpload}
+          onValidationError={handleValidationError}
+        />
 
         <form onSubmit={handleSubmit}>
           {inlineError && (
@@ -115,7 +133,7 @@ export default function UpdateProfileForm({
           )}
           <Button
             type="submit"
-            disabled={!newCid || isSubmitting || isPaused}
+            disabled={!canSubmit}
             isLoading={isSubmitting}
             title={isPaused ? 'Contract is currently paused' : undefined}
             className="w-full"

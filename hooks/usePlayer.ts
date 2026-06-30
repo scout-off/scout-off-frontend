@@ -42,10 +42,33 @@ export function usePlayer(walletOrId: string | null) {
     },
   );
 
+  /**
+   * Write optimistic data into the SWR cache without triggering a re-fetch.
+   * Call this immediately after a write transaction resolves so the UI shows
+   * the submitted data while waiting for on-chain finality.
+   */
+  const optimisticUpdate = (optimisticPlayer: Player) => {
+    mutate(optimisticPlayer, { revalidate: false });
+  };
+
+  /**
+   * Discard any optimistic data and revalidate from the contract.
+   * Pass `discardOptimistic: true` to also clear the cache before fetching
+   * (useful on error paths where the optimistic data should not linger).
+   */
+  const refetch = (options?: { discardOptimistic?: boolean }) => {
+    if (options?.discardOptimistic) {
+      mutate(undefined, { revalidate: true });
+    } else {
+      mutate();
+    }
+  };
+
   return {
     player: player ?? null,
     loading: isValidating && !player,
     error: error?.message ?? null,
-    refetch: () => mutate(),
+    refetch,
+    optimisticUpdate,
   };
 }

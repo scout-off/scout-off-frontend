@@ -2,6 +2,7 @@
 import { useState, useCallback } from 'react';
 import useSWR, { mutate as globalMutate } from 'swr';
 import { filterPlayers } from '@/lib/contract';
+import { searchPlayersByName } from '@/lib/api';
 import type { Player, PlayerFilter } from '@/types';
 
 /**
@@ -30,6 +31,11 @@ export function useScout() {
   const { data, error, isValidating } = useSWR<Player[]>(
     searchKey,
     async (key: string) => {
+      if (key.startsWith('scout:name:')) {
+        const name = key.slice('scout:name:'.length);
+        return searchPlayersByName(name);
+      }
+      // contract filter key: "scout:contract:{region}:{position}:{minLevel}"
       const parts = key.split(':');
       const region = parts[2] ?? '';
       const position = parts[3] ?? '';
@@ -42,6 +48,7 @@ export function useScout() {
       revalidateOnFocus: false,
       errorRetryCount: 2,
     },
+    { dedupingInterval: 60_000, revalidateOnFocus: false, errorRetryCount: 2 },
   );
 
   /** Trigger a search with the given filter. */
@@ -54,5 +61,6 @@ export function useScout() {
     loading: isValidating,
     error: error?.message ?? null,
     search,
+    searchByName,
   };
 }

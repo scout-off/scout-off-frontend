@@ -166,6 +166,28 @@ describe('PlayerOnboardingWizard', () => {
     expect(screen.getByText('Position is required')).toBeInTheDocument();
   });
 
+  it('shows a name-too-short error for a single-character name', () => {
+    renderWizard();
+    fireEvent.change(screen.getByLabelText(/name \*/i), {
+      target: { name: 'name', value: 'A' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    expect(
+      screen.getByText('Name must be at least 2 characters'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows a name-too-long error when name exceeds 50 characters', () => {
+    renderWizard();
+    fireEvent.change(screen.getByLabelText(/name \*/i), {
+      target: { name: 'name', value: 'A'.repeat(51) },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    expect(
+      screen.getByText('Name must be 50 characters or fewer'),
+    ).toBeInTheDocument();
+  });
+
   it('shows an age range error for age below 14', () => {
     renderWizard();
     fireEvent.change(screen.getByLabelText(/age \*/i), {
@@ -188,15 +210,103 @@ describe('PlayerOnboardingWizard', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows a name error on blur when field is left empty', () => {
+    renderWizard();
+    const nameInput = screen.getByLabelText(/name \*/i);
+    fireEvent.focus(nameInput);
+    fireEvent.blur(nameInput, { target: { name: 'name', value: '' } });
+    expect(screen.getByText('Name is required')).toBeInTheDocument();
+  });
+
+  it('shows an age error on blur when age is out of range', () => {
+    renderWizard();
+    const ageInput = screen.getByLabelText(/age \*/i);
+    fireEvent.focus(ageInput);
+    fireEvent.blur(ageInput, { target: { name: 'age', value: '5' } });
+    expect(
+      screen.getByText('Age must be between 14 and 45'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows a nationality error on blur when field is empty', () => {
+    renderWizard();
+    const nationalityInput = screen.getByLabelText(/nationality \*/i);
+    fireEvent.focus(nationalityInput);
+    fireEvent.blur(nationalityInput, {
+      target: { name: 'nationality', value: '' },
+    });
+    expect(screen.getByText('Nationality is required')).toBeInTheDocument();
+  });
+
   it('clears a field error as soon as the user corrects the input', () => {
     renderWizard();
     fireEvent.click(screen.getByRole('button', { name: /continue/i }));
     expect(screen.getByText('Name is required')).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText(/name \*/i), {
-      target: { name: 'name', value: 'J' },
+      target: { name: 'name', value: 'Jo' },
     });
     expect(screen.queryByText('Name is required')).toBeNull();
+  });
+
+  it('disables Continue button after failed validation attempt', () => {
+    renderWizard();
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
+  });
+
+  it('re-enables Continue button once all step-1 fields are valid', () => {
+    renderWizard();
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText(/name \*/i), {
+      target: { name: 'name', value: 'John Doe' },
+    });
+    fireEvent.change(screen.getByLabelText(/age \*/i), {
+      target: { name: 'age', value: '22' },
+    });
+    fireEvent.change(screen.getByLabelText(/nationality \*/i), {
+      target: { name: 'nationality', value: 'Nigerian' },
+    });
+    const [regionSelect, positionSelect] = screen.getAllByRole('combobox');
+    fireEvent.change(regionSelect, {
+      target: { name: 'region', value: 'nigeria' },
+    });
+    fireEvent.change(positionSelect, {
+      target: { name: 'position', value: 'ST' },
+    });
+    expect(screen.getByRole('button', { name: /continue/i })).not.toBeDisabled();
+  });
+
+  // ── aria attributes ────────────────────────────────────────────────────────
+
+  it('sets aria-invalid on inputs that have errors', () => {
+    renderWizard();
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    expect(screen.getByLabelText(/name \*/i)).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+    expect(screen.getByLabelText(/age \*/i)).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+    expect(screen.getByLabelText(/nationality \*/i)).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+  });
+
+  it('sets aria-describedby on the name input pointing to its error message', () => {
+    renderWizard();
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    const nameInput = screen.getByLabelText(/name \*/i);
+    const errorId = nameInput.getAttribute('aria-describedby');
+    expect(errorId).toBeTruthy();
+    expect(document.getElementById(errorId!)).toHaveTextContent(
+      'Name is required',
+    );
   });
 
   // ── Step 1 → Step 2 navigation ────────────────────────────────────────────
@@ -354,6 +464,19 @@ describe('PlayerOnboardingWizard', () => {
       'QmTestCID1234567890',
     );
     expect(onSuccess).toHaveBeenCalledTimes(1);
+    expect(onSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        playerId: expect.any(String),
+        vitals: expect.objectContaining({
+          name: 'John Doe',
+          age: 22,
+          position: 'ST',
+          region: 'nigeria',
+          nationality: 'Nigerian',
+        }),
+        ipfsHash: 'QmTestCID1234567890',
+      }),
+    );
   });
 
   it('shows an error message when contract submission fails', async () => {
