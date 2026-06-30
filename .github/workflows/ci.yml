@@ -35,6 +35,53 @@ jobs:
             console.log('All', manifest.icons.length, 'manifest icons present.');
           "
 
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm install
+
+      # Run tests with coverage collection. Thresholds (lines: 80 %, branches: 70 %,
+      # functions: 80 %, statements: 80 %) are enforced via coverageThreshold in
+      # jest.config.js — the step fails automatically if any threshold is breached.
+      - name: Run tests with coverage
+        run: npm run test -- --coverage --ci --coverageReporters=lcov --coverageReporters=text-summary
+
+      # Upload the lcov report to Codecov for per-file drill-down and PR annotations.
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/lcov.info
+          flags: frontend
+          fail_ci_if_error: false   # don't fail the build if Codecov is unreachable
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      # Also publish a summary directly to the GitHub Actions job summary page
+      # so coverage numbers are visible without leaving GitHub.
+      - name: Write coverage summary to job summary
+        if: always()
+        run: |
+          echo "## Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat coverage/coverage-summary.json 2>/dev/null \
+            | node -e "
+                const data = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+                const t = data.total;
+                console.log('Lines     : ' + t.lines.pct + '% (' + t.lines.covered + '/' + t.lines.total + ')');
+                console.log('Branches  : ' + t.branches.pct + '% (' + t.branches.covered + '/' + t.branches.total + ')');
+                console.log('Functions : ' + t.functions.pct + '% (' + t.functions.covered + '/' + t.functions.total + ')');
+                console.log('Statements: ' + t.statements.pct + '% (' + t.statements.covered + '/' + t.statements.total + ')');
+              " 2>/dev/null || echo "Coverage summary not available"
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
   build-storybook:
     runs-on: ubuntu-latest
     steps:
