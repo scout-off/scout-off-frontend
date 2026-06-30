@@ -1,5 +1,5 @@
 'use client';
-import useSWR from 'swr';
+import useSWR, { mutate as globalMutate } from 'swr';
 import { getPlayer } from '@/lib/contract';
 import type { Player } from '@/types';
 
@@ -8,10 +8,19 @@ import type { Player } from '@/types';
  *   "player:{walletOrId}"
  *
  * Keys are fully deterministic — same walletOrId always produces the same key.
- * SWR deduplicates concurrent requests for the same key, preventing duplicate RPC calls.
+ * SWR deduplicates concurrent requests for the same key, preventing duplicate
+ * RPC calls when multiple components mount with the same player ID.
  */
-function playerKey(walletOrId: string | null): string | null {
+export function playerKey(walletOrId: string | null): string | null {
   return walletOrId ? `player:${walletOrId}` : null;
+}
+
+/**
+ * Imperatively invalidate the player cache for a given wallet / ID.
+ * Call after any write operation that mutates player state.
+ */
+export function invalidatePlayerCache(walletOrId: string): Promise<void> {
+  return globalMutate(playerKey(walletOrId)) as Promise<void>;
 }
 
 export function usePlayer(walletOrId: string | null) {
@@ -27,7 +36,7 @@ export function usePlayer(walletOrId: string | null) {
       return result as Player | null;
     },
     {
-      dedupingInterval: 60_000, // 60-second stale time — no duplicate RPC calls within this window
+      dedupingInterval: 5_000,   // no duplicate RPC calls for the same player within 5 s
       revalidateOnFocus: false,
       errorRetryCount: 2,
     },

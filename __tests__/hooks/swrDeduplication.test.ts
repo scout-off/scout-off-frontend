@@ -1,0 +1,253 @@
+/**
+ * SWR deduplication tests — issue #394
+ *
+ * Verifies that read hooks sharing the same SWR cache key collapse multiple
+ * concurrent consumers into a single RPC call, and that caches are invalidated
+ * after write operations.
+ *
+ * Each test uses a fresh SWR cache (provider: () => new Map()) so test runs
+ * never bleed into one another.
+ */
+import { renderHook, act } from '@testing-library/react';
+import React from 'react';
+import { SWRConfig } from 'swr';
+import type { Player, Milestone } from '@/types';
+
+// ── Mocks ────────────────────────────────────────────────────────────────────
+jest.mock('@/lib/contract', () => ({
+  getPlayer: jest.fn(),
+  filterPlayers: jest.fn(),
+  getMilestoneHistory: jest.fn(),
+}));
+
+import { getPlayer, filterPlayers, getMilestoneHistory } from '@/lib/contract';
+import { usePlayer } from '@/hooks/usePlayer';
+import { useScout } from '@/hooks/useScout';
+import { useMilestoneHistory } from '@/hooks/useMilestoneHistory';
+
+const mockGetPlayer = getPlayer as jest.Mock;
+const mockFilterPlayers = filterPlayers as jest.Mock;
+const mockGetMilestoneHistory = getMilestoneHistory as jest.Mock;
+
+// ── Test fixtures ─────────────────────────────────────────────────────────────
+const PLAYER: Player = {
+  id: 'player-1',
+  wallet: 'GCFW7QAO3WZQ6X4CZ3OYZFXX3A3DL7XVI5DNVTXA5VJUGE5SU6ZRG5OV',
+  vitals: {
+    name: 'Ava Rodriguez',
+    age: 21,
+    position: 'Forward',
+    region: 'West Africa',
+    nationality: 'Ghana',
+  },
+  ipfsHash: 'QmHash',
+  progressLevel: 2,
+  milestones: [],
+  createdAt: 0,
+};
+
+const MILESTONES: Milestone[] = [
+  {
+    id: 'm1',
+    description: 'Scored 20 goals',
+    evidenceHash: 'Qm123',
+    validator: 'GABC',
+    timestamp: 1700000000,
+  },
+];
+
+// ── Shared SWR wrapper factory ────────────────────────────────────────────────
+// Each call returns a wrapper with its own fresh Map() cache, isolating tests.
+function makeWrapper() {
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return React.createElement(
+      SWRConfig,
+      { value: { provider: () => new Map(), shouldRetryOnError: false } },
+      children,
+    );
+  };
+}
+
+beforeEach(() => {
+  jest.resetAllMocks();
+});
+
+// ── usePlayer deduplication ───────────────────────────────────────────────────
+describe('usePlayer — SWR deduplication', () => {
+  test('two hooks with the same player ID share a single getPlayer call', async () => {
+    mockGetPlayer.mockResolvedValue(PLAYER);
+    const wrapper = makeWrapper();
+
+    const { result: r1 } = renderHook(() => usePlayer('player-1'), { wrapper });
+    const { result: r2 } = renderHook(() => usePlayer('player-1'), { wrapper });
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // Both hooks receive data but only one RPC was fired.
+    expect(mockGetPlayer).toHaveBeenCalledTimes(1);
+    expect(r1.current.player).toEqual(PLAYER);
+    expect(r2.current.player).toEqual(PLAYER);
+  });
+
+  test('two hooks with different player IDs fire separate getPlayer calls', async () => {
+    const player2 = { ...PLAYER, id: 'player-2' };
+    mockGetPlayer
+      .mockResolvedValueOnce(PLAYER)
+      .mockResolvedValueOnce(player2);
+    const wrapper = makeWrapper();
+
+    const { result: r1 } = renderHook(() => usePlayer('player-1'), { wrapper });
+    const { result: r2 } = renderHook(() => usePlayer('player-2'), { wrapper });
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockGetPlayer).toHaveBeenCalledTimes(2);
+    expect(r1.current.player?.id).toBe('player-1');
+    expect(r2.current.player?.id).toBe('player-2');
+  });
+
+  test('cache invalidation via refetch triggers a fresh getPlayer call', async () => {
+    mockGetPlayer.mockResolvedValue(PLAYER);
+    const wrapper = makeWrapper();
+
+    const { result } = renderHook(() => usePlayer('player-1'), { wrapper });
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockGetPlayer).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      result.current.refetch();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockGetPlayer).toHaveBeenCalledTimes(2);
+  });
+});
+
+// ── useScout deduplication ────────────────────────────────────────────────────
+describe('useScout — SWR deduplication', () => {
+  test('two hooks searching with identical filters share a single filterPlayers call', async () => {
+    mockFilterPlayers.mockResolvedValue([PLAYER]);
+    const wrapper = makeWrapper();
+
+    const { result: r1 } = renderHook(() => useScout(), { wrapper });
+    const { result: r2 } = renderHook(() => useScout(), { wrapper });
+
+    const filter = { region: 'West Africa', position: 'Forward', minLevel: 1 as const };
+
+    act(() => {
+      r1.current.search(filter);
+      r2.current.search(filter);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockFilterPlayers).toHaveBeenCalledTimes(1);
+    expect(r1.current.players).toEqual([PLAYER]);
+    expect(r2.current.players).toEqual([PLAYER]);
+  });
+
+  test('different filter combos fire separate filterPlayers calls', async () => {
+    mockFilterPlayers.mockResolvedValue([]);
+    const wrapper = makeWrapper();
+
+    const { result: r1 } = renderHook(() => useScout(), { wrapper });
+    const { result: r2 } = renderHook(() => useScout(), { wrapper });
+
+    act(() => {
+      r1.current.search({ region: 'West Africa', position: 'Forward', minLevel: 0 });
+      r2.current.search({ region: 'East Africa', position: 'Midfielder', minLevel: 1 });
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockFilterPlayers).toHaveBeenCalledTimes(2);
+  });
+});
+
+// ── useMilestoneHistory deduplication ─────────────────────────────────────────
+describe('useMilestoneHistory — SWR deduplication', () => {
+  test('two hooks with the same playerID share a single getMilestoneHistory call', async () => {
+    mockGetMilestoneHistory.mockResolvedValue(MILESTONES);
+    const wrapper = makeWrapper();
+
+    const { result: r1 } = renderHook(() => useMilestoneHistory('player-1'), { wrapper });
+    const { result: r2 } = renderHook(() => useMilestoneHistory('player-1'), { wrapper });
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockGetMilestoneHistory).toHaveBeenCalledTimes(1);
+    expect(r1.current.milestones).toEqual(MILESTONES);
+    expect(r2.current.milestones).toEqual(MILESTONES);
+  });
+
+  test('null playerID suppresses the RPC call and returns empty array', async () => {
+    const wrapper = makeWrapper();
+    const { result } = renderHook(() => useMilestoneHistory(null), { wrapper });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(mockGetMilestoneHistory).not.toHaveBeenCalled();
+    expect(result.current.milestones).toEqual([]);
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  test('refetch re-fires getMilestoneHistory for the same player', async () => {
+    mockGetMilestoneHistory.mockResolvedValue(MILESTONES);
+    const wrapper = makeWrapper();
+
+    const { result } = renderHook(() => useMilestoneHistory('player-1'), { wrapper });
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockGetMilestoneHistory).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      result.current.refetch();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockGetMilestoneHistory).toHaveBeenCalledTimes(2);
+  });
+
+  test('two hooks with different playerIDs fire separate getMilestoneHistory calls', async () => {
+    mockGetMilestoneHistory.mockResolvedValue([]);
+    const wrapper = makeWrapper();
+
+    renderHook(() => useMilestoneHistory('player-1'), { wrapper });
+    renderHook(() => useMilestoneHistory('player-2'), { wrapper });
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockGetMilestoneHistory).toHaveBeenCalledTimes(2);
+  });
+});

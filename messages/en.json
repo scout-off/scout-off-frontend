@@ -110,6 +110,12 @@
     "howItWorksDescription": "Sponsors will purchase fractional Player Tokens representing a stake in a player's future earnings. Funds raised go directly toward training, travel, and development costs, while a share of the player's future on-chain revenue is routed back to token holders — all enforced by Soroban smart contracts.",
     "notice": "This page is a placeholder. No tokens can be purchased yet and no blockchain interaction is available here."
   },
+  "progress_levels": {
+    "level0": "Unverified",
+    "level1": "Verified",
+    "level2": "Performance",
+    "level3": "Elite"
+  },
   "contractErrors": {
     "AlreadyInitialized": "This player is already registered.",
     "NotInitialized": "The contract has not been set up yet. Please contact support.",

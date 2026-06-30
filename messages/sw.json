@@ -110,6 +110,12 @@
     "howItWorksDescription": "TODO: Machine-translated - Wafadhili watanunua Tokeni za Mchezaji zinazowakilisha hisa katika mapato ya baadaye ya mchezaji. Fedha zilizokusanywa zinaelekezwa moja kwa moja kwenye mafunzo, usafiri, na maendeleo, huku sehemu ya mapato ya baadaye ya mchezaji kwenye blockchain ikirejeshwa kwa wamiliki wa tokeni — yote yakisimamiwa na mikataba mahiri ya Soroban.",
     "notice": "TODO: Machine-translated - Ukurasa huu ni nafasi ya muda. Hakuna tokeni zinazoweza kununuliwa bado na hakuna mwingiliano wa blockchain unaopatikana hapa."
   },
+  "progress_levels": {
+    "level0": "Haijathibitishwa",
+    "level1": "Imethibitishwa",
+    "level2": "Utendaji",
+    "level3": "Bora"
+  },
   "contractErrors": {
     "AlreadyInitialized": "Mchezaji huyu ameshasajiliwa.",
     "NotInitialized": "Mkataba bado haujasanidiwa. Tafadhali wasiliana na usaidizi.",

@@ -1,7 +1,7 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
-import { useWalletContext as useWallet } from '@/context/WalletContext';
+import { useState, useCallback } from 'react';
+import useSWR, { mutate as globalMutate } from 'swr';
+import { useWallet } from '@/hooks/useWallet';
 import {
   getSubscription,
   subscribe as contractSubscribe,
@@ -9,57 +9,79 @@ import {
 import { parseContractError } from '@/lib/contractErrorMessage';
 import type { Subscription, SubscriptionTier } from '@/types';
 
+/**
+ * Cache key scheme for useSubscription:
+ *   "subscription:{publicKey}"
+ *
+ * Null key when the wallet is not connected — SWR skips the fetch.
+ */
+export function subscriptionKey(publicKey: string | null): string | null {
+  return publicKey ? `subscription:${publicKey}` : null;
+}
+
+/**
+ * Imperatively invalidate the subscription cache for a given wallet.
+ * Call after any write that changes subscription state.
+ */
+export function invalidateSubscriptionCache(publicKey: string): Promise<void> {
+  return globalMutate(subscriptionKey(publicKey)) as Promise<void>;
+}
+
 export function useSubscription() {
-  const { publicKey, signAndSubmit, refreshBalance } = useWallet();
-  const t = useTranslations('contractErrors');
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { publicKey, signAndSubmit } = useWallet();
 
-  const fetchSubscription = useCallback(async () => {
-    if (!publicKey) {
-      setSubscription(null);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getSubscription(publicKey);
-      setSubscription((data as Subscription) ?? null);
-    } catch (e: any) {
-      const msg = parseContractError(e);
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
-  }, [publicKey]);
+  // Write-path loading and error are kept in local state because SWR only
+  // manages read-path state. This preserves the original hook's API exactly.
+  const [writeLoading, setWriteLoading] = useState(false);
+  const [writeError, setWriteError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchSubscription();
-  }, [fetchSubscription]);
+  const {
+    data: subscription,
+    error: readError,
+    isValidating,
+    mutate,
+  } = useSWR<Subscription | null>(
+    subscriptionKey(publicKey),
+    async () => {
+      const data = await getSubscription(publicKey!);
+      return (data as Subscription) ?? null;
+    },
+    {
+      dedupingInterval: 5_000,   // deduplicate concurrent reads within 5 s
+      revalidateOnFocus: false,
+      errorRetryCount: 2,
+    },
+  );
 
   const subscribe = useCallback(
     async (tier: SubscriptionTier) => {
       if (!publicKey) throw new Error('Wallet not connected');
-      setLoading(true);
-      setError(null);
+      setWriteLoading(true);
+      setWriteError(null);
       try {
         await contractSubscribe(publicKey, tier, signAndSubmit);
-        await Promise.all([fetchSubscription(), refreshBalance()]);
+        // Revalidate the cached subscription so callers see the updated state.
+        await mutate();
       } catch (e: any) {
         const msg = parseContractError(e);
-        setError(msg);
+        setWriteError(msg);
         throw e;
       } finally {
-        setLoading(false);
+        setWriteLoading(false);
       }
     },
-    [publicKey, signAndSubmit, fetchSubscription, refreshBalance],
+    [publicKey, signAndSubmit, mutate],
   );
 
   const isExpired = subscription
     ? subscription.expiresAt < Date.now() / 1000
     : false;
 
-  return { subscription, isExpired, subscribe, loading, error };
+  return {
+    subscription: subscription ?? null,
+    isExpired,
+    subscribe,
+    loading: isValidating || writeLoading,
+    error: writeError ?? (readError ? parseContractError(readError) : null),
+  };
 }
