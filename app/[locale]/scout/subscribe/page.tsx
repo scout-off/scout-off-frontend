@@ -196,17 +196,28 @@ function SubscribeContent() {
         </div>
 
         {error && !txStatus && (
-          <p role="alert" className="text-sm text-red-400">{error}</p>
+          <p role="alert" className="text-sm text-red-400">
+            {error}
+          </p>
         )}
         {successMessage && txStatus === 'success' && (
-          <p role="status" aria-live="polite" className="text-sm text-brand-green">{successMessage}</p>
+          <p
+            role="status"
+            aria-live="polite"
+            className="text-sm text-brand-green"
+          >
+            {successMessage}
+          </p>
         )}
         {txStatus && (
           <TransactionStatus
             status={txStatus}
             feePaid={feePaid}
             error={error ?? undefined}
-            onHide={() => { setTxStatus(null); setSuccessMessage(null); }}
+            onHide={() => {
+              setTxStatus(null);
+              setSuccessMessage(null);
+            }}
           />
         )}
       </div>

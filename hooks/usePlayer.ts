@@ -36,7 +36,7 @@ export function usePlayer(walletOrId: string | null) {
       return result as Player | null;
     },
     {
-      dedupingInterval: 5_000,   // no duplicate RPC calls for the same player within 5 s
+      dedupingInterval: 5_000, // no duplicate RPC calls for the same player within 5 s
       revalidateOnFocus: false,
       errorRetryCount: 2,
     },

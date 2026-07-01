@@ -172,7 +172,9 @@ describe('UpdateProfileForm', () => {
       screen.getByRole('button', { name: /upload invalid type/i }),
     );
 
-    expect(screen.getByRole('button', { name: /update profile/i })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /update profile/i }),
+    ).toBeDisabled();
   });
 
   it('disables submit button when file is oversized', () => {
@@ -180,7 +182,9 @@ describe('UpdateProfileForm', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /upload oversized/i }));
 
-    expect(screen.getByRole('button', { name: /update profile/i })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /update profile/i }),
+    ).toBeDisabled();
   });
 
   it('re-enables submit after a validation error is followed by a valid upload', () => {
@@ -189,11 +193,15 @@ describe('UpdateProfileForm', () => {
     fireEvent.click(
       screen.getByRole('button', { name: /upload invalid type/i }),
     );
-    expect(screen.getByRole('button', { name: /update profile/i })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /update profile/i }),
+    ).toBeDisabled();
 
     // Valid upload clears the error and provides a CID
     fireEvent.click(screen.getByRole('button', { name: /upload new media/i }));
-    expect(screen.getByRole('button', { name: /update profile/i })).toBeEnabled();
+    expect(
+      screen.getByRole('button', { name: /update profile/i }),
+    ).toBeEnabled();
   });
 
   // ── Inline error messages ───────────────────────────────────────────────────
@@ -229,7 +237,9 @@ describe('UpdateProfileForm', () => {
     fireEvent.click(
       screen.getByRole('button', { name: /upload invalid type/i }),
     );
-    expect(screen.getByText(/file type .* is not supported/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/file type .* is not supported/i),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /upload new media/i }));
     expect(

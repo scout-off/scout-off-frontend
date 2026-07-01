@@ -32,9 +32,7 @@ describe('ErrorBoundary', () => {
         <ThrowingComponent />
       </ErrorBoundary>,
     );
-    expect(
-      screen.getByText('Something went wrong'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
     expect(
       screen.getByText(
         'An error occurred while rendering this page. Please try again.',
@@ -50,9 +48,7 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>,
     );
     expect(screen.getByText('Custom Fallback')).toBeInTheDocument();
-    expect(
-      screen.queryByText('Something went wrong'),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Something went wrong')).not.toBeInTheDocument();
   });
 
   it('calls Sentry when an error is caught and Sentry is available', () => {
@@ -107,16 +103,12 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>,
     );
 
-    expect(
-      screen.getByText('Something went wrong'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
 
     throwError = false;
 
     fireEvent.click(screen.getByText('Try again'));
 
-    expect(
-      screen.getByText('Recovered successfully'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Recovered successfully')).toBeInTheDocument();
   });
 });

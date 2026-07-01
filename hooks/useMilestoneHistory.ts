@@ -37,7 +37,7 @@ export function useMilestoneHistory(playerID: string | null) {
       return (result as Milestone[] | null) ?? [];
     },
     {
-      dedupingInterval: 5_000,   // no duplicate RPC calls for the same player within 5 s
+      dedupingInterval: 5_000, // no duplicate RPC calls for the same player within 5 s
       revalidateOnFocus: false,
       errorRetryCount: 2,
     },

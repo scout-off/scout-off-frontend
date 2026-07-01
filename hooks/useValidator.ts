@@ -18,7 +18,9 @@ const VALIDATORS_KEY = 'contract:validators';
  * Exported for use in tests (beforeEach cleanup) and after admin write operations.
  */
 export function invalidateValidatorCache(): Promise<void> {
-  return globalMutate(VALIDATORS_KEY, undefined, { revalidate: false }) as Promise<void>;
+  return globalMutate(VALIDATORS_KEY, undefined, {
+    revalidate: false,
+  }) as Promise<void>;
 }
 
 export function useValidator(walletAddress?: string | null) {
@@ -71,7 +73,11 @@ export function useValidator(walletAddress?: string | null) {
       setLoading(true);
       setError(null);
       try {
-        const xdr = await buildRevokeMilestone(publicKey, playerId, milestoneId);
+        const xdr = await buildRevokeMilestone(
+          publicKey,
+          playerId,
+          milestoneId,
+        );
         const result = await signAndSubmit(xdr);
         // Invalidate the player cache so callers see updated progressLevel.
         await globalMutate(`player:${playerId}`);

@@ -270,7 +270,10 @@ function PlayerDashboardContent() {
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-gray-300">
-                      Player ID: <span className="font-mono text-white">{successPlayerId}</span>
+                      Player ID:{' '}
+                      <span className="font-mono text-white">
+                        {successPlayerId}
+                      </span>
                     </span>
                     <button
                       type="button"

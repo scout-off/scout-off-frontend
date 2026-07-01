@@ -90,7 +90,13 @@ const mockUsePlayer = usePlayer as jest.Mock;
 const basePlayer = {
   id: 'player-1',
   wallet: 'GABC123XYZ',
-  vitals: { name: 'Test Player', age: 22, position: 'ST', region: 'West Africa', nationality: 'GH' },
+  vitals: {
+    name: 'Test Player',
+    age: 22,
+    position: 'ST',
+    region: 'West Africa',
+    nationality: 'GH',
+  },
   stats: { goals: 10, assists: 5, appearances: 20 },
   ipfsHash: 'QmTestHash123',
   progressLevel: 1 as const,
@@ -106,26 +112,42 @@ beforeEach(() => {
 
 describe('PlayerProfile page', () => {
   it('shows skeleton while loading', () => {
-    mockUsePlayer.mockReturnValue({ player: null, loading: true, refetch: jest.fn() });
+    mockUsePlayer.mockReturnValue({
+      player: null,
+      loading: true,
+      refetch: jest.fn(),
+    });
     render(<PlayerProfile />);
     expect(screen.getByTestId('skeleton')).toBeInTheDocument();
   });
 
   it('shows not-found message when player is null', () => {
-    mockUsePlayer.mockReturnValue({ player: null, loading: false, refetch: jest.fn() });
+    mockUsePlayer.mockReturnValue({
+      player: null,
+      loading: false,
+      refetch: jest.fn(),
+    });
     render(<PlayerProfile />);
     expect(screen.getByText('Player not found.')).toBeInTheDocument();
   });
 
   it('renders player name and vitals', () => {
-    mockUsePlayer.mockReturnValue({ player: basePlayer, loading: false, refetch: jest.fn() });
+    mockUsePlayer.mockReturnValue({
+      player: basePlayer,
+      loading: false,
+      refetch: jest.fn(),
+    });
     render(<PlayerProfile />);
     expect(screen.getByText('Test Player')).toBeInTheDocument();
     expect(screen.getByText(/ST · West Africa · Age 22/)).toBeInTheDocument();
   });
 
   it('renders IPFSMediaGallery with the player ipfsHash', () => {
-    mockUsePlayer.mockReturnValue({ player: basePlayer, loading: false, refetch: jest.fn() });
+    mockUsePlayer.mockReturnValue({
+      player: basePlayer,
+      loading: false,
+      refetch: jest.fn(),
+    });
     render(<PlayerProfile />);
     const gallery = screen.getByTestId('ipfs-gallery');
     expect(gallery).toBeInTheDocument();
@@ -155,7 +177,11 @@ describe('PlayerProfile page', () => {
   });
 
   it('shows "no milestones" message when milestones is empty', () => {
-    mockUsePlayer.mockReturnValue({ player: basePlayer, loading: false, refetch: jest.fn() });
+    mockUsePlayer.mockReturnValue({
+      player: basePlayer,
+      loading: false,
+      refetch: jest.fn(),
+    });
     render(<PlayerProfile />);
     expect(screen.getByText('No milestones recorded yet.')).toBeInTheDocument();
   });
@@ -173,13 +199,21 @@ describe('PlayerProfile page', () => {
         },
       ],
     };
-    mockUsePlayer.mockReturnValue({ player, loading: false, refetch: jest.fn() });
+    mockUsePlayer.mockReturnValue({
+      player,
+      loading: false,
+      refetch: jest.fn(),
+    });
     render(<PlayerProfile />);
     expect(screen.getByText('Scored 5 goals')).toBeInTheDocument();
   });
 
   it('does not render pay-to-contact button when no wallet connected', () => {
-    mockUsePlayer.mockReturnValue({ player: basePlayer, loading: false, refetch: jest.fn() });
+    mockUsePlayer.mockReturnValue({
+      player: basePlayer,
+      loading: false,
+      refetch: jest.fn(),
+    });
     render(<PlayerProfile />);
     expect(screen.queryByText(/Pay to Contact/)).not.toBeInTheDocument();
   });

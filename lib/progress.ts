@@ -9,10 +9,30 @@ export interface ProgressLevelInfo {
 }
 
 export const PROGRESS_LEVELS: ProgressLevelInfo[] = [
-  { level: 0, label: 'Unverified', badgeLabel: 'Unverified', color: 'bg-gray-600' },
-  { level: 1, label: 'Verified Identity', badgeLabel: 'Verified', color: 'bg-blue-400' },
-  { level: 2, label: 'Performance Milestones', badgeLabel: 'Performance', color: 'bg-amber-400' },
-  { level: 3, label: 'Elite Tier', badgeLabel: 'Elite', color: 'bg-emerald-400' },
+  {
+    level: 0,
+    label: 'Unverified',
+    badgeLabel: 'Unverified',
+    color: 'bg-gray-600',
+  },
+  {
+    level: 1,
+    label: 'Verified Identity',
+    badgeLabel: 'Verified',
+    color: 'bg-blue-400',
+  },
+  {
+    level: 2,
+    label: 'Performance Milestones',
+    badgeLabel: 'Performance',
+    color: 'bg-amber-400',
+  },
+  {
+    level: 3,
+    label: 'Elite Tier',
+    badgeLabel: 'Elite',
+    color: 'bg-emerald-400',
+  },
 ];
 
 export function getProgressLabel(level: number): string {

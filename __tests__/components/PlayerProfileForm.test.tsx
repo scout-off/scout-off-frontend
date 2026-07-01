@@ -189,7 +189,9 @@ describe('PlayerProfileForm', () => {
     const ageInput = screen.getByLabelText(/age \*/i);
     fireEvent.focus(ageInput);
     fireEvent.blur(ageInput, { target: { name: 'age', value: '5' } });
-    expect(screen.getByText('Age must be between 14 and 45')).toBeInTheDocument();
+    expect(
+      screen.getByText('Age must be between 14 and 45'),
+    ).toBeInTheDocument();
   });
 
   it('disables Continue button after failed validation until errors are resolved', () => {
@@ -221,7 +223,9 @@ describe('PlayerProfileForm', () => {
     fireEvent.change(positionSelect, {
       target: { name: 'position', value: 'GK' },
     });
-    expect(screen.getByRole('button', { name: /continue/i })).not.toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /continue/i }),
+    ).not.toBeDisabled();
   });
 
   // ── aria attributes ──────────────────────────────────────────────────────

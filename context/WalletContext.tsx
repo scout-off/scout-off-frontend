@@ -39,7 +39,9 @@ export const WALLET_INSTALL_URLS: Record<WalletProvider, string> = {
 };
 
 /** Checks whether a given wallet provider's extension/app is installed. */
-export async function isWalletInstalled(provider: WalletProvider): Promise<boolean> {
+export async function isWalletInstalled(
+  provider: WalletProvider,
+): Promise<boolean> {
   try {
     await walletAdapters[provider].getPublicKey();
     return true;
@@ -68,7 +70,10 @@ function getStoredSession(): StoredSession | null {
 
 function setStoredSession(publicKey: string, provider: WalletProvider) {
   if (typeof window !== 'undefined') {
-    localStorage.setItem(WALLET_SESSION_KEY, JSON.stringify({ publicKey, provider }));
+    localStorage.setItem(
+      WALLET_SESSION_KEY,
+      JSON.stringify({ publicKey, provider }),
+    );
   }
 }
 
@@ -107,12 +112,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [connectingProvider, setConnectingProvider] = useState<WalletProvider | null>(null);
+  const [connectingProvider, setConnectingProvider] =
+    useState<WalletProvider | null>(null);
   const [isRestoringSession, setIsRestoringSession] = useState(true);
   const [xlmBalance, setXlmBalance] = useState<string | null>(null);
   const [balanceError, setBalanceError] = useState<string | null>(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
-  const [walletProvider, setWalletProvider] = useState<WalletProvider | null>(null);
+  const [walletProvider, setWalletProvider] = useState<WalletProvider | null>(
+    null,
+  );
   const [showWalletModal, setShowWalletModal] = useState(false);
 
   const walletProviderInfo: WalletProviderInfo | null = walletProvider
@@ -228,7 +236,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   );
 
   const disconnect = useCallback(() => {
-    Promise.resolve(fetch('/api/auth/sep10', { method: 'DELETE' })).catch(() => {});
+    Promise.resolve(fetch('/api/auth/sep10', { method: 'DELETE' })).catch(
+      () => {},
+    );
     setPublicKey(null);
     setIsAuthenticated(false);
     setXlmBalance(null);
@@ -247,7 +257,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         NETWORK,
       );
       const tx = TransactionBuilder.fromXDR(signedXdr, NETWORK);
-      const result = await rpc.sendTransaction(tx as Parameters<typeof rpc.sendTransaction>[0]);
+      const result = await rpc.sendTransaction(
+        tx as Parameters<typeof rpc.sendTransaction>[0],
+      );
       return (result as { hash: string }).hash;
     },
     [publicKey, walletProvider],

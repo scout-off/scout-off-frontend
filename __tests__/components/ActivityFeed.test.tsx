@@ -65,9 +65,7 @@ describe('ActivityFeed', () => {
 
     await waitFor(() => {
       expect(screen.getByText('John Doe registered')).toBeInTheDocument();
-      expect(
-        screen.getByText('Jane approved Speed Drill'),
-      ).toBeInTheDocument();
+      expect(screen.getByText('Jane approved Speed Drill')).toBeInTheDocument();
       expect(
         screen.getByText('player-3 received a trial offer'),
       ).toBeInTheDocument();
@@ -96,7 +94,10 @@ describe('ActivityFeed', () => {
   it('shows a loading skeleton while events are being fetched', async () => {
     let resolvePromise!: (value: unknown) => void;
     mockGet.mockImplementation(
-      () => new Promise((resolve) => { resolvePromise = resolve; }),
+      () =>
+        new Promise((resolve) => {
+          resolvePromise = resolve;
+        }),
     );
 
     const { container } = render(<ActivityFeed />);

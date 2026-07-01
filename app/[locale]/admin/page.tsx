@@ -179,7 +179,11 @@ function AdminDashboardContent() {
           onClick={() => {
             setLoading(true);
             setFetchError(false);
-            Promise.all([getValidators(), getPlatformFees(), getContractPaused()])
+            Promise.all([
+              getValidators(),
+              getPlatformFees(),
+              getContractPaused(),
+            ])
               .then(([v, f, p]) => {
                 setValidators(v);
                 setFees(f as number);
@@ -187,7 +191,10 @@ function AdminDashboardContent() {
               })
               .catch(() => {
                 setFetchError(true);
-                show({ message: 'Failed to load admin data.', variant: 'error' });
+                show({
+                  message: 'Failed to load admin data.',
+                  variant: 'error',
+                });
               })
               .finally(() => setLoading(false));
           }}
@@ -319,7 +326,10 @@ function AdminDashboardContent() {
                 className="flex items-center justify-between gap-4 text-sm"
               >
                 <span className="text-gray-300 font-mono truncate">
-                  <TruncatedAddress address={v.address} className="text-gray-300" />
+                  <TruncatedAddress
+                    address={v.address}
+                    className="text-gray-300"
+                  />
                 </span>
                 <button
                   disabled={paused}
@@ -364,11 +374,17 @@ function AdminDashboardContent() {
                     {EVENT_LABELS[event.type]}
                   </span>
                   <span className="font-mono text-gray-500 truncate">
-                    <TruncatedAddress address={event.actor} className="text-gray-500" />
+                    <TruncatedAddress
+                      address={event.actor}
+                      className="text-gray-500"
+                    />
                   </span>
                   {event.subjectId && (
                     <span className="font-mono text-gray-500 truncate">
-                      <TruncatedAddress address={event.subjectId} className="text-gray-500" />
+                      <TruncatedAddress
+                        address={event.subjectId}
+                        className="text-gray-500"
+                      />
                     </span>
                   )}
                   <span className="text-gray-500 shrink-0 ml-auto">

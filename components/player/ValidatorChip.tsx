@@ -100,7 +100,10 @@ export default function ValidatorChip({ address }: ValidatorChipProps) {
       {/* Status dot */}
       <span
         aria-hidden="true"
-        className={['w-1.5 h-1.5 rounded-full flex-shrink-0', dotClasses[status]].join(' ')}
+        className={[
+          'w-1.5 h-1.5 rounded-full flex-shrink-0',
+          dotClasses[status],
+        ].join(' ')}
       />
 
       {/* Label: address always visible; status text only when resolved */}
@@ -108,7 +111,9 @@ export default function ValidatorChip({ address }: ValidatorChipProps) {
 
       {status !== 'loading' && status !== 'unknown' && (
         <>
-          <span aria-hidden="true" className="opacity-40">·</span>
+          <span aria-hidden="true" className="opacity-40">
+            ·
+          </span>
           <span>{statusLabel[status]}</span>
         </>
       )}

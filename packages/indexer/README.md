@@ -43,6 +43,7 @@ Stellar Network
 ```
 
 Key design decisions:
+
 - **Zero external dependencies** for metrics — plain TypeScript counters/gauges, no `prom-client`.
 - **Singleton `IndexerMetrics`** — safe to import from multiple modules; one registry per process.
 - **Fixed-size sliding window** (500 entries, 60 s) bounds memory growth while still producing meaningful rate and p95 latency values.
@@ -97,15 +98,15 @@ npx ts-node-dev src/server.ts
 
 ## Environment Variables
 
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `PORT` | No | `3001` | HTTP server port for `/health` and `/metrics` |
-| `SOROBAN_RPC_URL` | Yes | — | Soroban RPC endpoint, e.g. `https://soroban-testnet.stellar.org` |
-| `CONTRACT_ID` | Yes | — | Deployed ScoutOff contract address (Strkey format) |
-| `NETWORK_PASSPHRASE` | No | Testnet passphrase | Stellar network passphrase used to decode event XDR |
-| `POLL_INTERVAL_MS` | No | `5000` | How often (ms) to poll for new ledgers |
-| `START_LEDGER` | No | `0` | Ledger sequence to start indexing from (0 = latest) |
-| `LOG_LEVEL` | No | `info` | Log verbosity: `debug`, `info`, `warn`, `error` |
+| Variable             | Required | Default            | Description                                                      |
+| -------------------- | -------- | ------------------ | ---------------------------------------------------------------- |
+| `PORT`               | No       | `3001`             | HTTP server port for `/health` and `/metrics`                    |
+| `SOROBAN_RPC_URL`    | Yes      | —                  | Soroban RPC endpoint, e.g. `https://soroban-testnet.stellar.org` |
+| `CONTRACT_ID`        | Yes      | —                  | Deployed ScoutOff contract address (Strkey format)               |
+| `NETWORK_PASSPHRASE` | No       | Testnet passphrase | Stellar network passphrase used to decode event XDR              |
+| `POLL_INTERVAL_MS`   | No       | `5000`             | How often (ms) to poll for new ledgers                           |
+| `START_LEDGER`       | No       | `0`                | Ledger sequence to start indexing from (0 = latest)              |
+| `LOG_LEVEL`          | No       | `info`             | Log verbosity: `debug`, `info`, `warn`, `error`                  |
 
 Copy `.env.example` in the repo root and fill in the required values:
 
@@ -123,87 +124,87 @@ The indexer processes seven event types emitted by the ScoutOff contract. All ev
 
 Emitted when a player calls `register_player`.
 
-| Field | Type | Description |
-|---|---|---|
-| `player_id` | `string` | On-chain player identifier |
-| `wallet` | `string` | Stellar public key of the player |
+| Field       | Type     | Description                          |
+| ----------- | -------- | ------------------------------------ |
+| `player_id` | `string` | On-chain player identifier           |
+| `wallet`    | `string` | Stellar public key of the player     |
 | `ipfs_hash` | `string` | IPFS CID of the initial media upload |
-| `ledger` | `number` | Ledger sequence |
-| `timestamp` | `number` | Unix timestamp (seconds) |
+| `ledger`    | `number` | Ledger sequence                      |
+| `timestamp` | `number` | Unix timestamp (seconds)             |
 
 ### `milestone_approved`
 
 Emitted when a validator calls `approve_milestone`.
 
-| Field | Type | Description |
-|---|---|---|
-| `player_id` | `string` | Target player |
-| `milestone_id` | `string` | Unique milestone identifier |
-| `description` | `string` | Human-readable milestone text |
-| `validator` | `string` | Validator's Stellar public key |
-| `new_level` | `number` | Player's progress level after approval (1–3) |
-| `ledger` | `number` | Ledger sequence |
-| `timestamp` | `number` | Unix timestamp (seconds) |
+| Field          | Type     | Description                                  |
+| -------------- | -------- | -------------------------------------------- |
+| `player_id`    | `string` | Target player                                |
+| `milestone_id` | `string` | Unique milestone identifier                  |
+| `description`  | `string` | Human-readable milestone text                |
+| `validator`    | `string` | Validator's Stellar public key               |
+| `new_level`    | `number` | Player's progress level after approval (1–3) |
+| `ledger`       | `number` | Ledger sequence                              |
+| `timestamp`    | `number` | Unix timestamp (seconds)                     |
 
 ### `milestone_revoked`
 
 Emitted when a validator or admin calls `revoke_milestone`.
 
-| Field | Type | Description |
-|---|---|---|
-| `player_id` | `string` | Target player |
-| `milestone_id` | `string` | Revoked milestone identifier |
-| `revoked_by` | `string` | Stellar public key of revoker |
-| `ledger` | `number` | Ledger sequence |
-| `timestamp` | `number` | Unix timestamp (seconds) |
+| Field          | Type     | Description                   |
+| -------------- | -------- | ----------------------------- |
+| `player_id`    | `string` | Target player                 |
+| `milestone_id` | `string` | Revoked milestone identifier  |
+| `revoked_by`   | `string` | Stellar public key of revoker |
+| `ledger`       | `number` | Ledger sequence               |
+| `timestamp`    | `number` | Unix timestamp (seconds)      |
 
 ### `scout_subscribed`
 
 Emitted when a scout calls `subscribe`.
 
-| Field | Type | Description |
-|---|---|---|
-| `scout` | `string` | Scout's Stellar public key |
-| `tier` | `string` | Subscription tier (`basic` \| `pro` \| `elite`) |
-| `expiry` | `number` | Unix timestamp when subscription expires |
-| `fee_xlm` | `string` | XLM amount paid (string to preserve precision) |
-| `ledger` | `number` | Ledger sequence |
-| `timestamp` | `number` | Unix timestamp (seconds) |
+| Field       | Type     | Description                                     |
+| ----------- | -------- | ----------------------------------------------- |
+| `scout`     | `string` | Scout's Stellar public key                      |
+| `tier`      | `string` | Subscription tier (`basic` \| `pro` \| `elite`) |
+| `expiry`    | `number` | Unix timestamp when subscription expires        |
+| `fee_xlm`   | `string` | XLM amount paid (string to preserve precision)  |
+| `ledger`    | `number` | Ledger sequence                                 |
+| `timestamp` | `number` | Unix timestamp (seconds)                        |
 
 ### `player_contacted`
 
 Emitted when a scout calls `pay_to_contact`.
 
-| Field | Type | Description |
-|---|---|---|
-| `scout` | `string` | Scout's Stellar public key |
+| Field       | Type     | Description                       |
+| ----------- | -------- | --------------------------------- |
+| `scout`     | `string` | Scout's Stellar public key        |
 | `player_id` | `string` | Player whose contact was unlocked |
-| `fee_xlm` | `string` | XLM fee paid |
-| `ledger` | `number` | Ledger sequence |
-| `timestamp` | `number` | Unix timestamp (seconds) |
+| `fee_xlm`   | `string` | XLM fee paid                      |
+| `ledger`    | `number` | Ledger sequence                   |
+| `timestamp` | `number` | Unix timestamp (seconds)          |
 
 ### `trial_offer_logged`
 
 Emitted when a scout calls `log_trial_offer` (advances player to Level 3).
 
-| Field | Type | Description |
-|---|---|---|
-| `scout` | `string` | Scout's Stellar public key |
+| Field       | Type     | Description                   |
+| ----------- | -------- | ----------------------------- |
+| `scout`     | `string` | Scout's Stellar public key    |
 | `player_id` | `string` | Player who received the offer |
-| `details` | `string` | Free-text trial offer details |
-| `ledger` | `number` | Ledger sequence |
-| `timestamp` | `number` | Unix timestamp (seconds) |
+| `details`   | `string` | Free-text trial offer details |
+| `ledger`    | `number` | Ledger sequence               |
+| `timestamp` | `number` | Unix timestamp (seconds)      |
 
 ### `fees_withdrawn`
 
 Emitted when an admin calls `withdraw_fees`.
 
-| Field | Type | Description |
-|---|---|---|
-| `to` | `string` | Recipient Stellar public key |
-| `amount_xlm` | `string` | XLM amount withdrawn |
-| `ledger` | `number` | Ledger sequence |
-| `timestamp` | `number` | Unix timestamp (seconds) |
+| Field        | Type     | Description                  |
+| ------------ | -------- | ---------------------------- |
+| `to`         | `string` | Recipient Stellar public key |
+| `amount_xlm` | `string` | XLM amount withdrawn         |
+| `ledger`     | `number` | Ledger sequence              |
+| `timestamp`  | `number` | Unix timestamp (seconds)     |
 
 ---
 
@@ -237,23 +238,23 @@ console.log(snap.ingestionRatePerSec, snap.latencyP95Ms, snap.isHealthy);
 
 ### What It Tracks
 
-| Metric | Description |
-|---|---|
-| `totalProcessed` | Cumulative events processed (successes + failures) |
-| `totalSuccesses` | Cumulative successfully processed events |
-| `totalFailures` | Cumulative failed processing attempts |
-| `totalRetries` | Cumulative retry attempts |
-| `totalBytesIngested` | Cumulative payload bytes processed |
-| `eventCounts` | Per-`EventType` success counter |
-| `lastProcessedAt` | Unix ms timestamp of the last processed event |
-| `consecutiveErrors` | Unbroken run of failures since last success |
-| `isHealthy` | `false` when `consecutiveErrors ≥ 5` |
-| `ingestionRatePerSec` | Events per second over the last 60 s sliding window |
-| `errorRatePercent` | `(failures / processed) × 100` (lifetime) |
-| `successRatePercent` | `(successes / processed) × 100` (lifetime) |
-| `latencyAvgMs` | Exponential moving average latency (α = 0.1) |
-| `latencyP95Ms` | 95th-percentile latency over 60 s sliding window |
-| `throughputBytesPerSec` | Bytes per second over 60 s sliding window |
+| Metric                  | Description                                         |
+| ----------------------- | --------------------------------------------------- |
+| `totalProcessed`        | Cumulative events processed (successes + failures)  |
+| `totalSuccesses`        | Cumulative successfully processed events            |
+| `totalFailures`         | Cumulative failed processing attempts               |
+| `totalRetries`          | Cumulative retry attempts                           |
+| `totalBytesIngested`    | Cumulative payload bytes processed                  |
+| `eventCounts`           | Per-`EventType` success counter                     |
+| `lastProcessedAt`       | Unix ms timestamp of the last processed event       |
+| `consecutiveErrors`     | Unbroken run of failures since last success         |
+| `isHealthy`             | `false` when `consecutiveErrors ≥ 5`                |
+| `ingestionRatePerSec`   | Events per second over the last 60 s sliding window |
+| `errorRatePercent`      | `(failures / processed) × 100` (lifetime)           |
+| `successRatePercent`    | `(successes / processed) × 100` (lifetime)          |
+| `latencyAvgMs`          | Exponential moving average latency (α = 0.1)        |
+| `latencyP95Ms`          | 95th-percentile latency over 60 s sliding window    |
+| `throughputBytesPerSec` | Bytes per second over 60 s sliding window           |
 
 ### Singleton and Testing
 
@@ -291,11 +292,11 @@ curl http://localhost:3001/health
 }
 ```
 
-| Field | Type | Description |
-|---|---|---|
-| `status` | `"ok"` \| `"degraded"` | `"degraded"` when no ledger update in the last 60 s |
-| `lastLedger` | `number` | Last indexed ledger sequence (0 = none yet) |
-| `uptime` | `number` | Server uptime in seconds |
+| Field        | Type                   | Description                                         |
+| ------------ | ---------------------- | --------------------------------------------------- |
+| `status`     | `"ok"` \| `"degraded"` | `"degraded"` when no ledger update in the last 60 s |
+| `lastLedger` | `number`               | Last indexed ledger sequence (0 = none yet)         |
+| `uptime`     | `number`               | Server uptime in seconds                            |
 
 #### `GET /metrics`
 
@@ -341,16 +342,16 @@ indexer_healthy 1
 
 ### Metric Reference
 
-| Metric | Type | Description |
-|---|---|---|
-| `indexer_events_total{type}` | counter | Per-event-type success count |
-| `indexer_processed_total` | counter | Total events processed |
-| `indexer_errors_total` | counter | Total failures |
-| `indexer_error_rate_percent` | gauge | Rolling failure rate |
-| `indexer_latency_avg_ms` | gauge | EMA processing latency |
-| `indexer_latency_p95_ms` | gauge | p95 latency over 60 s window |
-| `indexer_ledger_lag` | gauge | Network head minus last indexed ledger |
-| `indexer_healthy` | gauge | `1` = healthy, `0` = ≥ 5 consecutive errors |
+| Metric                       | Type    | Description                                 |
+| ---------------------------- | ------- | ------------------------------------------- |
+| `indexer_events_total{type}` | counter | Per-event-type success count                |
+| `indexer_processed_total`    | counter | Total events processed                      |
+| `indexer_errors_total`       | counter | Total failures                              |
+| `indexer_error_rate_percent` | gauge   | Rolling failure rate                        |
+| `indexer_latency_avg_ms`     | gauge   | EMA processing latency                      |
+| `indexer_latency_p95_ms`     | gauge   | p95 latency over 60 s window                |
+| `indexer_ledger_lag`         | gauge   | Network head minus last indexed ledger      |
+| `indexer_healthy`            | gauge   | `1` = healthy, `0` = ≥ 5 consecutive errors |
 
 ---
 
@@ -377,5 +378,6 @@ npx jest packages/indexer --coverage
 ```
 
 Test files live in:
+
 - `src/__tests__/server.test.ts` — HTTP server endpoint tests
 - `src/metrics/__tests__/` — `IndexerMetrics` unit tests (singleton, counters, sliding window, p95, health flag)

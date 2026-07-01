@@ -133,4 +133,3 @@ function IPFSMediaItem({ cid }: IPFSMediaItemProps) {
     </div>
   );
 }
-

@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { useState, useRef, FormEvent } from "react";
-import { useWallet } from "@/hooks/useWallet";
-import { useValidator } from "@/hooks/useValidator";
-import useIsPaused from "@/hooks/useIsPaused";
-import { buildRevokeMilestone } from "@/lib/contract";
-import { parseContractError } from "@/lib/contractErrorMessage";
-import ConfirmDialog from "@/components/ui/ConfirmDialog";
-import type { Player } from "@/types";
+import { useState, useRef, FormEvent } from 'react';
+import { useWallet } from '@/hooks/useWallet';
+import { useValidator } from '@/hooks/useValidator';
+import useIsPaused from '@/hooks/useIsPaused';
+import { buildRevokeMilestone } from '@/lib/contract';
+import { parseContractError } from '@/lib/contractErrorMessage';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import type { Player } from '@/types';
 
 interface RevokeFormProps {
   player?: Player;
@@ -23,8 +23,8 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
   const [selected, setSelected] = useState<string | null>(null);
 
   // Text-input mode state
-  const [playerId, setPlayerId] = useState("");
-  const [milestoneId, setMilestoneId] = useState("");
+  const [playerId, setPlayerId] = useState('');
+  const [milestoneId, setMilestoneId] = useState('');
   const [validationErrors, setValidationErrors] = useState<{
     playerId?: string;
     milestoneId?: string;
@@ -87,9 +87,9 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
           type="button"
           disabled={!selected || validatorLoading || paused}
           onClick={handleRevokeClick}
-          aria-describedby={txError ? "revoke-error-summary" : undefined}
+          aria-describedby={txError ? 'revoke-error-summary' : undefined}
         >
-          {validatorLoading ? "Revoking…" : "Revoke Selected Milestone"}
+          {validatorLoading ? 'Revoking…' : 'Revoke Selected Milestone'}
         </button>
         <ConfirmDialog
           isOpen={showConfirm}
@@ -109,8 +109,8 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
 
   const validate = () => {
     const errors: { playerId?: string; milestoneId?: string } = {};
-    if (!playerId.trim()) errors.playerId = "Player ID is required";
-    if (!milestoneId.trim()) errors.milestoneId = "Milestone ID is required";
+    if (!playerId.trim()) errors.playerId = 'Player ID is required';
+    if (!milestoneId.trim()) errors.milestoneId = 'Milestone ID is required';
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -120,7 +120,7 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
     setError(null);
     if (!validate()) return;
     if (!publicKey) {
-      setError("Wallet not connected");
+      setError('Wallet not connected');
       return;
     }
     setShowConfirm(true);
@@ -133,8 +133,8 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
       const xdr = await buildRevokeMilestone(publicKey!, playerId, milestoneId);
       await signAndSubmit(xdr);
       onSuccess();
-      setPlayerId("");
-      setMilestoneId("");
+      setPlayerId('');
+      setMilestoneId('');
     } catch (err) {
       setError(parseContractError(err));
     } finally {
@@ -158,11 +158,13 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
             type="text"
             value={playerId}
             onChange={(e) => setPlayerId(e.target.value)}
-            className={`input ${validationErrors.playerId ? "border-red-500" : ""}`}
+            className={`input ${validationErrors.playerId ? 'border-red-500' : ''}`}
             placeholder="Enter player ID"
           />
           {validationErrors.playerId && (
-            <p className="text-sm text-red-500 mt-1">{validationErrors.playerId}</p>
+            <p className="text-sm text-red-500 mt-1">
+              {validationErrors.playerId}
+            </p>
           )}
         </div>
         <div>
@@ -177,11 +179,13 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
             type="text"
             value={milestoneId}
             onChange={(e) => setMilestoneId(e.target.value)}
-            className={`input ${validationErrors.milestoneId ? "border-red-500" : ""}`}
+            className={`input ${validationErrors.milestoneId ? 'border-red-500' : ''}`}
             placeholder="Enter milestone ID"
           />
           {validationErrors.milestoneId && (
-            <p className="text-sm text-red-500 mt-1">{validationErrors.milestoneId}</p>
+            <p className="text-sm text-red-500 mt-1">
+              {validationErrors.milestoneId}
+            </p>
           )}
         </div>
 
@@ -192,7 +196,7 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
           disabled={isLoading}
           className="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {isLoading ? "Revoking…" : "Revoke Milestone"}
+          {isLoading ? 'Revoking…' : 'Revoke Milestone'}
         </button>
       </form>
       <ConfirmDialog

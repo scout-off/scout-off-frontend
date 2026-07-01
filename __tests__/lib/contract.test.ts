@@ -217,9 +217,9 @@ describe('parseContractError', () => {
   test.each(Object.entries(CONTRACT_ERRORS))(
     'code %s -> "%s"',
     (code, expected) => {
-      expect(
-        parseContractError(`Error(Contract, #${code})`).message,
-      ).toBe(expected);
+      expect(parseContractError(`Error(Contract, #${code})`).message).toBe(
+        expected,
+      );
     },
   );
 

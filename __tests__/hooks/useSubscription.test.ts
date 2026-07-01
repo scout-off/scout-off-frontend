@@ -26,7 +26,11 @@ const mockGetSubscription = getSubscription as jest.Mock;
 const mockSubscribe = contractSubscribe as jest.Mock;
 
 function wrapper({ children }: { children: React.ReactNode }) {
-  return React.createElement(SWRConfig, { value: { provider: () => new Map(), shouldRetryOnError: false } }, children);
+  return React.createElement(
+    SWRConfig,
+    { value: { provider: () => new Map(), shouldRetryOnError: false } },
+    children,
+  );
 }
 
 describe('useSubscription', () => {

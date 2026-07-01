@@ -93,7 +93,9 @@ describe('useWallet', () => {
     expect(result.current.isRestoringSession).toBe(true);
 
     await act(async () => {
-      resolveAccount!({ balances: [{ asset_type: 'native', balance: '10.0000000' }] });
+      resolveAccount!({
+        balances: [{ asset_type: 'native', balance: '10.0000000' }],
+      });
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 

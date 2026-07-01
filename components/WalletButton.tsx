@@ -76,7 +76,11 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-export default function WalletButton({ hideBalance = false }: { hideBalance?: boolean }) {
+export default function WalletButton({
+  hideBalance = false,
+}: {
+  hideBalance?: boolean;
+}) {
   const t = useTranslations('wallet');
   const { show: showToast } = useToast();
   const {
@@ -107,11 +111,15 @@ export default function WalletButton({ hideBalance = false }: { hideBalance?: bo
         const provider = wp.provider as WalletProvider;
         return [provider, await isWalletInstalled(provider)] as const;
       }),
-    ).then((results) => {
-      if (cancelled) return;
-      setInstalledMap(Object.fromEntries(results));
-    }).catch(() => {});
-    return () => { cancelled = true; };
+    )
+      .then((results) => {
+        if (cancelled) return;
+        setInstalledMap(Object.fromEntries(results));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [showWalletModal]);
 
   const allChecked = WALLET_PROVIDERS.every(

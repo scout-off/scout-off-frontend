@@ -20,7 +20,11 @@ const MILESTONES = [
 ];
 
 function wrapper({ children }: { children: React.ReactNode }) {
-  return React.createElement(SWRConfig, { value: { provider: () => new Map(), shouldRetryOnError: false } }, children);
+  return React.createElement(
+    SWRConfig,
+    { value: { provider: () => new Map(), shouldRetryOnError: false } },
+    children,
+  );
 }
 
 describe('useMilestoneHistory', () => {
@@ -43,7 +47,9 @@ describe('useMilestoneHistory', () => {
 
   it('returns the list of milestones on success', async () => {
     mockGetMilestoneHistory.mockResolvedValue(MILESTONES);
-    const { result } = renderHook(() => useMilestoneHistory('player-1'), { wrapper });
+    const { result } = renderHook(() => useMilestoneHistory('player-1'), {
+      wrapper,
+    });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.milestones).toEqual(MILESTONES);
     expect(result.current.error).toBeNull();
@@ -51,7 +57,9 @@ describe('useMilestoneHistory', () => {
 
   it('surfaces an error state when the contract call throws', async () => {
     mockGetMilestoneHistory.mockRejectedValue(new Error('contract error'));
-    const { result } = renderHook(() => useMilestoneHistory('player-1'), { wrapper });
+    const { result } = renderHook(() => useMilestoneHistory('player-1'), {
+      wrapper,
+    });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.error).toBe('contract error');
     expect(result.current.milestones).toEqual([]);
@@ -60,7 +68,9 @@ describe('useMilestoneHistory', () => {
   it('isLoading is true while in flight and false after', async () => {
     let resolve!: (v: unknown[]) => void;
     mockGetMilestoneHistory.mockReturnValue(new Promise((r) => (resolve = r)));
-    const { result } = renderHook(() => useMilestoneHistory('player-1'), { wrapper });
+    const { result } = renderHook(() => useMilestoneHistory('player-1'), {
+      wrapper,
+    });
     expect(result.current.isLoading).toBe(true);
     resolve(MILESTONES);
     await waitFor(() => expect(result.current.isLoading).toBe(false));

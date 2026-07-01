@@ -109,7 +109,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={contextValue}>
       {children}
-      <div aria-live="polite" aria-atomic="false" className="pointer-events-none fixed inset-x-0 bottom-5 z-50 flex justify-end px-4 sm:px-6">
+      <div
+        aria-live="polite"
+        aria-atomic="false"
+        className="pointer-events-none fixed inset-x-0 bottom-5 z-50 flex justify-end px-4 sm:px-6"
+      >
         <div className="flex w-full max-w-sm flex-col gap-3">
           {toasts.map((toast) => {
             const meta = VARIANT_META[toast.variant];
@@ -118,7 +122,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 key={toast.id}
                 role="alert"
                 aria-live="polite"
- aria-atomic="true"
+                aria-atomic="true"
                 className={`pointer-events-auto flex items-start gap-3 rounded-xl border border-gray-800 border-l-4 bg-brand-card p-4 shadow-2xl ${meta.border}`}
               >
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5">

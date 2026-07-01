@@ -69,9 +69,7 @@ function ValidatorDashboardContent() {
 
       {/* Player search section */}
       <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">
-          Find a Player
-        </h2>
+        <h2 className="text-lg font-semibold text-white mb-4">Find a Player</h2>
         <ValidatorPlayerSearch onSelect={handlePlayerSelected} />
       </div>
 
@@ -84,8 +82,8 @@ function ValidatorDashboardContent() {
               {selectedPlayer.vitals.name}
             </h3>
             <p className="text-gray-400 text-sm">
-              {selectedPlayer.vitals.position} · {selectedPlayer.vitals.region}
-              · {selectedPlayer.vitals.nationality}
+              {selectedPlayer.vitals.position} · {selectedPlayer.vitals.region}·{' '}
+              {selectedPlayer.vitals.nationality}
             </p>
             <p className="text-gray-500 text-xs mt-2 font-mono">
               ID: {selectedPlayer.id}

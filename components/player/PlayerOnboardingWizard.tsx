@@ -45,7 +45,11 @@ interface WizardData {
 }
 
 export interface PlayerOnboardingWizardProps {
-  onSuccess: (result: { playerId: string; vitals: PlayerVitals; ipfsHash: string }) => void;
+  onSuccess: (result: {
+    playerId: string;
+    vitals: PlayerVitals;
+    ipfsHash: string;
+  }) => void;
 }
 
 // ── Progress Stepper ──────────────────────────────────────────────────────────
@@ -178,7 +182,8 @@ export default function PlayerOnboardingWizard({
       case 'age': {
         if (!value) return 'Age is required';
         const n = parseInt(value);
-        if (isNaN(n) || n < 14 || n > 45) return 'Age must be between 14 and 45';
+        if (isNaN(n) || n < 14 || n > 45)
+          return 'Age must be between 14 and 45';
         return undefined;
       }
       case 'nationality':
@@ -193,7 +198,13 @@ export default function PlayerOnboardingWizard({
   };
 
   const validateStep1 = (): boolean => {
-    const fields = ['name', 'age', 'nationality', 'region', 'position'] as const;
+    const fields = [
+      'name',
+      'age',
+      'nationality',
+      'region',
+      'position',
+    ] as const;
     const errs: Record<string, string> = {};
     for (const field of fields) {
       const msg = validateField(field, data[field]);

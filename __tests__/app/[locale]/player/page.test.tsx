@@ -1,4 +1,10 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import '@testing-library/jest-dom';
 import PlayerDashboard from '@/app/[locale]/player/page';
 import { usePlayer } from '@/hooks/usePlayer';
@@ -38,7 +44,13 @@ jest.mock('@/components/player/PlayerProfileForm', () => ({
   }: {
     onSuccess: (result: {
       playerId: string;
-      vitals: { name: string; age: number; position: string; region: string; nationality: string };
+      vitals: {
+        name: string;
+        age: number;
+        position: string;
+        region: string;
+        nationality: string;
+      };
       ipfsHash: string;
     }) => void;
   }) => (
@@ -121,7 +133,9 @@ function makePlayerHook(overrides: Partial<ReturnType<typeof usePlayer>> = {}) {
   return { ...defaults, ...overrides };
 }
 
-function setup(playerHookOverrides: Partial<ReturnType<typeof usePlayer>> = {}) {
+function setup(
+  playerHookOverrides: Partial<ReturnType<typeof usePlayer>> = {},
+) {
   mockedUseRequireWallet.mockReturnValue({
     walletAddress: MOCK_PUBLIC_KEY,
   } as any);
@@ -271,7 +285,10 @@ describe('PlayerDashboard', () => {
   it('removes the pending-confirmation banner once re-fetch resolves', async () => {
     let resolveRefetch!: () => void;
     const refetch = jest.fn(
-      () => new Promise<void>((res) => { resolveRefetch = res; }),
+      () =>
+        new Promise<void>((res) => {
+          resolveRefetch = res;
+        }),
     );
     const optimisticUpdate = jest.fn();
 
@@ -318,13 +335,18 @@ describe('PlayerDashboard', () => {
     });
 
     rerender(<PlayerDashboard />);
-    expect(screen.queryByTestId('pending-confirmation')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('pending-confirmation'),
+    ).not.toBeInTheDocument();
   });
 
   it('replaces optimistic data with confirmed on-chain data after re-fetch', async () => {
     let resolveRefetch!: () => void;
     const refetch = jest.fn(
-      () => new Promise<void>((res) => { resolveRefetch = res; }),
+      () =>
+        new Promise<void>((res) => {
+          resolveRefetch = res;
+        }),
     );
     const optimisticUpdate = jest.fn();
 
@@ -344,7 +366,13 @@ describe('PlayerDashboard', () => {
         player: {
           id: 'player-optimistic',
           wallet: MOCK_PUBLIC_KEY,
-          vitals: { name: 'Optimistic Player', age: 22, position: 'ST', region: 'nigeria', nationality: 'Nigerian' },
+          vitals: {
+            name: 'Optimistic Player',
+            age: 22,
+            position: 'ST',
+            region: 'nigeria',
+            nationality: 'Nigerian',
+          },
           ipfsHash: 'QmOptimisticCID',
           progressLevel: 0,
           milestones: [],
@@ -366,7 +394,9 @@ describe('PlayerDashboard', () => {
       makePlayerHook({ player: confirmedPlayer, refetch, optimisticUpdate }),
     );
 
-    await act(async () => { resolveRefetch(); });
+    await act(async () => {
+      resolveRefetch();
+    });
     rerender(<PlayerDashboard />);
 
     expect(screen.getByText('Confirmed Player')).toBeInTheDocument();
@@ -376,9 +406,10 @@ describe('PlayerDashboard', () => {
   // ── Error path ────────────────────────────────────────────────────────────
 
   it('discards optimistic data and returns to register tab when re-fetch fails', async () => {
-    const refetch = jest.fn()
+    const refetch = jest
+      .fn()
       .mockRejectedValueOnce(new Error('Network error')) // first call (re-fetch after success) fails
-      .mockResolvedValue(undefined);                     // second call (discard + revalidate)
+      .mockResolvedValue(undefined); // second call (discard + revalidate)
 
     const optimisticUpdate = jest.fn();
 
@@ -425,7 +456,9 @@ describe('PlayerDashboard', () => {
     });
 
     await waitFor(() => {
-      expect(screen.queryByTestId('pending-confirmation')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('pending-confirmation'),
+      ).not.toBeInTheDocument();
     });
   });
 });

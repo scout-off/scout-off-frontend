@@ -276,7 +276,9 @@ describe('PlayerOnboardingWizard', () => {
     fireEvent.change(positionSelect, {
       target: { name: 'position', value: 'ST' },
     });
-    expect(screen.getByRole('button', { name: /continue/i })).not.toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /continue/i }),
+    ).not.toBeDisabled();
   });
 
   // ── aria attributes ────────────────────────────────────────────────────────

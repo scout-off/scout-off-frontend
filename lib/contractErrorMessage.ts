@@ -27,8 +27,7 @@ export const CONTRACT_ERROR_MESSAGES: Record<ContractErrorKey, string> = {
     'This player is already registered. You cannot register the same wallet twice.',
   NotInitialized:
     'The contract has not been set up yet. Please contact support.',
-  PlayerNotFound:
-    'Player not found. Please check the player ID and try again.',
+  PlayerNotFound: 'Player not found. Please check the player ID and try again.',
   UnauthorizedValidator:
     'You are not authorised as a validator. Ask the admin to add your wallet via Add Validator.',
   InvalidMilestone:

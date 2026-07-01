@@ -105,7 +105,9 @@ export default function TransactionStatus({
       <span className="text-red-500 mt-0.5" aria-hidden="true">
         ✕
       </span>
-      <span className="text-red-300">{readableError ?? 'Transaction failed.'}</span>
+      <span className="text-red-300">
+        {readableError ?? 'Transaction failed.'}
+      </span>
     </div>
   );
 }

@@ -157,11 +157,7 @@ describe('VideoUpload component', () => {
   it('calls onValidationError with an error message for an oversized file', async () => {
     renderUpload();
     const input = screen.getByLabelText(/highlight reel/i);
-    const bigFile = makeFile(
-      'video.mp4',
-      'video/mp4',
-      MAX_FILE_SIZE_BYTES + 1,
-    );
+    const bigFile = makeFile('video.mp4', 'video/mp4', MAX_FILE_SIZE_BYTES + 1);
 
     fireEvent.change(input, { target: { files: [bigFile] } });
 
@@ -189,11 +185,7 @@ describe('VideoUpload component', () => {
   it('shows an inline error message for an oversized file', async () => {
     renderUpload();
     const input = screen.getByLabelText(/highlight reel/i);
-    const bigFile = makeFile(
-      'video.mp4',
-      'video/mp4',
-      MAX_FILE_SIZE_BYTES + 1,
-    );
+    const bigFile = makeFile('video.mp4', 'video/mp4', MAX_FILE_SIZE_BYTES + 1);
 
     fireEvent.change(input, { target: { files: [bigFile] } });
 
@@ -204,12 +196,7 @@ describe('VideoUpload component', () => {
   });
 
   it('propagates aria-invalid when an external error prop is supplied', () => {
-    render(
-      <VideoUpload
-        onUpload={onUpload}
-        error="External error message"
-      />,
-    );
+    render(<VideoUpload onUpload={onUpload} error="External error message" />);
     const input = screen.getByLabelText(/highlight reel/i);
     expect(input).toHaveAttribute('aria-invalid', 'true');
   });

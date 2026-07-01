@@ -24,7 +24,8 @@ function isStellarKey(v: string) {
 
 export default function ScoutDashboardContent() {
   const { walletAddress: publicKey } = useRequireWallet();
-  const { isProtected, loading: subscriptionLoading } = useRequireSubscription();
+  const { isProtected, loading: subscriptionLoading } =
+    useRequireSubscription();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -238,7 +239,10 @@ export default function ScoutDashboardContent() {
       </div>
 
       <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
-        <label className="text-sm font-medium text-gray-300" htmlFor="name-search">
+        <label
+          className="text-sm font-medium text-gray-300"
+          htmlFor="name-search"
+        >
           Search by Player Name
         </label>
         <input
@@ -249,19 +253,21 @@ export default function ScoutDashboardContent() {
           onChange={(e) => setNameQuery(e.target.value)}
           autoComplete="off"
         />
-        {nameQuery && !loading && players.length === 0 && searchHasCompleted && (
-          <EmptyState
-            title="No players found"
-            description={`No players match "${nameQuery}".`}
-          />
-        )}
+        {nameQuery &&
+          !loading &&
+          players.length === 0 &&
+          searchHasCompleted && (
+            <EmptyState
+              title="No players found"
+              description={`No players match "${nameQuery}".`}
+            />
+          )}
       </div>
 
-      <div className={`bg-brand-card border border-gray-800 rounded-xl p-5${nameQuery ? ' opacity-50 pointer-events-none' : ''}`}>
-        <PlayerFilterForm
-          onSearch={handleSearch}
-          resetKey={resetKey}
-        />
+      <div
+        className={`bg-brand-card border border-gray-800 rounded-xl p-5${nameQuery ? ' opacity-50 pointer-events-none' : ''}`}
+      >
+        <PlayerFilterForm onSearch={handleSearch} resetKey={resetKey} />
       </div>
 
       {showSkeletons ? (

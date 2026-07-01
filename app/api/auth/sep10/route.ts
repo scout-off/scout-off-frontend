@@ -23,18 +23,26 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Invalid request body' },
+      { status: 400 },
+    );
   }
 
   const { signedXdr, publicKey } = body ?? {};
   if (!signedXdr || !publicKey) {
-    return NextResponse.json({ error: 'Missing signedXdr or publicKey' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Missing signedXdr or publicKey' },
+      { status: 400 },
+    );
   }
 
   const serverKey = process.env.SEP10_SERVER_KEY ?? '';
   const homeDomain = process.env.SEP10_HOME_DOMAIN ?? '';
   const network =
-    process.env.NEXT_PUBLIC_NETWORK === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
+    process.env.NEXT_PUBLIC_NETWORK === 'mainnet'
+      ? Networks.PUBLIC
+      : Networks.TESTNET;
 
   try {
     WebAuth.verifyChallengeTxSigners(
@@ -66,27 +74,45 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const account = req.nextUrl.searchParams.get('account');
   if (!account) {
-    return NextResponse.json({ error: 'Missing account parameter' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Missing account parameter' },
+      { status: 400 },
+    );
   }
 
   const serverKey = process.env.SEP10_SERVER_KEY;
   if (!serverKey) {
-    return NextResponse.json({ error: 'Server not configured' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Server not configured' },
+      { status: 500 },
+    );
   }
 
   const homeDomain = process.env.SEP10_HOME_DOMAIN ?? '';
   const network =
-    process.env.NEXT_PUBLIC_NETWORK === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
+    process.env.NEXT_PUBLIC_NETWORK === 'mainnet'
+      ? Networks.PUBLIC
+      : Networks.TESTNET;
 
   try {
     const { Keypair } = await import('@stellar/stellar-sdk');
     const serverKeypair = Keypair.fromSecret(serverKey);
     const { buildChallengeTx } = (await import('@stellar/stellar-sdk')).WebAuth;
-    const challengeXdr = buildChallengeTx(serverKeypair, account, homeDomain, 300, network, homeDomain);
+    const challengeXdr = buildChallengeTx(
+      serverKeypair,
+      account,
+      homeDomain,
+      300,
+      network,
+      homeDomain,
+    );
     return NextResponse.json({ transaction: challengeXdr });
   } catch (error) {
     console.error('SEP-10 Challenge Error:', error);
-    return NextResponse.json({ error: 'Failed to generate challenge' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to generate challenge' },
+      { status: 500 },
+    );
   }
 }
 

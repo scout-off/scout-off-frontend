@@ -9,8 +9,13 @@ global.IntersectionObserver = class {
   observe = jest.fn();
   unobserve = jest.fn();
   disconnect = jest.fn();
-  constructor(_cb: IntersectionObserverCallback, _opts?: IntersectionObserverInit) {}
-  takeRecords(): IntersectionObserverEntry[] { return []; }
+  constructor(
+    _cb: IntersectionObserverCallback,
+    _opts?: IntersectionObserverInit,
+  ) {}
+  takeRecords(): IntersectionObserverEntry[] {
+    return [];
+  }
   root: Element | null = null;
   rootMargin: string = '';
   thresholds: ReadonlyArray<number> = [];
@@ -25,7 +30,9 @@ jest.mock('@/hooks/useRequireWallet', () => ({
 }));
 
 jest.mock('@/hooks/useRequireSubscription', () => ({
-  useRequireSubscription: jest.fn().mockReturnValue({ isProtected: true, loading: false }),
+  useRequireSubscription: jest
+    .fn()
+    .mockReturnValue({ isProtected: true, loading: false }),
 }));
 
 const mockSearch = jest.fn();
@@ -151,10 +158,22 @@ function simulateSearchCycle(
 describe('ScoutDashboard — empty state', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    const { useRequireSubscription } = jest.requireMock('@/hooks/useRequireSubscription');
-    useRequireSubscription.mockReturnValue({ isProtected: true, loading: false });
+    const { useRequireSubscription } = jest.requireMock(
+      '@/hooks/useRequireSubscription',
+    );
+    useRequireSubscription.mockReturnValue({
+      isProtected: true,
+      loading: false,
+    });
     const { useSubscription } = jest.requireMock('@/hooks/useSubscription');
-    useSubscription.mockReturnValue({ subscription: null, isLoading: false, error: null, writeLoading: false, writeError: null, subscribe: jest.fn() });
+    useSubscription.mockReturnValue({
+      subscription: null,
+      isLoading: false,
+      error: null,
+      writeLoading: false,
+      writeError: null,
+      subscribe: jest.fn(),
+    });
     setupScout();
   });
 

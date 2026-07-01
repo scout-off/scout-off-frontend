@@ -35,9 +35,9 @@ const FOCUSABLE_SELECTORS = [
 ].join(',');
 
 function getFocusable(container: HTMLElement): HTMLElement[] {
-  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS)).filter(
-    (el) => !el.closest('[inert]') && el.tabIndex !== -1,
-  );
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS),
+  ).filter((el) => !el.closest('[inert]') && el.tabIndex !== -1);
 }
 
 export default function Modal({
@@ -109,13 +109,19 @@ export default function Modal({
 
         if (e.shiftKey) {
           // Shift+Tab: if focus is on or before the first element, wrap to last.
-          if (document.activeElement === first || !dialogRef.current.contains(document.activeElement)) {
+          if (
+            document.activeElement === first ||
+            !dialogRef.current.contains(document.activeElement)
+          ) {
             e.preventDefault();
             last.focus();
           }
         } else {
           // Tab: if focus is on or after the last element, wrap to first.
-          if (document.activeElement === last || !dialogRef.current.contains(document.activeElement)) {
+          if (
+            document.activeElement === last ||
+            !dialogRef.current.contains(document.activeElement)
+          ) {
             e.preventDefault();
             first.focus();
           }

@@ -121,9 +121,7 @@ export default function UpdateProfileForm({
           onUpload={handleUpload}
           onValidationError={handleValidationError}
         />
-        {fileError && (
-          <p className="text-sm text-red-400 mt-1">{fileError}</p>
-        )}
+        {fileError && <p className="text-sm text-red-400 mt-1">{fileError}</p>}
 
         <form onSubmit={handleSubmit}>
           {inlineError && (

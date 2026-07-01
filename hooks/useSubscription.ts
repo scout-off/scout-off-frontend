@@ -46,7 +46,7 @@ export function useSubscription() {
       return (data as Subscription) ?? null;
     },
     {
-      dedupingInterval: 5_000,   // deduplicate concurrent reads within 5 s
+      dedupingInterval: 5_000, // deduplicate concurrent reads within 5 s
       revalidateOnFocus: false,
       errorRetryCount: 2,
     },
@@ -80,6 +80,12 @@ export function useSubscription() {
     isExpired,
     subscribe,
     loading: isValidating || writeLoading,
-    error: writeError ?? (readError ? (readError instanceof Error ? readError.message : String(readError)) : null),
+    error:
+      writeError ??
+      (readError
+        ? readError instanceof Error
+          ? readError.message
+          : String(readError)
+        : null),
   };
 }

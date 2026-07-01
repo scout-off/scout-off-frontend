@@ -96,9 +96,7 @@ describe('usePlayer — SWR deduplication', () => {
 
   test('two hooks with different player IDs fire separate getPlayer calls', async () => {
     const player2 = { ...PLAYER, id: 'player-2' };
-    mockGetPlayer
-      .mockResolvedValueOnce(PLAYER)
-      .mockResolvedValueOnce(player2);
+    mockGetPlayer.mockResolvedValueOnce(PLAYER).mockResolvedValueOnce(player2);
     const wrapper = makeWrapper();
 
     const { result } = renderHook(
@@ -145,12 +143,15 @@ describe('useScout — SWR deduplication', () => {
     mockFilterPlayers.mockResolvedValue([PLAYER]);
     const wrapper = makeWrapper();
 
-    const { result } = renderHook(
-      () => ({ r1: useScout(), r2: useScout() }),
-      { wrapper },
-    );
+    const { result } = renderHook(() => ({ r1: useScout(), r2: useScout() }), {
+      wrapper,
+    });
 
-    const filter = { region: 'West Africa', position: 'Forward', minLevel: 1 as const };
+    const filter = {
+      region: 'West Africa',
+      position: 'Forward',
+      minLevel: 1 as const,
+    };
 
     act(() => {
       result.current.r1.search(filter);
@@ -171,14 +172,21 @@ describe('useScout — SWR deduplication', () => {
     mockFilterPlayers.mockResolvedValue([]);
     const wrapper = makeWrapper();
 
-    const { result } = renderHook(
-      () => ({ r1: useScout(), r2: useScout() }),
-      { wrapper },
-    );
+    const { result } = renderHook(() => ({ r1: useScout(), r2: useScout() }), {
+      wrapper,
+    });
 
     act(() => {
-      result.current.r1.search({ region: 'West Africa', position: 'Forward', minLevel: 0 });
-      result.current.r2.search({ region: 'East Africa', position: 'Midfielder', minLevel: 1 });
+      result.current.r1.search({
+        region: 'West Africa',
+        position: 'Forward',
+        minLevel: 0,
+      });
+      result.current.r2.search({
+        region: 'East Africa',
+        position: 'Midfielder',
+        minLevel: 1,
+      });
     });
 
     await act(async () => {
@@ -197,7 +205,10 @@ describe('useMilestoneHistory — SWR deduplication', () => {
     const wrapper = makeWrapper();
 
     const { result } = renderHook(
-      () => ({ r1: useMilestoneHistory('player-1'), r2: useMilestoneHistory('player-1') }),
+      () => ({
+        r1: useMilestoneHistory('player-1'),
+        r2: useMilestoneHistory('player-1'),
+      }),
       { wrapper },
     );
 
@@ -228,7 +239,9 @@ describe('useMilestoneHistory — SWR deduplication', () => {
     mockGetMilestoneHistory.mockResolvedValue(MILESTONES);
     const wrapper = makeWrapper();
 
-    const { result } = renderHook(() => useMilestoneHistory('player-1'), { wrapper });
+    const { result } = renderHook(() => useMilestoneHistory('player-1'), {
+      wrapper,
+    });
 
     await act(async () => {
       await Promise.resolve();

@@ -46,7 +46,9 @@ describe('ContractPausedBanner', () => {
   it('hides the banner when the dismiss button is clicked', () => {
     mockUseIsPaused.mockReturnValue(true);
     const { container } = render(<ContractPausedBanner />);
-    expect(screen.getByRole('button', { name: /dismiss/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /dismiss/i }),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /dismiss/i }));
 

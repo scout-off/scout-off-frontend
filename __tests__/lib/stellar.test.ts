@@ -183,9 +183,9 @@ describe('getXLMBalance', () => {
     });
 
     const { getXLMBalance } = require('@/lib/stellar');
-    await expect(
-      getXLMBalance('GERROR1234567890'),
-    ).rejects.toThrow('Horizon error: 500');
+    await expect(getXLMBalance('GERROR1234567890')).rejects.toThrow(
+      'Horizon error: 500',
+    );
   });
 
   it('returns 0 when no native balance is found', async () => {
