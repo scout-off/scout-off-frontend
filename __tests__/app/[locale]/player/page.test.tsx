@@ -11,6 +11,12 @@ jest.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
 }));
 
+jest.mock('next/navigation', () => ({
+  useRouter: jest.fn(() => ({ push: jest.fn(), replace: jest.fn() })),
+  usePathname: jest.fn(() => '/player'),
+  useSearchParams: jest.fn(() => new URLSearchParams()),
+}));
+
 jest.mock('@/hooks/useRequireWallet', () => ({
   useRequireWallet: jest.fn(),
 }));

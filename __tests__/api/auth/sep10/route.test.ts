@@ -1,3 +1,4 @@
+/** @jest-environment node */
 import { POST } from '../../../../app/api/auth/sep10/route';
 import { NextRequest } from 'next/server';
 

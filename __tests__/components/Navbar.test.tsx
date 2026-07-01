@@ -6,6 +6,10 @@ jest.mock('@/hooks/useWallet', () => ({
   useWallet: jest.fn(),
 }));
 
+jest.mock('@/components/ui/Toast', () => ({
+  useToast: jest.fn().mockReturnValue({ show: jest.fn() }),
+}));
+
 jest.mock('next/navigation', () => ({
   usePathname: jest.fn(),
   useRouter: jest.fn(() => ({
@@ -47,9 +51,11 @@ jest.mock('next/link', () => {
 import Navbar from '@/components/Navbar';
 import { useWallet } from '@/hooks/useWallet';
 import { usePathname } from 'next/navigation';
+import { useToast } from '@/components/ui/Toast';
 
 const mockUseWallet = useWallet as unknown as jest.Mock;
 const mockUsePathname = usePathname as unknown as jest.Mock;
+const mockUseToast = useToast as jest.Mock;
 
 function setup(pathname: string) {
   mockUseWallet.mockReturnValue({
@@ -66,6 +72,7 @@ function setup(pathname: string) {
 describe('Navbar', () => {
   beforeEach(() => {
     jest.resetAllMocks();
+    mockUseToast.mockReturnValue({ show: jest.fn() });
   });
 
   test('renders the ScoutOff logo/link', () => {

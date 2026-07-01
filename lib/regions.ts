@@ -15,11 +15,11 @@ export const AFRICAN_REGIONS: { label: string; value: string }[] = [
   { label: 'Nigeria', value: 'nigeria' },
   { label: 'North Africa', value: 'north-africa' },
   { label: 'Senegal', value: 'senegal' },
+  { label: 'South Africa', value: 'south-africa' },
   { label: 'Southern Africa', value: 'southern-africa' },
   { label: 'Tanzania', value: 'tanzania' },
   { label: 'Uganda', value: 'uganda' },
   { label: 'West Africa', value: 'west-africa' },
-  { label: 'South Africa', value: 'south-africa' },
 ];
 
 /**

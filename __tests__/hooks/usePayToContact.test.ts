@@ -49,6 +49,7 @@ function makeWallet(overrides: WalletOverrides = {}) {
     publicKey: 'publicKey' in overrides ? overrides.publicKey : SCOUT_KEY,
     xlmBalance: 'xlmBalance' in overrides ? overrides.xlmBalance : '5.0000000',
     signAndSubmit,
+    refreshBalance: jest.fn().mockResolvedValue(undefined),
   });
   return { signAndSubmit };
 }

@@ -7,11 +7,26 @@ import { useWallet } from '@/hooks/useWallet';
 // Mock dependencies
 jest.mock('@/lib/contract');
 jest.mock('@/hooks/useWallet');
+jest.mock('@/hooks/useValidator', () => ({
+  useValidator: jest.fn().mockReturnValue({
+    isValidator: false,
+    checking: false,
+    approveMilestone: jest.fn(),
+    revokeMilestone: jest.fn(),
+    loading: false,
+    error: null,
+  }),
+}));
+jest.mock('@/hooks/useIsPaused', () => ({
+  __esModule: true,
+  default: jest.fn().mockReturnValue(false),
+}));
 jest.mock('@/components/ui/ConfirmDialog', () => {
-  return function MockConfirmDialog({ isOpen, onConfirm, onCancel }: any) {
+  return function MockConfirmDialog({ isOpen, onConfirm, onCancel, message }: any) {
     if (!isOpen) return null;
     return (
       <div data-testid="confirm-dialog">
+        {message && <p>{message}</p>}
         <button onClick={onConfirm} data-testid="confirm-btn">Confirm</button>
         <button onClick={onCancel} data-testid="cancel-btn">Cancel</button>
       </div>
@@ -119,7 +134,7 @@ describe('RevokeForm', () => {
     fireEvent.click(confirmBtn);
 
     await waitFor(() => {
-      expect(screen.getByText(/unauthorizedvalidator/i)).toBeInTheDocument();
+      expect(screen.getByText(/you are not authorised as a validator/i)).toBeInTheDocument();
     });
   });
 

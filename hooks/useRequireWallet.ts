@@ -12,7 +12,7 @@ export function useRequireWallet() {
     // Don't redirect while session is being restored from the server — this
     // prevents a flash-redirect for users who are already authenticated.
     if (isRestoringSession) return;
-    if (!isConnecting && (!publicKey || !isAuthenticated)) {
+    if (!isConnecting && !isAuthenticated) {
       router.replace('/');
     }
   }, [publicKey, isAuthenticated, isConnecting, isRestoringSession, router]);

@@ -78,8 +78,10 @@ describe('usePlayer — SWR deduplication', () => {
     mockGetPlayer.mockResolvedValue(PLAYER);
     const wrapper = makeWrapper();
 
-    const { result: r1 } = renderHook(() => usePlayer('player-1'), { wrapper });
-    const { result: r2 } = renderHook(() => usePlayer('player-1'), { wrapper });
+    const { result } = renderHook(
+      () => ({ r1: usePlayer('player-1'), r2: usePlayer('player-1') }),
+      { wrapper },
+    );
 
     await act(async () => {
       await Promise.resolve();
@@ -88,8 +90,8 @@ describe('usePlayer — SWR deduplication', () => {
 
     // Both hooks receive data but only one RPC was fired.
     expect(mockGetPlayer).toHaveBeenCalledTimes(1);
-    expect(r1.current.player).toEqual(PLAYER);
-    expect(r2.current.player).toEqual(PLAYER);
+    expect(result.current.r1.player).toEqual(PLAYER);
+    expect(result.current.r2.player).toEqual(PLAYER);
   });
 
   test('two hooks with different player IDs fire separate getPlayer calls', async () => {
@@ -99,8 +101,10 @@ describe('usePlayer — SWR deduplication', () => {
       .mockResolvedValueOnce(player2);
     const wrapper = makeWrapper();
 
-    const { result: r1 } = renderHook(() => usePlayer('player-1'), { wrapper });
-    const { result: r2 } = renderHook(() => usePlayer('player-2'), { wrapper });
+    const { result } = renderHook(
+      () => ({ r1: usePlayer('player-1'), r2: usePlayer('player-2') }),
+      { wrapper },
+    );
 
     await act(async () => {
       await Promise.resolve();
@@ -108,8 +112,8 @@ describe('usePlayer — SWR deduplication', () => {
     });
 
     expect(mockGetPlayer).toHaveBeenCalledTimes(2);
-    expect(r1.current.player?.id).toBe('player-1');
-    expect(r2.current.player?.id).toBe('player-2');
+    expect(result.current.r1.player?.id).toBe('player-1');
+    expect(result.current.r2.player?.id).toBe('player-2');
   });
 
   test('cache invalidation via refetch triggers a fresh getPlayer call', async () => {
@@ -141,14 +145,16 @@ describe('useScout — SWR deduplication', () => {
     mockFilterPlayers.mockResolvedValue([PLAYER]);
     const wrapper = makeWrapper();
 
-    const { result: r1 } = renderHook(() => useScout(), { wrapper });
-    const { result: r2 } = renderHook(() => useScout(), { wrapper });
+    const { result } = renderHook(
+      () => ({ r1: useScout(), r2: useScout() }),
+      { wrapper },
+    );
 
     const filter = { region: 'West Africa', position: 'Forward', minLevel: 1 as const };
 
     act(() => {
-      r1.current.search(filter);
-      r2.current.search(filter);
+      result.current.r1.search(filter);
+      result.current.r2.search(filter);
     });
 
     await act(async () => {
@@ -157,20 +163,22 @@ describe('useScout — SWR deduplication', () => {
     });
 
     expect(mockFilterPlayers).toHaveBeenCalledTimes(1);
-    expect(r1.current.players).toEqual([PLAYER]);
-    expect(r2.current.players).toEqual([PLAYER]);
+    expect(result.current.r1.players).toEqual([PLAYER]);
+    expect(result.current.r2.players).toEqual([PLAYER]);
   });
 
   test('different filter combos fire separate filterPlayers calls', async () => {
     mockFilterPlayers.mockResolvedValue([]);
     const wrapper = makeWrapper();
 
-    const { result: r1 } = renderHook(() => useScout(), { wrapper });
-    const { result: r2 } = renderHook(() => useScout(), { wrapper });
+    const { result } = renderHook(
+      () => ({ r1: useScout(), r2: useScout() }),
+      { wrapper },
+    );
 
     act(() => {
-      r1.current.search({ region: 'West Africa', position: 'Forward', minLevel: 0 });
-      r2.current.search({ region: 'East Africa', position: 'Midfielder', minLevel: 1 });
+      result.current.r1.search({ region: 'West Africa', position: 'Forward', minLevel: 0 });
+      result.current.r2.search({ region: 'East Africa', position: 'Midfielder', minLevel: 1 });
     });
 
     await act(async () => {
@@ -188,8 +196,10 @@ describe('useMilestoneHistory — SWR deduplication', () => {
     mockGetMilestoneHistory.mockResolvedValue(MILESTONES);
     const wrapper = makeWrapper();
 
-    const { result: r1 } = renderHook(() => useMilestoneHistory('player-1'), { wrapper });
-    const { result: r2 } = renderHook(() => useMilestoneHistory('player-1'), { wrapper });
+    const { result } = renderHook(
+      () => ({ r1: useMilestoneHistory('player-1'), r2: useMilestoneHistory('player-1') }),
+      { wrapper },
+    );
 
     await act(async () => {
       await Promise.resolve();
@@ -197,8 +207,8 @@ describe('useMilestoneHistory — SWR deduplication', () => {
     });
 
     expect(mockGetMilestoneHistory).toHaveBeenCalledTimes(1);
-    expect(r1.current.milestones).toEqual(MILESTONES);
-    expect(r2.current.milestones).toEqual(MILESTONES);
+    expect(result.current.r1.milestones).toEqual(MILESTONES);
+    expect(result.current.r2.milestones).toEqual(MILESTONES);
   });
 
   test('null playerID suppresses the RPC call and returns empty array', async () => {

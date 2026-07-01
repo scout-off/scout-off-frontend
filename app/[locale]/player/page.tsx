@@ -165,7 +165,7 @@ function PlayerDashboardContent() {
       } catch {
         setSuccessPlayerId(null);
         // On error, discard the optimistic state so the user is not left with stale data
-        refetch({ discardOptimistic: true });
+        refetch({ discardOptimistic: true }).catch(() => {});
         setActiveTab('register');
       } finally {
         setIsPendingConfirmation(false);

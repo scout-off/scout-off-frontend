@@ -55,6 +55,7 @@ jest.mock('next/navigation', () => ({
 
 jest.mock('swr', () => ({
   __esModule: true,
+  default: jest.fn().mockReturnValue({ data: undefined, error: undefined, isLoading: false }),
   mutate: jest.fn(),
 }));
 

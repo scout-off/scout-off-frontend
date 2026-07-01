@@ -70,6 +70,7 @@ function SubscribeContent() {
     useSubscription();
   const [txStatus, setTxStatus] = useState<TxStatus | null>(null);
   const [feePaid, setFeePaid] = useState<string | undefined>(undefined);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [selectedTier, setSelectedTier] = useState<SubscriptionTier | null>(
     null,
   );
@@ -129,12 +130,14 @@ function SubscribeContent() {
     setSelectedTier(tier);
     setTxStatus('pending');
     setFeePaid(undefined);
+    setSuccessMessage(null);
 
     try {
       await subscribe(tier);
       const plan = TIERS.find((p) => p.tier === tier);
       // price is like "5 XLM" — strip the " XLM" suffix for feePaid
       setFeePaid(plan ? plan.price.replace(' XLM', '') : undefined);
+      setSuccessMessage(`Subscribed to ${tier} successfully`);
       setTxStatus('success');
       redirectTimer.current = window.setTimeout(() => {
         router.push('/scout');
@@ -192,12 +195,18 @@ function SubscribeContent() {
           </div>
         </div>
 
+        {error && !txStatus && (
+          <p role="alert" className="text-sm text-red-400">{error}</p>
+        )}
+        {successMessage && txStatus === 'success' && (
+          <p role="status" aria-live="polite" className="text-sm text-brand-green">{successMessage}</p>
+        )}
         {txStatus && (
           <TransactionStatus
             status={txStatus}
             feePaid={feePaid}
             error={error ?? undefined}
-            onHide={() => setTxStatus(null)}
+            onHide={() => { setTxStatus(null); setSuccessMessage(null); }}
           />
         )}
       </div>
@@ -225,8 +234,8 @@ function SubscribeContent() {
             </span>{' '}
             &middot;{' '}
             <span className="text-brand-green font-medium">
-              {daysRemaining(subscription.expiresAt)} day
-              {daysRemaining(subscription.expiresAt) !== 1 ? 's' : ''} remaining
+              {remainingDays(subscription.expiresAt)} day
+              {remainingDays(subscription.expiresAt) !== 1 ? 's' : ''} remaining
             </span>
           </div>
         </div>

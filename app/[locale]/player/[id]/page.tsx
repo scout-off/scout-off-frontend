@@ -18,6 +18,7 @@ import QRModal from '@/components/ui/QRModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import TransactionStatus from '@/components/ui/TransactionStatus';
 import type { TxStatus } from '@/components/ui/TransactionStatus';
+import TruncatedAddress from '@/components/ui/TruncatedAddress';
 
 export default function PlayerProfile() {
   const { id } = useParams<{ id: string }>();
@@ -36,13 +37,6 @@ export default function PlayerProfile() {
   const shareButtonRef = useRef<HTMLButtonElement>(null);
   const milestones = player?.milestones ?? [];
   const profileUrl = typeof window !== 'undefined' ? window.location.href : '';
-
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [qrOpen, setQrOpen] = useState(false);
-  const shareButtonRef = useRef<HTMLButtonElement>(null);
-
-  const profileUrl =
-    typeof window !== 'undefined' ? window.location.href : '';
 
   async function handleConfirm() {
     setContactTxStatus('pending');

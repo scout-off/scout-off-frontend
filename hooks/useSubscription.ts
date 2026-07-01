@@ -6,7 +6,6 @@ import {
   getSubscription,
   subscribe as contractSubscribe,
 } from '@/lib/contract';
-import { parseContractError } from '@/lib/contractErrorMessage';
 import type { Subscription, SubscriptionTier } from '@/types';
 
 /**
@@ -63,8 +62,7 @@ export function useSubscription() {
         // Revalidate the cached subscription so callers see the updated state.
         await mutate();
       } catch (e: any) {
-        const msg = parseContractError(e);
-        setWriteError(msg);
+        setWriteError(e instanceof Error ? e.message : String(e));
         throw e;
       } finally {
         setWriteLoading(false);
@@ -82,6 +80,6 @@ export function useSubscription() {
     isExpired,
     subscribe,
     loading: isValidating || writeLoading,
-    error: writeError ?? (readError ? parseContractError(readError) : null),
+    error: writeError ?? (readError ? (readError instanceof Error ? readError.message : String(readError)) : null),
   };
 }

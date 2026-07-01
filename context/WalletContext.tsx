@@ -9,12 +9,14 @@ import {
   ReactNode,
 } from 'react';
 import { mutate } from 'swr';
-import albedo from '@albedo-link/intent';
-import { NETWORK } from '@/lib/stellar';
+import { TransactionBuilder } from '@stellar/stellar-sdk';
+import { rpc, NETWORK } from '@/lib/stellar';
+import { walletAdapters } from '@/lib/walletAdapters';
+import type { WalletProvider as WalletProviderAlias } from '@/lib/walletAdapters';
 
 // ── Wallet provider types ─────────────────────────────────────────────────────
 
-export type WalletProvider = 'freighter' | 'lobstr' | 'albedo';
+export type WalletProvider = WalletProviderAlias;
 
 /** Stored wallet provider info used by WalletButton etc. */
 export interface WalletProviderInfo {
@@ -36,126 +38,43 @@ export const WALLET_INSTALL_URLS: Record<WalletProvider, string> = {
   lobstr: 'https://lobstr.co',
 };
 
-interface WalletAdapter {
-  isInstalled: () => Promise<boolean>;
-  getPublicKey: () => Promise<string>;
-  signTransaction: (xdr: string) => Promise<string>;
-}
-
-const ADAPTERS: Record<WalletProvider, WalletAdapter> = {
-  freighter: {
-    isInstalled: async () => {
-      const { isConnected } = await import('@stellar/freighter-api');
-      const result = await isConnected();
-      return typeof result === 'object' && result !== null
-        ? (result as { isConnected: boolean }).isConnected
-        : Boolean(result);
-    },
-    getPublicKey: async () => {
-      const { getPublicKey } = await import('@stellar/freighter-api');
-      const result = await getPublicKey();
-      if (
-        typeof result === 'object' &&
-        result !== null &&
-        'publicKey' in result
-      ) {
-        return (result as { publicKey: string }).publicKey;
-      }
-      return result as unknown as string;
-    },
-    signTransaction: async (xdr: string) => {
-      const { signTransaction } = await import('@stellar/freighter-api');
-      const result = await signTransaction(xdr, { networkPassphrase: NETWORK });
-      if (
-        typeof result === 'object' &&
-        result !== null &&
-        'signedTxXdr' in result
-      ) {
-        return (result as { signedTxXdr: string }).signedTxXdr;
-      }
-      return result as unknown as string;
-    },
-  },
-  albedo: {
-    isInstalled: async () => {
-      return typeof window !== 'undefined' && 'albedo' in window;
-    },
-    getPublicKey: async () => {
-      const result = await albedo.publicKey({});
-      if (!result || !result.pubkey)
-        throw new Error('Albedo returned no public key');
-      return result.pubkey;
-    },
-    signTransaction: async (xdr: string) => {
-      const network = NETWORK.includes('TESTNET') ? 'testnet' : 'public';
-      const result = await albedo.tx({ xdr, network });
-      if (!result || !result.signed_envelope_xdr)
-        throw new Error('Albedo signing failed');
-      return result.signed_envelope_xdr;
-    },
-  },
-  lobstr: {
-    isInstalled: async () => {
-      try {
-        const { isConnected: lobstrIsConnected } =
-          await import('@lobstrco/signer-extension-api');
-        return await lobstrIsConnected();
-      } catch {
-        return false;
-      }
-    },
-    getPublicKey: async () => {
-      const { getPublicKey: lobstrGetPublicKey } =
-        await import('@lobstrco/signer-extension-api');
-      const pk = await lobstrGetPublicKey();
-      if (!pk) throw new Error('LOBSTR returned empty public key');
-      return pk;
-    },
-    signTransaction: async (xdr: string) => {
-      const { signTransaction: lobstrSignTransaction } =
-        await import('@lobstrco/signer-extension-api');
-      const signed = await lobstrSignTransaction(xdr);
-      if (!signed) throw new Error('LOBSTR signing failed');
-      return signed;
-    },
-  },
-};
-
 /** Checks whether a given wallet provider's extension/app is installed. */
-export async function isWalletInstalled(
-  provider: WalletProvider,
-): Promise<boolean> {
+export async function isWalletInstalled(provider: WalletProvider): Promise<boolean> {
   try {
-    return await ADAPTERS[provider].isInstalled();
+    await walletAdapters[provider].getPublicKey();
+    return true;
   } catch {
     return false;
   }
 }
 
-const PROVIDER_STORAGE_KEY = 'scoutoff_wallet_provider';
+const WALLET_SESSION_KEY = 'wallet_session';
 
-/** Returns the adapter for the currently persisted provider, or null. */
-function getStoredProvider(): WalletProvider | null {
+interface StoredSession {
+  publicKey: string;
+  provider: WalletProvider;
+}
+
+function getStoredSession(): StoredSession | null {
   if (typeof window === 'undefined') return null;
-  const stored = localStorage.getItem(PROVIDER_STORAGE_KEY);
-  if (
-    stored &&
-    (stored === 'freighter' || stored === 'albedo' || stored === 'lobstr')
-  ) {
-    return stored as WalletProvider;
-  }
-  return null;
-}
-
-function setStoredProvider(p: WalletProvider) {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(PROVIDER_STORAGE_KEY, p);
+  try {
+    const stored = localStorage.getItem(WALLET_SESSION_KEY);
+    if (!stored) return null;
+    return JSON.parse(stored) as StoredSession;
+  } catch {
+    return null;
   }
 }
 
-function removeStoredProvider() {
+function setStoredSession(publicKey: string, provider: WalletProvider) {
   if (typeof window !== 'undefined') {
-    localStorage.removeItem(PROVIDER_STORAGE_KEY);
+    localStorage.setItem(WALLET_SESSION_KEY, JSON.stringify({ publicKey, provider }));
+  }
+}
+
+function removeStoredSession() {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(WALLET_SESSION_KEY);
   }
 }
 
@@ -177,59 +96,38 @@ interface WalletContextValue {
   closeWalletModal: () => void;
   connectWithProvider: (provider: WalletProvider) => Promise<void>;
   connect: () => Promise<void>;
-  disconnect: () => Promise<void>;
+  disconnect: () => void;
   signAndSubmit: (xdr: string) => Promise<string>;
   refreshBalance: () => Promise<void>;
 }
 
 const WalletContext = createContext<WalletContextValue | null>(null);
 
-const HORIZON_URL =
-  process.env.NEXT_PUBLIC_HORIZON_URL ?? 'https://horizon-testnet.stellar.org';
-
-/**
- * Fetch the native XLM balance for a Stellar account via Horizon.
- * Returns "0.00" for unfunded (404) accounts.
- * Returns null on network/server errors so callers can surface an error indicator.
- */
-async function fetchXlmBalance(address: string): Promise<string | null> {
-  const res = await fetch(`${HORIZON_URL}/accounts/${address}`);
-  if (res.status === 404) return '0.00';
-  if (!res.ok) throw new Error(`Horizon error: ${res.status}`);
-  const data = await res.json();
-  const native = (
-    data.balances as Array<{ asset_type: string; balance: string }>
-  ).find((b) => b.asset_type === 'native');
-  const raw = native ? parseFloat(native.balance) : 0;
-  return raw.toFixed(2);
-}
-
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [connectingProvider, setConnectingProvider] =
-    useState<WalletProvider | null>(null);
+  const [connectingProvider, setConnectingProvider] = useState<WalletProvider | null>(null);
   const [isRestoringSession, setIsRestoringSession] = useState(true);
   const [xlmBalance, setXlmBalance] = useState<string | null>(null);
   const [balanceError, setBalanceError] = useState<string | null>(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
-  const [walletProvider, setWalletProvider] = useState<WalletProvider | null>(
-    null,
-  );
+  const [walletProvider, setWalletProvider] = useState<WalletProvider | null>(null);
   const [showWalletModal, setShowWalletModal] = useState(false);
 
   const walletProviderInfo: WalletProviderInfo | null = walletProvider
     ? (WALLET_PROVIDERS.find((wp) => wp.provider === walletProvider) ?? null)
     : null;
 
-  /** Fetch and store the XLM balance for the given address. */
   const loadBalance = useCallback(async (address: string) => {
     setIsLoadingBalance(true);
     setBalanceError(null);
     try {
-      const balance = await fetchXlmBalance(address);
-      setXlmBalance(balance);
+      const account = await rpc.getAccount(address);
+      const native = (
+        account.balances as Array<{ asset_type: string; balance: string }>
+      ).find((b) => b.asset_type === 'native');
+      setXlmBalance(native ? native.balance : '0.0000000');
     } catch (err: unknown) {
       setXlmBalance(null);
       setBalanceError(
@@ -240,20 +138,20 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  /** Public refresh — callers (e.g. after a transaction) can trigger a re-fetch. */
   const refreshBalance = useCallback(async () => {
     if (publicKey) await loadBalance(publicKey);
   }, [publicKey, loadBalance]);
 
-  // Restore session and provider on mount
+  // Restore session from localStorage on mount
   useEffect(() => {
     async function restoreSession() {
       try {
-        const res = await fetch('/api/auth/session');
-        if (res.ok) {
-          const { publicKey: pk } = await res.json();
+        const session = getStoredSession();
+        if (session) {
+          const { publicKey: pk, provider } = session;
           setPublicKey(pk);
           setIsAuthenticated(true);
+          setWalletProvider(provider);
           await loadBalance(pk);
         }
       } catch {
@@ -263,40 +161,31 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       }
     }
     restoreSession();
-
-    // Restore persisted provider
-    const stored = getStoredProvider();
-    if (stored) setWalletProvider(stored);
   }, [loadBalance]);
 
   const openWalletModal = useCallback(() => setShowWalletModal(true), []);
   const closeWalletModal = useCallback(() => setShowWalletModal(false), []);
 
-  /**
-   * Core connection logic: authenticate with a specific wallet provider.
-   * Shared by connect (uses stored provider) and connectWithProvider.
-   */
   const doConnect = useCallback(
     async (provider: WalletProvider) => {
-      const adapter = ADAPTERS[provider];
       setIsConnecting(true);
       setConnectingProvider(provider);
       try {
-        if (!(await adapter.isInstalled())) {
-          throw new Error(`${provider} is not installed`);
-        }
-        const pk = await adapter.getPublicKey();
+        const pk = await walletAdapters[provider].getPublicKey();
 
         // SEP-10 Auth Flow
         const challengeRes = await fetch(`/api/auth/sep10?account=${pk}`);
         if (!challengeRes.ok) throw new Error('Failed to fetch auth challenge');
         const { transaction } = await challengeRes.json();
 
-        const signedXdr = await adapter.signTransaction(transaction);
+        const signedXdr = await walletAdapters[provider].signTransaction(
+          transaction,
+          NETWORK,
+        );
 
         const authRes = await fetch('/api/auth/sep10', {
           method: 'POST',
-          body: JSON.stringify({ transaction: signedXdr }),
+          body: JSON.stringify({ signedXdr, publicKey: pk }),
           headers: { 'Content-Type': 'application/json' },
         });
 
@@ -305,9 +194,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         setPublicKey(pk);
         setIsAuthenticated(true);
         setWalletProvider(provider);
-        setStoredProvider(provider);
+        setStoredSession(pk, provider);
         setShowWalletModal(false);
-        // Fetch balance immediately after connecting
         await loadBalance(pk);
       } catch (error) {
         console.error('Connection/Auth error:', error);
@@ -323,17 +211,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     [loadBalance],
   );
 
-  /** Connect using the previously stored provider, or open the modal if none. */
   const connect = useCallback(async () => {
-    const stored = getStoredProvider();
-    if (stored) {
-      await doConnect(stored);
+    const session = getStoredSession();
+    if (session) {
+      await doConnect(session.provider);
     } else {
       openWalletModal();
     }
   }, [doConnect, openWalletModal]);
 
-  /** Connect using a specific provider (called from the wallet selection modal). */
   const connectWithProvider = useCallback(
     async (provider: WalletProvider) => {
       await doConnect(provider);
@@ -341,30 +227,28 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     [doConnect],
   );
 
-  const disconnect = useCallback(async () => {
-    try {
-      await fetch('/api/auth/sep10', { method: 'DELETE' });
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      setPublicKey(null);
-      setIsAuthenticated(false);
-      setXlmBalance(null);
-      setBalanceError(null);
-      setWalletProvider(null);
-      removeStoredProvider();
-      // Clear all SWR caches so stale data from the previous session isn't
-      // shown briefly if a different wallet connects immediately after.
-      mutate(() => true, undefined, { revalidate: false });
-    }
+  const disconnect = useCallback(() => {
+    Promise.resolve(fetch('/api/auth/sep10', { method: 'DELETE' })).catch(() => {});
+    setPublicKey(null);
+    setIsAuthenticated(false);
+    setXlmBalance(null);
+    setBalanceError(null);
+    setWalletProvider(null);
+    removeStoredSession();
+    mutate(() => true, undefined, { revalidate: false });
   }, []);
 
   const signAndSubmit = useCallback(
     async (xdr: string): Promise<string> => {
       if (!publicKey) throw new Error('Wallet not connected');
       if (!walletProvider) throw new Error('No wallet provider selected');
-      const adapter = ADAPTERS[walletProvider];
-      return adapter.signTransaction(xdr);
+      const signedXdr = await walletAdapters[walletProvider].signTransaction(
+        xdr,
+        NETWORK,
+      );
+      const tx = TransactionBuilder.fromXDR(signedXdr, NETWORK);
+      const result = await rpc.sendTransaction(tx as Parameters<typeof rpc.sendTransaction>[0]);
+      return (result as { hash: string }).hash;
     },
     [publicKey, walletProvider],
   );

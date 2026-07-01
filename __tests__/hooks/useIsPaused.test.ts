@@ -1,21 +1,19 @@
 import { renderHook, act } from '@testing-library/react';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
-// Mock the entire lib/contract module so no real Soroban RPC calls are made.
-// useIsPaused → useContractHealth → getContractHealth is the actual call chain.
 jest.mock('@/lib/contract', () => ({
   getContractHealth: jest.fn(),
+  getContractPaused: jest.fn(),
 }));
 
-import { getContractHealth } from '@/lib/contract';
+import { getContractHealth, getContractPaused } from '@/lib/contract';
 import useIsPaused from '@/hooks/useIsPaused';
 import { useContractHealth } from '@/hooks/useContractHealth';
 
 const mockGetContractHealth = getContractHealth as jest.Mock;
+const mockGetContractPaused = getContractPaused as jest.Mock;
 
 // ── Deferred helper ───────────────────────────────────────────────────────────
-// Lets individual tests control exactly when a promise resolves or rejects,
-// so we can assert on intermediate (in-flight) state.
 function makeDeferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (reason?: unknown) => void;
@@ -43,16 +41,18 @@ describe('useIsPaused', () => {
   it('returns false on initial render before the health check resolves', () => {
     // A promise that never resolves keeps the hook perpetually in-flight.
     mockGetContractHealth.mockReturnValue(new Promise(() => {}));
+    mockGetContractPaused.mockReturnValue(new Promise(() => {}));
 
     const { result } = renderHook(() => useIsPaused());
 
-    // paused defaults to false in useContractHealth, so useIsPaused must be false
+    // paused defaults to false in useContractStatus, so useIsPaused must be false
     expect(result.current).toBe(false);
   });
 
   // 2 ─ Contract is paused ─────────────────────────────────────────────────────
-  it('returns true when getContractHealth resolves with paused: true', async () => {
-    mockGetContractHealth.mockResolvedValue({ paused: true });
+  it('returns true when getContractPaused resolves with true', async () => {
+    mockGetContractHealth.mockResolvedValue({});
+    mockGetContractPaused.mockResolvedValue(true);
 
     const { result } = renderHook(() => useIsPaused());
     await flush();
@@ -61,8 +61,9 @@ describe('useIsPaused', () => {
   });
 
   // 3 ─ Contract is not paused ─────────────────────────────────────────────────
-  it('returns false when getContractHealth resolves with paused: false', async () => {
-    mockGetContractHealth.mockResolvedValue({ paused: false });
+  it('returns false when getContractPaused resolves with false', async () => {
+    mockGetContractHealth.mockResolvedValue({});
+    mockGetContractPaused.mockResolvedValue(false);
 
     const { result } = renderHook(() => useIsPaused());
     await flush();
@@ -73,6 +74,7 @@ describe('useIsPaused', () => {
   // 4 ─ Error handling ─────────────────────────────────────────────────────────
   it('returns false and does not throw when getContractHealth rejects', async () => {
     mockGetContractHealth.mockRejectedValue(new Error('RPC unavailable'));
+    mockGetContractPaused.mockResolvedValue(false);
 
     let result: ReturnType<typeof renderHook<boolean, never>>['result'];
     expect(() => {
@@ -81,7 +83,7 @@ describe('useIsPaused', () => {
 
     await flush();
 
-    // useContractHealth catches errors and keeps paused at its false default
+    // useContractStatus catches errors and keeps isPaused at its false default
     expect(result!.current).toBe(false);
   });
 
@@ -89,8 +91,9 @@ describe('useIsPaused', () => {
   // useIsPaused itself returns only a boolean, so we verify isLoading via
   // useContractHealth (the hook it delegates to) alongside the isPaused value.
   it('isLoading is true while in-flight and false after the check settles, and isPaused updates accordingly', async () => {
-    const deferred = makeDeferred<{ paused: boolean }>();
-    mockGetContractHealth.mockReturnValue(deferred.promise);
+    const deferred = makeDeferred<boolean>();
+    mockGetContractHealth.mockResolvedValue({});
+    mockGetContractPaused.mockReturnValue(deferred.promise);
 
     const { result: healthResult } = renderHook(() => useContractHealth());
     const { result: isPausedResult } = renderHook(() => useIsPaused());
@@ -102,14 +105,13 @@ describe('useIsPaused', () => {
 
     // ── Resolve the in-flight request ────────────────────────────────────────
     await act(async () => {
-      deferred.resolve({ paused: true });
+      deferred.resolve(true);
       await deferred.promise;
     });
 
     // ── After resolution ─────────────────────────────────────────────────────
-    // loading clears in the finally block of useContractHealth.check()
     expect(healthResult.current.loading).toBe(false);
-    // isPaused now reflects the resolved value
+    // isPaused now reflects the resolved value from getContractPaused
     expect(isPausedResult.current).toBe(true);
   });
 });

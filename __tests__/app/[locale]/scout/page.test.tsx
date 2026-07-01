@@ -8,7 +8,7 @@ return <div data-testid="scout-dashboard-content">Scout Dashboard</div>;
 },
 }));
 
-jest.mock('@/components/ErrorBoundary', () => ({
+jest.mock('@/components/ui/ErrorBoundary', () => ({
 __esModule: true,
 default: function MockErrorBoundary({ children }: { children: React.ReactNode }) {
 return <>{children}</>;

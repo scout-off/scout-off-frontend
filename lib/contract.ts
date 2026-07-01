@@ -20,7 +20,8 @@ import {
   Account,
   StrKey,
 } from '@stellar/stellar-sdk';
-import { rpc, NETWORK, BASE_FEE, signAndSubmitTx } from './stellar';
+import { rpc, NETWORK, BASE_FEE, signAndSubmitTx, isValidStellarAddress } from './stellar';
+import { ValidationError } from './errors';
 import type {
   PlayerVitals,
   ValidatorInfo,
@@ -167,6 +168,9 @@ export async function buildRegisterPlayer(
   vitals: PlayerVitals,
   ipfsHash: string,
 ) {
+  if (!isValidStellarAddress(wallet)) {
+    throw new ValidationError(`wallet "${wallet}" is not a valid Stellar address`);
+  }
   return buildTx(
     'register_player',
     [
@@ -262,6 +266,9 @@ export async function buildApproveMilestone(
   playerId: string,
   milestone: string,
 ) {
+  if (!isValidStellarAddress(validatorKey)) {
+    throw new ValidationError(`validatorKey "${validatorKey}" is not a valid Stellar address`);
+  }
   return buildTx(
     'approve_milestone',
     [
@@ -432,6 +439,9 @@ export const SCOUT_ERROR_CODES = {
  * @throws {Error} If the RPC node cannot fetch the source account or prepare the transaction.
  */
 export async function buildPayToContact(scoutKey: string, playerId: string) {
+  if (!isValidStellarAddress(scoutKey)) {
+    throw new ValidationError(`scoutKey "${scoutKey}" is not a valid Stellar address`);
+  }
   return buildTx(
     'pay_to_contact',
     [

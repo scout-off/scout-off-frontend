@@ -69,9 +69,10 @@ export default function UpdateProfileForm({
       setNewCid('');
       onSuccess();
     } catch (err) {
-      const msg = parseContractError(err);
-      show({ message: msg, variant: 'error' });
-      setInlineError(msg);
+      const contractMsg = parseContractError(err);
+      const inlineMsg = `Failed to update profile media: ${contractMsg}`;
+      show({ message: contractMsg, variant: 'error' });
+      setInlineError(inlineMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -120,6 +121,9 @@ export default function UpdateProfileForm({
           onUpload={handleUpload}
           onValidationError={handleValidationError}
         />
+        {fileError && (
+          <p className="text-sm text-red-400 mt-1">{fileError}</p>
+        )}
 
         <form onSubmit={handleSubmit}>
           {inlineError && (

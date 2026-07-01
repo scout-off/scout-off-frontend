@@ -2,12 +2,30 @@ import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
+// ── Globals ───────────────────────────────────────────────────────────────────
+
+// jsdom does not implement IntersectionObserver; provide a no-op stub.
+global.IntersectionObserver = class {
+  observe = jest.fn();
+  unobserve = jest.fn();
+  disconnect = jest.fn();
+  constructor(_cb: IntersectionObserverCallback, _opts?: IntersectionObserverInit) {}
+  takeRecords(): IntersectionObserverEntry[] { return []; }
+  root: Element | null = null;
+  rootMargin: string = '';
+  thresholds: ReadonlyArray<number> = [];
+} as unknown as typeof IntersectionObserver;
+
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 jest.mock('@/hooks/useRequireWallet', () => ({
   useRequireWallet: () => ({
     walletAddress: 'GABC1234567890ABCDE1234567890ABCDE1234567890ABCDE123456',
   }),
+}));
+
+jest.mock('@/hooks/useRequireSubscription', () => ({
+  useRequireSubscription: jest.fn().mockReturnValue({ isProtected: true, loading: false }),
 }));
 
 const mockSearch = jest.fn();
@@ -74,6 +92,17 @@ jest.mock('@/components/scout/PlayerFilterForm', () => {
   };
 });
 
+jest.mock('@/hooks/useSubscription', () => ({
+  useSubscription: jest.fn().mockReturnValue({
+    subscription: null,
+    isLoading: false,
+    error: null,
+    writeLoading: false,
+    writeError: null,
+    subscribe: jest.fn(),
+  }),
+}));
+
 // ErrorBoundary is a transparent pass-through for these tests.
 jest.mock('@/components/ui/ErrorBoundary', () => ({
   __esModule: true,
@@ -91,6 +120,7 @@ const EMPTY_SCOUT = {
   loading: false,
   error: null,
   search: mockSearch,
+  searchByName: jest.fn(),
 };
 
 function setupScout(overrides: Partial<typeof EMPTY_SCOUT> = {}) {
@@ -121,6 +151,10 @@ function simulateSearchCycle(
 describe('ScoutDashboard — empty state', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    const { useRequireSubscription } = jest.requireMock('@/hooks/useRequireSubscription');
+    useRequireSubscription.mockReturnValue({ isProtected: true, loading: false });
+    const { useSubscription } = jest.requireMock('@/hooks/useSubscription');
+    useSubscription.mockReturnValue({ subscription: null, isLoading: false, error: null, writeLoading: false, writeError: null, subscribe: jest.fn() });
     setupScout();
   });
 

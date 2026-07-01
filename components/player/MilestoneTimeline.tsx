@@ -53,20 +53,6 @@ export default function MilestoneTimeline({
     setExpanded((prev) => (prev === level ? null : level));
   }
 
-  // Empty state: role="status" + aria-live="polite" ensures screen readers
-  // announce this message without requiring focus to move to it.
-  if (milestones.length === 0 && currentLevel === 0) {
-    return (
-      <p
-        role="status"
-        aria-live="polite"
-        className="text-sm text-gray-500 text-center py-4"
-      >
-        No milestones yet
-      </p>
-    );
-  }
-
   return (
     // <ol> carries implicit list semantics; aria-label names the landmark so
     // screen readers announce "Level progression timeline, list" rather than

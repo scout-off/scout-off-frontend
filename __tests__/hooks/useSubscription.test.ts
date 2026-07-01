@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { renderHook, act } from '@testing-library/react';
+import { SWRConfig } from 'swr';
 import { useSubscription } from '@/hooks/useSubscription';
 
 // Mock useWallet
@@ -24,6 +25,10 @@ const mockUseWallet = useWallet as jest.Mock;
 const mockGetSubscription = getSubscription as jest.Mock;
 const mockSubscribe = contractSubscribe as jest.Mock;
 
+function wrapper({ children }: { children: React.ReactNode }) {
+  return React.createElement(SWRConfig, { value: { provider: () => new Map(), shouldRetryOnError: false } }, children);
+}
+
 describe('useSubscription', () => {
   beforeEach(() => {
     jest.resetAllMocks();
@@ -40,7 +45,7 @@ describe('useSubscription', () => {
     };
     mockGetSubscription.mockResolvedValue(mockSubscription);
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderHook(() => useSubscription(), { wrapper });
 
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -60,7 +65,7 @@ describe('useSubscription', () => {
     };
     mockGetSubscription.mockResolvedValue(mockSubscription);
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderHook(() => useSubscription(), { wrapper });
 
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -85,7 +90,7 @@ describe('useSubscription', () => {
     mockSubscribe.mockResolvedValue(undefined);
     mockGetSubscription.mockResolvedValue(mockSubscription);
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderHook(() => useSubscription(), { wrapper });
 
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -110,7 +115,7 @@ describe('useSubscription', () => {
     mockSubscribe.mockRejectedValue(new Error('InsufficientFee'));
     mockGetSubscription.mockResolvedValue(null);
 
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderHook(() => useSubscription(), { wrapper });
 
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));

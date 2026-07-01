@@ -1,92 +1,92 @@
-import { Keypair, WebAuth, Networks } from '@stellar/stellar-sdk';
+import { WebAuth, Networks } from '@stellar/stellar-sdk';
 import { NextRequest, NextResponse } from 'next/server';
 
-// Initialise lazily so module-level evaluation during Next.js build does not
-// throw when STELLAR_SECRET_KEY is absent (the fallback placeholder is not a
-// valid Stellar secret and would fail the checksum on Keypair.fromSecret).
-function getServerConfig() {
-  const SECRET_KEY = process.env.STELLAR_SECRET_KEY;
-  if (!SECRET_KEY) {
-    throw new Error('STELLAR_SECRET_KEY environment variable is not set');
+function getAllowedOrigin(req: NextRequest): string | null {
+  const configured = process.env.NEXT_PUBLIC_BASE_URL;
+  if (configured) return configured;
+
+  const host = req.headers.get('host');
+  if (!host) return null;
+  const proto = req.headers.get('x-forwarded-proto') ?? 'http';
+  return `${proto}://${host}`;
+}
+
+export async function POST(req: NextRequest) {
+  const origin = req.headers.get('origin');
+  const allowed = getAllowedOrigin(req);
+
+  if (!origin || !allowed || origin !== allowed) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
-  const serverKeypair = Keypair.fromSecret(SECRET_KEY);
-  const NETWORK =
-    process.env.NEXT_PUBLIC_NETWORK === 'mainnet'
-      ? Networks.PUBLIC
-      : Networks.TESTNET;
-  const DOMAIN = process.env.NEXT_PUBLIC_DOMAIN || 'localhost:3000';
-  return { serverKeypair, NETWORK, DOMAIN };
+
+  let body: { signedXdr?: string; publicKey?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
+
+  const { signedXdr, publicKey } = body ?? {};
+  if (!signedXdr || !publicKey) {
+    return NextResponse.json({ error: 'Missing signedXdr or publicKey' }, { status: 400 });
+  }
+
+  const serverKey = process.env.SEP10_SERVER_KEY ?? '';
+  const homeDomain = process.env.SEP10_HOME_DOMAIN ?? '';
+  const network =
+    process.env.NEXT_PUBLIC_NETWORK === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
+
+  try {
+    WebAuth.verifyChallengeTxSigners(
+      signedXdr,
+      serverKey,
+      network,
+      [publicKey],
+      homeDomain,
+      homeDomain,
+    );
+
+    const response = NextResponse.json({ success: true });
+    response.cookies.set('session', publicKey, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+    });
+    return response;
+  } catch (error) {
+    console.error('SEP-10 Verification Error:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Verification failed' },
+      { status: 401 },
+    );
+  }
 }
 
 export async function GET(req: NextRequest) {
   const account = req.nextUrl.searchParams.get('account');
   if (!account) {
-    return NextResponse.json(
-      { error: 'Missing account parameter' },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: 'Missing account parameter' }, { status: 400 });
   }
 
+  const serverKey = process.env.SEP10_SERVER_KEY;
+  if (!serverKey) {
+    return NextResponse.json({ error: 'Server not configured' }, { status: 500 });
+  }
+
+  const homeDomain = process.env.SEP10_HOME_DOMAIN ?? '';
+  const network =
+    process.env.NEXT_PUBLIC_NETWORK === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
+
   try {
-    const { serverKeypair, NETWORK, DOMAIN } = getServerConfig();
-    const challengeXdr = WebAuth.buildChallengeTx(
-      serverKeypair,
-      account,
-      DOMAIN,
-      300,
-      NETWORK,
-      DOMAIN,
-    );
+    const { Keypair } = await import('@stellar/stellar-sdk');
+    const serverKeypair = Keypair.fromSecret(serverKey);
+    const { buildChallengeTx } = (await import('@stellar/stellar-sdk')).WebAuth;
+    const challengeXdr = buildChallengeTx(serverKeypair, account, homeDomain, 300, network, homeDomain);
     return NextResponse.json({ transaction: challengeXdr });
   } catch (error) {
     console.error('SEP-10 Challenge Error:', error);
-    return NextResponse.json(
-      { error: 'Failed to generate challenge' },
-      { status: 500 },
-    );
-  }
-}
-
-export async function POST(req: NextRequest) {
-  try {
-    const { transaction } = await req.json();
-    if (!transaction) {
-      return NextResponse.json(
-        { error: 'Missing transaction' },
-        { status: 400 },
-      );
-    }
-
-    const { serverKeypair, NETWORK, DOMAIN } = getServerConfig();
-    // readChallengeTx validates the server signature and extracts the client account ID
-    const { clientAccountID } = WebAuth.readChallengeTx(
-      transaction,
-      serverKeypair.publicKey(),
-      NETWORK,
-      DOMAIN,
-      DOMAIN,
-    );
-
-    const response = NextResponse.json({
-      success: true,
-      publicKey: clientAccountID,
-    });
-
-    response.cookies.set('session', clientAccountID, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 60 * 60 * 24, // 24 hours
-      path: '/',
-    });
-
-    return response;
-  } catch (error) {
-    console.error('SEP-10 Verification Error:', error);
-    return NextResponse.json(
-      { error: 'Invalid challenge transaction' },
-      { status: 401 },
-    );
+    return NextResponse.json({ error: 'Failed to generate challenge' }, { status: 500 });
   }
 }
 

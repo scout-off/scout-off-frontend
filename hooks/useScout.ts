@@ -44,16 +44,19 @@ export function useScout() {
       return results as Player[];
     },
     {
-      dedupingInterval: 5_000,   // no duplicate RPC calls for the same filter within 5 s
+      dedupingInterval: 60_000,
       revalidateOnFocus: false,
       errorRetryCount: 2,
     },
-    { dedupingInterval: 60_000, revalidateOnFocus: false, errorRetryCount: 2 },
   );
 
   /** Trigger a search with the given filter. */
   const search = useCallback((filter: PlayerFilter) => {
     setSearchKey(scoutSearchKey(filter));
+  }, []);
+
+  const searchByName = useCallback((name: string) => {
+    setSearchKey(`scout:name:${name}`);
   }, []);
 
   return {

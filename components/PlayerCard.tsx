@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { mutate } from 'swr';
 import type { Player, ProgressLevel } from '@/types';
-import { getProgressLabel, getProgressBadgeLabel } from '@/lib/progress';
+import { getProgressLabel } from '@/lib/progress';
 import ProgressBar from './ProgressBar';
 import Badge from '@/components/ui/Badge';
 
@@ -38,7 +38,6 @@ function PlayerCard({ player }: { player: Player }) {
   const href = `/player/${id}`;
   const cacheKey = `player:${id}`;
   const levelLabel = getProgressLabel(progressLevel);
-  const levelBadgeLabel = getProgressBadgeLabel(progressLevel);
   const cardLabel = `${vitals.name}, ${vitals.position}, Level ${progressLevel} – ${levelLabel}`;
 
   const prefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -132,7 +131,7 @@ function PlayerCard({ player }: { player: Player }) {
 
         <Badge
           variant={LEVEL_VARIANT[progressLevel]}
-          label={levelBadgeLabel}
+          label={levelLabel}
           aria-label={`Level ${progressLevel}: ${levelLabel}`}
           size="sm"
           className="mt-1"
@@ -142,6 +141,7 @@ function PlayerCard({ player }: { player: Player }) {
           <span className="inline-block h-4 w-12 bg-gray-600 rounded animate-pulse mt-1" />
         ) : (
           <Badge
+            role="none"
             variant="region"
             label={`${milestoneCount} milestones`}
             size="sm"

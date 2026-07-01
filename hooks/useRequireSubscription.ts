@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { useSubscription } from './useSubscription';
-import { useToast } from './useToast';
+import { useToast } from '@/components/ui/Toast';
 import { useWallet } from './useWallet';
 
 export function useRequireSubscription() {

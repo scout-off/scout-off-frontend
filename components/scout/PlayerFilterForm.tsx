@@ -66,14 +66,6 @@ export default function PlayerFilterForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // When the parent increments resetKey, reset controls and immediately search defaults.
-  const prevResetKey = useRef(resetKey);
-  useEffect(() => {
-    if (prevResetKey.current === resetKey) return;
-    prevResetKey.current = resetKey;
-    handleReset();
-  }, [resetKey, handleReset]);
-
   const updateURL = useCallback(
     (next: FilterState) => {
       const params = new URLSearchParams();
@@ -112,6 +104,14 @@ export default function PlayerFilterForm({
     updateURL(DEFAULTS);
     onSearch(toPlayerFilter(DEFAULTS));
   }, [onSearch, updateURL]);
+
+  // When the parent increments resetKey, reset controls and immediately search defaults.
+  const prevResetKey = useRef(resetKey);
+  useEffect(() => {
+    if (prevResetKey.current === resetKey) return;
+    prevResetKey.current = resetKey;
+    handleReset();
+  }, [resetKey, handleReset]);
 
   return (
     <div

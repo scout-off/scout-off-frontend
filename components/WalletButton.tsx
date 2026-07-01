@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useWallet } from '@/hooks/useWallet';
 import {
@@ -93,6 +93,35 @@ export default function WalletButton({ hideBalance = false }: { hideBalance?: bo
     closeWalletModal,
     connectWithProvider,
   } = useWallet();
+
+  // ── Wallet install detection ───────────────────────────────────────────────
+  const [installedMap, setInstalledMap] = useState<
+    Partial<Record<WalletProvider, boolean>>
+  >({});
+
+  useEffect(() => {
+    if (!showWalletModal) return;
+    let cancelled = false;
+    Promise.all(
+      WALLET_PROVIDERS.map(async (wp) => {
+        const provider = wp.provider as WalletProvider;
+        return [provider, await isWalletInstalled(provider)] as const;
+      }),
+    ).then((results) => {
+      if (cancelled) return;
+      setInstalledMap(Object.fromEntries(results));
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [showWalletModal]);
+
+  const allChecked = WALLET_PROVIDERS.every(
+    (wp) => installedMap[wp.provider as WalletProvider] !== undefined,
+  );
+  const noneInstalled =
+    allChecked &&
+    WALLET_PROVIDERS.every(
+      (wp) => installedMap[wp.provider as WalletProvider] === false,
+    );
 
   // ── Disconnect confirmation state ──────────────────────────────────────────
   const [disconnectOpen, setDisconnectOpen] = useState(false);
