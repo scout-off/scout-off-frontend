@@ -132,4 +132,74 @@ describe('ActivityFeed', () => {
       expect(screen.getByText('Live')).toBeInTheDocument();
     });
   });
+
+  it('scopes the request and results to the given scoutId', async () => {
+    mockGet.mockResolvedValue({
+      data: [
+        {
+          id: 'evt-1',
+          type: 'player_registered',
+          createdAt: Math.floor(Date.now() / 1000),
+          payload: { playerName: 'Mine', scoutId: 'scout-1' },
+        },
+        {
+          id: 'evt-2',
+          type: 'player_registered',
+          createdAt: Math.floor(Date.now() / 1000),
+          payload: { playerName: 'Other', scoutId: 'scout-2' },
+        },
+      ],
+    });
+
+    render(<ActivityFeed scoutId="scout-1" />);
+
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenCalledWith(
+        expect.stringContaining('scoutId=scout-1'),
+      );
+      expect(screen.getByText('Mine registered')).toBeInTheDocument();
+      expect(screen.queryByText('Other registered')).not.toBeInTheDocument();
+    });
+  });
+
+  it('shows the empty state when the fetch fails', async () => {
+    mockGet.mockRejectedValue(new Error('network down'));
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(<ActivityFeed />);
+
+    await waitFor(() => {
+      expect(screen.getByText('No recent activity.')).toBeInTheDocument();
+    });
+
+    (console.error as jest.Mock).mockRestore();
+  });
+
+  it('merges new live events onto the top of the feed', async () => {
+    mockGet.mockResolvedValue({ data: [] });
+    mockUseContractEvents.mockReturnValue({ events: [], isLive: true });
+
+    const { rerender } = render(<ActivityFeed />);
+
+    await waitFor(() => {
+      expect(screen.getByText('No recent activity.')).toBeInTheDocument();
+    });
+
+    mockUseContractEvents.mockReturnValue({
+      events: [
+        {
+          id: 'live-1',
+          type: 'player_registered',
+          createdAt: Math.floor(Date.now() / 1000),
+          payload: { playerName: 'Live Player' },
+        },
+      ],
+      isLive: true,
+    });
+    rerender(<ActivityFeed />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Live Player registered')).toBeInTheDocument();
+    });
+  });
 });

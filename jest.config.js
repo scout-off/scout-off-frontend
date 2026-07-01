@@ -28,6 +28,7 @@ const customJestConfig = {
     'context/**/*.{ts,tsx}',
     'packages/**/*.{ts,tsx}',
     '!**/*.d.ts',
+    '!**/*.stories.{ts,tsx}',
     '!**/node_modules/**',
   ],
 };

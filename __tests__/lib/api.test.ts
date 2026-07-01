@@ -49,6 +49,10 @@ import {
   fetchScoutContacts,
   fetchChatHistory,
   postChatMessage,
+  searchPlayersByName,
+  fetchScoutStats,
+  fetchActivityEvents,
+  fetchValidatorMilestoneCount,
 } from '@/lib/api';
 
 // Grab the mock functions from the instance that axios.create returned
@@ -165,6 +169,118 @@ describe('fetchChatHistory (getMessages)', () => {
 
     await expect(fetchChatHistory('room-abc')).rejects.toThrow(
       'Request failed with status code 500',
+    );
+  });
+});
+
+// ── searchPlayersByName ───────────────────────────────────────────────────────
+
+describe('searchPlayersByName', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('calls GET /players/search with the name param and returns data', async () => {
+    const mockData = [{ id: 'player-1', name: 'Alice' }];
+    mockGet.mockResolvedValueOnce({ data: mockData });
+
+    const result = await searchPlayersByName('Alice');
+
+    expect(mockGet).toHaveBeenCalledWith('/players/search', {
+      params: { name: 'Alice' },
+    });
+    expect(result).toEqual(mockData);
+  });
+});
+
+// ── fetchScoutStats ───────────────────────────────────────────────────────────
+
+describe('fetchScoutStats', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('calls GET /scouts/:scoutId/stats and returns data', async () => {
+    const mockData = { contactedCount: 3, trialOffersCount: 1 };
+    mockGet.mockResolvedValueOnce({ data: mockData });
+
+    const result = await fetchScoutStats('scout-1');
+
+    expect(mockGet).toHaveBeenCalledWith('/scouts/scout-1/stats');
+    expect(result).toEqual(mockData);
+  });
+});
+
+// ── fetchActivityEvents ───────────────────────────────────────────────────────
+
+describe('fetchActivityEvents', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('calls GET /admin/activity with default paging and returns data', async () => {
+    const mockData = { events: [], total: 0 };
+    mockGet.mockResolvedValueOnce({ data: mockData });
+
+    const result = await fetchActivityEvents();
+
+    expect(mockGet).toHaveBeenCalledWith('/admin/activity', {
+      params: { page: 1, pageSize: 20 },
+    });
+    expect(result).toEqual(mockData);
+  });
+
+  it('forwards explicit page and pageSize params', async () => {
+    const mockData = { events: [], total: 0 };
+    mockGet.mockResolvedValueOnce({ data: mockData });
+
+    await fetchActivityEvents(2, 5);
+
+    expect(mockGet).toHaveBeenCalledWith('/admin/activity', {
+      params: { page: 2, pageSize: 5 },
+    });
+  });
+});
+
+// ── fetchValidatorMilestoneCount ──────────────────────────────────────────────
+
+describe('fetchValidatorMilestoneCount', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('returns the milestone count from a camelCase response', async () => {
+    mockGet.mockResolvedValueOnce({ data: { milestoneCount: 7 } });
+
+    const result = await fetchValidatorMilestoneCount('GVALIDATOR');
+
+    expect(mockGet).toHaveBeenCalledWith('/validators/GVALIDATOR/stats');
+    expect(result).toBe(7);
+  });
+
+  it('falls back to a snake_case response', async () => {
+    mockGet.mockResolvedValueOnce({ data: { milestone_count: 4 } });
+
+    const result = await fetchValidatorMilestoneCount('GVALIDATOR');
+
+    expect(result).toBe(4);
+  });
+
+  it('returns null when the response has no recognisable count', async () => {
+    mockGet.mockResolvedValueOnce({ data: {} });
+
+    const result = await fetchValidatorMilestoneCount('GVALIDATOR');
+
+    expect(result).toBeNull();
+  });
+
+  it('returns null when the request fails', async () => {
+    mockGet.mockRejectedValueOnce(new Error('Network error'));
+
+    const result = await fetchValidatorMilestoneCount('GVALIDATOR');
+
+    expect(result).toBeNull();
+  });
+
+  it('URL-encodes the validator address', async () => {
+    mockGet.mockResolvedValueOnce({ data: { milestoneCount: 1 } });
+
+    await fetchValidatorMilestoneCount('G VALIDATOR/WITH SPACE');
+
+    expect(mockGet).toHaveBeenCalledWith(
+      '/validators/G%20VALIDATOR%2FWITH%20SPACE/stats',
     );
   });
 });
