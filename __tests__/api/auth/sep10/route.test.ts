@@ -1,5 +1,5 @@
 /** @jest-environment node */
-import { POST } from '../../../../app/api/auth/sep10/route';
+import { POST, DELETE } from '../../../../app/api/auth/sep10/route';
 import { NextRequest } from 'next/server';
 
 // Mock stellar-sdk so tests don't need real Stellar keys or network access
@@ -13,8 +13,28 @@ jest.mock('@stellar/stellar-sdk', () => ({
   },
 }));
 
+// Mock the session store so tests don't touch the real filesystem
+jest.mock('@/lib/sessionStore', () => ({
+  createSession: jest.fn(),
+  revokeSession: jest.fn(),
+}));
+
 import { WebAuth } from '@stellar/stellar-sdk';
+import { createSession, revokeSession } from '@/lib/sessionStore';
 const mockVerify = WebAuth.verifyChallengeTxSigners as jest.Mock;
+const mockCreateSession = createSession as jest.Mock;
+const mockRevokeSession = revokeSession as jest.Mock;
+
+const SESSION_ID = 'session-abc-123';
+const CREATED_AT = 1_700_000_000_000;
+const TTL_SECONDS = 86400;
+const SESSION_RECORD = {
+  id: SESSION_ID,
+  publicKey: '',
+  createdAt: CREATED_AT,
+  expiresAt: CREATED_AT + TTL_SECONDS * 1000,
+  revoked: false,
+};
 
 const ALLOWED_ORIGIN = 'https://app.scoutoff.com';
 const VALID_PUBLIC_KEY =
@@ -46,6 +66,10 @@ beforeEach(() => {
     'GBSERVERKEY0000000000000000000000000000000000000000000000000';
   process.env.SEP10_HOME_DOMAIN = 'scoutoff.com';
   process.env.NEXT_PUBLIC_NETWORK = 'testnet';
+  mockCreateSession.mockReturnValue({
+    ...SESSION_RECORD,
+    publicKey: VALID_PUBLIC_KEY,
+  });
 });
 
 afterEach(() => {
@@ -102,14 +126,47 @@ describe('POST /api/auth/sep10 — successful authentication', () => {
     );
 
     const body = await res.json();
-    expect(body).toEqual({ success: true });
+    expect(body).toEqual({
+      success: true,
+      expiresAt: SESSION_RECORD.expiresAt,
+    });
+
+    expect(mockCreateSession).toHaveBeenCalledWith(VALID_PUBLIC_KEY);
 
     const cookie = res.cookies.get('session');
     expect(cookie).toBeDefined();
-    expect(cookie?.value).toBe(VALID_PUBLIC_KEY);
+    expect(cookie?.value).toBe(SESSION_ID);
+    expect(cookie?.value).not.toBe(VALID_PUBLIC_KEY);
     expect(cookie?.httpOnly).toBe(true);
     expect(cookie?.sameSite).toBe('strict');
     expect(cookie?.path).toBe('/');
+    expect(cookie?.maxAge).toBe(TTL_SECONDS);
+  });
+});
+
+describe('DELETE /api/auth/sep10 — session revocation', () => {
+  test('revokes the session server-side and clears the cookie', async () => {
+    const req = new NextRequest('http://localhost:3000/api/auth/sep10', {
+      method: 'DELETE',
+      headers: { cookie: `session=${SESSION_ID}` },
+    });
+
+    const res = await DELETE(req);
+
+    expect(res.status).toBe(200);
+    expect(mockRevokeSession).toHaveBeenCalledWith(SESSION_ID);
+    expect(res.cookies.get('session')?.value).toBe('');
+  });
+
+  test('does not call revokeSession when there is no session cookie', async () => {
+    const req = new NextRequest('http://localhost:3000/api/auth/sep10', {
+      method: 'DELETE',
+    });
+
+    const res = await DELETE(req);
+
+    expect(res.status).toBe(200);
+    expect(mockRevokeSession).not.toHaveBeenCalled();
   });
 });
 

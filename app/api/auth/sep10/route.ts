@@ -1,5 +1,6 @@
 import { WebAuth, Networks } from '@stellar/stellar-sdk';
 import { NextRequest, NextResponse } from 'next/server';
+import { createSession, revokeSession } from '@/lib/sessionStore';
 
 function getAllowedOrigin(req: NextRequest): string | null {
   const configured = process.env.NEXT_PUBLIC_BASE_URL;
@@ -54,12 +55,18 @@ export async function POST(req: NextRequest) {
       homeDomain,
     );
 
-    const response = NextResponse.json({ success: true });
-    response.cookies.set('session', publicKey, {
+    const session = createSession(publicKey);
+
+    const response = NextResponse.json({
+      success: true,
+      expiresAt: session.expiresAt,
+    });
+    response.cookies.set('session', session.id, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       path: '/',
+      maxAge: Math.floor((session.expiresAt - session.createdAt) / 1000),
     });
     return response;
   } catch (error) {
@@ -116,7 +123,10 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function DELETE() {
+export async function DELETE(req: NextRequest) {
+  const sessionId = req.cookies.get('session')?.value;
+  if (sessionId) revokeSession(sessionId);
+
   const response = NextResponse.json({ success: true });
   response.cookies.delete('session');
   return response;
