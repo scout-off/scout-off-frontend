@@ -79,6 +79,14 @@
     "french": "Français",
     "swahili": "Kiswahili"
   },
+  "offline_queue": {
+    "queued": "{count} {count, plural, one {kitendo} other {vitendo}} vimewekwa foleni — vitatumwa mtandao ukirejea",
+    "queued_desc": "Mabadiliko yako yamehifadhiwa kwenye kifaa chako na yatatumwa kiotomatiki mtandao ukirejea.",
+    "processing": "Inatuma {count} {count, plural, one {kitendo} other {vitendo}}…",
+    "processing_desc": "Tafadhali subiri wakati vitendo vyako vilivyoko foleni vinatumwa.",
+    "retry": "Jaribu tena sasa",
+    "retry_aria": "Jaribu tena vitendo vilivyoko foleni"
+  },
   "validator": {
     "title": "Dashibodi ya Mthibitishaji",
     "verifying": "Inathibitisha hali ya mthibitishaji…",
@@ -120,7 +128,9 @@
     "milestones": "Miikukuu",
     "achievements": "Mafanikio",
     "progress": "Maendeleo",
-    "stats": "Takwimu"
+    "stats": "Takwimu",
+    "download_data": "Pakua data yangu",
+    "download_data_success": "Data yako imepakuliwa."
   },
   "wallet": {
     "connect": "Unganisha Pochi",
@@ -268,5 +278,84 @@
     "NoFeesToWithdraw": "Hakuna ada zinazopatikana kwa uchukuzi kwa sasa.",
     "Overflow": "Kosa la hesabu limetokea. Tafadhali jaribu tena.",
     "unknown": "Kosa lisilotarajiwa limetokea. Tafadhali jaribu tena."
+  },
+  "privacy": {
+    "back_to_home": "Rudi Nyumbani",
+    "page_title": "Sera ya Faragha",
+    "page_description": "Jinsi ScoutOff inavyokusanya, kutumia, na kulinda data yako binafsi.",
+    "eyebrow": "Kisheria",
+    "last_updated": "Ilisasishwa mwisho: Julai 29, 2026",
+    "section1_title": "1. Utangulizi",
+    "section1_content": "ScoutOff imejitolea kulinda faragha yako. Sera hii inaeleza jinsi tunavyokusanya, kutumia, na kulinda taarifa zako. Kwa kutumia ScoutOff, unakubali ukusanyaji na matumizi ya taarifa kulingana na sera hii.",
+    "section2_title": "2. Data Tunazokusanya",
+    "section2_content": "Data za on-chain: Funguo yako ya umma ya Stellar, historia ya miamala, hali ya usajili, na data za usajili huhifadhiwa kwenye blockchain ya Stellar. Data hizi ni za umma, hazibadiliki, na hazawezi kufutwa na yeyote. Data za off-chain: Tunakusanya maelezo ya mawasiliano, metadata ya wasifu, ujumbe wa mazungumzo, na uchambuzi wa matumizi kupitia Vercel Analytics na Sentry.",
+    "section3_title": "3. Maudhui Yanayohifadhiwa kwenye IPFS",
+    "section3_content": "Maudhui ya wasifu wa mchezaji (picha, video) yanahifadhiwa kwenye IPFS, mtandao wa uhifadhi uliogatuliwa. Mara maudhui yanapopakiwa kwenye IPFS, yanapatikana hadharani na, kutokana na asili ya itifaki hiyo, hayawezi kuhakikishiwa kuondolewa kabisa kwenye nodi zote za mtandao.",
+    "section4_title": "4. Jinsi Tunavyotumia Data Yako",
+    "section4_content": "Tunatumia data yako kutoa na kudumisha jukwaa, kuchakata miamala ya on-chain, kuunganisha wachunguzi na wachezaji, kufuatilia utendaji wa jukwaa, na kutimiza wajibu wa kisheria.",
+    "section5_title": "5. Ushirikishaji wa Data",
+    "section5_content": "Hatuuzi data yako binafsi. Tunashirikisha data pekee na watumiaji wengine kulingana na maelekezo yako, na watoa huduma (Vercel, Sentry, Pinata), na inapohitajika kisheria.",
+    "section6_title": "6. Uhifadhi na Ufutaji",
+    "section6_content": "Data za on-chain ni za kudumu na haziwezi kufutwa. Data za off-chain zinahifadhiwa kwa muda unaohitajika. Unaweza kuomba ufutaji wa data zako za off-chain kupitia mipangilio ya akaunti. Tumia kitendo cha 'Omba Ufutaji wa Data' katika Mipangilio ya Akaunti.",
+    "section7_title": "7. Haki Zako na Mawasiliano",
+    "section7_content": "Kulingana na eneo lako la kisheria, unaweza kuwa na haki za kufikia, kusahihisha, kufuta, au kuhamisha data yako binafsi. Haki hizi zinatumika tu kwa data za off-chain. Kwa maswali, wasiliana nasi kupitia njia rasmi za ScoutOff."
+  },
+  "terms": {
+    "back_to_home": "Rudi Nyumbani",
+    "page_title": "Masharti ya Huduma",
+    "page_description": "Masharti ya matumizi ya jukwaa, ada, na asili isiyoweza kubadilishwa ya vitendo vya on-chain.",
+    "eyebrow": "Kisheria",
+    "last_updated": "Ilisasishwa mwisho: Julai 29, 2026",
+    "section1_title": "1. Kukubali Masharti",
+    "section1_content": "Kwa kutumia ScoutOff, unakubali Masharti haya ya Huduma. Ikiwa hukubaliani, usitumie jukwaa hili. ScoutOff ni jukwaa lililogatuliwa la uchunguzi wa vipaji vya soka lililojengwa kwenye mtandao wa Stellar.",
+    "section2_title": "2. Matumizi Yanayokubalika",
+    "section2_content": "Unakubali kutumia ScoutOff kwa madhumuni halali pekee. Usiwasilishe taarifa za uongo, kutumia jukwaa kunyanyasa wengine, kukwepa ada za usajili, kutumia zana za kiotomatiki bila idhini, au kuwasilisha maudhui haramu. Tunahifadhi haki ya kusimamisha ufikiaji kwa ukiukaji.",
+    "section3_title": "3. Ada na Malipo",
+    "section3_content": "Ada zote zimeainishwa kwa XLM (Stellar Lumens). Ada ni pamoja na usajili wa wachunguzi na ada za jukwaa. Ada hazirudishwi isipokuwa imeelezwa vinginevyo. Malipo yote yanachakatwa on-chain kupitia mikataba mahiri ya Soroban.",
+    "section4_title": "4. Vitendo vya On-Chain na Kutobadilika",
+    "section4_content": "Vitendo vinavyofanyika kwenye blockchain ya Stellar ni vya kudumu na haviwezi kubadilishwa. Hii ni pamoja na usajili wa wachezaji, idhini za hatua muhimu, malipo ya usajili, na utoaji wa ada. ScoutOff haiwezi kubadilisha miamala ya on-chain baada ya kuthibitishwa.",
+    "section5_title": "5. Haki Miliki",
+    "section5_content": "Wachezaji wanabaki na umiliki wa maudhui ya wasifu wao na data binafsi. Kwa kuwasilisha maudhui kwa ScoutOff, unatupa leseni ya kuonyesha maudhui hayo kwa madhumuni ya uendeshaji wa jukwaa pekee. Msimbo wa jukwaa ni chanzo huria.",
+    "section6_title": "6. Kanusho na Vikwazo",
+    "section6_content": "ScoutOff inatolewa 'kama ilivyo' bila dhamana. Hatuwajibiki kwa usahihi wa taarifa za wachezaji, maudhui ya IPFS, hasara kutokana na matatizo ya mtandao wa blockchain, au hitilafu za mikataba mahiri. Dhima yetu haitazidi ada ulizotulipa katika miezi 12 kabla ya madai."
+  },
+  "settings": {
+    "back_to_home": "Rudi Nyumbani",
+    "page_title": "Mipangilio ya Akaunti",
+    "page_description": "Simamia mapendeleo na data yako.",
+    "eyebrow": "Mipangilio",
+    "data_deletion_title": "Omba Ufutaji wa Data",
+    "data_deletion_description": "Omba ufutaji wa data yako binafsi ya off-chain (historia ya mazungumzo, metadata ya wasifu, uchambuzi). Data za on-chain (miamala, usajili) ni za kudumu na haziwezi kufutwa.",
+    "data_deletion_button": "Omba Ufutaji",
+    "connect_wallet_to_request": "Unganisha pochi yako ili kuomba ufutaji wa data."
+  },
+  "dataDeletion": {
+    "modal_title": "Omba Ufutaji wa Data",
+    "onchain_heading": "Data za On-Chain (Haziwezi Kufutwa)",
+    "onchain_description": "Funguo yako ya umma ya Stellar, historia ya miamala, usajili wa mchezaji, na malipo huhifadhiwa kwa kudumu kwenye blockchain. Hakuna yeyote — ikiwa ni pamoja na ScoutOff — anayeweza kubadilisha au kufuta data hizi.",
+    "offchain_heading": "Data za Off-Chain (Zinaweza Kufutwa)",
+    "offchain_description": "Historia ya mazungumzo, metadata ya wasifu, maelezo ya mawasiliano, na data za uchambuzi zilizohifadhiwa kwenye seva zetu zinaweza kufutwa ukiomba.",
+    "request_button": "Omba Ufutaji wa Data",
+    "request_note": "Rekodi za off-chain pekee ndizo zinaweza kufutwa. Data za on-chain ni za kudumu.",
+    "confirm_title": "Una uhakika?",
+    "confirm_message": "Hatua hii itatuma ombi la kufuta data yako binafsi ya off-chain kutoka kwenye seva za ScoutOff. Data za on-chain haziwezi kufutwa na zitabaki kwenye blockchain ya Stellar kwa kudumu.",
+    "confirm_button": "Ndiyo, Omba Ufutaji",
+    "cancel": "Ghairi",
+    "close": "Funga",
+    "retry": "Jaribu Tena",
+    "success_title": "Ombi Limetumwa",
+    "success_message": "Ombi lako la ufutaji wa data limetumwa. Utapokea uthibitisho mara rekodi zako za off-chain zitakapochakatwa.",
+    "success_toast": "Ombi la ufutaji wa data limetumwa kwa mafanikio.",
+    "error_toast": "Imeshindwa kutuma ombi. Tafadhali jaribu tena.",
+    "error_message": "Hitilafu imetokea wakati wa kutuma ombi lako. Tafadhali jaribu tena.",
+    "submitting": "Inatuma ombi lako…",
+    "done": "Imekamilika"
+  },
+  "cookieConsent": {
+    "title": "Idhini ya Vidakuzi",
+    "message": "Tunatumia Vercel Analytics na Sentry kwa ufuatiliaji. Hatutumii kamwe vifuatiliaji vya matangazo vya wahusika wengine.",
+    "accept": "Kubali",
+    "decline": "Kataa",
+    "privacy_link": "Sera ya Faragha"
   }
 }

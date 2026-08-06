@@ -23,7 +23,9 @@ describe('ThemeToggle', () => {
 
     const button = screen.getByRole('button', { name: 'Switch to light mode' });
     fireEvent.click(button);
-    expect(screen.getByRole('button', { name: 'Switch to dark mode' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Switch to dark mode' }),
+    ).toBeInTheDocument();
   });
 
   it('renders a sun icon and switches to dark when currently light', () => {
@@ -32,6 +34,8 @@ describe('ThemeToggle', () => {
 
     const button = screen.getByRole('button', { name: 'Switch to dark mode' });
     fireEvent.click(button);
-    expect(screen.getByRole('button', { name: 'Switch to light mode' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Switch to light mode' }),
+    ).toBeInTheDocument();
   });
 });

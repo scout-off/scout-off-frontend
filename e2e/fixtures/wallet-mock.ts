@@ -132,9 +132,10 @@ export async function installMockFreighter(
               return;
             }
             (
-              (window as unknown as Record<string, unknown>)[
-                signFn
-              ] as (xdr: string, passphrase?: string) => Promise<string>
+              (window as unknown as Record<string, unknown>)[signFn] as (
+                xdr: string,
+                passphrase?: string,
+              ) => Promise<string>
             )(data.transactionXdr ?? '', data.networkPassphrase).then(
               (signedTransaction: string) =>
                 respond({ signedTransaction, error: '' }),
@@ -150,7 +151,12 @@ export async function installMockFreighter(
         }
       });
     },
-    { publicKey, behaviorFlag: BEHAVIOR_FLAG, signFn: SIGN_FN, initialBehavior },
+    {
+      publicKey,
+      behaviorFlag: BEHAVIOR_FLAG,
+      signFn: SIGN_FN,
+      initialBehavior,
+    },
   );
 
   return {

@@ -27,7 +27,10 @@ describe('WatchlistStore', () => {
 
     const entries = store.list('GSCOUT');
     expect(entries.map((e) => e.playerId)).toEqual(['player-2', 'player-1']);
-    expect(entries[0]).toMatchObject({ scoutWallet: 'GSCOUT', playerId: 'player-2' });
+    expect(entries[0]).toMatchObject({
+      scoutWallet: 'GSCOUT',
+      playerId: 'player-2',
+    });
   });
 
   it('does not duplicate an entry for the same scout/player pair', () => {

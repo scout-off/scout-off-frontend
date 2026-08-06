@@ -46,7 +46,8 @@ async function checkEndpoint(
     }
 
     const data = await res.json().catch(() => ({}) as Record<string, unknown>);
-    const status: SubsystemStatus = data?.status === 'degraded' ? 'degraded' : 'ok';
+    const status: SubsystemStatus =
+      data?.status === 'degraded' ? 'degraded' : 'ok';
     return { status, detail: data };
   } catch (err) {
     const message =

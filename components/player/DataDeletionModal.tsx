@@ -2,7 +2,13 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ShieldAlert, Database, CheckCircle, Loader2, AlertTriangle } from 'lucide-react';
+import {
+  ShieldAlert,
+  Database,
+  CheckCircle,
+  Loader2,
+  AlertTriangle,
+} from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
@@ -32,9 +38,7 @@ export default function DataDeletionModal({
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(
-          (body as { error?: string }).error ?? 'Request failed',
-        );
+        throw new Error((body as { error?: string }).error ?? 'Request failed');
       }
 
       setStatus('success');
@@ -46,8 +50,7 @@ export default function DataDeletionModal({
     } catch (err: unknown) {
       setStatus('error');
       show({
-        message:
-          err instanceof Error ? err.message : t('error_toast'),
+        message: err instanceof Error ? err.message : t('error_toast'),
         variant: 'error',
         duration: 6000,
       });
@@ -107,9 +110,7 @@ export default function DataDeletionModal({
             <p className="text-sm font-semibold text-white">
               {t('success_title')}
             </p>
-            <p className="text-xs text-gray-400">
-              {t('success_message')}
-            </p>
+            <p className="text-xs text-gray-400">{t('success_message')}</p>
             <Button
               variant="secondary"
               onClick={handleClose}
@@ -161,9 +162,7 @@ export default function DataDeletionModal({
               className="animate-spin text-brand-green"
               aria-hidden="true"
             />
-            <p className="text-sm text-gray-300">
-              {t('submitting')}
-            </p>
+            <p className="text-sm text-gray-300">{t('submitting')}</p>
           </div>
         ) : status === 'error' ? (
           <div className="flex flex-col gap-3">

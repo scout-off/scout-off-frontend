@@ -62,7 +62,10 @@ const cache = new Map<string, CacheEntry>();
  * `{ a: 2, b: 1 }` produce the same hash.
  */
 export function hashMetadata(metadata: unknown): string {
-  const canonical = JSON.stringify(metadata, Object.keys(metadata as object).sort());
+  const canonical = JSON.stringify(
+    metadata,
+    Object.keys(metadata as object).sort(),
+  );
   return crypto.createHash('sha256').update(canonical).digest('hex');
 }
 

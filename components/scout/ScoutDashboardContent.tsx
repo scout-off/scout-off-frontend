@@ -41,7 +41,11 @@ export default function ScoutDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const tour = useOnboardingTour(SCOUT_TOUR_ID, scoutTourSteps, publicKey ?? undefined);
+  const tour = useOnboardingTour(
+    SCOUT_TOUR_ID,
+    scoutTourSteps,
+    publicKey ?? undefined,
+  );
 
   const {
     players,
@@ -178,7 +182,10 @@ export default function ScoutDashboardContent() {
           return prev.filter((id) => id !== playerId);
         }
         if (prev.length >= 4) {
-          showToast({ message: 'Maximum 4 players for comparison', variant: 'info' });
+          showToast({
+            message: 'Maximum 4 players for comparison',
+            variant: 'info',
+          });
           return prev;
         }
         return [...prev, playerId];
@@ -237,443 +244,455 @@ export default function ScoutDashboardContent() {
         onComplete={tour.completeTour}
       />
       <div className="flex flex-col gap-8">
-      <h1 className="text-3xl font-bold text-white">Scout Dashboard</h1>
+        <h1 className="text-3xl font-bold text-white">Scout Dashboard</h1>
 
-      {subscription &&
-        (() => {
-          const daysRemaining = Math.floor(
-            (subscription.expiresAt - now / 1000) / 86400,
-          );
-          const tierLabel =
-            subscription.tier.charAt(0).toUpperCase() +
-            subscription.tier.slice(1);
+        {subscription &&
+          (() => {
+            const daysRemaining = Math.floor(
+              (subscription.expiresAt - now / 1000) / 86400,
+            );
+            const tierLabel =
+              subscription.tier.charAt(0).toUpperCase() +
+              subscription.tier.slice(1);
 
-          if (daysRemaining <= 0) {
+            if (daysRemaining <= 0) {
+              return (
+                <div
+                  data-tour="subscription-status"
+                  className="flex items-center gap-3 rounded-xl border border-red-500 bg-brand-card px-4 py-3 text-sm"
+                >
+                  <span className="text-red-400">Subscription expired</span>
+                  <Link
+                    href="/scout/subscribe"
+                    className="ml-auto text-brand-green underline hover:opacity-80 transition"
+                  >
+                    Renew
+                  </Link>
+                </div>
+              );
+            }
+
+            if (daysRemaining <= 7) {
+              return (
+                <div
+                  data-tour="subscription-status"
+                  className="flex items-center gap-3 rounded-xl border border-orange-400 bg-brand-card px-4 py-3 text-sm text-gray-200"
+                >
+                  <span>
+                    {tierLabel} — expires in {daysRemaining} day
+                    {daysRemaining !== 1 ? 's' : ''}
+                  </span>
+                  <Link
+                    href="/scout/subscribe"
+                    className="ml-auto text-brand-green underline hover:opacity-80 transition"
+                  >
+                    Renew
+                  </Link>
+                </div>
+              );
+            }
+
             return (
               <div
                 data-tour="subscription-status"
-                className="flex items-center gap-3 rounded-xl border border-red-500 bg-brand-card px-4 py-3 text-sm"
+                className="flex items-center gap-3 rounded-xl border border-brand-green bg-brand-card px-4 py-3 text-sm text-gray-200"
               >
-                <span className="text-red-400">Subscription expired</span>
-                <Link
-                  href="/scout/subscribe"
-                  className="ml-auto text-brand-green underline hover:opacity-80 transition"
-                >
-                  Renew
-                </Link>
+                {tierLabel} — {daysRemaining} days remaining
               </div>
             );
-          }
+          })()}
 
-          if (daysRemaining <= 7) {
-            return (
-              <div
-                data-tour="subscription-status"
-                className="flex items-center gap-3 rounded-xl border border-orange-400 bg-brand-card px-4 py-3 text-sm text-gray-200"
+        <ReferralPanel />
+
+        <SpendingSummary />
+
+        {watchlist.entries.length > 0 && (
+          <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-medium text-gray-300">
+                My Watchlist
+              </h2>
+              <Link
+                href="/scout/watchlist"
+                className="text-xs text-brand-green hover:underline"
               >
-                <span>
-                  {tierLabel} — expires in {daysRemaining} day
-                  {daysRemaining !== 1 ? 's' : ''}
-                </span>
-                <Link
-                  href="/scout/subscribe"
-                  className="ml-auto text-brand-green underline hover:opacity-80 transition"
-                >
-                  Renew
-                </Link>
-              </div>
-            );
-          }
-
-          return (
-            <div
-              data-tour="subscription-status"
-              className="flex items-center gap-3 rounded-xl border border-brand-green bg-brand-card px-4 py-3 text-sm text-gray-200"
-            >
-              {tierLabel} — {daysRemaining} days remaining
+                View all
+              </Link>
             </div>
-          );
-        })()}
-
-      <ReferralPanel />
-
-      <SpendingSummary />
-
-      {watchlist.entries.length > 0 && (
-        <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium text-gray-300">My Watchlist</h2>
-            <Link
-              href="/scout/watchlist"
-              className="text-xs text-brand-green hover:underline"
-            >
-              View all
-            </Link>
+            <ul className="flex flex-col gap-2">
+              {watchlist.entries.slice(0, 5).map((entry) => (
+                <li
+                  key={entry.id}
+                  className="flex items-center justify-between gap-3 text-sm text-gray-200"
+                >
+                  <Link
+                    href={`/player/${entry.playerId}`}
+                    className="text-brand-green hover:underline truncate"
+                  >
+                    {entry.playerId}
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => watchlist.remove(entry)}
+                    className="px-3 py-1 rounded-lg border border-gray-700 text-xs text-gray-300 hover:border-red-500 hover:text-red-400 transition"
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
-          <ul className="flex flex-col gap-2">
-            {watchlist.entries.slice(0, 5).map((entry) => (
-              <li
-                key={entry.id}
-                className="flex items-center justify-between gap-3 text-sm text-gray-200"
-              >
-                <Link
-                  href={`/player/${entry.playerId}`}
-                  className="text-brand-green hover:underline truncate"
-                >
-                  {entry.playerId}
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => watchlist.remove(entry)}
-                  className="px-3 py-1 rounded-lg border border-gray-700 text-xs text-gray-300 hover:border-red-500 hover:text-red-400 transition"
-                >
-                  Remove
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+        )}
 
-      {recentlyViewed.entries.length > 0 && (
-        <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
-          <h2 className="text-sm font-medium text-gray-300">Recently Viewed</h2>
-          <ul className="flex flex-col gap-2">
-            {recentlyViewed.entries.map((entry) => (
-              <li
-                key={entry.playerId}
-                className="flex items-center justify-between gap-3 text-sm text-gray-200"
-              >
-                <Link
-                  href={`/player/${entry.playerId}`}
-                  className="text-brand-green hover:underline truncate"
+        {recentlyViewed.entries.length > 0 && (
+          <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
+            <h2 className="text-sm font-medium text-gray-300">
+              Recently Viewed
+            </h2>
+            <ul className="flex flex-col gap-2">
+              {recentlyViewed.entries.map((entry) => (
+                <li
+                  key={entry.playerId}
+                  className="flex items-center justify-between gap-3 text-sm text-gray-200"
                 >
-                  {entry.name}
-                </Link>
-                <span className="text-xs text-gray-500 shrink-0">
-                  {entry.position}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+                  <Link
+                    href={`/player/${entry.playerId}`}
+                    className="text-brand-green hover:underline truncate"
+                  >
+                    {entry.name}
+                  </Link>
+                  <span className="text-xs text-gray-500 shrink-0">
+                    {entry.position}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
-      {savedSearches.searches.length > 0 && (
-        <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
-          <h2 className="text-sm font-medium text-gray-300">Saved Searches</h2>
-          <ul className="flex flex-col gap-2">
-            {savedSearches.searches.map((s) => (
-              <li
-                key={s.id}
-                className="flex items-center justify-between gap-3 text-sm text-gray-200"
-              >
-                {renamingId === s.id ? (
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <input
-                      className="input flex-1 min-w-0"
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
+        {savedSearches.searches.length > 0 && (
+          <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
+            <h2 className="text-sm font-medium text-gray-300">
+              Saved Searches
+            </h2>
+            <ul className="flex flex-col gap-2">
+              {savedSearches.searches.map((s) => (
+                <li
+                  key={s.id}
+                  className="flex items-center justify-between gap-3 text-sm text-gray-200"
+                >
+                  {renamingId === s.id ? (
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <input
+                        className="input flex-1 min-w-0"
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const trimmed = renameValue.trim();
+                            if (trimmed) {
+                              savedSearches.rename(s.id, trimmed);
+                            }
+                            setRenamingId(null);
+                          }
+                          if (e.key === 'Escape') {
+                            setRenamingId(null);
+                          }
+                        }}
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
                           const trimmed = renameValue.trim();
                           if (trimmed) {
                             savedSearches.rename(s.id, trimmed);
                           }
                           setRenamingId(null);
-                        }
-                        if (e.key === 'Escape') {
-                          setRenamingId(null);
-                        }
-                      }}
-                      autoFocus
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const trimmed = renameValue.trim();
-                        if (trimmed) {
-                          savedSearches.rename(s.id, trimmed);
-                        }
-                        setRenamingId(null);
-                      }}
-                      disabled={!renameValue.trim()}
-                      className="px-3 py-1 rounded-lg border border-brand-green text-xs text-brand-green disabled:opacity-40 hover:bg-brand-green hover:text-black transition"
-                    >
-                      Save
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRenamingId(null)}
-                      className="px-3 py-1 rounded-lg border border-gray-700 text-xs text-gray-300 hover:border-gray-500 transition"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <span className="truncate">{s.name}</span>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => handleSearch(s.filter)}
-                        className="px-3 py-1 rounded-lg border border-brand-green text-xs text-brand-green hover:bg-brand-green hover:text-black transition"
-                      >
-                        Apply
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setRenameValue(s.name);
-                          setRenamingId(s.id);
                         }}
-                        className="px-3 py-1 rounded-lg border border-gray-700 text-xs text-gray-300 hover:border-yellow-500 hover:text-yellow-400 transition"
+                        disabled={!renameValue.trim()}
+                        className="px-3 py-1 rounded-lg border border-brand-green text-xs text-brand-green disabled:opacity-40 hover:bg-brand-green hover:text-black transition"
                       >
-                        Rename
+                        Save
                       </button>
                       <button
                         type="button"
-                        onClick={() => savedSearches.remove(s)}
-                        className="px-3 py-1 rounded-lg border border-gray-700 text-xs text-gray-300 hover:border-red-500 hover:text-red-400 transition"
+                        onClick={() => setRenamingId(null)}
+                        className="px-3 py-1 rounded-lg border border-gray-700 text-xs text-gray-300 hover:border-gray-500 transition"
                       >
-                        Remove
+                        Cancel
                       </button>
                     </div>
-                  </>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <div
-        className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3"
-        data-tour="search-section"
-      >
-        <label
-          className="text-sm font-medium text-gray-300"
-          htmlFor="wallet-search"
-        >
-          Search by Wallet Address
-        </label>
-        <input
-          id="wallet-search"
-          className="input"
-          placeholder="G... (56-character Stellar public key)"
-          value={walletQuery}
-          onChange={(e) => setWalletQuery(e.target.value.trim())}
-          autoComplete="off"
-          spellCheck={false}
-        />
-        {walletQuery && (
-          <div className="mt-1">
-            {searchLoading && (
-              <p className="text-sm text-gray-400">Searching…</p>
-            )}
-            {!searchLoading && searchResult === 'invalid' && (
-              <p className="text-sm text-red-400">
-                Invalid Stellar address — must be a 56-character key starting
-                with G.
-              </p>
-            )}
-            {!searchLoading && searchResult === 'not-found' && (
-              <EmptyState
-                title="No players found"
-                description="No player is registered with that wallet address."
-              />
-            )}
-            {!searchLoading &&
-              searchResult &&
-              searchResult !== 'invalid' &&
-              searchResult !== 'not-found' && (
-                <div className="mt-2 max-w-sm">
-                  <PlayerCard
-                    player={searchResult}
-                    isWatched={watchlist.isWatched(searchResult.id)}
-                    onToggleWatchlist={() => handleToggleWatchlist(searchResult)}
-                    isCompareSelected={compareIds.includes(searchResult.id)}
-                    onToggleCompare={() => toggleCompare(searchResult.id)}
-                  />
-                </div>
-              )}
+                  ) : (
+                    <>
+                      <span className="truncate">{s.name}</span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleSearch(s.filter)}
+                          className="px-3 py-1 rounded-lg border border-brand-green text-xs text-brand-green hover:bg-brand-green hover:text-black transition"
+                        >
+                          Apply
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRenameValue(s.name);
+                            setRenamingId(s.id);
+                          }}
+                          className="px-3 py-1 rounded-lg border border-gray-700 text-xs text-gray-300 hover:border-yellow-500 hover:text-yellow-400 transition"
+                        >
+                          Rename
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => savedSearches.remove(s)}
+                          className="px-3 py-1 rounded-lg border border-gray-700 text-xs text-gray-300 hover:border-red-500 hover:text-red-400 transition"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
-      </div>
 
-      <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
-        <label
-          className="text-sm font-medium text-gray-300"
-          htmlFor="name-search"
+        <div
+          className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3"
+          data-tour="search-section"
         >
-          Search by Player Name
-        </label>
-        <input
-          id="name-search"
-          className="input"
-          placeholder="e.g. Amara Diallo"
-          value={nameQuery}
-          onChange={(e) => setNameQuery(e.target.value)}
-          autoComplete="off"
-        />
-        {nameQuery &&
-          !loading &&
-          players.length === 0 &&
-          searchHasCompleted && (
-            <EmptyState
-              title="No players found"
-              description={`No players match "${nameQuery}".`}
-            />
-          )}
-      </div>
-
-      <div
-        className={`bg-brand-card border border-gray-800 rounded-xl p-5${nameQuery ? ' opacity-50 pointer-events-none' : ''}`}
-        data-tour="filter-section"
-        data-testid="filter-form"
-      >
-        <PlayerFilterForm
-          onSearch={handleSearch}
-          resetKey={resetKey}
-          onSaveSearch={handleSaveSearch}
-        />
-      </div>
-
-      {showCompareBar && (
-        <div className="flex items-center justify-between bg-brand-card border border-brand-green rounded-xl px-5 py-3">
-          <span className="text-sm text-gray-200">
-            {compareIds.length} player{compareIds.length !== 1 ? 's' : ''} selected for comparison
-          </span>
-          <div className="flex items-center gap-3">
-            <Link
-              href={`/scout/compare?ids=${compareIds.join(',')}`}
-              className="px-4 py-1.5 rounded-lg border border-brand-green text-sm text-brand-green hover:bg-brand-green hover:text-black transition"
-            >
-              Compare
-            </Link>
-            <button
-              type="button"
-              onClick={handleClearCompare}
-              className="px-4 py-1.5 rounded-lg border border-gray-700 text-sm text-gray-300 hover:border-red-500 hover:text-red-400 transition"
-            >
-              Clear
-            </button>
-          </div>
-        </div>
-      )}
-
-      {showSkeletons ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: PAGE_SIZE }).map((_, i) => (
-            <PlayerCardSkeleton key={i} />
-          ))}
-        </div>
-      ) : showEmptyState ? (
-        <div data-testid="empty-state">
-        <EmptyState
-          title="No players found"
-          description="Try adjusting your filters."
-          icon={
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="w-12 h-12 mx-auto"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"
-              />
-            </svg>
-          }
-          action={{ label: 'Reset Filters', onClick: handleClearFilters }}
-        />
-        </div>
-      ) : (
-        <>
-          {players.length > 0 && (
-            <p className="text-sm text-gray-400">
-              {players.length} player{players.length !== 1 ? 's' : ''} found
-            </p>
-          )}
-
-          <div data-testid="player-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {visiblePlayers.map((p) => (
-              <PlayerCard
-                key={p.id}
-                player={p}
-                isWatched={watchlist.isWatched(p.id)}
-                onToggleWatchlist={() => handleToggleWatchlist(p)}
-                isCompareSelected={compareIds.includes(p.id)}
-                onToggleCompare={() => toggleCompare(p.id)}
-              />
-            ))}
-          </div>
-
-          <div ref={sentinelRef} aria-hidden="true" />
-
-          {isFetchingMore && (
-            <div className="flex justify-center py-4">
-              <Spinner size="md" />
+          <label
+            className="text-sm font-medium text-gray-300"
+            htmlFor="wallet-search"
+          >
+            Search by Wallet Address
+          </label>
+          <input
+            id="wallet-search"
+            className="input"
+            placeholder="G... (56-character Stellar public key)"
+            value={walletQuery}
+            onChange={(e) => setWalletQuery(e.target.value.trim())}
+            autoComplete="off"
+            spellCheck={false}
+          />
+          {walletQuery && (
+            <div className="mt-1">
+              {searchLoading && (
+                <p className="text-sm text-gray-400">Searching…</p>
+              )}
+              {!searchLoading && searchResult === 'invalid' && (
+                <p className="text-sm text-red-400">
+                  Invalid Stellar address — must be a 56-character key starting
+                  with G.
+                </p>
+              )}
+              {!searchLoading && searchResult === 'not-found' && (
+                <EmptyState
+                  title="No players found"
+                  description="No player is registered with that wallet address."
+                />
+              )}
+              {!searchLoading &&
+                searchResult &&
+                searchResult !== 'invalid' &&
+                searchResult !== 'not-found' && (
+                  <div className="mt-2 max-w-sm">
+                    <PlayerCard
+                      player={searchResult}
+                      isWatched={watchlist.isWatched(searchResult.id)}
+                      onToggleWatchlist={() =>
+                        handleToggleWatchlist(searchResult)
+                      }
+                      isCompareSelected={compareIds.includes(searchResult.id)}
+                      onToggleCompare={() => toggleCompare(searchResult.id)}
+                    />
+                  </div>
+                )}
             </div>
           )}
+        </div>
 
-          {isExhausted && players.length > PAGE_SIZE && (
-            <p
-              role="status"
-              aria-live="polite"
-              className="text-center text-sm text-gray-400 py-2"
-            >
-              No more results
-            </p>
-          )}
+        <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
+          <label
+            className="text-sm font-medium text-gray-300"
+            htmlFor="name-search"
+          >
+            Search by Player Name
+          </label>
+          <input
+            id="name-search"
+            className="input"
+            placeholder="e.g. Amara Diallo"
+            value={nameQuery}
+            onChange={(e) => setNameQuery(e.target.value)}
+            autoComplete="off"
+          />
+          {nameQuery &&
+            !loading &&
+            players.length === 0 &&
+            searchHasCompleted && (
+              <EmptyState
+                title="No players found"
+                description={`No players match "${nameQuery}".`}
+              />
+            )}
+        </div>
 
-          {players.length > PAGE_SIZE && (
-            <nav
-              aria-label="Player list pagination"
-              className="flex flex-col items-center gap-3"
-            >
-              <p className="sr-only">
-                Keyboard pagination — use these buttons if you prefer not to
-                scroll
+        <div
+          className={`bg-brand-card border border-gray-800 rounded-xl p-5${nameQuery ? ' opacity-50 pointer-events-none' : ''}`}
+          data-tour="filter-section"
+          data-testid="filter-form"
+        >
+          <PlayerFilterForm
+            onSearch={handleSearch}
+            resetKey={resetKey}
+            onSaveSearch={handleSaveSearch}
+          />
+        </div>
+
+        {showCompareBar && (
+          <div className="flex items-center justify-between bg-brand-card border border-brand-green rounded-xl px-5 py-3">
+            <span className="text-sm text-gray-200">
+              {compareIds.length} player{compareIds.length !== 1 ? 's' : ''}{' '}
+              selected for comparison
+            </span>
+            <div className="flex items-center gap-3">
+              <Link
+                href={`/scout/compare?ids=${compareIds.join(',')}`}
+                className="px-4 py-1.5 rounded-lg border border-brand-green text-sm text-brand-green hover:bg-brand-green hover:text-black transition"
+              >
+                Compare
+              </Link>
+              <button
+                type="button"
+                onClick={handleClearCompare}
+                className="px-4 py-1.5 rounded-lg border border-gray-700 text-sm text-gray-300 hover:border-red-500 hover:text-red-400 transition"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        )}
+
+        {showSkeletons ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: PAGE_SIZE }).map((_, i) => (
+              <PlayerCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : showEmptyState ? (
+          <div data-testid="empty-state">
+            <EmptyState
+              title="No players found"
+              description="Try adjusting your filters."
+              icon={
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-12 h-12 mx-auto"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"
+                  />
+                </svg>
+              }
+              action={{ label: 'Reset Filters', onClick: handleClearFilters }}
+            />
+          </div>
+        ) : (
+          <>
+            {players.length > 0 && (
+              <p className="text-sm text-gray-400">
+                {players.length} player{players.length !== 1 ? 's' : ''} found
               </p>
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={() => setPage(currentPage - 1)}
-                  disabled={currentPage <= 1}
-                  aria-label="Previous page"
-                  data-testid="pagination-prev"
-                  className="px-4 py-2 rounded-lg border border-gray-700 text-gray-300 disabled:opacity-40 hover:border-brand-green transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green"
-                >
-                  Previous
-                </button>
-                <span
-                  className="text-sm text-gray-400"
-                  aria-live="polite"
-                  aria-atomic="true"
-                >
-                  Page {currentPage} of {totalPages}
-                </span>
-                <button
-                  onClick={() => setPage(currentPage + 1)}
-                  disabled={currentPage >= totalPages}
-                  aria-label="Next page"
-                  data-testid="pagination-next"
-                  className="px-4 py-2 rounded-lg border border-gray-700 text-gray-300 disabled:opacity-40 hover:border-brand-green transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green"
-                >
-                  Next
-                </button>
+            )}
+
+            <div
+              data-testid="player-grid"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+            >
+              {visiblePlayers.map((p) => (
+                <PlayerCard
+                  key={p.id}
+                  player={p}
+                  isWatched={watchlist.isWatched(p.id)}
+                  onToggleWatchlist={() => handleToggleWatchlist(p)}
+                  isCompareSelected={compareIds.includes(p.id)}
+                  onToggleCompare={() => toggleCompare(p.id)}
+                />
+              ))}
+            </div>
+
+            <div ref={sentinelRef} aria-hidden="true" />
+
+            {isFetchingMore && (
+              <div className="flex justify-center py-4">
+                <Spinner size="md" />
               </div>
-            </nav>
-          )}
-        </>
-      )}
-    </div>
-    <ScrollToTop />
+            )}
+
+            {isExhausted && players.length > PAGE_SIZE && (
+              <p
+                role="status"
+                aria-live="polite"
+                className="text-center text-sm text-gray-400 py-2"
+              >
+                No more results
+              </p>
+            )}
+
+            {players.length > PAGE_SIZE && (
+              <nav
+                aria-label="Player list pagination"
+                className="flex flex-col items-center gap-3"
+              >
+                <p className="sr-only">
+                  Keyboard pagination — use these buttons if you prefer not to
+                  scroll
+                </p>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setPage(currentPage - 1)}
+                    disabled={currentPage <= 1}
+                    aria-label="Previous page"
+                    data-testid="pagination-prev"
+                    className="px-4 py-2 rounded-lg border border-gray-700 text-gray-300 disabled:opacity-40 hover:border-brand-green transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green"
+                  >
+                    Previous
+                  </button>
+                  <span
+                    className="text-sm text-gray-400"
+                    aria-live="polite"
+                    aria-atomic="true"
+                  >
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setPage(currentPage + 1)}
+                    disabled={currentPage >= totalPages}
+                    aria-label="Next page"
+                    data-testid="pagination-next"
+                    className="px-4 py-2 rounded-lg border border-gray-700 text-gray-300 disabled:opacity-40 hover:border-brand-green transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green"
+                  >
+                    Next
+                  </button>
+                </div>
+              </nav>
+            )}
+          </>
+        )}
+      </div>
+      <ScrollToTop />
     </PullToRefresh>
   );
 }

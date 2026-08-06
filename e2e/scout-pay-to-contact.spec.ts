@@ -14,11 +14,13 @@ test.describe('scout browse / filter / pay-to-contact', () => {
       },
     });
 
-    await page.route('**/api/ipfs/upload', async route => {
+    await page.route('**/api/ipfs/upload', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ cid: 'bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi' }),
+        body: JSON.stringify({
+          cid: 'bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi',
+        }),
       });
     });
 
@@ -27,7 +29,9 @@ test.describe('scout browse / filter / pay-to-contact', () => {
     await page.getByRole('button', { name: /freighter/i }).click();
 
     await expect(
-      page.getByText(wallet.publicKey.slice(0, 4) + '…' + wallet.publicKey.slice(-4)),
+      page.getByText(
+        wallet.publicKey.slice(0, 4) + '…' + wallet.publicKey.slice(-4),
+      ),
     ).toBeVisible();
 
     await page.goto('/en/scout');
@@ -38,7 +42,10 @@ test.describe('scout browse / filter / pay-to-contact', () => {
 
     await expect(page.getByText('Test Player')).toBeVisible();
 
-    await page.getByRole('button', { name: /pay to contact/i }).first().click();
+    await page
+      .getByRole('button', { name: /pay to contact/i })
+      .first()
+      .click();
 
     await expect(page.getByText(/email/i)).toBeVisible({ timeout: 10_000 });
 

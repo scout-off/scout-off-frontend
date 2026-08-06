@@ -108,7 +108,10 @@ export async function POST(req: NextRequest) {
       txHash: typeof txHash === 'string' ? txHash : null,
       status,
       timestamp: Math.floor(Date.now() / 1000),
-      data: data && typeof data === 'object' ? (data as Record<string, unknown>) : {},
+      data:
+        data && typeof data === 'object'
+          ? (data as Record<string, unknown>)
+          : {},
     });
     return NextResponse.json(entry, { status: 201 });
   } catch (err) {

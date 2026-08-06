@@ -143,9 +143,7 @@ export default async function RootLayout({
             </WalletProvider>
           </NextIntlClientProvider>
         </ThemeProvider>
-        {!isTestEnv && (
-          <CookieConsentGate />
-        )}
+        {!isTestEnv && <CookieConsentGate />}
       </body>
     </html>
   );

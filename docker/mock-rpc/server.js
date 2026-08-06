@@ -68,7 +68,10 @@ const MOCK_RESPONSES = {
     },
   ],
   get_player: (args) => mockPlayer(args[0] || 'player_mock_1'),
-  filter_players: () => [mockPlayer('player_mock_1'), mockPlayer('player_mock_2')],
+  filter_players: () => [
+    mockPlayer('player_mock_1'),
+    mockPlayer('player_mock_2'),
+  ],
   get_milestone_history: () => [
     {
       id: 'milestone_mock_1',
@@ -79,7 +82,8 @@ const MOCK_RESPONSES = {
     },
   ],
   get_subscription: (args) => ({
-    scout: args[0] || 'GBR6LYRKEFYV3MG322FYLED6PLOTEV77KCX6AZSR7V4RV7EJLIWOZJWQ',
+    scout:
+      args[0] || 'GBR6LYRKEFYV3MG322FYLED6PLOTEV77KCX6AZSR7V4RV7EJLIWOZJWQ',
     tier: 'basic',
     expiresAt: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
   }),
@@ -112,7 +116,10 @@ function mockPlayer(id) {
 }
 
 function resolveMockResponse(functionName, args) {
-  const entry = Object.prototype.hasOwnProperty.call(MOCK_RESPONSES, functionName)
+  const entry = Object.prototype.hasOwnProperty.call(
+    MOCK_RESPONSES,
+    functionName,
+  )
     ? MOCK_RESPONSES[functionName]
     : DEFAULT_MOCK_RESPONSE;
   return typeof entry === 'function' ? entry(args) : entry;
@@ -210,7 +217,11 @@ function handleGetNetwork() {
 }
 
 function handleGetLatestLedger() {
-  return { id: `mock-ledger-${ledgerSeq}`, sequence: ledgerSeq, protocolVersion: '21' };
+  return {
+    id: `mock-ledger-${ledgerSeq}`,
+    sequence: ledgerSeq,
+    protocolVersion: '21',
+  };
 }
 
 function handleGetLedgerEntries(params) {
@@ -372,14 +383,19 @@ const server = http.createServer((req, res) => {
         JSON.stringify({
           jsonrpc: '2.0',
           id: payload.id,
-          error: { code: -32601, message: `Method not found: ${payload.method}` },
+          error: {
+            code: -32601,
+            message: `Method not found: ${payload.method}`,
+          },
         }),
       );
     }
 
     try {
       const result = handler(payload.params || {});
-      return res.end(JSON.stringify({ jsonrpc: '2.0', id: payload.id, result }));
+      return res.end(
+        JSON.stringify({ jsonrpc: '2.0', id: payload.id, result }),
+      );
     } catch (err) {
       console.error(`[mock-rpc] ${payload.method} failed`, err);
       return res.end(
@@ -394,5 +410,7 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`[mock-rpc] listening on port ${PORT} (network: ${NETWORK_PASSPHRASE})`);
+  console.log(
+    `[mock-rpc] listening on port ${PORT} (network: ${NETWORK_PASSPHRASE})`,
+  );
 });

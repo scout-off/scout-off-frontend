@@ -6,7 +6,11 @@ import type { PlayerFilter } from '@/types';
 
 let store: SavedSearchStore;
 
-const FILTER: PlayerFilter = { region: 'Europe', position: 'Forward', minLevel: 1 };
+const FILTER: PlayerFilter = {
+  region: 'Europe',
+  position: 'Forward',
+  minLevel: 1,
+};
 
 beforeEach(() => {
   SavedSearchStore.resetInstance();

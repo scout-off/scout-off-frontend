@@ -21,6 +21,7 @@ jest.mock('@/lib/stellar', () => ({
 
 jest.mock('@stellar/stellar-sdk', () => ({
   TransactionBuilder: { fromXDR: jest.fn(() => ({})) },
+  Networks: { PUBLIC: 'Public Global Stellar Network ; September 2015' },
 }));
 
 jest.mock('swr', () => {

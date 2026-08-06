@@ -20,13 +20,23 @@ export interface ChatMessage {
   status: 'sent' | 'delivered' | 'read';
 }
 
-export async function fetchThreadMessages(threadId: string): Promise<ChatMessage[]> {
-  const { data } = await chatApi.get<ChatMessage[]>(`/threads/${threadId}/messages`);
+export async function fetchThreadMessages(
+  threadId: string,
+): Promise<ChatMessage[]> {
+  const { data } = await chatApi.get<ChatMessage[]>(
+    `/threads/${threadId}/messages`,
+  );
   return data;
 }
 
-export async function sendThreadMessage(threadId: string, body: string): Promise<ChatMessage> {
-  const { data } = await chatApi.post<ChatMessage>(`/threads/${threadId}/messages`, { body });
+export async function sendThreadMessage(
+  threadId: string,
+  body: string,
+): Promise<ChatMessage> {
+  const { data } = await chatApi.post<ChatMessage>(
+    `/threads/${threadId}/messages`,
+    { body },
+  );
   return data;
 }
 

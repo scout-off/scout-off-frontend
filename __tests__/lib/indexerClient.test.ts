@@ -70,7 +70,10 @@ describe('fetchPlayerEvents', () => {
   it('GETs /players/:id/events with the given query params', async () => {
     mockGet.mockResolvedValue({ data: { events: [], nextCursor: null } });
 
-    await fetchPlayerEvents('player-1', { type: 'milestone_approved', limit: 20 });
+    await fetchPlayerEvents('player-1', {
+      type: 'milestone_approved',
+      limit: 20,
+    });
 
     expect(mockGet).toHaveBeenCalledWith('/players/player-1/events', {
       params: { type: 'milestone_approved', limit: 20 },
@@ -102,7 +105,11 @@ describe('getMilestoneHistoryFromIndexer', () => {
             validator: 'GVAL',
             ledger: 10,
             timestamp: 1000,
-            data: { milestone_id: 'm1', description: 'Scored 20 goals', validator: 'GVAL' },
+            data: {
+              milestone_id: 'm1',
+              description: 'Scored 20 goals',
+              validator: 'GVAL',
+            },
           },
         ],
         nextCursor: null,
@@ -145,7 +152,11 @@ describe('getMilestoneHistoryFromIndexer', () => {
             validator: 'GVAL',
             ledger: 10,
             timestamp: 1000,
-            data: { milestone_id: 'm1', description: 'Scored 20 goals', validator: 'GVAL' },
+            data: {
+              milestone_id: 'm1',
+              description: 'Scored 20 goals',
+              validator: 'GVAL',
+            },
           },
         ],
         nextCursor: null,
@@ -169,7 +180,11 @@ describe('getMilestoneHistoryFromIndexer', () => {
             validator: 'GVAL',
             ledger: 30,
             timestamp: 3000,
-            data: { milestone_id: 'm1', description: 'Re-approved', validator: 'GVAL' },
+            data: {
+              milestone_id: 'm1',
+              description: 'Re-approved',
+              validator: 'GVAL',
+            },
           },
           {
             id: 2,
@@ -189,7 +204,11 @@ describe('getMilestoneHistoryFromIndexer', () => {
             validator: 'GVAL',
             ledger: 10,
             timestamp: 1000,
-            data: { milestone_id: 'm1', description: 'First approval', validator: 'GVAL' },
+            data: {
+              milestone_id: 'm1',
+              description: 'First approval',
+              validator: 'GVAL',
+            },
           },
         ],
         nextCursor: null,
@@ -222,7 +241,11 @@ describe('getMilestoneHistoryFromIndexer', () => {
               validator: 'GVAL',
               ledger: 20,
               timestamp: 2000,
-              data: { milestone_id: 'm2', description: 'Second', validator: 'GVAL' },
+              data: {
+                milestone_id: 'm2',
+                description: 'Second',
+                validator: 'GVAL',
+              },
             },
           ],
           nextCursor: 20,
@@ -239,7 +262,11 @@ describe('getMilestoneHistoryFromIndexer', () => {
               validator: 'GVAL',
               ledger: 10,
               timestamp: 1000,
-              data: { milestone_id: 'm1', description: 'First', validator: 'GVAL' },
+              data: {
+                milestone_id: 'm1',
+                description: 'First',
+                validator: 'GVAL',
+              },
             },
           ],
           nextCursor: null,

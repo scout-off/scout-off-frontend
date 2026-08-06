@@ -33,7 +33,10 @@ describe('POST /api/ipfs/upload/init', () => {
   it('returns 400 for invalid JSON', async () => {
     const req = new NextRequest('http://localhost:3000/api/ipfs/upload/init', {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-forwarded-for': 'ip-badjson' },
+      headers: {
+        'content-type': 'application/json',
+        'x-forwarded-for': 'ip-badjson',
+      },
       body: 'not json',
     });
     const res = await POST(req);
@@ -42,7 +45,10 @@ describe('POST /api/ipfs/upload/init', () => {
 
   it('returns 400 when filename is missing', async () => {
     const res = await POST(
-      makeRequest({ fileType: 'video/mp4', fileSize: 100, totalChunks: 1 }, 'ip-nofilename'),
+      makeRequest(
+        { fileType: 'video/mp4', fileSize: 100, totalChunks: 1 },
+        'ip-nofilename',
+      ),
     );
     expect(res.status).toBe(400);
   });
@@ -50,7 +56,12 @@ describe('POST /api/ipfs/upload/init', () => {
   it('returns 400 for a disallowed MIME type', async () => {
     const res = await POST(
       makeRequest(
-        { filename: 'doc.pdf', fileType: 'application/pdf', fileSize: 100, totalChunks: 1 },
+        {
+          filename: 'doc.pdf',
+          fileType: 'application/pdf',
+          fileSize: 100,
+          totalChunks: 1,
+        },
         'ip-badmime',
       ),
     );
@@ -77,7 +88,12 @@ describe('POST /api/ipfs/upload/init', () => {
   it('returns 400 when totalChunks is not a positive integer', async () => {
     const res = await POST(
       makeRequest(
-        { filename: 'clip.mp4', fileType: 'video/mp4', fileSize: 100, totalChunks: 0 },
+        {
+          filename: 'clip.mp4',
+          fileType: 'video/mp4',
+          fileSize: 100,
+          totalChunks: 0,
+        },
         'ip-badchunks',
       ),
     );
@@ -105,7 +121,12 @@ describe('POST /api/ipfs/upload/init', () => {
     for (let i = 0; i < 21; i++) {
       lastRes = await POST(
         makeRequest(
-          { filename: 'clip.mp4', fileType: 'video/mp4', fileSize: 100, totalChunks: 1 },
+          {
+            filename: 'clip.mp4',
+            fileType: 'video/mp4',
+            fileSize: 100,
+            totalChunks: 1,
+          },
           ip,
         ),
       );

@@ -12,22 +12,35 @@ export interface BlockedUser {
 
 const BLOCKED_USERS_KEY = 'scoutoff_blocked_users';
 
-export async function reportUser(threadId: string, counterpartId: string, reason: string): Promise<void> {
-  await chatApi.post('/moderation/reports', { threadId, counterpartId, reason });
+export async function reportUser(
+  threadId: string,
+  counterpartId: string,
+  reason: string,
+): Promise<void> {
+  await chatApi.post('/moderation/reports', {
+    threadId,
+    counterpartId,
+    reason,
+  });
 }
 
 export async function blockUser(counterpartId: string): Promise<void> {
   await chatApi.post('/moderation/blocks', { counterpartId });
   const blocked = getBlockedUsers();
   if (!blocked.some((b) => b.userId === counterpartId)) {
-    blocked.push({ userId: counterpartId, blockedAt: new Date().toISOString() });
+    blocked.push({
+      userId: counterpartId,
+      blockedAt: new Date().toISOString(),
+    });
     persistBlockedUsers(blocked);
   }
 }
 
 export async function unblockUser(counterpartId: string): Promise<void> {
   await chatApi.delete(`/moderation/blocks/${counterpartId}`);
-  persistBlockedUsers(getBlockedUsers().filter((b) => b.userId !== counterpartId));
+  persistBlockedUsers(
+    getBlockedUsers().filter((b) => b.userId !== counterpartId),
+  );
 }
 
 export function getBlockedUsers(): BlockedUser[] {

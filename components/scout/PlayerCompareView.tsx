@@ -10,12 +10,13 @@ import MilestoneTimeline from '@/components/player/MilestoneTimeline';
 import Badge from '@/components/ui/Badge';
 import Tooltip from '@/components/ui/Tooltip';
 
-const LEVEL_VARIANT: Record<number, 'level0' | 'level1' | 'level2' | 'level3'> = {
-  0: 'level0',
-  1: 'level1',
-  2: 'level2',
-  3: 'level3',
-};
+const LEVEL_VARIANT: Record<number, 'level0' | 'level1' | 'level2' | 'level3'> =
+  {
+    0: 'level0',
+    1: 'level1',
+    2: 'level2',
+    3: 'level3',
+  };
 
 const POSITION_LABEL: Record<string, string> = Object.fromEntries(
   FOOTBALL_POSITIONS.map(({ value, label }) => [value, label]),
@@ -28,7 +29,10 @@ function CompareColumn({ player }: { player: Player }) {
     <div className="flex flex-col gap-5 bg-brand-card border border-gray-800 rounded-xl p-5">
       {/* Avatar + Name */}
       <div className="flex flex-col items-center gap-3 text-center">
-        <div className="w-20 h-20 rounded-full bg-gray-700 overflow-hidden" aria-hidden="true">
+        <div
+          className="w-20 h-20 rounded-full bg-gray-700 overflow-hidden"
+          aria-hidden="true"
+        >
           {player.ipfsHash && (
             <Image
               src={getMediaProxyUrl(player.ipfsHash)}
@@ -40,7 +44,9 @@ function CompareColumn({ player }: { player: Player }) {
           )}
         </div>
         <div>
-          <h3 className="font-semibold text-white text-lg">{player.vitals.name}</h3>
+          <h3 className="font-semibold text-white text-lg">
+            {player.vitals.name}
+          </h3>
           <Badge
             variant={LEVEL_VARIANT[player.progressLevel]}
             label={levelLabel}
@@ -60,7 +66,11 @@ function CompareColumn({ player }: { player: Player }) {
 
           <dt className="text-gray-400">Position</dt>
           <dd className="text-white text-right">
-            <Tooltip content={POSITION_LABEL[player.vitals.position] ?? player.vitals.position}>
+            <Tooltip
+              content={
+                POSITION_LABEL[player.vitals.position] ?? player.vitals.position
+              }
+            >
               <span>{player.vitals.position}</span>
             </Tooltip>
           </dd>
@@ -89,19 +99,25 @@ function CompareColumn({ player }: { player: Player }) {
             {player.stats.assists !== undefined && (
               <>
                 <dt className="text-gray-400">Assists</dt>
-                <dd className="text-white text-right">{player.stats.assists}</dd>
+                <dd className="text-white text-right">
+                  {player.stats.assists}
+                </dd>
               </>
             )}
             {player.stats.appearances !== undefined && (
               <>
                 <dt className="text-gray-400">Appearances</dt>
-                <dd className="text-white text-right">{player.stats.appearances}</dd>
+                <dd className="text-white text-right">
+                  {player.stats.appearances}
+                </dd>
               </>
             )}
             {player.stats.clean_sheets !== undefined && (
               <>
                 <dt className="text-gray-400">Clean sheets</dt>
-                <dd className="text-white text-right">{player.stats.clean_sheets}</dd>
+                <dd className="text-white text-right">
+                  {player.stats.clean_sheets}
+                </dd>
               </>
             )}
           </dl>
@@ -122,7 +138,8 @@ function CompareColumn({ player }: { player: Player }) {
           Milestones
         </h4>
         <p className="text-sm text-gray-300 mb-3">
-          {player.milestones.length} milestone{player.milestones.length !== 1 ? 's' : ''}
+          {player.milestones.length} milestone
+          {player.milestones.length !== 1 ? 's' : ''}
         </p>
         <MilestoneTimeline
           milestones={player.milestones}

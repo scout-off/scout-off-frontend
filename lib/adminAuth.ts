@@ -13,7 +13,10 @@ import { NextRequest } from 'next/server';
  */
 export function requireAdminWallet(req: NextRequest): string | null {
   const sessionCookie = req.cookies.get('session')?.value;
-  if (!sessionCookie || sessionCookie !== process.env.NEXT_PUBLIC_ADMIN_ADDRESS) {
+  if (
+    !sessionCookie ||
+    sessionCookie !== process.env.NEXT_PUBLIC_ADMIN_ADDRESS
+  ) {
     return null;
   }
   return sessionCookie;

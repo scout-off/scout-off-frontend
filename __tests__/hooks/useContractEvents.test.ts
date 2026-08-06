@@ -161,8 +161,7 @@ class MockEventSource {
 }
 
 describe('useContractEvents (SSE path with reconnect/backoff)', () => {
-  const originalEventSource = (global as { EventSource?: unknown })
-    .EventSource;
+  const originalEventSource = (global as { EventSource?: unknown }).EventSource;
 
   beforeEach(() => {
     jest.useFakeTimers();
@@ -243,8 +242,6 @@ describe('useContractEvents (SSE path with reconnect/backoff)', () => {
 
     // Having given up on SSE, the hook falls back to polling instead of
     // staying silently dead.
-    await waitFor(() =>
-      expect(global.fetch as jest.Mock).toHaveBeenCalled(),
-    );
+    await waitFor(() => expect(global.fetch as jest.Mock).toHaveBeenCalled());
   });
 });

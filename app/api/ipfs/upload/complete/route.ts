@@ -46,7 +46,10 @@ export async function POST(req: NextRequest) {
 
   const { sessionId } = (body ?? {}) as Record<string, unknown>;
   if (typeof sessionId !== 'string' || !sessionId) {
-    return NextResponse.json({ error: 'sessionId is required' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'sessionId is required' },
+      { status: 400 },
+    );
   }
 
   let assembled;
@@ -54,7 +57,9 @@ export async function POST(req: NextRequest) {
     assembled = await assembleFile(sessionId);
   } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to assemble upload' },
+      {
+        error: err instanceof Error ? err.message : 'Failed to assemble upload',
+      },
       { status: 400 },
     );
   }
@@ -67,7 +72,9 @@ export async function POST(req: NextRequest) {
   if (!mimeAllowed) {
     cleanupSession(sessionId);
     return NextResponse.json(
-      { error: `File type "${fileType}" is not allowed. Only image/* and video/* files are accepted.` },
+      {
+        error: `File type "${fileType}" is not allowed. Only image/* and video/* files are accepted.`,
+      },
       { status: 400 },
     );
   }
@@ -75,9 +82,16 @@ export async function POST(req: NextRequest) {
   const header = new Uint8Array(buffer.subarray(0, 12));
   if (!hasValidMagicBytes(header)) {
     cleanupSession(sessionId);
-    log.warn('Rejected spoofed MIME type', { type: fileType, ip, header: bufToHex(header) });
+    log.warn('Rejected spoofed MIME type', {
+      type: fileType,
+      ip,
+      header: bufToHex(header),
+    });
     return NextResponse.json(
-      { error: 'File content does not match its declared type. Upload rejected.' },
+      {
+        error:
+          'File content does not match its declared type. Upload rejected.',
+      },
       { status: 400 },
     );
   }
@@ -87,7 +101,9 @@ export async function POST(req: NextRequest) {
     const pinataForm = new FormData();
     // Uint8Array copy sidesteps a @types/node-vs-DOM-lib generic mismatch
     // (Buffer's ArrayBufferLike vs BlobPart's concrete ArrayBuffer).
-    const file = new File([new Uint8Array(buffer)], filename, { type: fileType });
+    const file = new File([new Uint8Array(buffer)], filename, {
+      type: fileType,
+    });
     pinataForm.append('file', file);
 
     const { data } = await axios.post(
@@ -109,7 +125,10 @@ export async function POST(req: NextRequest) {
       ip,
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json({ error: 'Failed to upload file to IPFS' }, { status: 502 });
+    return NextResponse.json(
+      { error: 'Failed to upload file to IPFS' },
+      { status: 502 },
+    );
   }
 
   // Post-upload integrity verification (issue #699): re-fetch the CID from

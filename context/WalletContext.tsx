@@ -390,7 +390,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
         // Read maxAge from server response so frontend knows when session expires
         const authData = await authRes.json();
-        const maxAge: number = authData.maxAge ?? (rememberMe ? 2592000 : 86400);
+        const maxAge: number =
+          authData.maxAge ?? (rememberMe ? 2592000 : 86400);
         const expiresAt = Date.now() + maxAge * 1000;
 
         setPublicKey(pk);

@@ -47,12 +47,17 @@ export async function POST(req: NextRequest) {
   >;
 
   if (typeof filename !== 'string' || !filename.trim()) {
-    return NextResponse.json({ error: 'filename is required' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'filename is required' },
+      { status: 400 },
+    );
   }
 
   if (
     typeof fileType !== 'string' ||
-    !ALLOWED_MIME_PREFIXES.some((prefix) => fileType.toLowerCase().startsWith(prefix))
+    !ALLOWED_MIME_PREFIXES.some((prefix) =>
+      fileType.toLowerCase().startsWith(prefix),
+    )
   ) {
     return NextResponse.json(
       {
@@ -62,8 +67,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (typeof fileSize !== 'number' || !Number.isFinite(fileSize) || fileSize <= 0) {
-    return NextResponse.json({ error: 'fileSize must be a positive number' }, { status: 400 });
+  if (
+    typeof fileSize !== 'number' ||
+    !Number.isFinite(fileSize) ||
+    fileSize <= 0
+  ) {
+    return NextResponse.json(
+      { error: 'fileSize must be a positive number' },
+      { status: 400 },
+    );
   }
 
   if (fileSize > MAX_FILE_SIZE_BYTES) {
@@ -75,12 +87,22 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (typeof totalChunks !== 'number' || !Number.isInteger(totalChunks) || totalChunks <= 0) {
-    return NextResponse.json({ error: 'totalChunks must be a positive integer' }, { status: 400 });
+  if (
+    typeof totalChunks !== 'number' ||
+    !Number.isInteger(totalChunks) ||
+    totalChunks <= 0
+  ) {
+    return NextResponse.json(
+      { error: 'totalChunks must be a positive integer' },
+      { status: 400 },
+    );
   }
 
   if (totalChunks > MAX_CHUNKS) {
-    return NextResponse.json({ error: 'totalChunks is unreasonably high' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'totalChunks is unreasonably high' },
+      { status: 400 },
+    );
   }
 
   if (totalChunks > 1 && fileSize / totalChunks < MIN_CHUNK_SIZE_BYTES) {
@@ -90,6 +112,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { sessionId } = initSession({ filename, fileType, fileSize, totalChunks });
+  const { sessionId } = initSession({
+    filename,
+    fileType,
+    fileSize,
+    totalChunks,
+  });
   return NextResponse.json({ sessionId }, { status: 201 });
 }

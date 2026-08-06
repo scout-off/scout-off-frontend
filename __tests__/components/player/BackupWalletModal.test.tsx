@@ -65,10 +65,14 @@ describe('BackupWalletModal', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Link Backup Wallet' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Link Backup Wallet' }),
+    );
 
     expect(
-      screen.getByText(/You'll need to sign a\s*confirmation with your primary wallet\./),
+      screen.getByText(
+        /You'll need to sign a\s*confirmation with your primary wallet\./,
+      ),
     ).toBeInTheDocument();
   });
 
@@ -83,7 +87,9 @@ describe('BackupWalletModal', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Link Backup Wallet' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Link Backup Wallet' }),
+    );
     await user.type(
       screen.getByPlaceholderText(/56-character Stellar public key/),
       'G'.repeat(56),
@@ -94,13 +100,18 @@ describe('BackupWalletModal', () => {
       screen.getByRole('button', { name: 'Link & Sign' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Click "Link & Sign" to confirm with your primary wallet\. This proves you own both/),
+      screen.getByText(
+        /Click "Link & Sign" to confirm with your primary wallet\. This proves you own both/,
+      ),
     ).toBeInTheDocument();
   });
 
   it('renders the remove-wallet copy with its apostrophe intact', async () => {
     const user = userEvent.setup();
-    const player = { ...PLAYER, backupWallet: 'GBACKUPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' };
+    const player = {
+      ...PLAYER,
+      backupWallet: 'GBACKUPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+    };
     render(
       <BackupWalletModal
         player={player}
@@ -113,13 +124,17 @@ describe('BackupWalletModal', () => {
     await user.click(screen.getByRole('button', { name: 'Remove' }));
 
     expect(
-      screen.getByText(/Removing your backup wallet means you won't be able to use it to recover your account/),
+      screen.getByText(
+        /Removing your backup wallet means you won't be able to use it to recover your account/,
+      ),
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Remove' }));
 
     expect(
-      screen.getByText(/This action cannot be undone\. You'll have no backup recovery method\./),
+      screen.getByText(
+        /This action cannot be undone\. You'll have no backup recovery method\./,
+      ),
     ).toBeInTheDocument();
   });
 });

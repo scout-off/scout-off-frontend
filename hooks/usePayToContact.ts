@@ -85,7 +85,10 @@ export function usePayToContact(playerId: string) {
       // ── 3. Sign, submit, and cache the result ─────────────────────────────
       const details = await payToContact(publicKey, playerId, signOnly);
       await refreshBalance();
-      await cacheContactDetails(contactDetailsKey(playerId, publicKey), details);
+      await cacheContactDetails(
+        contactDetailsKey(playerId, publicKey),
+        details,
+      );
       return details;
     } catch (e: any) {
       fail(parseContractError(e));

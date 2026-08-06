@@ -158,6 +158,6 @@ describe('TrialOfferForm', () => {
     expect(screen.getByLabelText(/Club Name/)).toBeDisabled();
     expect(screen.getByLabelText(/Offer Type/)).toBeDisabled();
     expect(screen.getByLabelText(/Message/)).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Submitting…' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /submitting…/i })).toBeDisabled();
   });
 });

@@ -1,7 +1,11 @@
 /** @jest-environment node */
 import { POST } from '@/app/api/ipfs/upload/chunk/route';
 import { NextRequest } from 'next/server';
-import { initSession, getSessionStatus, __resetForTests } from '@/lib/chunkedUploadStore';
+import {
+  initSession,
+  getSessionStatus,
+  __resetForTests,
+} from '@/lib/chunkedUploadStore';
 
 function makeRequest(form: FormData, ip = 'ip-chunk-default'): NextRequest {
   return new NextRequest('http://localhost:3000/api/ipfs/upload/chunk', {

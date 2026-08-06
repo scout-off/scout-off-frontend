@@ -21,7 +21,11 @@ function toIntlLocale(locale: Locale): string {
   return INTL_LOCALE_TAG[locale] ?? 'en-US';
 }
 
-export function formatNumber(value: number, locale: Locale, options?: Intl.NumberFormatOptions): string {
+export function formatNumber(
+  value: number,
+  locale: Locale,
+  options?: Intl.NumberFormatOptions,
+): string {
   return new Intl.NumberFormat(toIntlLocale(locale), options).format(value);
 }
 
@@ -32,7 +36,11 @@ export function formatXlmAmount(value: number, locale: Locale): string {
   }).format(value);
 }
 
-export function formatDate(value: Date | number, locale: Locale, options?: Intl.DateTimeFormatOptions): string {
+export function formatDate(
+  value: Date | number,
+  locale: Locale,
+  options?: Intl.DateTimeFormatOptions,
+): string {
   return new Intl.DateTimeFormat(toIntlLocale(locale), {
     dateStyle: 'medium',
     ...options,

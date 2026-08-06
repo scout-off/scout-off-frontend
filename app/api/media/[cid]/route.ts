@@ -72,9 +72,10 @@ function isAllowedReferrer(req: NextRequest): boolean {
   // Referer, which is the common hotlinking/scraping signature.
   if (!referer) return true;
 
-  const allowedOrigins = [process.env.NEXT_PUBLIC_APP_URL, 'http://localhost:3000'].filter(
-    (v): v is string => Boolean(v),
-  );
+  const allowedOrigins = [
+    process.env.NEXT_PUBLIC_APP_URL,
+    'http://localhost:3000',
+  ].filter((v): v is string => Boolean(v));
 
   try {
     const refOrigin = new URL(referer).origin;
@@ -137,9 +138,7 @@ export async function GET(
     try {
       const upstream = await fetch(`${gateway}/${cid}`);
       if (!upstream.ok || !upstream.body) {
-        lastError = new Error(
-          `Gateway ${gateway} returned ${upstream.status}`,
-        );
+        lastError = new Error(`Gateway ${gateway} returned ${upstream.status}`);
         continue;
       }
 

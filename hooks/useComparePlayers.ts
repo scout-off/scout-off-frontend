@@ -15,7 +15,7 @@ async function fetchPlayers(ids: string[]): Promise<Player[]> {
   );
   return results
     .filter(
-      (r): r is PromiseFulfilledResult<Player | null> =>
+      (r): r is PromiseFulfilledResult<Player> =>
         r.status === 'fulfilled' && r.value !== null,
     )
     .map((r) => r.value);

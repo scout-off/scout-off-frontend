@@ -15,12 +15,15 @@ import { installMockFreighter } from './fixtures/wallet-mock';
 import { Keypair } from '@stellar/stellar-sdk';
 
 // Admin keypair for testing (must match the environment variable in test setup)
-const ADMIN_SECRET = process.env.E2E_ADMIN_SECRET ?? 'SADMINKEYSECRETFORTESTINGFEEWITHDRAWAL123456789ABCDE';
+const ADMIN_SECRET =
+  process.env.E2E_ADMIN_SECRET ??
+  'SADMINKEYSECRETFORTESTINGFEEWITHDRAWAL123456789ABCDE';
 const ADMIN_KEYPAIR = Keypair.fromSecret(ADMIN_SECRET);
 const ADMIN_ADDRESS = ADMIN_KEYPAIR.publicKey();
 
 const MOCK_ACCUMULATED_FEES = 5000000; // 5 XLM in stroops
-const MOCK_TX_HASH = 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2';
+const MOCK_TX_HASH =
+  'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2';
 
 function truncateAddress(address: string): string {
   return `${address.slice(0, 4)}…${address.slice(-4)}`;
@@ -71,7 +74,10 @@ test.describe('Admin fee withdrawal', () => {
           contentType: 'application/json',
           body: JSON.stringify(false),
         });
-      } else if (url.includes('activity') || url.includes('fetchActivityEvents')) {
+      } else if (
+        url.includes('activity') ||
+        url.includes('fetchActivityEvents')
+      ) {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -81,7 +87,11 @@ test.describe('Admin fee withdrawal', () => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ totalCodes: 0, totalSuccessfulReferrals: 0, topReferrers: [] }),
+          body: JSON.stringify({
+            totalCodes: 0,
+            totalSuccessfulReferrals: 0,
+            topReferrers: [],
+          }),
         });
       } else {
         await route.continue();
@@ -94,7 +104,9 @@ test.describe('Admin fee withdrawal', () => {
     await page.goto('/en/admin');
 
     // Wait for admin dashboard to load
-    await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible({
+    await expect(
+      page.getByRole('heading', { name: 'Admin Dashboard' }),
+    ).toBeVisible({
       timeout: 10000,
     });
 
@@ -106,11 +118,15 @@ test.describe('Admin fee withdrawal', () => {
     await expect(feesSection.getByText(/5\.00 XLM/i)).toBeVisible();
   });
 
-  test('withdraw button is enabled when fees are available', async ({ page }) => {
+  test('withdraw button is enabled when fees are available', async ({
+    page,
+  }) => {
     await connectAdminWallet(page);
     await page.goto('/en/admin');
 
-    await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible({
+    await expect(
+      page.getByRole('heading', { name: 'Admin Dashboard' }),
+    ).toBeVisible({
       timeout: 10000,
     });
 
@@ -124,7 +140,9 @@ test.describe('Admin fee withdrawal', () => {
     await connectAdminWallet(page);
     await page.goto('/en/admin');
 
-    await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible({
+    await expect(
+      page.getByRole('heading', { name: 'Admin Dashboard' }),
+    ).toBeVisible({
       timeout: 10000,
     });
 
@@ -142,7 +160,9 @@ test.describe('Admin fee withdrawal', () => {
     }, MOCK_TX_HASH);
 
     // Confirm the withdrawal
-    const confirmButton = page.getByRole('button', { name: /Withdraw Fees/i }).last();
+    const confirmButton = page
+      .getByRole('button', { name: /Withdraw Fees/i })
+      .last();
     await confirmButton.click();
 
     // Should show transaction status (pending → success)
@@ -153,7 +173,9 @@ test.describe('Admin fee withdrawal', () => {
     });
   });
 
-  test('withdraw button is disabled when contract is paused', async ({ page }) => {
+  test('withdraw button is disabled when contract is paused', async ({
+    page,
+  }) => {
     // Override paused state for this test
     await page.route('**/api/**', async (route) => {
       const url = route.request().url();
@@ -188,7 +210,9 @@ test.describe('Admin fee withdrawal', () => {
     await connectAdminWallet(page);
     await page.goto('/en/admin');
 
-    await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible({
+    await expect(
+      page.getByRole('heading', { name: 'Admin Dashboard' }),
+    ).toBeVisible({
       timeout: 10000,
     });
 
@@ -201,7 +225,9 @@ test.describe('Admin fee withdrawal', () => {
     await expect(withdrawButton).toBeDisabled();
   });
 
-  test('withdraw button is disabled when no fees are available', async ({ page }) => {
+  test('withdraw button is disabled when no fees are available', async ({
+    page,
+  }) => {
     // Override fees to 0 for this test
     await page.route('**/api/**', async (route) => {
       const url = route.request().url();
@@ -236,7 +262,9 @@ test.describe('Admin fee withdrawal', () => {
     await connectAdminWallet(page);
     await page.goto('/en/admin');
 
-    await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible({
+    await expect(
+      page.getByRole('heading', { name: 'Admin Dashboard' }),
+    ).toBeVisible({
       timeout: 10000,
     });
 
@@ -249,11 +277,15 @@ test.describe('Admin fee withdrawal', () => {
     await expect(withdrawButton).toBeDisabled();
   });
 
-  test('shows confirmation dialog with correct fee amount', async ({ page }) => {
+  test('shows confirmation dialog with correct fee amount', async ({
+    page,
+  }) => {
     await connectAdminWallet(page);
     await page.goto('/en/admin');
 
-    await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible({
+    await expect(
+      page.getByRole('heading', { name: 'Admin Dashboard' }),
+    ).toBeVisible({
       timeout: 10000,
     });
 
@@ -262,7 +294,9 @@ test.describe('Admin fee withdrawal', () => {
     await withdrawButton.click();
 
     // Confirmation dialog should show the exact amount
-    const confirmDialog = page.locator('[role="dialog"]').or(page.locator('text=Withdraw 5.00 XLM'));
+    const confirmDialog = page
+      .locator('[role="dialog"]')
+      .or(page.locator('text=Withdraw 5.00 XLM'));
     await expect(page.getByText(/Withdraw 5\.00 XLM/i)).toBeVisible();
 
     // Cancel button should be present

@@ -107,7 +107,11 @@ export async function writeChunk(
   if (!session) {
     throw new Error('Upload session not found or expired');
   }
-  if (!Number.isInteger(chunkIndex) || chunkIndex < 0 || chunkIndex >= session.totalChunks) {
+  if (
+    !Number.isInteger(chunkIndex) ||
+    chunkIndex < 0 ||
+    chunkIndex >= session.totalChunks
+  ) {
     throw new Error('Chunk index out of range');
   }
 
@@ -115,7 +119,10 @@ export async function writeChunk(
   // generic over ArrayBufferLike (which includes SharedArrayBuffer), which
   // this project's DOM-lib-inclusive tsconfig can't unify with fs/DOM APIs
   // typed against a concrete ArrayBuffer. A fresh copy sidesteps the clash.
-  await fs.promises.writeFile(chunkPath(session, chunkIndex), new Uint8Array(data));
+  await fs.promises.writeFile(
+    chunkPath(session, chunkIndex),
+    new Uint8Array(data),
+  );
   session.receivedChunks.add(chunkIndex);
 
   return {

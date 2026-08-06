@@ -9,9 +9,9 @@ import Spinner from '@/components/ui/Spinner';
  * with this instead of importing them directly.
  */
 export function createLazyDashboard<P extends object>(
-  loader: () => Promise<{ default: ComponentType<P> }>
+  loader: () => Promise<{ default: ComponentType<P> }>,
 ) {
-  const LazyComponent = lazy(loader);
+  const LazyComponent = lazy(loader) as unknown as ComponentType<P>;
 
   return function LazyDashboardBoundary(props: P) {
     return (

@@ -2,6 +2,9 @@ import { WebAuth, Networks, Keypair } from '@stellar/stellar-sdk';
 import { NextRequest, NextResponse } from 'next/server';
 import { createRequestLogger, withRequestId } from '@/lib/logger';
 
+const DEFAULT_SESSION_SECS = 60 * 60 * 24; // 1 day
+const REMEMBER_ME_SESSION_SECS = 60 * 60 * 24 * 30; // 30 days
+
 // Returns the set of origins this route will accept requests from. This is
 // derived ONLY from server-controlled configuration (env vars) — never from
 // the incoming request's own Host/X-Forwarded-Proto headers, which a caller
@@ -42,7 +45,11 @@ export async function POST(req: NextRequest) {
   const origin = req.headers.get('origin');
   const allowedOrigins = getAllowedOrigins();
 
-  if (!origin || allowedOrigins.length === 0 || !allowedOrigins.includes(origin)) {
+  if (
+    !origin ||
+    allowedOrigins.length === 0 ||
+    !allowedOrigins.includes(origin)
+  ) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -103,7 +110,9 @@ export async function POST(req: NextRequest) {
     });
     return withRequestId(
       NextResponse.json(
-        { error: error instanceof Error ? error.message : 'Verification failed' },
+        {
+          error: error instanceof Error ? error.message : 'Verification failed',
+        },
         { status: 401 },
       ),
       log.requestId,

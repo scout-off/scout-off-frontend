@@ -5,8 +5,35 @@ import type { Player } from '@/types';
 let mockWalletAddress: string | null = null;
 const mockCheckIsValidator = jest.fn();
 
+// The global jest.setup.ts next-intl mock is a flat, namespace-unaware key
+// dictionary (fine for the small set of keys it already covers, but 'title'
+// collides across many pages' namespaces) — this page renders real
+// 'validator' namespace copy the tests assert on, so mock it locally here,
+// scoped to this file only.
+jest.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => {
+    const t: Record<string, string> = {
+      title: 'Validator Dashboard',
+      verifying: 'Verifying validator status…',
+      access_only_title: 'Validator Access Only',
+      access_only_description:
+        'Your wallet is not registered as an approved validator. Contact an administrator to request validator access.',
+      find_player: 'Find a Player',
+    };
+    return t[key] ?? key;
+  },
+}));
+
 jest.mock('@/hooks/useRequireWallet', () => ({
   useRequireWallet: () => ({ walletAddress: mockWalletAddress }),
+}));
+
+// PendingMilestoneQueue reads useValidator() -> useWalletContext()
+// unconditionally, which requires a real WalletProvider ancestor this suite
+// doesn't render — mock it out like the other page subcomponents below.
+jest.mock('@/components/validator/PendingMilestoneQueue', () => ({
+  __esModule: true,
+  default: () => <div data-testid="pending-milestone-queue" />,
 }));
 
 jest.mock('@/lib/contract', () => ({

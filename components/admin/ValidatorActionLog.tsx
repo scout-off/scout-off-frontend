@@ -45,7 +45,10 @@ export default function ValidatorActionLog() {
   };
 
   const handleExport = () => {
-    downloadCsv(buildValidatorActionLogCsv(entries), 'validator-action-log.csv');
+    downloadCsv(
+      buildValidatorActionLogCsv(entries),
+      'validator-action-log.csv',
+    );
   };
 
   return (
@@ -119,8 +122,7 @@ export default function ValidatorActionLog() {
         <p className="text-sm text-gray-400">Loading…</p>
       ) : error ? (
         <p role="alert" className="text-sm text-red-400">
-          Failed to load validator action log. The indexer may be
-          unavailable.
+          Failed to load validator action log. The indexer may be unavailable.
         </p>
       ) : entries.length === 0 ? (
         <EmptyState

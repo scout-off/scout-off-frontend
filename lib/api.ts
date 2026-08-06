@@ -331,9 +331,12 @@ export const fetchPendingMilestoneSubmissions = (
   validatorWallet: string,
 ): Promise<MilestoneSubmission[]> =>
   api
-    .get(`/milestone-submissions/validator/${encodeURIComponent(validatorWallet)}`, {
-      params: { status: 'pending' },
-    })
+    .get(
+      `/milestone-submissions/validator/${encodeURIComponent(validatorWallet)}`,
+      {
+        params: { status: 'pending' },
+      },
+    )
     .then((r) => r.data);
 
 export const decideMilestoneSubmission = (
@@ -341,7 +344,12 @@ export const decideMilestoneSubmission = (
   status: 'approved' | 'rejected',
   txHash?: string | null,
 ): Promise<MilestoneSubmission> =>
-  api.patch(`/milestone-submissions/${encodeURIComponent(id)}`, { status, txHash }).then((r) => r.data);
+  api
+    .patch(`/milestone-submissions/${encodeURIComponent(id)}`, {
+      status,
+      txHash,
+    })
+    .then((r) => r.data);
 
 export const createMilestoneSubmission = (payload: {
   playerId: string;

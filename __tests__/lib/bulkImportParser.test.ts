@@ -128,9 +128,7 @@ describe('parseBulkImportFile — CSV', () => {
     ].join('\n');
     const result = parseBulkImportFile(csv, 'csv');
     expect(result.rows[0].isValid).toBe(false);
-    expect(
-      result.rows[0].errors.some((e) => e.field === 'age'),
-    ).toBe(true);
+    expect(result.rows[0].errors.some((e) => e.field === 'age')).toBe(true);
   });
 
   it('sanitizes HTML out of free-text fields like name and bio', () => {
@@ -159,7 +157,10 @@ describe('parseBulkImportFile — CSV', () => {
   });
 
   it('returns a fileError for a CSV with only a header row', () => {
-    const result = parseBulkImportFile('name,age,nationality,region,position', 'csv');
+    const result = parseBulkImportFile(
+      'name,age,nationality,region,position',
+      'csv',
+    );
     expect(result.fileError).toMatch(/no data rows/i);
     expect(result.rows).toHaveLength(0);
   });
@@ -167,7 +168,9 @@ describe('parseBulkImportFile — CSV', () => {
   it('returns a fileError when the row count exceeds the batch limit', () => {
     const header = 'name,age,nationality,region,position';
     const row = 'John Doe,22,Nigerian,nigeria,ST';
-    const csv = [header, ...Array(MAX_BULK_IMPORT_ROWS + 1).fill(row)].join('\n');
+    const csv = [header, ...Array(MAX_BULK_IMPORT_ROWS + 1).fill(row)].join(
+      '\n',
+    );
     const result = parseBulkImportFile(csv, 'csv');
     expect(result.fileError).toMatch(/exceeds/i);
     expect(result.rows).toHaveLength(0);
@@ -212,7 +215,13 @@ describe('parseBulkImportFile — JSON', () => {
 
   it('accepts numeric age values (not just strings)', () => {
     const json = JSON.stringify([
-      { name: 'John Doe', age: 22, nationality: 'Nigerian', region: 'nigeria', position: 'ST' },
+      {
+        name: 'John Doe',
+        age: 22,
+        nationality: 'Nigerian',
+        region: 'nigeria',
+        position: 'ST',
+      },
     ]);
     const result = parseBulkImportFile(json, 'json');
     expect(result.rows[0].valid?.age).toBe(22);
@@ -236,8 +245,20 @@ describe('parseBulkImportFile — JSON', () => {
 
   it('flags invalid rows in JSON input just like CSV', () => {
     const json = JSON.stringify([
-      { name: 'John Doe', age: 22, nationality: 'Nigerian', region: 'nigeria', position: 'ST' },
-      { name: '', age: 22, nationality: 'Nigerian', region: 'nigeria', position: 'ST' },
+      {
+        name: 'John Doe',
+        age: 22,
+        nationality: 'Nigerian',
+        region: 'nigeria',
+        position: 'ST',
+      },
+      {
+        name: '',
+        age: 22,
+        nationality: 'Nigerian',
+        region: 'nigeria',
+        position: 'ST',
+      },
     ]);
     const result = parseBulkImportFile(json, 'json');
     expect(result.rows[0].isValid).toBe(true);

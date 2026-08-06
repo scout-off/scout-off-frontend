@@ -40,7 +40,10 @@ interface RateLimitStore {
    * active, and report the post-increment count plus how much of the
    * current window remains.
    */
-  increment(key: string, windowMs: number): Promise<{ count: number; ttlMs: number }>;
+  increment(
+    key: string,
+    windowMs: number,
+  ): Promise<{ count: number; ttlMs: number }>;
 }
 
 // ── In-memory store (dev/test fallback) ─────────────────────────────────────

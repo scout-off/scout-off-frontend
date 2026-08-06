@@ -162,7 +162,9 @@ describe('fetchWithRetry – retry on network errors', () => {
     // Use real timers to avoid microtask-ordering issues with fake timers
     jest.useRealTimers();
 
-    (global.fetch as jest.Mock).mockRejectedValue(new TypeError('Failed to fetch'));
+    (global.fetch as jest.Mock).mockRejectedValue(
+      new TypeError('Failed to fetch'),
+    );
 
     await expect(
       fetchWithRetry(DEFAULT_URL, {}, { maxRetries: 2, initialDelayMs: 10 }),
@@ -265,7 +267,11 @@ describe('fetchJsonWithRetry', () => {
     });
 
     await expect(
-      fetchJsonWithRetry(DEFAULT_URL, {}, { maxRetries: 1, initialDelayMs: 10 }),
+      fetchJsonWithRetry(
+        DEFAULT_URL,
+        {},
+        { maxRetries: 1, initialDelayMs: 10 },
+      ),
     ).rejects.toThrow('Request failed: 500 Error');
 
     expect(global.fetch).toHaveBeenCalledTimes(2); // initial + 1 retry

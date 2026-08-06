@@ -55,7 +55,7 @@ export default function BackupWalletModal({
     }
     if (!validateWalletAddress(trimmed)) {
       setInputError(
-        'Invalid Stellar address. Must be 56 characters starting with G.'
+        'Invalid Stellar address. Must be 56 characters starting with G.',
       );
       return;
     }
@@ -133,25 +133,31 @@ export default function BackupWalletModal({
 
             <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3">
               <p className="text-xs text-yellow-200">
-                <span className="font-semibold">What this does NOT protect:</span>
+                <span className="font-semibold">
+                  What this does NOT protect:
+                </span>
                 <br />
-                Backup wallets do not protect against loss of both wallets, stolen backup addresses,
-                or other security compromises. Use a wallet backup phrase as your primary recovery
-                method.
+                Backup wallets do not protect against loss of both wallets,
+                stolen backup addresses, or other security compromises. Use a
+                wallet backup phrase as your primary recovery method.
               </p>
             </div>
 
             {hasBackupWallet ? (
               <>
                 <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4">
-                  <p className="text-xs text-gray-400 mb-2">Current backup wallet:</p>
+                  <p className="text-xs text-gray-400 mb-2">
+                    Current backup wallet:
+                  </p>
                   <p className="text-sm font-mono text-gray-300 break-all">
                     {player.backupWallet}
                   </p>
                   {player.backupWalletVerifiedAt && (
                     <p className="text-xs text-gray-400 mt-2">
                       Verified on{' '}
-                      {new Date(player.backupWalletVerifiedAt * 1000).toLocaleDateString()}
+                      {new Date(
+                        player.backupWalletVerifiedAt * 1000,
+                      ).toLocaleDateString()}
                     </p>
                   )}
                 </div>
@@ -175,8 +181,8 @@ export default function BackupWalletModal({
             ) : (
               <>
                 <p className="text-sm text-gray-300">
-                  No backup wallet configured. Link one to recover your account if you lose access
-                  to your primary wallet.
+                  No backup wallet configured. Link one to recover your account
+                  if you lose access to your primary wallet.
                 </p>
 
                 <div className="flex gap-3 pt-2">
@@ -203,12 +209,14 @@ export default function BackupWalletModal({
           <>
             <div className="flex items-center gap-3">
               <Shield className="w-5 h-5 text-brand-green" />
-              <h3 className="text-lg font-semibold text-white">Link Backup Wallet</h3>
+              <h3 className="text-lg font-semibold text-white">
+                Link Backup Wallet
+              </h3>
             </div>
 
             <p className="text-sm text-gray-300">
-              Enter a secondary wallet address to use as a recovery method. You&apos;ll need to sign a
-              confirmation with your primary wallet.
+              Enter a secondary wallet address to use as a recovery method.
+              You&apos;ll need to sign a confirmation with your primary wallet.
             </p>
 
             <input
@@ -222,9 +230,7 @@ export default function BackupWalletModal({
               className="input"
             />
 
-            {inputError && (
-              <p className="text-sm text-red-400">{inputError}</p>
-            )}
+            {inputError && <p className="text-sm text-red-400">{inputError}</p>}
 
             <div className="flex gap-3 pt-2">
               <button
@@ -250,13 +256,17 @@ export default function BackupWalletModal({
           <>
             <div className="flex items-center gap-3">
               <Key className="w-5 h-5 text-brand-green" />
-              <h3 className="text-lg font-semibold text-white">Confirm & Sign</h3>
+              <h3 className="text-lg font-semibold text-white">
+                Confirm & Sign
+              </h3>
             </div>
 
             <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4 space-y-3">
               <div>
                 <p className="text-xs text-gray-400">Primary wallet:</p>
-                <p className="text-sm font-mono text-gray-300 break-all">{player.wallet}</p>
+                <p className="text-sm font-mono text-gray-300 break-all">
+                  {player.wallet}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-gray-400">Backup wallet:</p>
@@ -267,8 +277,8 @@ export default function BackupWalletModal({
             </div>
 
             <p className="text-sm text-gray-400">
-              Click &quot;Link &amp; Sign&quot; to confirm with your primary wallet. This proves you own both
-              addresses.
+              Click &quot;Link &amp; Sign&quot; to confirm with your primary
+              wallet. This proves you own both addresses.
             </p>
 
             {error && (
@@ -301,17 +311,23 @@ export default function BackupWalletModal({
           <>
             <div className="flex items-center gap-3">
               <Trash2 className="w-5 h-5 text-red-500" />
-              <h3 className="text-lg font-semibold text-white">Remove Backup Wallet?</h3>
+              <h3 className="text-lg font-semibold text-white">
+                Remove Backup Wallet?
+              </h3>
             </div>
 
             <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4">
-              <p className="text-xs text-gray-400 mb-2">Current backup wallet:</p>
-              <p className="text-sm font-mono text-gray-300 break-all">{player.backupWallet}</p>
+              <p className="text-xs text-gray-400 mb-2">
+                Current backup wallet:
+              </p>
+              <p className="text-sm font-mono text-gray-300 break-all">
+                {player.backupWallet}
+              </p>
             </div>
 
             <p className="text-sm text-gray-300">
-              Removing your backup wallet means you won&apos;t be able to use it to recover your account
-              if you lose access to your primary wallet.
+              Removing your backup wallet means you won&apos;t be able to use it
+              to recover your account if you lose access to your primary wallet.
             </p>
 
             <div className="flex gap-3 pt-2">
@@ -337,11 +353,14 @@ export default function BackupWalletModal({
           <>
             <div className="flex items-center gap-3">
               <AlertCircle className="w-5 h-5 text-red-500" />
-              <h3 className="text-lg font-semibold text-white">Confirm Removal</h3>
+              <h3 className="text-lg font-semibold text-white">
+                Confirm Removal
+              </h3>
             </div>
 
             <p className="text-sm text-red-200">
-              Are you sure? This action cannot be undone. You&apos;ll have no backup recovery method.
+              Are you sure? This action cannot be undone. You&apos;ll have no
+              backup recovery method.
             </p>
 
             <div className="flex gap-3 pt-2">

@@ -2,12 +2,62 @@ import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
+// jsdom doesn't implement IntersectionObserver; useInfiniteScroll (used by
+// this component's pagination) constructs one on mount. This suite isn't
+// testing scroll-triggered loading itself, so a no-op stub is enough to
+// avoid the ReferenceError.
+class MockIntersectionObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+// @ts-expect-error partial IntersectionObserver stub, sufficient for jsdom
+global.IntersectionObserver = MockIntersectionObserver;
+
 // ── Mocks ─────────────────────────────────────────────────────────────────────
+
+const DASHBOARD_WALLET =
+  'GABC1234567890ABCDE1234567890ABCDE1234567890ABCDE123456';
 
 jest.mock('@/hooks/useRequireWallet', () => ({
   useRequireWallet: () => ({
-    walletAddress: 'GABC1234567890ABCDE1234567890ABCDE1234567890ABCDE123456',
+    walletAddress: DASHBOARD_WALLET,
   }),
+}));
+
+// useSubscription/useRequireSubscription (transitively, via
+// useRequireSubscription -> useWallet -> useWalletContext) both need a real
+// WalletProvider ancestor this suite doesn't render — mock useWallet
+// directly instead.
+jest.mock('@/hooks/useWallet', () => ({
+  useWallet: () => ({ publicKey: DASHBOARD_WALLET }),
+}));
+
+jest.mock('@/hooks/useRequireSubscription', () => ({
+  useRequireSubscription: () => ({ isProtected: true, loading: false }),
+}));
+
+jest.mock('@/hooks/useSubscription', () => ({
+  useSubscription: () => ({
+    subscription: { tier: 'pro', expiresAt: Date.now() + 1000 * 60 * 60 },
+    isExpired: false,
+    subscribe: jest.fn(),
+    loading: false,
+    error: null,
+  }),
+}));
+
+jest.mock('@/components/ui/Toast', () => ({
+  useToast: () => ({ show: jest.fn() }),
+}));
+
+// The real OnboardingTour renders a "Welcome to Scout Dashboard" heading and
+// Previous/Next-step buttons on first visit (no dismissal recorded in
+// jsdom's localStorage), which collide with this suite's own heading/button
+// queries — mock it out since tour behavior isn't this suite's concern.
+jest.mock('@/components/ui/OnboardingTour', () => ({
+  __esModule: true,
+  default: () => null,
 }));
 
 const mockSearch = jest.fn();
@@ -83,7 +133,11 @@ const EMPTY_SCOUT = {
   players: [],
   loading: false,
   error: null,
+  isRateLimited: false,
+  retryAfterSec: null,
   search: mockSearch,
+  searchByName: jest.fn(),
+  refetch: jest.fn(),
 };
 
 type ScoutState = typeof EMPTY_SCOUT;
@@ -237,7 +291,11 @@ describe('ScoutDashboardContent — empty state', () => {
     expect(screen.getByText('No players found')).toBeInTheDocument();
 
     act(() => {
-      mockUseScout.mockReturnValue({ ...EMPTY_SCOUT, loading: true, players: [] });
+      mockUseScout.mockReturnValue({
+        ...EMPTY_SCOUT,
+        loading: true,
+        players: [],
+      });
       rerender(<ScoutDashboardContent />);
     });
     expect(screen.queryByText('No players found')).not.toBeInTheDocument();
@@ -332,13 +390,22 @@ describe('ScoutDashboardContent — pagination', () => {
 
   it('does not render pagination controls when results fit on one page', () => {
     const { rerender } = render(<ScoutDashboardContent />);
-    simulateSearchCycle(rerender, Array.from({ length: 5 }, (_, i) => makePlayer(`p${i}`)));
-    expect(screen.queryByRole('button', { name: /previous/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /next/i })).not.toBeInTheDocument();
+    simulateSearchCycle(
+      rerender,
+      Array.from({ length: 5 }, (_, i) => makePlayer(`p${i}`)),
+    );
+    expect(
+      screen.queryByRole('button', { name: /previous/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /next/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('renders pagination controls when results exceed one page (>12 items)', () => {
-    const manyPlayers = Array.from({ length: 13 }, (_, i) => makePlayer(`p${i}`));
+    const manyPlayers = Array.from({ length: 13 }, (_, i) =>
+      makePlayer(`p${i}`),
+    );
     const { rerender } = render(<ScoutDashboardContent />);
     simulateSearchCycle(rerender, manyPlayers);
     expect(screen.getByTestId('pagination-prev')).toBeInTheDocument();
@@ -346,7 +413,9 @@ describe('ScoutDashboardContent — pagination', () => {
   });
 
   it('Previous button is disabled on the first page', () => {
-    const manyPlayers = Array.from({ length: 13 }, (_, i) => makePlayer(`p${i}`));
+    const manyPlayers = Array.from({ length: 13 }, (_, i) =>
+      makePlayer(`p${i}`),
+    );
     const { rerender } = render(<ScoutDashboardContent />);
     simulateSearchCycle(rerender, manyPlayers);
     expect(screen.getByTestId('pagination-prev')).toBeDisabled();
@@ -371,9 +440,7 @@ describe('ScoutDashboardContent — wallet address search', () => {
     render(<ScoutDashboardContent />);
     const input = screen.getByLabelText(/search by wallet address/i);
     fireEvent.change(input, { target: { value: 'not-a-key' } });
-    expect(
-      screen.getByText(/invalid stellar address/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/invalid stellar address/i)).toBeInTheDocument();
   });
 
   it('shows "Searching…" while a valid wallet lookup is in-flight', async () => {

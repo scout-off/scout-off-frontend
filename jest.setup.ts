@@ -65,8 +65,12 @@ jest.mock('next-intl', () => ({
   useFormatter: () => ({}),
 }));
 
+// The real package's default export is the albedo intent instance itself
+// (with .publicKey()/.tx() directly on it, not nested under an `albedo`
+// key) — see node_modules/@albedo-link/intent/src/index.js.
 jest.mock('@albedo-link/intent', () => ({
-  albedo: {
+  __esModule: true,
+  default: {
     publicKey: jest.fn(),
     tx: jest.fn(),
   },

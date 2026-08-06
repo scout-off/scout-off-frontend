@@ -3,7 +3,11 @@ import { ChatMessage } from '@/lib/messaging/chatApi';
 /**
  * Small delivered/read indicator rendered next to a sent message bubble.
  */
-export default function MessageStatus({ status }: { status: ChatMessage['status'] }) {
+export default function MessageStatus({
+  status,
+}: {
+  status: ChatMessage['status'];
+}) {
   if (status === 'sent') return null;
 
   const label = status === 'read' ? 'Read' : 'Delivered';

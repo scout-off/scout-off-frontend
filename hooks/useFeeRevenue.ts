@@ -63,7 +63,10 @@ async function fetchFeeRevenue(): Promise<FeeRevenueData> {
     fetchAllEventsOfType('scout_subscribed'),
   ]);
 
-  const byDay = new Map<string, { contactFeeXlm: number; subscriptionXlm: number }>();
+  const byDay = new Map<
+    string,
+    { contactFeeXlm: number; subscriptionXlm: number }
+  >();
 
   for (const event of playerContacted) {
     const day = dayKey(event.timestamp);

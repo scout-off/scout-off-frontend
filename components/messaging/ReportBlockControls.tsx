@@ -1,7 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { blockUser, isUserBlocked, reportUser, unblockUser } from '@/lib/messaging/moderation';
+import {
+  blockUser,
+  isUserBlocked,
+  reportUser,
+  unblockUser,
+} from '@/lib/messaging/moderation';
 
 /**
  * Report/Block controls for a message thread. Report captures a reason and
@@ -43,7 +48,10 @@ export default function ReportBlockControls({
   return (
     <div className="flex flex-col gap-2 text-sm">
       <div className="flex gap-2">
-        <button className="rounded border px-2 py-1" onClick={() => setReporting((v) => !v)}>
+        <button
+          className="rounded border px-2 py-1"
+          onClick={() => setReporting((v) => !v)}
+        >
           Report
         </button>
         <button className="rounded border px-2 py-1" onClick={toggleBlock}>
@@ -59,7 +67,10 @@ export default function ReportBlockControls({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
           />
-          <button className="w-fit rounded bg-red-600 px-2 py-1 text-white" onClick={submitReport}>
+          <button
+            className="w-fit rounded bg-red-600 px-2 py-1 text-white"
+            onClick={submitReport}
+          >
             Submit report
           </button>
         </div>

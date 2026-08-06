@@ -63,7 +63,9 @@ function createSubmission({
 
 /** Lists submissions for a validator, oldest first. Defaults to pending only. */
 function listForValidator(validatorWallet, status = 'pending') {
-  return listByValidatorAndStatus.all(validatorWallet, status).map(toSubmission);
+  return listByValidatorAndStatus
+    .all(validatorWallet, status)
+    .map(toSubmission);
 }
 
 /**

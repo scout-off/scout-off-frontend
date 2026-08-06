@@ -1,51 +1,64 @@
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
-// Mock lib/api at the Axios instance level so fetchReferralStats /
-// generateReferralCode (which use api.get / api.post) are controllable.
-jest.mock('@/lib/api', () => {
-  const mockApi = {
-    get: jest.fn(),
-    post: jest.fn(),
-  };
-  // Default export is the axios instance; also expose named exports unchanged.
-  return {
-    __esModule: true,
-    default: mockApi,
-    // Keep any named exports that other modules may import from lib/api.
-    fetchScoutStats: jest.fn(),
-    fetchScoutProfile: jest.fn(),
-    fetchScoutContacts: jest.fn(),
-    fetchPlayerProfile: jest.fn(),
-    fetchPlayerComments: jest.fn(),
-    fetchChatHistory: jest.fn(),
-    postChatMessage: jest.fn(),
-  };
-});
+// lib/api.ts builds its axios instance once, at module load, via
+// `axios.create(...)` — generateReferralCode / getReferralStats /
+// listReferralCodes close over that instance internally, so mocking
+// '@/lib/api' itself can't intercept their HTTP calls (their real
+// implementations are bound to the real instance, not whatever a mock
+// later exposes as the default export). Mocking 'axios' one level down
+// lets lib/api.ts load for real while still controlling every call it
+// makes through api.get/api.post. The get/post jest.fn()s are created
+// inside the factory (not referenced from outer scope) since jest hoists
+// this call above the test file's own top-level `const` declarations.
+jest.mock('axios', () => ({
+  __esModule: true,
+  default: {
+    create: jest.fn(() => ({ get: jest.fn(), post: jest.fn() })),
+  },
+}));
 
 jest.mock('@/components/ui/Toast', () => ({
   useToast: jest.fn(),
 }));
 
+// scoutId is passed explicitly in every test below to represent the scout
+// viewing (and acting on) their own referral panel, so the connected
+// wallet matches scoutId — mirroring how the page actually renders this
+// component for its primary use case.
+const SCOUT_ID = 'scout-abc-123';
+
+jest.mock('@/hooks/useWallet', () => ({
+  useWallet: jest.fn(() => ({ publicKey: 'scout-abc-123' })),
+}));
+
 // ── Typed imports (after mocks) ───────────────────────────────────────────────
 
-import api from '@/lib/api';
+import axios from 'axios';
 import ReferralPanel, {
   type ReferralStats,
   type ReferralCode,
 } from '@/components/scout/ReferralPanel';
 import { useToast } from '@/components/ui/Toast';
 
-const mockApiGet = api.get as jest.Mock;
-const mockApiPost = api.post as jest.Mock;
+// lib/api.ts already called axios.create() once, during the import chain
+// above — grab the (get/post) instance that call returned so tests can
+// control it.
+const mockAxiosInstance = (axios.create as jest.Mock).mock.results[0].value;
+const mockApiGet = mockAxiosInstance.get as jest.Mock;
+const mockApiPost = mockAxiosInstance.post as jest.Mock;
 const mockUseToast = useToast as jest.Mock;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-const SCOUT_ID = 'scout-abc-123';
 
 function makeStats(overrides: Partial<ReferralStats> = {}): ReferralStats {
   return {
@@ -55,8 +68,14 @@ function makeStats(overrides: Partial<ReferralStats> = {}): ReferralStats {
   };
 }
 
-function makeNewCode(code = 'CODE-NEW'): ReferralCode {
-  return { code, scoutWallet: '', createdAt: Date.now() / 1000, usedBy: null, usedAt: null };
+function makeCode(code: string): ReferralCode {
+  return {
+    code,
+    scoutWallet: SCOUT_ID,
+    createdAt: Date.now() / 1000,
+    usedBy: null,
+    usedAt: null,
+  };
 }
 
 function makeToast() {
@@ -65,22 +84,48 @@ function makeToast() {
   return { show };
 }
 
-/** Setup api.get to resolve with the given stats wrapped as an axios response. */
+// getReferralStats and listReferralCodes are two separate GET endpoints
+// (/referrals/count/:wallet and /referrals/scout/:wallet respectively) —
+// route mockApiGet by URL so each can be controlled independently. Left
+// unresolved by default (stats) / resolved empty by default (codes) so
+// tests that only care about one don't need to set up the other.
+let statsResponse: () => Promise<{ data: ReferralStats }> = () =>
+  new Promise(() => {});
+let codesResponse: () => Promise<{ data: ReferralCode[] }> = () =>
+  Promise.resolve({ data: [] });
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  statsResponse = () => new Promise(() => {});
+  codesResponse = () => Promise.resolve({ data: [] });
+  mockApiGet.mockImplementation((url: string) => {
+    if (url.includes('/referrals/count/')) return statsResponse();
+    if (url.includes('/referrals/scout/')) return codesResponse();
+    return Promise.reject(new Error(`Unexpected GET ${url}`));
+  });
+});
+
+/** Setup getReferralStats to resolve with the given stats. */
 function resolveStats(stats: ReferralStats) {
-  mockApiGet.mockResolvedValue({ data: stats });
+  statsResponse = () => Promise.resolve({ data: stats });
 }
 
-/** Setup api.get to reject. */
+/** Setup getReferralStats to reject. */
 function rejectStats(err = new Error('Network Error')) {
-  mockApiGet.mockRejectedValue(err);
+  statsResponse = () => Promise.reject(err);
 }
 
-/** Setup api.post to resolve with a new code. */
+/** Setup listReferralCodes to resolve with the given codes. */
+function resolveCodes(codes: ReferralCode[]) {
+  codesResponse = () => Promise.resolve({ data: codes });
+}
+
+/** Setup api.post (generateReferralCode) to resolve with a new code. */
 function resolveGenerate(code: ReferralCode) {
   mockApiPost.mockResolvedValue({ data: code });
 }
 
-/** Setup api.post to reject. */
+/** Setup api.post (generateReferralCode) to reject. */
 function rejectGenerate(err = new Error('Server Error')) {
   mockApiPost.mockRejectedValue(err);
 }
@@ -89,66 +134,53 @@ function rejectGenerate(err = new Error('Server Error')) {
 
 describe('ReferralPanel — initial loading state', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
     makeToast();
   });
 
-  it('shows a loading skeleton while stats are being fetched', () => {
-    // A promise that never resolves keeps the component in the loading state.
-    mockApiGet.mockReturnValue(new Promise(() => {}));
+  it('shows a loading indicator while stats are being fetched', () => {
+    // statsResponse defaults to a never-resolving promise (see beforeEach).
     render(<ReferralPanel scoutId={SCOUT_ID} />);
     expect(screen.getByLabelText('Loading stats')).toBeInTheDocument();
   });
 
-  it('disables the Generate button while stats are loading', () => {
-    mockApiGet.mockReturnValue(new Promise(() => {}));
+  it('keeps the Generate button enabled while stats are still loading', () => {
+    // Generate only depends on the connected wallet, not on the stats
+    // fetch — it should never be gated by loading.
     render(<ReferralPanel scoutId={SCOUT_ID} />);
     expect(
       screen.getByRole('button', { name: /generate invite link/i }),
-    ).toBeDisabled();
+    ).not.toBeDisabled();
   });
 
   it('renders stats and codes after a successful load', async () => {
     resolveStats(makeStats());
+    resolveCodes([makeCode('CODE-001'), makeCode('CODE-002')]);
     render(<ReferralPanel scoutId={SCOUT_ID} />);
 
     await waitFor(() => {
-      expect(screen.getByText('5')).toBeInTheDocument(); // totalReferrals
+      expect(screen.getByText('3 referrals')).toBeInTheDocument();
     });
-    expect(screen.getByText('3')).toBeInTheDocument(); // activeReferrals
-    expect(screen.getByText('CODE-001')).toBeInTheDocument();
-    expect(screen.getByText('CODE-002')).toBeInTheDocument();
+    expect(screen.getByText(/CODE-001/)).toBeInTheDocument();
+    expect(screen.getByText(/CODE-002/)).toBeInTheDocument();
   });
 
-  it('shows the "no invite links yet" message when codes list is empty', async () => {
-    resolveStats(makeStats({ codes: [] }));
-    render(<ReferralPanel scoutId={SCOUT_ID} />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/no invite links yet/i)).toBeInTheDocument();
-    });
-  });
-
-  it('enables the Generate button after stats finish loading', async () => {
+  it('shows the empty-state message when the codes list is empty', async () => {
     resolveStats(makeStats());
+    resolveCodes([]);
     render(<ReferralPanel scoutId={SCOUT_ID} />);
 
-    await waitFor(() =>
+    await waitFor(() => {
       expect(
-        screen.getByRole('button', { name: /generate invite link/i }),
-      ).not.toBeDisabled(),
-    );
+        screen.getByText(/your generated invite links will appear here/i),
+      ).toBeInTheDocument();
+    });
   });
 });
 
 // ── Error state on initial load ───────────────────────────────────────────────
 
 describe('ReferralPanel — API failure on load', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('shows an error toast when fetchReferralStats rejects', async () => {
+  it('shows an error toast when getReferralStats rejects', async () => {
     const { show } = makeToast();
     rejectStats();
     render(<ReferralPanel scoutId={SCOUT_ID} />);
@@ -180,21 +212,15 @@ describe('ReferralPanel — API failure on load', () => {
 
 describe('ReferralPanel — generate invite link', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
     makeToast();
+    resolveStats(makeStats());
+    resolveCodes([]);
   });
 
   it('adds the new code to the list after successful generation', async () => {
-    resolveStats(makeStats({ codes: [] }));
-    resolveGenerate(makeNewCode('CODE-NEW'));
+    resolveGenerate(makeCode('CODE-NEW'));
 
     render(<ReferralPanel scoutId={SCOUT_ID} />);
-    await waitFor(() =>
-      expect(
-        screen.getByRole('button', { name: /generate invite link/i }),
-      ).not.toBeDisabled(),
-    );
-
     await act(async () => {
       fireEvent.click(
         screen.getByRole('button', { name: /generate invite link/i }),
@@ -202,54 +228,41 @@ describe('ReferralPanel — generate invite link', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('CODE-NEW')).toBeInTheDocument();
+      expect(screen.getByText(/CODE-NEW/)).toBeInTheDocument();
     });
   });
 
-  it('calls api.post with the correct endpoint', async () => {
-    resolveStats(makeStats({ codes: [] }));
-    resolveGenerate(makeNewCode());
+  it('calls generateReferralCode with the connected wallet', async () => {
+    resolveGenerate(makeCode('CODE-NEW'));
 
     render(<ReferralPanel scoutId={SCOUT_ID} />);
-    await waitFor(() =>
-      expect(
-        screen.getByRole('button', { name: /generate invite link/i }),
-      ).not.toBeDisabled(),
-    );
-
     await act(async () => {
       fireEvent.click(
         screen.getByRole('button', { name: /generate invite link/i }),
       );
     });
 
-    expect(mockApiPost).toHaveBeenCalledWith(
-      `/scouts/${SCOUT_ID}/referrals`,
-    );
+    expect(mockApiPost).toHaveBeenCalledWith('/referrals/generate', {
+      scoutWallet: SCOUT_ID,
+      turnstileToken: undefined,
+    });
   });
 
   it('disables the Generate button while generation is in-flight', async () => {
-    resolveStats(makeStats({ codes: [] }));
     // Promise that never resolves keeps the component generating
     mockApiPost.mockReturnValue(new Promise(() => {}));
 
     render(<ReferralPanel scoutId={SCOUT_ID} />);
-    await waitFor(() =>
-      expect(
-        screen.getByRole('button', { name: /generate invite link/i }),
-      ).not.toBeDisabled(),
-    );
+    const btn = screen.getByRole('button', { name: /generate invite link/i });
 
     act(() => {
-      fireEvent.click(
-        screen.getByRole('button', { name: /generate invite link/i }),
-      );
+      fireEvent.click(btn);
     });
 
-    // After click, generating state is true → button is disabled and text changes.
-    // The aria-label stays "Generate Invite Link"; check disabled + text content.
+    // The button's accessible name changes to "Generating…" once clicked
+    // (see the ternary in the component), so re-query it by its stable
+    // container/DOM node reference rather than its (now-different) name.
     await waitFor(() => {
-      const btn = screen.getByRole('button', { name: /generate invite link/i });
       expect(btn).toBeDisabled();
       expect(btn).toHaveTextContent(/generating/i);
     });
@@ -257,16 +270,9 @@ describe('ReferralPanel — generate invite link', () => {
 
   it('shows an error toast when generateReferralCode rejects', async () => {
     const { show } = makeToast();
-    resolveStats(makeStats({ codes: [] }));
     rejectGenerate();
 
     render(<ReferralPanel scoutId={SCOUT_ID} />);
-    await waitFor(() =>
-      expect(
-        screen.getByRole('button', { name: /generate invite link/i }),
-      ).not.toBeDisabled(),
-    );
-
     await act(async () => {
       fireEvent.click(
         screen.getByRole('button', { name: /generate invite link/i }),
@@ -275,7 +281,7 @@ describe('ReferralPanel — generate invite link', () => {
 
     expect(show).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: expect.stringMatching(/generate invite link/i),
+        message: expect.stringMatching(/failed to generate an invite link/i),
         variant: 'error',
       }),
     );
@@ -286,8 +292,9 @@ describe('ReferralPanel — generate invite link', () => {
 
 describe('ReferralPanel — copy to clipboard', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
     makeToast();
+    resolveStats(makeStats());
+    resolveCodes([makeCode('CODE-001'), makeCode('CODE-002')]);
     jest.useFakeTimers();
   });
 
@@ -303,104 +310,91 @@ describe('ReferralPanel — copy to clipboard', () => {
   }
 
   function mockClipboardFailure() {
-    const writeText = jest
-      .fn()
-      .mockRejectedValue(new Error('ClipboardError'));
+    const writeText = jest.fn().mockRejectedValue(new Error('ClipboardError'));
     Object.assign(navigator, { clipboard: { writeText } });
     return { writeText };
   }
 
   it('shows "Copied!" confirmation after clicking a copy button', async () => {
     mockClipboardSuccess();
-    resolveStats(makeStats());
 
     render(<ReferralPanel scoutId={SCOUT_ID} />);
     await waitFor(() =>
-      expect(screen.getByText('CODE-001')).toBeInTheDocument(),
+      expect(screen.getByText(/CODE-001/)).toBeInTheDocument(),
     );
 
     await act(async () => {
-      fireEvent.click(
-        screen.getByRole('button', { name: /copy invite link for code-001/i }),
-      );
+      fireEvent.click(screen.getByRole('button', { name: /code-001/i }));
     });
 
-    expect(
-      screen.getByRole('button', { name: /copy invite link for code-001/i }),
-    ).toHaveTextContent('Copied!');
+    expect(screen.getByRole('button', { name: /code-001/i })).toHaveTextContent(
+      'Copied!',
+    );
   });
 
   it('"Copied!" label clears after ~2 seconds', async () => {
     mockClipboardSuccess();
-    resolveStats(makeStats());
 
     render(<ReferralPanel scoutId={SCOUT_ID} />);
     await waitFor(() =>
-      expect(screen.getByText('CODE-001')).toBeInTheDocument(),
+      expect(screen.getByText(/CODE-001/)).toBeInTheDocument(),
     );
 
     await act(async () => {
-      fireEvent.click(
-        screen.getByRole('button', { name: /copy invite link for code-001/i }),
-      );
+      fireEvent.click(screen.getByRole('button', { name: /code-001/i }));
     });
 
-    expect(
-      screen.getByRole('button', { name: /copy invite link for code-001/i }),
-    ).toHaveTextContent('Copied!');
+    expect(screen.getByRole('button', { name: /code-001/i })).toHaveTextContent(
+      'Copied!',
+    );
 
     act(() => {
       jest.advanceTimersByTime(2100);
     });
 
-    expect(
-      screen.getByRole('button', { name: /copy invite link for code-001/i }),
-    ).toHaveTextContent('Copy');
+    expect(screen.getByRole('button', { name: /code-001/i })).toHaveTextContent(
+      'Copy',
+    );
   });
 
   it('only shows "Copied!" on the clicked code, not others', async () => {
     mockClipboardSuccess();
-    resolveStats(makeStats());
 
     render(<ReferralPanel scoutId={SCOUT_ID} />);
     await waitFor(() =>
-      expect(screen.getByText('CODE-001')).toBeInTheDocument(),
+      expect(screen.getByText(/CODE-001/)).toBeInTheDocument(),
     );
 
     await act(async () => {
-      fireEvent.click(
-        screen.getByRole('button', { name: /copy invite link for code-001/i }),
-      );
+      fireEvent.click(screen.getByRole('button', { name: /code-001/i }));
     });
 
-    expect(
-      screen.getByRole('button', { name: /copy invite link for code-001/i }),
-    ).toHaveTextContent('Copied!');
+    expect(screen.getByRole('button', { name: /code-001/i })).toHaveTextContent(
+      'Copied!',
+    );
 
     // The second code's button should still say "Copy"
-    expect(
-      screen.getByRole('button', { name: /copy invite link for code-002/i }),
-    ).toHaveTextContent('Copy');
+    expect(screen.getByRole('button', { name: /code-002/i })).toHaveTextContent(
+      'Copy',
+    );
   });
 
-  it('shows an error toast when the clipboard API fails', async () => {
-    const { show } = makeToast();
+  it('leaves the button showing "Copy" (not "Copied!") when the clipboard API fails', async () => {
     mockClipboardFailure();
-    resolveStats(makeStats());
 
     render(<ReferralPanel scoutId={SCOUT_ID} />);
     await waitFor(() =>
-      expect(screen.getByText('CODE-001')).toBeInTheDocument(),
+      expect(screen.getByText(/CODE-001/)).toBeInTheDocument(),
     );
 
     await act(async () => {
-      fireEvent.click(
-        screen.getByRole('button', { name: /copy invite link for code-001/i }),
-      );
+      fireEvent.click(screen.getByRole('button', { name: /code-001/i }));
     });
 
-    expect(show).toHaveBeenCalledWith(
-      expect.objectContaining({ variant: 'error' }),
+    // A failed clipboard write silently fails (matches TruncatedAddress's
+    // convention) rather than showing a misleading "Copied!" state.
+    expect(screen.getByRole('button', { name: /code-001/i })).toHaveTextContent(
+      'Copy',
     );
   });
 });

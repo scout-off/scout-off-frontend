@@ -125,6 +125,22 @@ jest.mock('@/components/ui/ErrorBoundary', () => ({
   default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+// useWatchlist/useSavedSearches (via useUndoableRemoval) and the component
+// itself all call useToast(), which needs a ToastProvider ancestor this
+// suite doesn't render.
+jest.mock('@/components/ui/Toast', () => ({
+  useToast: () => ({ show: jest.fn() }),
+}));
+
+// The real OnboardingTour renders a "Welcome to Scout Dashboard" heading and
+// Previous/Next-step buttons on first visit, colliding with this suite's own
+// heading/button queries — mock it out, tour behavior isn't this suite's
+// concern.
+jest.mock('@/components/ui/OnboardingTour', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
 // ── Import under test (after mocks) ───────────────────────────────────────────
 
 import ScoutDashboard from '@/app/[locale]/scout/page';

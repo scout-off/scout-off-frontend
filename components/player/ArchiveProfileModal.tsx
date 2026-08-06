@@ -59,8 +59,8 @@ export default function ArchiveProfileModal({
             {isArchived ? (
               <>
                 <p className="text-sm text-gray-300">
-                  Restore your profile to make it visible to scouts again. Scouts will be able to
-                  search and view your profile.
+                  Restore your profile to make it visible to scouts again.
+                  Scouts will be able to search and view your profile.
                 </p>
                 <p className="text-xs text-gray-400">
                   Your data and milestones are preserved — nothing is deleted.
@@ -69,12 +69,13 @@ export default function ArchiveProfileModal({
             ) : (
               <>
                 <p className="text-sm text-gray-300">
-                  Archiving your profile will hide it from scout search results and browsing. You
-                  can restore it anytime.
+                  Archiving your profile will hide it from scout search results
+                  and browsing. You can restore it anytime.
                 </p>
                 <p className="text-xs text-gray-400">
-                  Your data and milestones are preserved — nothing is deleted. Direct links to your
-                  profile will show a &apos;currently private&apos; message.
+                  Your data and milestones are preserved — nothing is deleted.
+                  Direct links to your profile will show a &apos;currently
+                  private&apos; message.
                 </p>
               </>
             )}
@@ -138,7 +139,11 @@ export default function ArchiveProfileModal({
                 }`}
               >
                 {loading && <Spinner size="sm" />}
-                {loading ? 'Processing...' : isArchived ? 'Yes, Restore' : 'Yes, Archive'}
+                {loading
+                  ? 'Processing...'
+                  : isArchived
+                    ? 'Yes, Restore'
+                    : 'Yes, Archive'}
               </button>
             </div>
           </>

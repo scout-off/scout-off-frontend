@@ -84,7 +84,8 @@ export function createRequestLogger(request: Request): RequestLogger {
     requestId,
     info: (message, fields) => emit('info', requestId, route, message, fields),
     warn: (message, fields) => emit('warn', requestId, route, message, fields),
-    error: (message, fields) => emit('error', requestId, route, message, fields),
+    error: (message, fields) =>
+      emit('error', requestId, route, message, fields),
   };
 }
 

@@ -28,7 +28,8 @@ router.post('/', (req, res) => {
     !isNonEmptyString(submittedBy)
   ) {
     return res.status(400).json({
-      error: 'playerId, description, validatorWallet, and submittedBy are required',
+      error:
+        'playerId, description, validatorWallet, and submittedBy are required',
     });
   }
 
@@ -47,11 +48,16 @@ router.post('/', (req, res) => {
 // Public read — matches the validator-stats/academy-lookup pattern above;
 // the validator dashboard queries this without any auth of its own.
 router.get('/validator/:wallet', (req, res) => {
-  const status = typeof req.query.status === 'string' ? req.query.status : 'pending';
+  const status =
+    typeof req.query.status === 'string' ? req.query.status : 'pending';
   if (!VALID_STATUSES.includes(status)) {
-    return res.status(400).json({ error: `status must be one of ${VALID_STATUSES.join(', ')}` });
+    return res
+      .status(400)
+      .json({ error: `status must be one of ${VALID_STATUSES.join(', ')}` });
   }
-  return res.json(milestoneSubmissionService.listForValidator(req.params.wallet, status));
+  return res.json(
+    milestoneSubmissionService.listForValidator(req.params.wallet, status),
+  );
 });
 
 // PATCH /milestone-submissions/:id
@@ -59,7 +65,9 @@ router.get('/validator/:wallet', (req, res) => {
 router.patch('/:id', (req, res) => {
   const { status, txHash } = req.body ?? {};
   if (!VALID_STATUSES.includes(status) || status === 'pending') {
-    return res.status(400).json({ error: "status must be 'approved' or 'rejected'" });
+    return res
+      .status(400)
+      .json({ error: "status must be 'approved' or 'rejected'" });
   }
 
   try {

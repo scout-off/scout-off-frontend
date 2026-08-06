@@ -126,7 +126,9 @@ describe('chunkedUploadStore', () => {
     cleanupSession(sessionId);
 
     expect(getSessionStatus(sessionId)).toBeNull();
-    await expect(assembleFile(sessionId)).rejects.toThrow(/not found or expired/i);
+    await expect(assembleFile(sessionId)).rejects.toThrow(
+      /not found or expired/i,
+    );
   });
 
   it('cleanupSession on an unknown session is a harmless no-op', () => {

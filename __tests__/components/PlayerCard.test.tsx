@@ -162,10 +162,7 @@ describe('PlayerCard — rendering', () => {
     render(<PlayerCard player={mockPlayer} />);
     const image = screen.getByAltText(mockPlayer.vitals.name);
     expect(image).toBeInTheDocument();
-    expect(image).toHaveAttribute(
-      'src',
-      `/api/media/${mockPlayer.ipfsHash}`,
-    );
+    expect(image).toHaveAttribute('src', `/api/media/${mockPlayer.ipfsHash}`);
   });
 
   it('shows a placeholder when no IPFS image CID is set', () => {
@@ -228,6 +225,10 @@ describe('PlayerCard — position tooltip', () => {
     // 'Forward' is not a key in FOOTBALL_POSITIONS — tooltip should still show
     render(<PlayerCard player={mockPlayer} />);
     fireEvent.focus(screen.getByText('Forward'));
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Forward');
+  });
+});
+
 // ── #895: Position abbreviation Tooltip ──────────────────────────────────────
 
 describe('PlayerCard — position Tooltip', () => {
@@ -237,8 +238,9 @@ describe('PlayerCard — position Tooltip', () => {
       ...mockPlayer,
       vitals: { ...mockPlayer.vitals, position: 'ST' },
     };
-    const expectedLabel =
-      FOOTBALL_POSITIONS.find((p) => p.value === 'ST')!.label; // 'Striker'
+    const expectedLabel = FOOTBALL_POSITIONS.find(
+      (p) => p.value === 'ST',
+    )!.label; // 'Striker'
 
     render(<PlayerCard player={stPlayer} />);
 

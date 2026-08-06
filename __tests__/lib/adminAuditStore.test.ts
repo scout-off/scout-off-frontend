@@ -1,7 +1,10 @@
 /**
  * @jest-environment node
  */
-import { AdminAuditStore, type NewAdminAuditEntry } from '@/lib/adminAuditStore';
+import {
+  AdminAuditStore,
+  type NewAdminAuditEntry,
+} from '@/lib/adminAuditStore';
 
 function makeEntry(
   overrides: Partial<NewAdminAuditEntry> = {},

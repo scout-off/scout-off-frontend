@@ -1,4 +1,7 @@
-import { ADMIN_AUDIT_ACTION_LABELS, type AdminAuditEntry } from '@/lib/adminAudit';
+import {
+  ADMIN_AUDIT_ACTION_LABELS,
+  type AdminAuditEntry,
+} from '@/lib/adminAudit';
 
 const CSV_HEADERS = [
   'timestamp',

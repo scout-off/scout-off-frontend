@@ -27,10 +27,9 @@ const ApproveForm = dynamic(
   () => import('@/components/validator/ApproveForm'),
   { ssr: false },
 );
-const RevokeForm = dynamic(
-  () => import('@/components/validator/RevokeForm'),
-  { ssr: false },
-);
+const RevokeForm = dynamic(() => import('@/components/validator/RevokeForm'), {
+  ssr: false,
+});
 
 function ValidatorDashboardContent() {
   const { walletAddress: publicKey } = useRequireWallet();

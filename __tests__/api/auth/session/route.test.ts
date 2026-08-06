@@ -23,9 +23,7 @@ describe('GET /api/auth/session', () => {
   it('returns 200 with authenticated: true and the public key when a session cookie is present', async () => {
     const publicKey =
       'GPUBLICKEY0000000000000000000000000000000000000000000000';
-    const res = await GET(
-      makeRequest(`session=${publicKey}`, 'ip-basic-200'),
-    );
+    const res = await GET(makeRequest(`session=${publicKey}`, 'ip-basic-200'));
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({

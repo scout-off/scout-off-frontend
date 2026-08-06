@@ -53,7 +53,10 @@ describe('EventStore', () => {
   it('filters by event type', () => {
     store.insertEvent(makeDecoded({ type: 'milestone_approved' }));
     store.insertEvent(
-      makeDecoded({ type: 'player_contacted', data: { player_id: 'player-1', scout: 'GS' } }),
+      makeDecoded({
+        type: 'player_contacted',
+        data: { player_id: 'player-1', scout: 'GS' },
+      }),
     );
 
     const { events } = store.getEvents({ type: 'player_contacted' });

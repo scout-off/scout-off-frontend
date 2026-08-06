@@ -129,10 +129,7 @@ export default function AdminDashboardSkeleton() {
         />
         <ul aria-hidden="true" className="flex flex-col gap-3">
           {Array.from({ length: 2 }).map((_, i) => (
-            <li
-              key={i}
-              className="h-20 rounded-lg bg-gray-700 animate-pulse"
-            />
+            <li key={i} className="h-20 rounded-lg bg-gray-700 animate-pulse" />
           ))}
         </ul>
       </section>

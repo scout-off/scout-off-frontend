@@ -112,7 +112,9 @@ function archiveEntries(entries: ReferralEntry[]): void {
     let existing: ReferralEntry[] = [];
     if (fs.existsSync(dest)) {
       try {
-        existing = JSON.parse(fs.readFileSync(dest, 'utf-8')) as ReferralEntry[];
+        existing = JSON.parse(
+          fs.readFileSync(dest, 'utf-8'),
+        ) as ReferralEntry[];
       } catch {
         // Corrupt archive — start fresh
       }
@@ -193,7 +195,10 @@ function rotateLiveStore(entries: ReferralEntry[]): ReferralEntry[] {
  * Run full housekeeping: prune stale entries, then rotate if the live
  * store is still over the size cap.
  */
-function housekeep(entries: ReferralEntry[], nowMs: number = Date.now()): ReferralEntry[] {
+function housekeep(
+  entries: ReferralEntry[],
+  nowMs: number = Date.now(),
+): ReferralEntry[] {
   const afterPrune = pruneStaleEntries(entries, nowMs);
   return rotateLiveStore(afterPrune);
 }

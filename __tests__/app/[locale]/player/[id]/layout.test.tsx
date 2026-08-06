@@ -98,9 +98,7 @@ describe('PlayerProfileLayout', () => {
       expect(jsonLd.description).toContain('Forward');
       expect(jsonLd.description).toContain('West Africa');
       expect(jsonLd.description).toContain('Level 2');
-      expect(jsonLd.url).toBe(
-        'https://scoutoff.app/en/player/player-abc-123',
-      );
+      expect(jsonLd.url).toBe('https://scoutoff.app/en/player/player-abc-123');
       expect(jsonLd.identifier).toBe('player-abc-123');
       expect(jsonLd.sameAs).toEqual(
         expect.arrayContaining([
@@ -156,9 +154,7 @@ describe('PlayerProfileLayout', () => {
         params: { locale: 'en', id: 'player-abc-123' },
       });
 
-      expect(metadata.title).toBe(
-        'Alex Okafor — Player Profile — ScoutOff',
-      );
+      expect(metadata.title).toBe('Alex Okafor — Player Profile — ScoutOff');
       expect(metadata.description).toContain('Forward');
       expect(metadata.description).toContain('West Africa');
       expect(metadata.openGraph?.title).toContain('Alex Okafor');

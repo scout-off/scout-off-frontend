@@ -35,8 +35,7 @@ async function verifyTurnstile(req, res, next) {
 
     if (!result.success) {
       return res.status(400).json({
-        error:
-          'Bot-protection challenge failed. Please refresh and try again.',
+        error: 'Bot-protection challenge failed. Please refresh and try again.',
       });
     }
 

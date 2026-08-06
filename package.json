@@ -25,7 +25,9 @@
     "build-storybook": "storybook build",
     "analyze": "cross-env ANALYZE=true npm run build",
     "size": "size-limit",
-    "size:ci": "size-limit --json"
+    "size:ci": "size-limit --json",
+    "test:visual": "playwright test --config=playwright.visual.config.ts",
+    "test:visual:update": "playwright test --config=playwright.visual.config.ts --update-snapshots"
   },
   "dependencies": {
     "@albedo-link/intent": "^0.13.0",

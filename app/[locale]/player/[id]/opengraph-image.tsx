@@ -24,11 +24,7 @@ const LEVEL_BADGE_COLOR: Record<number, string> = {
 
 const GRADIENT = 'linear-gradient(135deg, #0f172a 0%, #0a0f1e 100%)';
 
-export default async function Image({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default async function Image({ params }: { params: { id: string } }) {
   let player: Player | null = null;
 
   try {
@@ -41,132 +37,150 @@ export default async function Image({
     return fallbackImage();
   }
 
-  const badgeColor = LEVEL_BADGE_COLOR[player.progressLevel] ?? LEVEL_BADGE_COLOR[0];
+  const badgeColor =
+    LEVEL_BADGE_COLOR[player.progressLevel] ?? LEVEL_BADGE_COLOR[0];
   const badgeLabel = getProgressBadgeLabel(player.progressLevel);
   const subtitle = [player.vitals.position, player.vitals.region]
     .filter(Boolean)
     .join('  ·  ');
 
   return new ImageResponse(
-    (
-      <div
-        style={{
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          padding: '64px',
-          background: GRADIENT,
-          fontFamily: 'sans-serif',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div
-            style={{
-              display: 'flex',
-              width: 20,
-              height: 20,
-              borderRadius: 999,
-              background: '#00C853',
-              marginRight: 12,
-            }}
-          />
-          <div style={{ display: 'flex', fontSize: 28, fontWeight: 700, color: '#f9fafb' }}>
-            ScoutOff
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div
-            style={{
-              display: 'flex',
-              fontSize: 72,
-              fontWeight: 700,
-              lineHeight: 1.1,
-              color: '#f9fafb',
-            }}
-          >
-            {player.vitals.name}
-          </div>
-          {subtitle && (
-            <div
-              style={{
-                display: 'flex',
-                fontSize: 32,
-                color: '#9CA3AF',
-                marginTop: 16,
-              }}
-            >
-              {subtitle}
-            </div>
-          )}
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '12px 28px',
-              borderRadius: 999,
-              background: badgeColor,
-              color: '#0A0F1E',
-              fontSize: 28,
-              fontWeight: 700,
-            }}
-          >
-            {badgeLabel}
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              fontSize: 24,
-              color: '#6B7280',
-              marginLeft: 20,
-            }}
-          >
-            Progress Level {player.progressLevel}
-          </div>
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        padding: '64px',
+        background: GRADIENT,
+        fontFamily: 'sans-serif',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div
+          style={{
+            display: 'flex',
+            width: 20,
+            height: 20,
+            borderRadius: 999,
+            background: '#00C853',
+            marginRight: 12,
+          }}
+        />
+        <div
+          style={{
+            display: 'flex',
+            fontSize: 28,
+            fontWeight: 700,
+            color: '#f9fafb',
+          }}
+        >
+          ScoutOff
         </div>
       </div>
-    ),
+
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div
+          style={{
+            display: 'flex',
+            fontSize: 72,
+            fontWeight: 700,
+            lineHeight: 1.1,
+            color: '#f9fafb',
+          }}
+        >
+          {player.vitals.name}
+        </div>
+        {subtitle && (
+          <div
+            style={{
+              display: 'flex',
+              fontSize: 32,
+              color: '#9CA3AF',
+              marginTop: 16,
+            }}
+          >
+            {subtitle}
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '12px 28px',
+            borderRadius: 999,
+            background: badgeColor,
+            color: '#0A0F1E',
+            fontSize: 28,
+            fontWeight: 700,
+          }}
+        >
+          {badgeLabel}
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            fontSize: 24,
+            color: '#6B7280',
+            marginLeft: 20,
+          }}
+        >
+          Progress Level {player.progressLevel}
+        </div>
+      </div>
+    </div>,
     { width: size.width, height: size.height },
   );
 }
 
 function fallbackImage() {
   return new ImageResponse(
-    (
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: GRADIENT,
+      }}
+    >
       <div
         style={{
-          width: '100%',
-          height: '100%',
           display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: GRADIENT,
+          width: 96,
+          height: 96,
+          borderRadius: 999,
+          background: '#00C853',
+          marginBottom: 32,
+        }}
+      />
+      <div
+        style={{
+          display: 'flex',
+          fontSize: 64,
+          fontWeight: 700,
+          color: '#f9fafb',
         }}
       >
-        <div
-          style={{
-            display: 'flex',
-            width: 96,
-            height: 96,
-            borderRadius: 999,
-            background: '#00C853',
-            marginBottom: 32,
-          }}
-        />
-        <div style={{ display: 'flex', fontSize: 64, fontWeight: 700, color: '#f9fafb' }}>
-          ScoutOff
-        </div>
-        <div style={{ display: 'flex', fontSize: 28, color: '#9CA3AF', marginTop: 16 }}>
-          Verified Player Profiles
-        </div>
+        ScoutOff
       </div>
-    ),
+      <div
+        style={{
+          display: 'flex',
+          fontSize: 28,
+          color: '#9CA3AF',
+          marginTop: 16,
+        }}
+      >
+        Verified Player Profiles
+      </div>
+    </div>,
     { width: size.width, height: size.height },
   );
 }

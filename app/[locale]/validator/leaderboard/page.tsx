@@ -21,7 +21,10 @@ export default function ValidatorLeaderboardPage() {
       {loading && (
         <div className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-3">
           {[1, 2, 3].map((n) => (
-            <div key={n} className="h-14 rounded-lg bg-gray-800/50 animate-pulse" />
+            <div
+              key={n}
+              className="h-14 rounded-lg bg-gray-800/50 animate-pulse"
+            />
           ))}
         </div>
       )}
@@ -46,7 +49,9 @@ export default function ValidatorLeaderboardPage() {
       {!loading && !error && entries.length > 0 && (
         <div className="bg-brand-card border border-gray-800 rounded-xl overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <caption className="sr-only">Validators ranked by approval count</caption>
+            <caption className="sr-only">
+              Validators ranked by approval count
+            </caption>
             <thead>
               <tr className="border-b border-gray-800 text-gray-400">
                 <th scope="col" className="py-3 pl-6 pr-4 font-medium">
@@ -65,20 +70,32 @@ export default function ValidatorLeaderboardPage() {
             </thead>
             <tbody>
               {entries.map((entry, i) => (
-                <tr key={entry.address} className="border-b border-gray-800/60 last:border-0">
-                  <td className="py-3 pl-6 pr-4 text-gray-400 font-mono">{i + 1}</td>
+                <tr
+                  key={entry.address}
+                  className="border-b border-gray-800/60 last:border-0"
+                >
+                  <td className="py-3 pl-6 pr-4 text-gray-400 font-mono">
+                    {i + 1}
+                  </td>
                   <td className="py-3 pr-4">
                     {entry.isAcademy ? (
-                      <span className="text-white font-medium">{entry.displayName}</span>
+                      <span className="text-white font-medium">
+                        {entry.displayName}
+                      </span>
                     ) : (
-                      <TruncatedAddress address={entry.address} className="text-white" />
+                      <TruncatedAddress
+                        address={entry.address}
+                        className="text-white"
+                      />
                     )}
                   </td>
                   <td className="py-3 pr-4 text-gray-300">
                     {entry.approvalCount !== null ? entry.approvalCount : '—'}
                   </td>
                   <td className="py-3 pr-6 text-gray-300">
-                    {entry.approvalCount !== null ? entry.approvalCount : 'Unavailable'}
+                    {entry.approvalCount !== null
+                      ? entry.approvalCount
+                      : 'Unavailable'}
                   </td>
                 </tr>
               ))}

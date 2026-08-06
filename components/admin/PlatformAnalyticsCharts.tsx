@@ -73,11 +73,25 @@ function CumulativeChart({
         </p>
       ) : (
         <ResponsiveContainer width="100%" height={220}>
-          <LineChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+          <LineChart
+            data={data}
+            margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
+          >
             <CartesianGrid strokeDasharray="3 3" stroke="#1F2937" />
-            <XAxis dataKey="date" tick={{ fill: '#9CA3AF', fontSize: 11 }} minTickGap={24} />
-            <YAxis tick={{ fill: '#9CA3AF', fontSize: 11 }} allowDecimals={false} width={40} />
-            <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={{ color: '#E5E7EB' }} />
+            <XAxis
+              dataKey="date"
+              tick={{ fill: '#9CA3AF', fontSize: 11 }}
+              minTickGap={24}
+            />
+            <YAxis
+              tick={{ fill: '#9CA3AF', fontSize: 11 }}
+              allowDecimals={false}
+              width={40}
+            />
+            <Tooltip
+              contentStyle={TOOLTIP_STYLE}
+              labelStyle={{ color: '#E5E7EB' }}
+            />
             <Line
               type="monotone"
               dataKey="count"
@@ -104,11 +118,25 @@ function MilestonesPerWeekChart({ data }: { data: WeeklyPoint[] }) {
         </p>
       ) : (
         <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+          <BarChart
+            data={data}
+            margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
+          >
             <CartesianGrid strokeDasharray="3 3" stroke="#1F2937" />
-            <XAxis dataKey="weekStart" tick={{ fill: '#9CA3AF', fontSize: 11 }} minTickGap={24} />
-            <YAxis tick={{ fill: '#9CA3AF', fontSize: 11 }} allowDecimals={false} width={40} />
-            <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={{ color: '#E5E7EB' }} />
+            <XAxis
+              dataKey="weekStart"
+              tick={{ fill: '#9CA3AF', fontSize: 11 }}
+              minTickGap={24}
+            />
+            <YAxis
+              tick={{ fill: '#9CA3AF', fontSize: 11 }}
+              allowDecimals={false}
+              width={40}
+            />
+            <Tooltip
+              contentStyle={TOOLTIP_STYLE}
+              labelStyle={{ color: '#E5E7EB' }}
+            />
             <Bar dataKey="count" fill={BRAND_GREEN} radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>

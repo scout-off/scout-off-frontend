@@ -114,16 +114,16 @@ Or, as part of the full local stack (frontend + indexer + mocked RPC/API), see t
 
 ## Environment Variables
 
-| Variable             | Required | Default            | Description                                                      |
-| -------------------- | -------- | ------------------ | ---------------------------------------------------------------- |
-| `PORT`               | No       | `3001`             | HTTP server port for `/health` and `/metrics`                    |
-| `SOROBAN_RPC_URL`    | Yes      | —                  | Soroban RPC endpoint, e.g. `https://soroban-testnet.stellar.org` |
-| `CONTRACT_ID`        | Yes      | —                  | Deployed ScoutOff contract address (Strkey format)               |
-| `NETWORK_PASSPHRASE` | No       | Testnet passphrase | Stellar network passphrase used to decode event XDR              |
-| `POLL_INTERVAL_MS`   | No       | `5000`             | How often (ms) to poll for new ledgers                           |
-| `START_LEDGER`       | No       | `0`                | Ledger sequence to start indexing from (0 = latest)              |
-| `LOG_LEVEL`          | No       | `info`             | Log verbosity: `debug`, `info`, `warn`, `error`                  |
-| `INDEXER_DB_PATH`    | No       | `./data/indexer.db` (`:memory:` when `NODE_ENV=test`) | Path to the SQLite event store file          |
+| Variable             | Required | Default                                               | Description                                                      |
+| -------------------- | -------- | ----------------------------------------------------- | ---------------------------------------------------------------- |
+| `PORT`               | No       | `3001`                                                | HTTP server port for `/health` and `/metrics`                    |
+| `SOROBAN_RPC_URL`    | Yes      | —                                                     | Soroban RPC endpoint, e.g. `https://soroban-testnet.stellar.org` |
+| `CONTRACT_ID`        | Yes      | —                                                     | Deployed ScoutOff contract address (Strkey format)               |
+| `NETWORK_PASSPHRASE` | No       | Testnet passphrase                                    | Stellar network passphrase used to decode event XDR              |
+| `POLL_INTERVAL_MS`   | No       | `5000`                                                | How often (ms) to poll for new ledgers                           |
+| `START_LEDGER`       | No       | `0`                                                   | Ledger sequence to start indexing from (0 = latest)              |
+| `LOG_LEVEL`          | No       | `info`                                                | Log verbosity: `debug`, `info`, `warn`, `error`                  |
+| `INDEXER_DB_PATH`    | No       | `./data/indexer.db` (`:memory:` when `NODE_ENV=test`) | Path to the SQLite event store file                              |
 
 Copy `.env.example` in the repo root and fill in the required values:
 
@@ -299,17 +299,17 @@ const metrics = IndexerMetrics.getInstance(mockNow);
 
 `db/eventStore.ts` persists every successfully decoded event into a single SQLite `events` table:
 
-| Column        | Type      | Description                                                          |
-| ------------- | --------- | --------------------------------------------------------------------- |
-| `id`          | INTEGER   | Autoincrement primary key                                             |
-| `event_type`  | TEXT      | One of the 7 documented event types                                   |
-| `player_id`   | TEXT      | `data.player_id` when present (NULL otherwise) — indexed              |
-| `scout`       | TEXT      | `data.scout` when present (NULL otherwise)                            |
-| `validator`   | TEXT      | `data.validator` when present (NULL otherwise)                        |
-| `ledger`      | INTEGER   | Ledger sequence — indexed, used for ordering and pagination           |
-| `timestamp`   | INTEGER   | Unix seconds, from the event envelope                                 |
-| `data`        | TEXT      | Full decoded event payload as JSON (all type-specific fields live here) |
-| `inserted_at` | INTEGER   | Unix ms when the row was written, for operational debugging           |
+| Column        | Type    | Description                                                             |
+| ------------- | ------- | ----------------------------------------------------------------------- |
+| `id`          | INTEGER | Autoincrement primary key                                               |
+| `event_type`  | TEXT    | One of the 7 documented event types                                     |
+| `player_id`   | TEXT    | `data.player_id` when present (NULL otherwise) — indexed                |
+| `scout`       | TEXT    | `data.scout` when present (NULL otherwise)                              |
+| `validator`   | TEXT    | `data.validator` when present (NULL otherwise)                          |
+| `ledger`      | INTEGER | Ledger sequence — indexed, used for ordering and pagination             |
+| `timestamp`   | INTEGER | Unix seconds, from the event envelope                                   |
+| `data`        | TEXT    | Full decoded event payload as JSON (all type-specific fields live here) |
+| `inserted_at` | INTEGER | Unix ms when the row was written, for operational debugging             |
 
 Design rationale: `event_type`, `player_id`, `scout`, `validator`, and `ledger` are the fields queries actually filter or sort by, so they get real indexed columns (`idx_events_player_ledger`, `idx_events_type_ledger`, `idx_events_ledger`). Everything else — `milestone_id`, `description`, `new_level`, `fee_xlm`, `tier`, `expiry`, `details`, `amount_xlm`, `to`, `revoked_by`, `wallet`, `ipfs_hash` — stays in the `data` JSON blob rather than becoming 15+ mostly-NULL columns shared across 7 unrelated event shapes. If a second use case needs to filter/sort on one of those fields, promote it to a real column then (see the companion issue's guidance to scope this conservatively).
 
@@ -323,11 +323,11 @@ The indexer exposes four endpoints from `server.ts`:
 
 Query events across all players, optionally filtered.
 
-| Query param | Required | Description                                                    |
-| ----------- | -------- | ---------------------------------------------------------------- |
-| `type`      | No       | One of the 7 documented event types. `400` if unrecognized.      |
-| `player_id` | No       | Not applicable here — use `/players/:id/events` instead.         |
-| `limit`     | No       | Page size, default 50, capped at 200. `400` if not a positive integer. |
+| Query param | Required | Description                                                                                                            |
+| ----------- | -------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `type`      | No       | One of the 7 documented event types. `400` if unrecognized.                                                            |
+| `player_id` | No       | Not applicable here — use `/players/:id/events` instead.                                                               |
+| `limit`     | No       | Page size, default 50, capped at 200. `400` if not a positive integer.                                                 |
 | `before`    | No       | Keyset cursor: only returns events with `ledger` strictly less than this value. Pass the previous page's `nextCursor`. |
 
 ```bash
@@ -345,7 +345,15 @@ curl 'http://localhost:3001/events?type=milestone_approved&limit=20'
       "validator": "GVALIDATOR...",
       "ledger": 54321,
       "timestamp": 1700000000,
-      "data": { "player_id": "player-1", "milestone_id": "m1", "description": "Scored 20 goals", "validator": "GVALIDATOR...", "new_level": 2, "ledger": 54321, "timestamp": 1700000000 }
+      "data": {
+        "player_id": "player-1",
+        "milestone_id": "m1",
+        "description": "Scored 20 goals",
+        "validator": "GVALIDATOR...",
+        "new_level": 2,
+        "ledger": 54321,
+        "timestamp": 1700000000
+      }
     }
   ],
   "nextCursor": 54100

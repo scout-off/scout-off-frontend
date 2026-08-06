@@ -36,7 +36,10 @@ jest.mock('@/lib/stellar', () => ({
 
 jest.mock('@stellar/stellar-sdk', () => ({
   TransactionBuilder: { fromXDR: jest.fn(() => ({})) },
-  Networks: { PUBLIC: 'Public Global Stellar Network ; September 2015', TESTNET: 'Test SDF Network ; September 2015' },
+  Networks: {
+    PUBLIC: 'Public Global Stellar Network ; September 2015',
+    TESTNET: 'Test SDF Network ; September 2015',
+  },
 }));
 
 const PUBLIC_KEY = 'GCFW7QAO3WZQ6X4CZ3OYZFXX3A3DL7XVI5DNVTXA5VJUGE5SU6ZRG5OV';
@@ -288,7 +291,9 @@ describe('WalletContext', () => {
 
       // Simulate tab refocus: set visibilityState to 'visible' and fire
       // the visibilitychange event so the listener re-runs restoreSession.
-      const visibilitySpy = jest.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+      const visibilitySpy = jest
+        .spyOn(document, 'visibilityState', 'get')
+        .mockReturnValue('visible');
       document.dispatchEvent(new Event('visibilitychange'));
 
       await waitFor(() => {
@@ -317,7 +322,9 @@ describe('WalletContext', () => {
       });
 
       // Session network matches env (both testnet) — no warning expected.
-      const visibilitySpy = jest.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+      const visibilitySpy = jest
+        .spyOn(document, 'visibilityState', 'get')
+        .mockReturnValue('visible');
       document.dispatchEvent(new Event('visibilitychange'));
 
       // Allow any async restore to settle.
@@ -353,13 +360,21 @@ describe('WalletContext', () => {
         email: 'p@example.com',
       });
 
-      act(() => {
+      await act(async () => {
         result.current.disconnect();
+        // Let disconnect()'s fire-and-forget mutate()/purgeAllContactDetails()
+        // promises settle.
+        await Promise.resolve();
       });
+      // SWR v2's cache subscription is useSyncExternalStore-based; a
+      // globalMutate() from outside the probe hook's own render doesn't
+      // reliably trigger it to re-render on its own in this jsdom/RTL
+      // environment (a *fresh* render always sees the updated cache — only
+      // an *already-rendered* hook instance doesn't auto-update) — force a
+      // re-render to read the current cache state.
+      cacheProbe.rerender();
 
-      await waitFor(() =>
-        expect(cacheProbe.result.current.data).toBeUndefined(),
-      );
+      expect(cacheProbe.result.current.data).toBeUndefined();
     });
   });
 });

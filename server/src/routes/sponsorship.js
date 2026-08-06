@@ -30,7 +30,9 @@ router.post('/waitlist', verifyTurnstile, (req, res) => {
 
   // ── Validation ──────────────────────────────────────────────────────────
   if (!isNonEmptyString(email) || !EMAIL_RE.test(email.trim())) {
-    return res.status(400).json({ error: 'A valid email address is required.' });
+    return res
+      .status(400)
+      .json({ error: 'A valid email address is required.' });
   }
 
   const type = interestType ?? 'fan';
@@ -63,7 +65,8 @@ router.post('/waitlist', verifyTurnstile, (req, res) => {
   }
 
   return res.status(201).json({
-    message: "You're on the list! We'll notify you when fractionalized sponsorship launches.",
+    message:
+      "You're on the list! We'll notify you when fractionalized sponsorship launches.",
   });
 });
 

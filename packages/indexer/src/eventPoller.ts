@@ -25,7 +25,8 @@ export const EVENT_TYPES: readonly EventType[] = [
 
 export function isEventType(name: unknown): name is EventType {
   return (
-    typeof name === 'string' && (EVENT_TYPES as readonly string[]).includes(name)
+    typeof name === 'string' &&
+    (EVENT_TYPES as readonly string[]).includes(name)
   );
 }
 
@@ -87,7 +88,9 @@ export interface DecodedEvent {
 
 export function createRpcClient(config: PollerConfig): RpcClient {
   const allowHttp = new URL(config.rpcUrl).protocol === 'http:';
-  return new SorobanRpc.Server(config.rpcUrl, { allowHttp }) as unknown as RpcClient;
+  return new SorobanRpc.Server(config.rpcUrl, {
+    allowHttp,
+  }) as unknown as RpcClient;
 }
 
 /**

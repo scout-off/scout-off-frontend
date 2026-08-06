@@ -16,7 +16,7 @@ describe('Button', () => {
 
   it('renders with secondary variant styles', () => {
     render(<Button variant="secondary">Secondary</Button>);
-    expect(screen.getByRole('button')).toHaveClass('bg-gray-700');
+    expect(screen.getByRole('button')).toHaveClass('dark:bg-gray-700');
   });
 
   it('renders with danger variant styles', () => {

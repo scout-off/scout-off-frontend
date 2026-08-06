@@ -10,6 +10,7 @@ jest.mock('next-intl', () => ({
   NextIntlClientProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="intl-provider">{children}</div>
   ),
+  useTranslations: () => (key: string) => key,
 }));
 
 jest.mock('@/components/Navbar', () => ({
@@ -30,14 +31,7 @@ jest.mock('@/components/ContractIncompatibleBanner', () => ({
 jest.mock('@/components/ConfigWarningBanner', () => ({
   __esModule: true,
   default: ({ warnings }: { warnings: unknown[] }) =>
-    warnings.length > 0 ? (
-      <div data-testid="config-warning-banner" />
-    ) : null,
-}));
-
-jest.mock('@/components/WebVitalsReporter', () => ({
-  __esModule: true,
-  default: () => <div data-testid="web-vitals-reporter" />,
+    warnings.length > 0 ? <div data-testid="config-warning-banner" /> : null,
 }));
 
 jest.mock('@/components/ServiceWorkerUpdateBanner', () => ({
@@ -45,11 +39,13 @@ jest.mock('@/components/ServiceWorkerUpdateBanner', () => ({
   default: () => <div data-testid="service-worker-update-banner" />,
 }));
 
-// @vercel/analytics/next ships an ESM-only build under the "browser" export
-// condition, which jest-environment-jsdom resolves by default — Jest can't
-// transform it, so it's mocked out like the other leaf components above.
-jest.mock('@vercel/analytics/next', () => ({
-  Analytics: () => <div data-testid="vercel-analytics" />,
+// Analytics/Web Vitals now mount from inside CookieConsentGate, gated
+// behind cookie consent — RootLayout only decides whether to mount the
+// gate at all (see isTestEnv below). Consent-gated mounting of Analytics/
+// WebVitalsReporter is CookieConsentGate's own concern, not RootLayout's.
+jest.mock('@/components/ui/CookieConsentGate', () => ({
+  __esModule: true,
+  default: () => <div data-testid="cookie-consent-gate" />,
 }));
 
 jest.mock('@/components/ui/Toast', () => ({
@@ -57,6 +53,7 @@ jest.mock('@/components/ui/Toast', () => ({
   ToastProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="toast-provider">{children}</div>
   ),
+  useToast: () => ({ show: jest.fn() }),
 }));
 
 jest.mock('@/context/WalletContext', () => ({
@@ -64,6 +61,11 @@ jest.mock('@/context/WalletContext', () => ({
   WalletProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="wallet-provider">{children}</div>
   ),
+  useWalletContext: () => ({
+    isAuthenticated: false,
+    sessionExpiresAt: null,
+    reauthenticate: jest.fn(),
+  }),
 }));
 
 // ── next/headers mock (used by getLocale() in the root layout) ────────────────
@@ -185,9 +187,7 @@ describe('RootLayout', () => {
 
       render(<>{element}</>);
 
-      expect(
-        screen.getByTestId('config-warning-banner'),
-      ).toBeInTheDocument();
+      expect(screen.getByTestId('config-warning-banner')).toBeInTheDocument();
     } finally {
       process.env.NEXT_PUBLIC_CONTRACT_ID = prev;
     }
@@ -214,7 +214,7 @@ describe('RootLayout', () => {
     }
   });
 
-  it('does not render Analytics or WebVitalsReporter in the test environment', async () => {
+  it('does not render CookieConsentGate (and therefore Analytics/Web Vitals) in the test environment', async () => {
     mockPathname = '/en/';
 
     const element = await RootLayout({
@@ -224,24 +224,35 @@ describe('RootLayout', () => {
 
     render(<>{element}</>);
 
-    expect(
-      screen.queryByTestId('vercel-analytics'),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByTestId('web-vitals-reporter'),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('cookie-consent-gate')).not.toBeInTheDocument();
   });
 
-  it('renders Analytics and WebVitalsReporter outside the test environment', async () => {
+  it('renders CookieConsentGate outside the test environment', async () => {
+    // Analytics/WebVitalsReporter now mount from *inside* CookieConsentGate,
+    // gated behind cookie consent (see components/ui/CookieConsentGate.tsx)
+    // — RootLayout's isTestEnv branch only decides whether to mount the
+    // gate at all, so that's what this test exercises.
     mockPathname = '/en/';
     const prevNodeEnv = process.env.NODE_ENV;
     // @ts-expect-error NODE_ENV is typed readonly; reassigning to simulate a
     // production build is the standard way to exercise this branch.
     process.env.NODE_ENV = 'production';
 
+    // Capture the already-loaded 'react' instance before resetting the
+    // module registry below, then pin the next require() of it back to
+    // this exact object. Without this, reloading '@/app/layout' after
+    // resetModules() would instantiate a *second* copy of 'react' for
+    // every hook-using component in its tree (e.g. A11yDevAudit) —
+    // distinct from the one react-dom (bound at this file's top-level
+    // import, unaffected by the reset) already set its hooks dispatcher
+    // on, which surfaces as "Cannot read properties of null" from within
+    // the hook call itself.
+    const actualReact = jest.requireActual('react');
+
     let ProductionRootLayout: typeof RootLayout;
     try {
       jest.resetModules();
+      jest.doMock('react', () => actualReact);
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       ProductionRootLayout = require('@/app/layout').default;
 
@@ -252,10 +263,7 @@ describe('RootLayout', () => {
 
       render(<>{element}</>);
 
-      expect(screen.getByTestId('vercel-analytics')).toBeInTheDocument();
-      expect(
-        screen.getByTestId('web-vitals-reporter'),
-      ).toBeInTheDocument();
+      expect(screen.getByTestId('cookie-consent-gate')).toBeInTheDocument();
     } finally {
       // @ts-expect-error see above
       process.env.NODE_ENV = prevNodeEnv;

@@ -165,7 +165,9 @@ describe('GET /events', () => {
 
     const { body } = await request('/events');
     const json = JSON.parse(body);
-    expect(json.events.map((e: { ledger: number }) => e.ledger)).toEqual([20, 10]);
+    expect(json.events.map((e: { ledger: number }) => e.ledger)).toEqual([
+      20, 10,
+    ]);
   });
 
   test('filters by type', async () => {
@@ -214,15 +216,27 @@ describe('GET /players/:id/events', () => {
   test('supports pagination via limit and the returned nextCursor', async () => {
     const store = EventStore.getInstance();
     for (let ledger = 1; ledger <= 3; ledger++) {
-      store.insertEvent(makeDecoded({ ledger, data: { player_id: 'player-1' } }));
+      store.insertEvent(
+        makeDecoded({ ledger, data: { player_id: 'player-1' } }),
+      );
     }
 
-    const page1 = JSON.parse(await (await request('/players/player-1/events?limit=2')).body);
-    expect(page1.events.map((e: { ledger: number }) => e.ledger)).toEqual([3, 2]);
+    const page1 = JSON.parse(
+      await (
+        await request('/players/player-1/events?limit=2')
+      ).body,
+    );
+    expect(page1.events.map((e: { ledger: number }) => e.ledger)).toEqual([
+      3, 2,
+    ]);
     expect(page1.nextCursor).toBe(2);
 
     const page2 = JSON.parse(
-      await (await request(`/players/player-1/events?limit=2&before=${page1.nextCursor}`)).body,
+      await (
+        await request(
+          `/players/player-1/events?limit=2&before=${page1.nextCursor}`,
+        )
+      ).body,
     );
     expect(page2.events.map((e: { ledger: number }) => e.ledger)).toEqual([1]);
     expect(page2.nextCursor).toBeNull();

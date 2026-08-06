@@ -89,7 +89,7 @@ export default function CookieConsentBanner({
     }
     setVisible(true);
     setAnimating(true);
-  }, []);  // Expose reopen on the window object for the footer link
+  }, []); // Expose reopen on the window object for the footer link
   useEffect(() => {
     if (typeof window !== 'undefined') {
       (window as unknown as Record<string, unknown>).__scoutoffReopenConsent =
@@ -111,9 +111,7 @@ export default function CookieConsentBanner({
       aria-modal="false"
       aria-label="Cookie consent"
       className={`fixed bottom-0 left-0 right-0 z-50 transition-all duration-300 ease-out ${
-        animating
-          ? 'translate-y-0 opacity-100'
-          : 'translate-y-full opacity-0'
+        animating ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
       }`}
     >
       <div className="mx-auto max-w-6xl px-4 pb-4 sm:px-6">

@@ -51,9 +51,9 @@ export default function AcademyManager() {
   // Per-wallet on-chain validator status, so the panel can flag academy
   // members that haven't (yet) been added as validators via the section
   // above — academy membership and on-chain authorization are independent.
-  const [onChainStatus, setOnChainStatus] = useState<Record<string, boolean | null>>(
-    {},
-  );
+  const [onChainStatus, setOnChainStatus] = useState<
+    Record<string, boolean | null>
+  >({});
 
   const load = useCallback(() => {
     setLoading(true);
@@ -92,9 +92,15 @@ export default function AcademyManager() {
       setAcademies((list) => [academy, ...list]);
       setNewName('');
       setNewOwnerWallet('');
-      show({ message: `Academy "${academy.name}" created.`, variant: 'success' });
+      show({
+        message: `Academy "${academy.name}" created.`,
+        variant: 'success',
+      });
     } catch (e: any) {
-      show({ message: e?.message ?? 'Failed to create academy.', variant: 'error' });
+      show({
+        message: e?.message ?? 'Failed to create academy.',
+        variant: 'error',
+      });
     } finally {
       setActionLoading(false);
     }
@@ -106,7 +112,9 @@ export default function AcademyManager() {
     setActionLoading(true);
     try {
       const academy = await addAcademyMember(academyId, wallet);
-      setAcademies((list) => list.map((a) => (a.id === academyId ? academy : a)));
+      setAcademies((list) =>
+        list.map((a) => (a.id === academyId ? academy : a)),
+      );
       setMemberInputs((s) => ({ ...s, [academyId]: '' }));
       show({ message: 'Signer wallet added to academy.', variant: 'success' });
     } catch (e: any) {
@@ -131,7 +139,10 @@ export default function AcademyManager() {
             : a,
         ),
       );
-      show({ message: 'Signer wallet removed from academy.', variant: 'success' });
+      show({
+        message: 'Signer wallet removed from academy.',
+        variant: 'success',
+      });
     } catch (e: any) {
       show({
         message: e?.message ?? 'Failed to remove signer wallet.',
@@ -183,7 +194,11 @@ export default function AcademyManager() {
             onChange={(e) => setNewOwnerWallet(e.target.value)}
           />
           <button
-            disabled={!newName.trim() || !isStellarAddress(newOwnerWallet) || actionLoading}
+            disabled={
+              !newName.trim() ||
+              !isStellarAddress(newOwnerWallet) ||
+              actionLoading
+            }
             onClick={handleCreate}
             className="px-5 py-2 rounded-lg bg-brand-green text-black font-semibold hover:opacity-90 transition disabled:opacity-40"
           >
@@ -266,12 +281,16 @@ export default function AcademyManager() {
                     placeholder="Add signer wallet (G...)"
                     value={memberInputs[academy.id] ?? ''}
                     onChange={(e) =>
-                      setMemberInputs((s) => ({ ...s, [academy.id]: e.target.value }))
+                      setMemberInputs((s) => ({
+                        ...s,
+                        [academy.id]: e.target.value,
+                      }))
                     }
                   />
                   <button
                     disabled={
-                      !isStellarAddress(memberInputs[academy.id] ?? '') || actionLoading
+                      !isStellarAddress(memberInputs[academy.id] ?? '') ||
+                      actionLoading
                     }
                     onClick={() =>
                       setDialog({
@@ -294,13 +313,19 @@ export default function AcademyManager() {
       {dialog && (
         <ConfirmDialog
           isOpen
-          title={dialog.action === 'add-member' ? 'Add Signer Wallet' : 'Remove Signer Wallet'}
+          title={
+            dialog.action === 'add-member'
+              ? 'Add Signer Wallet'
+              : 'Remove Signer Wallet'
+          }
           message={
             dialog.action === 'add-member'
               ? `Add ${dialog.wallet} as a signer wallet for this academy?`
               : `Remove ${dialog.wallet.slice(0, 4)}…${dialog.wallet.slice(-4)} from this academy?`
           }
-          confirmLabel={dialog.action === 'add-member' ? 'Add Signer' : 'Remove Signer'}
+          confirmLabel={
+            dialog.action === 'add-member' ? 'Add Signer' : 'Remove Signer'
+          }
           loading={actionLoading}
           onConfirm={() =>
             dialog.action === 'add-member'

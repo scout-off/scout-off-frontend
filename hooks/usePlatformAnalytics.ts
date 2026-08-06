@@ -61,7 +61,11 @@ function weekStartKey(timestampSeconds: number): string {
   const day = d.getUTCDay(); // 0 = Sunday
   const diffToMonday = day === 0 ? 6 : day - 1;
   const monday = new Date(
-    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - diffToMonday),
+    Date.UTC(
+      d.getUTCFullYear(),
+      d.getUTCMonth(),
+      d.getUTCDate() - diffToMonday,
+    ),
   );
   return monday.toISOString().slice(0, 10);
 }
@@ -100,13 +104,17 @@ function buildCumulativeByFirstSeen(
 }
 
 async function fetchPlatformAnalytics(): Promise<PlatformAnalyticsData> {
-  const [playerRegistered, scoutSubscribed, playerContacted, milestoneApproved] =
-    await Promise.all([
-      fetchAllEventsOfType('player_registered'),
-      fetchAllEventsOfType('scout_subscribed'),
-      fetchAllEventsOfType('player_contacted'),
-      fetchAllEventsOfType('milestone_approved'),
-    ]);
+  const [
+    playerRegistered,
+    scoutSubscribed,
+    playerContacted,
+    milestoneApproved,
+  ] = await Promise.all([
+    fetchAllEventsOfType('player_registered'),
+    fetchAllEventsOfType('scout_subscribed'),
+    fetchAllEventsOfType('player_contacted'),
+    fetchAllEventsOfType('milestone_approved'),
+  ]);
 
   const playersCumulative = buildCumulativeByFirstSeen(
     playerRegistered,

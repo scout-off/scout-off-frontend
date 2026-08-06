@@ -23,7 +23,10 @@ test.describe('landing page smoke', () => {
   }) => {
     await page.goto('/en');
 
-    await page.getByRole('link', { name: /Scout Dashboard/i }).first().click();
+    await page
+      .getByRole('link', { name: /Scout Dashboard/i })
+      .first()
+      .click();
     await expect(page).toHaveURL(/\/en\/scout/);
   });
 });

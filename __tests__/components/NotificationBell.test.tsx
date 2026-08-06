@@ -105,7 +105,9 @@ describe('NotificationBell', () => {
     });
 
     const user = userEvent.setup({ delay: null });
-    await user.click(screen.getByRole('button', { name: 'Notifications, 2 unread' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Notifications, 2 unread' }),
+    );
     await user.click(screen.getByRole('button', { name: 'Mark all as read' }));
 
     expect(markAllRead).toHaveBeenCalledTimes(1);

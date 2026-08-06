@@ -35,6 +35,14 @@
     "french": "Français",
     "swahili": "Kiswahili"
   },
+  "offline_queue": {
+    "queued": "{count} {count, plural, one {ação} other {ações}} na fila — será enviada quando a conexão for restabelecida",
+    "queued_desc": "Suas alterações foram salvas localmente e serão enviadas automaticamente quando sua conexão for restabelecida.",
+    "processing": "Enviando {count} {count, plural, one {ação} other {ações}}…",
+    "processing_desc": "Aguarde enquanto suas ações pendentes são enviadas.",
+    "retry": "Tentar novamente",
+    "retry_aria": "Tentar novamente as ações pendentes"
+  },
   "scout_dashboard": {
     "title": "Painel do Olheiro",
     "welcome": "Bem-vindo ao Painel do Olheiro",
@@ -62,7 +70,9 @@
     "milestones": "Marcos",
     "achievements": "Conquistas",
     "progress": "Progresso",
-    "stats": "Estatísticas"
+    "stats": "Estatísticas",
+    "download_data": "Baixar meus dados",
+    "download_data_success": "Seus dados foram baixados."
   },
   "wallet": {
     "connect": "Conectar Carteira",
@@ -110,7 +120,8 @@
     "description": "Fãs e investidores em breve poderão comprar \"Tokens de Jogador\" para financiar o treinamento e as viagens de um jogador — com receita roteada de forma transparente de volta on-chain.",
     "howItWorksTitle": "Como vai funcionar",
     "howItWorksDescription": "Os patrocinadores comprarão Tokens de Jogador fracionados que representam uma participação nos ganhos futuros de um jogador. Os fundos arrecadados vão diretamente para custos de treinamento, viagens e desenvolvimento, enquanto uma parte da receita futura on-chain do jogador é roteada de volta aos detentores de tokens — tudo garantido por contratos inteligentes Soroban.",
-    "notice": "Esta página é um espaço reservado. Nenhum token pode ser comprado ainda e nenhuma interação com blockchain está disponível aqui."
+    "notice": "Esta página é um espaço reservado. Nenhum token pode ser comprado ainda e nenhuma interação com blockchain está disponível aqui.",
+    "metaDescription": "Apoie jogadores talentosos de regiões carentes por meio de patrocínio fracionado em XLM na blockchain Stellar. O ScoutOff conecta fãs e apoiadores diretamente com talentos descobertos."
   },
   "footer": {
     "changelog": "Registro de Alterações",
@@ -304,5 +315,47 @@
     "NoFeesToWithdraw": "Não há taxas disponíveis para saque no momento.",
     "Overflow": "Ocorreu um erro de cálculo. Tente novamente.",
     "unknown": "Ocorreu um erro inesperado. Tente novamente."
+  },
+  "recovery": {
+    "title": "Recuperação de Conta",
+    "subtitle": "Recupere o acesso à sua conta usando sua carteira de backup",
+    "howItWorks": "Como funciona",
+    "step1": "Digite o endereço da sua carteira principal ao qual você perdeu o acesso",
+    "step2": "Conecte-se com sua carteira de backup vinculada como endereço de recuperação",
+    "step3": "Sua conta será restaurada e você poderá acessar seu perfil",
+    "noteLabel": "Nota:",
+    "noteText": "A recuperação só funciona se você vinculou anteriormente esta carteira como seu endereço de recuperação de backup.",
+    "primaryWalletLabel": "Endereço da Carteira Principal",
+    "primaryWalletPlaceholder": "G... (chave pública Stellar de 56 caracteres)",
+    "backToHome": "Voltar ao Início",
+    "next": "Próximo",
+    "connectBackupTitle": "Conectar Carteira de Backup",
+    "connectBackupDesc": "Agora conecte a carteira de backup que você vinculou à sua conta.",
+    "primaryWalletToRecover": "Carteira principal (a recuperar):",
+    "connecting": "Conectando...",
+    "connectBackupButton": "Conectar Carteira de Backup",
+    "back": "Voltar",
+    "verifyTitle": "Verificar Carteira de Backup",
+    "verifyDesc": "Confirme ambos os endereços de carteira e clique em verificar para concluir a recuperação.",
+    "primaryWalletLost": "Carteira principal (acesso perdido):",
+    "backupWalletConnected": "Carteira de backup (conectada):",
+    "connected": "✓ Conectado",
+    "recoverButton": "Recuperar Conta",
+    "verifying": "Verificando...",
+    "cancel": "Cancelar",
+    "successTitle": "Conta Recuperada!",
+    "successRedirect": "Redirecionando para o seu painel...",
+    "errorTitle": "Falha na Recuperação",
+    "troubleshooting": "Solução de problemas:",
+    "troubleshootingTip1": "Verifique se você está usando o endereço correto da carteira principal",
+    "troubleshootingTip2": "Confirme se você vinculou anteriormente esta carteira de backup",
+    "troubleshootingTip3": "Certifique-se de estar conectado com a carteira de backup",
+    "tryAgain": "Tentar Novamente",
+    "errorEmptyAddress": "Digite o endereço da sua carteira principal",
+    "errorInvalidAddress": "Endereço Stellar inválido. Deve ter 56 caracteres começando com G.",
+    "errorConnectFailed": "Falha ao conectar a carteira",
+    "errorNotConnected": "Carteira de backup não conectada",
+    "errorNoAccountFound": "Nenhuma conta encontrada com esta carteira de backup. Verifique se você digitou o endereço correto da carteira principal.",
+    "errorRecoverFailed": "Falha ao recuperar a conta. Verifique os endereços das suas carteiras e tente novamente."
   }
 }

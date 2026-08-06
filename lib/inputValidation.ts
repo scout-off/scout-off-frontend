@@ -21,7 +21,8 @@ export interface ValidationResult {
 
 // Drops control characters (keeping newline/tab) before length checks.
 function isDisallowedControlChar(codePoint: number): boolean {
-  const isNewlineOrTab = codePoint === 9 || codePoint === 10 || codePoint === 13;
+  const isNewlineOrTab =
+    codePoint === 9 || codePoint === 10 || codePoint === 13;
   const isC0Control = codePoint < 32;
   const isDelete = codePoint === 127;
   return !isNewlineOrTab && (isC0Control || isDelete);
@@ -37,7 +38,10 @@ export function sanitizeTextInput(value: string): string {
   return result.trim();
 }
 
-export function validateTextField(field: TextFieldKey, value: string): ValidationResult {
+export function validateTextField(
+  field: TextFieldKey,
+  value: string,
+): ValidationResult {
   const { min, max } = TEXT_FIELD_LIMITS[field];
   const sanitized = sanitizeTextInput(value);
 

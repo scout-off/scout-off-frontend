@@ -40,6 +40,30 @@ jest.mock('@/components/admin/AdminDashboardSkeleton', () => ({
   default: () => <div data-testid="admin-skeleton">Loading skeleton</div>,
 }));
 
+// ConfigStatus fetches '/api/admin/config-status' directly via the global
+// fetch() (not the axios-based @/lib/api client the other mocks above
+// intercept), which jsdom doesn't provide — mock the component itself
+// since this suite is testing the surrounding page, not ConfigStatus.
+jest.mock('@/components/admin/ConfigStatus', () => ({
+  __esModule: true,
+  default: () => <div data-testid="config-status" />,
+}));
+
+// AcademyManager calls fetchAcademies() from @/lib/api, which the mock
+// below doesn't provide (this suite is testing the surrounding page, not
+// AcademyManager) — mock the component itself, same as ConfigStatus above.
+jest.mock('@/components/admin/AcademyManager', () => ({
+  __esModule: true,
+  default: () => <div data-testid="academy-manager" />,
+}));
+
+// Same as AcademyManager above: fetchFraudFlags() isn't in the @/lib/api
+// mock below, so mock the component itself.
+jest.mock('@/components/admin/FraudFlagsPanel', () => ({
+  __esModule: true,
+  default: () => <div data-testid="fraud-flags-panel" />,
+}));
+
 jest.mock('@/components/ui/EmptyState', () => ({
   __esModule: true,
   default: ({
@@ -122,8 +146,7 @@ const mockFetchActivityEvents = jest.fn();
 const mockGetReferralOverview = jest.fn();
 jest.mock('@/lib/api', () => ({
   fetchActivityEvents: (...args: unknown[]) => mockFetchActivityEvents(...args),
-  getReferralOverview: (...args: unknown[]) =>
-    mockGetReferralOverview(...args),
+  getReferralOverview: (...args: unknown[]) => mockGetReferralOverview(...args),
 }));
 
 jest.mock('@/lib/contractErrorMessage', () => ({
@@ -186,7 +209,10 @@ describe('AdminDashboard page', () => {
     );
 
     render(<AdminDashboard />);
-    expect(screen.getByTestId('admin-skeleton')).toBeInTheDocument();
+    // AdminDashboardSkeleton is lazy-loaded via next/dynamic ({ ssr: false }),
+    // so it isn't present on the first synchronous render — only after the
+    // dynamic import's promise resolves.
+    expect(await screen.findByTestId('admin-skeleton')).toBeInTheDocument();
 
     await act(async () => {
       resolveValidators([]);
@@ -208,7 +234,7 @@ describe('AdminDashboard page', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Active')).toBeInTheDocument();
     expect(screen.getByText(/42\.00 XLM/)).toBeInTheDocument();
-    expect(screen.getByText('Validators (1)')).toBeInTheDocument();
+    expect(screen.getByText('Authorized Validators (1)')).toBeInTheDocument();
     expect(screen.getByText(VALID_VALIDATOR_ADDRESS)).toBeInTheDocument();
   });
 

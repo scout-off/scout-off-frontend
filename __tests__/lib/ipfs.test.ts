@@ -91,7 +91,9 @@ describe('lib/ipfs', () => {
       const file = makeFile('clip.mp4', 'video/mp4', 1024);
       (axios.post as jest.Mock)
         .mockResolvedValueOnce({ data: { sessionId: 'sess-1' } }) // init
-        .mockResolvedValueOnce({ data: { receivedChunks: [0], totalChunks: 1 } }) // chunk
+        .mockResolvedValueOnce({
+          data: { receivedChunks: [0], totalChunks: 1 },
+        }) // chunk
         .mockResolvedValueOnce({ data: { cid: 'QmChunked1' } }); // complete
 
       const onProgress = jest.fn();
@@ -109,9 +111,13 @@ describe('lib/ipfs', () => {
         '/api/ipfs/upload/chunk',
         expect.any(FormData),
       );
-      expect(axios.post).toHaveBeenNthCalledWith(3, '/api/ipfs/upload/complete', {
-        sessionId: 'sess-1',
-      });
+      expect(axios.post).toHaveBeenNthCalledWith(
+        3,
+        '/api/ipfs/upload/complete',
+        {
+          sessionId: 'sess-1',
+        },
+      );
       expect(onProgress).toHaveBeenLastCalledWith(1);
     });
 
@@ -119,7 +125,9 @@ describe('lib/ipfs', () => {
       const file = makeFile('clip.mp4', 'video/mp4', 1024);
       (axios.post as jest.Mock)
         .mockResolvedValueOnce({ data: { sessionId: 'sess-phase' } }) // init
-        .mockResolvedValueOnce({ data: { receivedChunks: [0], totalChunks: 1 } }) // chunk
+        .mockResolvedValueOnce({
+          data: { receivedChunks: [0], totalChunks: 1 },
+        }) // chunk
         .mockResolvedValueOnce({ data: { cid: 'QmPhase' } }); // complete
 
       const onPhaseChange = jest.fn();
@@ -132,12 +140,22 @@ describe('lib/ipfs', () => {
     });
 
     it('splits a multi-chunk file into CHUNK_SIZE_BYTES pieces and uploads each', async () => {
-      const file = makeFile('clip.mp4', 'video/mp4', CHUNK_SIZE_BYTES * 2 + 100);
+      const file = makeFile(
+        'clip.mp4',
+        'video/mp4',
+        CHUNK_SIZE_BYTES * 2 + 100,
+      );
       (axios.post as jest.Mock)
         .mockResolvedValueOnce({ data: { sessionId: 'sess-multi' } })
-        .mockResolvedValueOnce({ data: { receivedChunks: [0], totalChunks: 3 } })
-        .mockResolvedValueOnce({ data: { receivedChunks: [0, 1], totalChunks: 3 } })
-        .mockResolvedValueOnce({ data: { receivedChunks: [0, 1, 2], totalChunks: 3 } })
+        .mockResolvedValueOnce({
+          data: { receivedChunks: [0], totalChunks: 3 },
+        })
+        .mockResolvedValueOnce({
+          data: { receivedChunks: [0, 1], totalChunks: 3 },
+        })
+        .mockResolvedValueOnce({
+          data: { receivedChunks: [0, 1, 2], totalChunks: 3 },
+        })
         .mockResolvedValueOnce({ data: { cid: 'QmMulti' } });
 
       const onProgress = jest.fn();
@@ -166,10 +184,14 @@ describe('lib/ipfs', () => {
         data: { receivedChunks: [0], totalChunks: 2 },
       });
       (axios.post as jest.Mock)
-        .mockResolvedValueOnce({ data: { receivedChunks: [0, 1], totalChunks: 2 } }) // chunk 1 only
+        .mockResolvedValueOnce({
+          data: { receivedChunks: [0, 1], totalChunks: 2 },
+        }) // chunk 1 only
         .mockResolvedValueOnce({ data: { cid: 'QmResumed' } }); // complete
 
-      const cid = await uploadToIPFSChunked(file, { resumeSessionId: 'sess-resume' });
+      const cid = await uploadToIPFSChunked(file, {
+        resumeSessionId: 'sess-resume',
+      });
 
       expect(cid).toBe('QmResumed');
       expect(axios.get).toHaveBeenCalledWith('/api/ipfs/upload/status', {
@@ -185,7 +207,9 @@ describe('lib/ipfs', () => {
       (axios.post as jest.Mock)
         .mockResolvedValueOnce({ data: { sessionId: 'sess-retry' } }) // init
         .mockRejectedValueOnce(new Error('network blip')) // chunk attempt 1
-        .mockResolvedValueOnce({ data: { receivedChunks: [0], totalChunks: 1 } }) // chunk attempt 2
+        .mockResolvedValueOnce({
+          data: { receivedChunks: [0], totalChunks: 1 },
+        }) // chunk attempt 2
         .mockResolvedValueOnce({ data: { cid: 'QmRetried' } }); // complete
 
       const promise = uploadToIPFSChunked(file);

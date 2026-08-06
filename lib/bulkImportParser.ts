@@ -78,7 +78,10 @@ export interface BulkImportParseResult {
 
 // ── Format detection ─────────────────────────────────────────────────────────
 
-export function detectFormat(fileName: string, text: string): BulkImportFileFormat {
+export function detectFormat(
+  fileName: string,
+  text: string,
+): BulkImportFileFormat {
   const lower = fileName.toLowerCase();
   if (lower.endsWith('.json')) return 'json';
   if (lower.endsWith('.csv')) return 'csv';
@@ -193,7 +196,9 @@ function parseJson(text: string): Record<string, unknown>[] {
     );
   }
   return parsed.map((entry) =>
-    entry && typeof entry === 'object' ? (entry as Record<string, unknown>) : {},
+    entry && typeof entry === 'object'
+      ? (entry as Record<string, unknown>)
+      : {},
   );
 }
 
@@ -240,7 +245,10 @@ function resolvePosition(raw: string): string | null {
   return byLabel ?? null;
 }
 
-function validateRow(raw: Record<string, unknown>, rowNumber: number): ParsedRow {
+function validateRow(
+  raw: Record<string, unknown>,
+  rowNumber: number,
+): ParsedRow {
   const errors: RowFieldError[] = [];
 
   const rawName = toStringField(raw.name);
@@ -274,9 +282,15 @@ function validateRow(raw: Record<string, unknown>, rowNumber: number): ParsedRow
   // Name
   if (rawName) {
     if (name.length < 2) {
-      errors.push({ field: 'name', message: 'Name must be at least 2 characters' });
+      errors.push({
+        field: 'name',
+        message: 'Name must be at least 2 characters',
+      });
     } else if (name.length > 50) {
-      errors.push({ field: 'name', message: 'Name must be 50 characters or fewer' });
+      errors.push({
+        field: 'name',
+        message: 'Name must be 50 characters or fewer',
+      });
     }
   }
 
@@ -285,7 +299,10 @@ function validateRow(raw: Record<string, unknown>, rowNumber: number): ParsedRow
   if (rawAge) {
     const n = Number(rawAge);
     if (!Number.isFinite(n) || !Number.isInteger(n) || n < 14 || n > 45) {
-      errors.push({ field: 'age', message: 'Age must be a whole number between 14 and 45' });
+      errors.push({
+        field: 'age',
+        message: 'Age must be a whole number between 14 and 45',
+      });
     } else {
       age = n;
     }
@@ -325,7 +342,10 @@ function validateRow(raw: Record<string, unknown>, rowNumber: number): ParsedRow
 
   // Bio (optional, but cap length so it doesn't blow up on-chain storage)
   if (bio.length > 500) {
-    errors.push({ field: 'bio', message: 'Bio must be 500 characters or fewer' });
+    errors.push({
+      field: 'bio',
+      message: 'Bio must be 500 characters or fewer',
+    });
   }
 
   const data: BulkImportRow = {

@@ -9,7 +9,10 @@ export default function AchievementBadges({ player }: { player: Player }) {
   if (badges.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-2" aria-label="Achievement badges">
+    <div
+      className="flex flex-wrap items-center gap-2"
+      aria-label="Achievement badges"
+    >
       {badges.map((badge) => (
         <Tooltip key={badge.id} content={badge.description}>
           <Badge variant="achievement" label={badge.label} />

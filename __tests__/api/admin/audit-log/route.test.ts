@@ -38,7 +38,9 @@ describe('GET /api/admin/audit-log', () => {
 
   it('returns 401 for a non-admin session cookie', async () => {
     const res = await GET(
-      makeRequest('http://localhost/api/admin/audit-log', { cookie: 'GSOMEONEELSE' }),
+      makeRequest('http://localhost/api/admin/audit-log', {
+        cookie: 'GSOMEONEELSE',
+      }),
     );
     expect(res.status).toBe(401);
   });

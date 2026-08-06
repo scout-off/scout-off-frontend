@@ -15,7 +15,7 @@ test.describe('wallet connect → player registration', () => {
   }) => {
     mockSorobanRpc(page);
 
-    await page.route('**/api/ipfs/upload', async route => {
+    await page.route('**/api/ipfs/upload', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -28,7 +28,9 @@ test.describe('wallet connect → player registration', () => {
     await page.getByRole('button', { name: /freighter/i }).click();
 
     await expect(
-      page.getByText(wallet.publicKey.slice(0, 4) + '…' + wallet.publicKey.slice(-4)),
+      page.getByText(
+        wallet.publicKey.slice(0, 4) + '…' + wallet.publicKey.slice(-4),
+      ),
     ).toBeVisible();
 
     await page.goto('/en/player');
@@ -40,13 +42,11 @@ test.describe('wallet connect → player registration', () => {
     await page.getByLabel('Position *').selectOption({ label: 'Striker' });
     await page.getByRole('button', { name: 'Continue' }).click();
 
-    await page
-      .locator('input[type="file"]')
-      .setInputFiles({
-        name: 'highlight.png',
-        mimeType: 'image/png',
-        buffer: TINY_PNG,
-      });
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'highlight.png',
+      mimeType: 'image/png',
+      buffer: TINY_PNG,
+    });
     await page.getByRole('button', { name: 'Continue' }).click();
 
     await page.getByRole('button', { name: 'Register as Player' }).click();

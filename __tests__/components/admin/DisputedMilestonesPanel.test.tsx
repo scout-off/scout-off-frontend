@@ -86,7 +86,9 @@ describe('DisputedMilestonesPanel', () => {
   });
 
   it('upholding a dispute calls decide with status "upheld" and no on-chain tx', async () => {
-    const decide = jest.fn().mockResolvedValue(makeDispute({ status: 'upheld' }));
+    const decide = jest
+      .fn()
+      .mockResolvedValue(makeDispute({ status: 'upheld' }));
     mockUseDisputeQueue.mockReturnValue({
       disputes: [makeDispute({ id: 7 })],
       loading: false,
@@ -108,9 +110,13 @@ describe('DisputedMilestonesPanel', () => {
 
   it('reversing a dispute submits the on-chain revoke first, then decides with the tx hash', async () => {
     mockBuildRevokeMilestone.mockResolvedValue('xdr-envelope');
-    const decide = jest.fn().mockResolvedValue(makeDispute({ status: 'reversed' }));
+    const decide = jest
+      .fn()
+      .mockResolvedValue(makeDispute({ status: 'reversed' }));
     mockUseDisputeQueue.mockReturnValue({
-      disputes: [makeDispute({ id: 9, playerId: 'player-9', milestoneId: 'm9' })],
+      disputes: [
+        makeDispute({ id: 9, playerId: 'player-9', milestoneId: 'm9' }),
+      ],
       loading: false,
       error: null,
       decide,

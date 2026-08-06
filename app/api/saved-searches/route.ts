@@ -100,10 +100,7 @@ export async function PATCH(req: NextRequest) {
 
   const { id, name } = body as Record<string, unknown>;
   if (typeof id !== 'number') {
-    return NextResponse.json(
-      { error: 'id must be a number' },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: 'id must be a number' }, { status: 400 });
   }
   if (typeof name !== 'string' || name.trim().length === 0) {
     return NextResponse.json(
@@ -155,10 +152,7 @@ export async function DELETE(req: NextRequest) {
 
   const { id } = body as Record<string, unknown>;
   if (typeof id !== 'number') {
-    return NextResponse.json(
-      { error: 'id must be a number' },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: 'id must be a number' }, { status: 400 });
   }
 
   try {

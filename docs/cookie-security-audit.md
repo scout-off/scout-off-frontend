@@ -4,10 +4,10 @@ Quick audit of cookies set by the app and its API routes (SEP-10 session cookie,
 
 ## Findings
 
-| Cookie | Purpose | HttpOnly | Secure | SameSite |
-|---|---|---|---|---|
-| SEP-10 session cookie | Auth session | Should be `true` | Should be `true` in production | `Lax` recommended (avoid `None` unless cross-site flows require it) |
-| Consent / preference cookies | Non-sensitive UI prefs | Not required | Recommended `true` in production | `Lax` |
+| Cookie                       | Purpose                | HttpOnly         | Secure                           | SameSite                                                            |
+| ---------------------------- | ---------------------- | ---------------- | -------------------------------- | ------------------------------------------------------------------- |
+| SEP-10 session cookie        | Auth session           | Should be `true` | Should be `true` in production   | `Lax` recommended (avoid `None` unless cross-site flows require it) |
+| Consent / preference cookies | Non-sensitive UI prefs | Not required     | Recommended `true` in production | `Lax`                                                               |
 
 ## Recommended fixes
 

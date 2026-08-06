@@ -26,7 +26,7 @@ which `POST`s to `/api/admin/audit-log` and is persisted in
 doc comment for why: no separate migration tool, conservative
 column-vs-JSON-blob schema, singleton store, keyset pagination).
 
-This call is fire-and-forget (`.catch(() => {})`) — a failure to *log* an
+This call is fire-and-forget (`.catch(() => {})`) — a failure to _log_ an
 action must never block, delay, or roll back the action itself, which has
 already gone on-chain (or at least been submitted) by the time the log
 write happens.
@@ -37,10 +37,10 @@ own source of truth — it always re-derives "what actually happened" from
 somewhere the frontend doesn't control:
 
 - **Validator add/remove** and **pause/unpause**: read the contract's
-  *current* state directly via `lib/contract.ts`'s `getValidators()` and
+  _current_ state directly via `lib/contract.ts`'s `getValidators()` and
   `getContractPaused()` (`simulateTx` calls straight to Soroban RPC — no
   caching, no dependency on anything the admin panel wrote). The audit log
-  is replayed in timestamp order to compute what the *expected* current
+  is replayed in timestamp order to compute what the _expected_ current
   state should be (an accumulated validator set; the most recent
   pause/unpause action), and that expectation is diffed against the real
   on-chain state.
@@ -78,11 +78,11 @@ audit log alone:
 
 In every case, the mismatch is symmetric: an audit log entry with no
 matching on-chain effect (`missing_onchain_effect` — e.g. a submitted
-transaction that later failed, or was reverted by a *subsequent* CLI call)
+transaction that later failed, or was reverted by a _subsequent_ CLI call)
 is reported exactly the same way, just with the two sides swapped. Neither
 side is treated as more authoritative than the other for detecting drift —
 only the on-chain reads (`getValidators`, `getContractPaused`, indexed
-events) are treated as ground truth for what the *audit log* is checked
+events) are treated as ground truth for what the _audit log_ is checked
 against.
 
 ## Why not extend the indexer's event types instead

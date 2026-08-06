@@ -42,7 +42,9 @@ export function createRateLimiter(limit: number, windowMs: number) {
     map.set(ip, entry);
 
     if (entry.count > limit) {
-      const retryAfterSec = Math.ceil((windowMs - (now - entry.firstSeen)) / 1000);
+      const retryAfterSec = Math.ceil(
+        (windowMs - (now - entry.firstSeen)) / 1000,
+      );
       return { limited: true, retryAfterSec };
     }
 

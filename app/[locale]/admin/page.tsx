@@ -14,35 +14,75 @@ import { recordAuditEntry } from '@/lib/adminAuditClient';
 // for the much larger player/scout user base (issue #967).
 const AdminDashboardSkeleton = dynamic(
   () => import('@/components/admin/AdminDashboardSkeleton'),
-  { ssr: false, loading: () => <div className="bg-brand-card border border-gray-800 rounded-xl p-6 h-64 motion-safe:animate-pulse" /> },
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-brand-card border border-gray-800 rounded-xl p-6 h-64 motion-safe:animate-pulse" />
+    ),
+  },
 );
 const FraudFlagsPanel = dynamic(
   () => import('@/components/admin/FraudFlagsPanel'),
-  { ssr: false, loading: () => <div className="bg-brand-card border border-gray-800 rounded-xl p-6 motion-safe:animate-pulse h-20" /> },
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-brand-card border border-gray-800 rounded-xl p-6 motion-safe:animate-pulse h-20" />
+    ),
+  },
 );
 const DisputedMilestonesPanel = dynamic(
   () => import('@/components/admin/DisputedMilestonesPanel'),
-  { ssr: false, loading: () => <div className="bg-brand-card border border-gray-800 rounded-xl p-6 motion-safe:animate-pulse h-20" /> },
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-brand-card border border-gray-800 rounded-xl p-6 motion-safe:animate-pulse h-20" />
+    ),
+  },
 );
 const AcademyManager = dynamic(
   () => import('@/components/admin/AcademyManager'),
-  { ssr: false, loading: () => <div className="bg-brand-card border border-gray-800 rounded-xl p-6 animate-pulse h-32" /> },
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-brand-card border border-gray-800 rounded-xl p-6 animate-pulse h-32" />
+    ),
+  },
 );
 const AdminAuditLog = dynamic(
   () => import('@/components/admin/AdminAuditLog'),
-  { ssr: false, loading: () => <div className="bg-brand-card border border-gray-800 rounded-xl p-6 animate-pulse h-48" /> },
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-brand-card border border-gray-800 rounded-xl p-6 animate-pulse h-48" />
+    ),
+  },
 );
 const PlatformAnalyticsCharts = dynamic(
   () => import('@/components/admin/PlatformAnalyticsCharts'),
-  { ssr: false, loading: () => <div className="bg-brand-card border border-gray-800 rounded-xl p-6 animate-pulse h-64" /> },
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-brand-card border border-gray-800 rounded-xl p-6 animate-pulse h-64" />
+    ),
+  },
 );
 const FeeRevenueChart = dynamic(
   () => import('@/components/admin/FeeRevenueChart'),
-  { ssr: false, loading: () => <div className="bg-brand-card border border-gray-800 rounded-xl p-6 animate-pulse h-64" /> },
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-brand-card border border-gray-800 rounded-xl p-6 animate-pulse h-64" />
+    ),
+  },
 );
 const ValidatorActionLog = dynamic(
   () => import('@/components/admin/ValidatorActionLog'),
-  { ssr: false, loading: () => <div className="bg-brand-card border border-gray-800 rounded-xl p-6 animate-pulse h-48" /> },
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-brand-card border border-gray-800 rounded-xl p-6 animate-pulse h-48" />
+    ),
+  },
 );
 import type { TxStatus } from '@/components/ui/TransactionStatus';
 import {
@@ -201,7 +241,10 @@ function AdminDashboardContent() {
     getReferralOverview()
       .then(setReferralOverview)
       .catch(() =>
-        show({ message: 'Failed to load referral program data.', variant: 'error' }),
+        show({
+          message: 'Failed to load referral program data.',
+          variant: 'error',
+        }),
       )
       .finally(() => setReferralLoading(false));
   }, [publicKey, show]);
@@ -409,8 +452,7 @@ function AdminDashboardContent() {
       <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
         <h2 className="text-lg font-semibold text-white">Platform Fees</h2>
         <p className="text-sm text-gray-400">
-          Accumulated:{' '}
-          <XlmFiatDisplay xlmAmount={fees ?? 0} />
+          Accumulated: <XlmFiatDisplay xlmAmount={fees ?? 0} />
         </p>
         <button
           disabled={!fees || fees <= 0 || paused}

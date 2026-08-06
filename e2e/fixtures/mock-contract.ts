@@ -27,8 +27,9 @@ function xdrU32(value: number): string {
 }
 
 function xdrStruct(fields: string[]): string {
-  const fieldBufs = fields.map(f => Buffer.from(f, 'base64'));
-  const totalLen = 1 + fieldBufs.length * 4 + fieldBufs.reduce((s, b) => s + b.length, 0);
+  const fieldBufs = fields.map((f) => Buffer.from(f, 'base64'));
+  const totalLen =
+    1 + fieldBufs.length * 4 + fieldBufs.reduce((s, b) => s + b.length, 0);
   const buf = Buffer.alloc(totalLen);
   buf.writeUInt8(16, 0);
   buf.writeUInt32BE(fieldBufs.length, 1);
@@ -73,16 +74,12 @@ interface SimulateOptions {
   subscription?: Record<string, unknown>;
 }
 
-export function mockSorobanRpc(
-  page: Page,
-  opts: SimulateOptions = {},
-): void {
+export function mockSorobanRpc(page: Page, opts: SimulateOptions = {}): void {
   const {
     isValidator = true,
     player = {
       id: 'P12345',
-      wallet:
-        'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN',
+      wallet: 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN',
       vitals: {
         name: 'Test Player',
         age: 25,
@@ -108,7 +105,7 @@ export function mockSorobanRpc(
     },
   } = opts;
 
-  page.route(`**/${new URL(SOROBAN_RPC).host}/**`, async route => {
+  page.route(`**/${new URL(SOROBAN_RPC).host}/**`, async (route) => {
     if (route.request().method() !== 'POST') {
       await route.continue();
       return;
@@ -147,7 +144,11 @@ export function mockSorobanRpc(
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ jsonrpc: '2.0', id, result: { result: { retval } } }),
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id,
+            result: { result: { retval } },
+          }),
         });
         return;
       }
@@ -156,7 +157,11 @@ export function mockSorobanRpc(
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ jsonrpc: '2.0', id, result: { hash: 'test-tx-hash-' + Date.now(), status: 'PENDING' } }),
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id,
+            result: { hash: 'test-tx-hash-' + Date.now(), status: 'PENDING' },
+          }),
         });
         return;
       }
@@ -165,7 +170,14 @@ export function mockSorobanRpc(
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ jsonrpc: '2.0', id, result: { status: 'SUCCESS', result: { results: [{ result: { code: 0, results: [] } }] } } }),
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id,
+            result: {
+              status: 'SUCCESS',
+              result: { results: [{ result: { code: 0, results: [] } }] },
+            },
+          }),
         });
         return;
       }
@@ -176,7 +188,27 @@ export function mockSorobanRpc(
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ jsonrpc: '2.0', id, result: { account_id: accountId, sequence: '1', subentry_count: 0, thresholds: { master_weight: 1, low_threshold: 0, medium_threshold: 0, high_threshold: 0 }, flags: { auth_required: false, auth_revocable: true, auth_immutable: false }, balances: [{ asset_type: 'native', balance: '1000000000' }] } }),
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id,
+            result: {
+              account_id: accountId,
+              sequence: '1',
+              subentry_count: 0,
+              thresholds: {
+                master_weight: 1,
+                low_threshold: 0,
+                medium_threshold: 0,
+                high_threshold: 0,
+              },
+              flags: {
+                auth_required: false,
+                auth_revocable: true,
+                auth_immutable: false,
+              },
+              balances: [{ asset_type: 'native', balance: '1000000000' }],
+            },
+          }),
         });
         return;
       }
@@ -185,7 +217,15 @@ export function mockSorobanRpc(
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ jsonrpc: '2.0', id, result: { envelope_xdr: 'test-prepared-xdr', source: '', fee_bump: false } }),
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id,
+            result: {
+              envelope_xdr: 'test-prepared-xdr',
+              source: '',
+              fee_bump: false,
+            },
+          }),
         });
         return;
       }

@@ -17,7 +17,11 @@ interface TourState {
 
 const STORAGE_PREFIX = 'scout_tour_';
 
-export function useOnboardingTour(tourId: string, steps: TourStep[], walletAddress?: string) {
+export function useOnboardingTour(
+  tourId: string,
+  steps: TourStep[],
+  walletAddress?: string,
+) {
   const [state, setState] = useState<TourState>({
     currentStep: 0,
     isVisible: false,
@@ -33,7 +37,11 @@ export function useOnboardingTour(tourId: string, steps: TourStep[], walletAddre
     if (stored) {
       const parsed = JSON.parse(stored);
       if (parsed.isDismissed || parsed.isCompleted) {
-        setState((prev) => ({ ...prev, isDismissed: parsed.isDismissed, isCompleted: parsed.isCompleted }));
+        setState((prev) => ({
+          ...prev,
+          isDismissed: parsed.isDismissed,
+          isCompleted: parsed.isCompleted,
+        }));
       } else {
         setState((prev) => ({ ...prev, isVisible: true }));
       }
@@ -43,15 +51,18 @@ export function useOnboardingTour(tourId: string, steps: TourStep[], walletAddre
     }
   }, [storageKey]);
 
-  const saveTourState = useCallback((newState: TourState) => {
-    localStorage.setItem(
-      storageKey,
-      JSON.stringify({
-        isDismissed: newState.isDismissed,
-        isCompleted: newState.isCompleted,
-      })
-    );
-  }, [storageKey]);
+  const saveTourState = useCallback(
+    (newState: TourState) => {
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          isDismissed: newState.isDismissed,
+          isCompleted: newState.isCompleted,
+        }),
+      );
+    },
+    [storageKey],
+  );
 
   const nextStep = useCallback(() => {
     setState((prev) => {

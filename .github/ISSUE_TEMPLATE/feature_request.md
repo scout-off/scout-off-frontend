@@ -4,7 +4,6 @@ about: Suggest an idea for ScoutOff
 title: ''
 labels: enhancement
 assignees: ''
-
 ---
 
 ## Is Your Feature Request Related to a Problem?

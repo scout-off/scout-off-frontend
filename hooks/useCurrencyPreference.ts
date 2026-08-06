@@ -64,7 +64,8 @@ export interface CurrencyPreferenceReturn {
  * Used by the currency selector UI and all XLM-to-fiat display call sites.
  */
 export function useCurrencyPreference(): CurrencyPreferenceReturn {
-  const [currency, setCurrencyState] = useState<CurrencyCode>(getStoredCurrency);
+  const [currency, setCurrencyState] =
+    useState<CurrencyCode>(getStoredCurrency);
 
   const setCurrency = useCallback((c: CurrencyCode) => {
     setCurrencyState(c);

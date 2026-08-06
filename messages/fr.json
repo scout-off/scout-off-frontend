@@ -35,6 +35,14 @@
     "french": "Français",
     "swahili": "Kiswahili"
   },
+  "offline_queue": {
+    "queued": "{count} {count, plural, one {action} other {actions}} en attente — sera envoyé une fois la connexion rétablie",
+    "queued_desc": "Vos modifications ont été enregistrées localement et seront envoyées automatiquement dès que votre connexion sera rétablie.",
+    "processing": "Envoi de {count} {count, plural, one {action} other {actions}} en cours…",
+    "processing_desc": "Veuillez patienter pendant l'envoi de vos actions en attente.",
+    "retry": "Réessayer maintenant",
+    "retry_aria": "Réessayer les actions en attente"
+  },
   "scout_dashboard": {
     "title": "Tableau de bord des scouts",
     "welcome": "Bienvenue sur le tableau de bord des scouts",
@@ -62,7 +70,9 @@
     "milestones": "Jalons",
     "achievements": "Réalisations",
     "progress": "Progrès",
-    "stats": "Statistiques"
+    "stats": "Statistiques",
+    "download_data": "Télécharger mes données",
+    "download_data_success": "Vos données ont été téléchargées."
   },
   "wallet": {
     "connect": "Connecter le portefeuille",
@@ -117,7 +127,7 @@
     "changelog": "Journal des modifications",
     "status": "Statut",
     "privacy": "Politique de confidentialité",
-    "terms": "Conditions d\u2019utilisation",
+    "terms": "Conditions d’utilisation",
     "cookie_settings": "Paramètres des cookies"
   },
   "changelog": {
@@ -268,5 +278,84 @@
     "NoFeesToWithdraw": "Aucun frais n'est disponible pour le retrait pour le moment.",
     "Overflow": "Une erreur de calcul s'est produite. Veuillez réessayer.",
     "unknown": "Une erreur inattendue s'est produite. Veuillez réessayer."
+  },
+  "privacy": {
+    "back_to_home": "Retour à l'accueil",
+    "page_title": "Politique de confidentialité",
+    "page_description": "Comment ScoutOff collecte, utilise et protège vos données personnelles.",
+    "eyebrow": "Juridique",
+    "last_updated": "Dernière mise à jour : 29 juillet 2026",
+    "section1_title": "1. Introduction",
+    "section1_content": "ScoutOff s'engage à protéger votre vie privée. Cette politique explique comment nous collectons, utilisons et protégeons vos informations. En utilisant ScoutOff, vous acceptez la collecte et l'utilisation des informations conformément à cette politique.",
+    "section2_title": "2. Données que nous collectons",
+    "section2_content": "Données on-chain : votre clé publique Stellar, l'historique des transactions, le statut d'abonnement et les données d'inscription sont stockés sur la blockchain Stellar. Ces données sont publiques, immuables et ne peuvent être supprimées par personne. Données off-chain : nous collectons les coordonnées, les métadonnées de profil, les messages de chat et les données d'utilisation via Vercel Analytics et Sentry.",
+    "section3_title": "3. Médias hébergés sur IPFS",
+    "section3_content": "Les médias du profil du joueur (photos, vidéos) sont stockés sur IPFS, un réseau de stockage décentralisé. Une fois téléchargés sur IPFS, les médias sont accessibles publiquement et, de par la nature du protocole, leur suppression complète de tous les nœuds du réseau ne peut être garantie.",
+    "section4_title": "4. Comment nous utilisons vos données",
+    "section4_content": "Nous utilisons vos données pour fournir et maintenir la plateforme, traiter les transactions on-chain, mettre en relation les recruteurs et les joueurs, surveiller les performances de la plateforme et respecter les obligations légales.",
+    "section5_title": "5. Partage des données",
+    "section5_content": "Nous ne vendons pas vos données personnelles. Nous ne partageons des données qu'avec d'autres utilisateurs selon vos instructions, avec des prestataires de services (Vercel, Sentry, Pinata) et lorsque la loi l'exige.",
+    "section6_title": "6. Conservation et suppression",
+    "section6_content": "Les données on-chain sont permanentes et ne peuvent pas être supprimées. Les données off-chain sont conservées aussi longtemps que nécessaire. Vous pouvez demander la suppression de vos données off-chain via les paramètres du compte. Utilisez l'action « Demander la suppression des données » dans les paramètres du compte.",
+    "section7_title": "7. Vos droits et contact",
+    "section7_content": "Selon votre juridiction, vous pouvez disposer de droits d'accès, de rectification, de suppression ou de portabilité de vos données personnelles. Ces droits s'appliquent uniquement aux données off-chain. Pour toute question, contactez-nous via les canaux officiels de ScoutOff."
+  },
+  "terms": {
+    "back_to_home": "Retour à l'accueil",
+    "page_title": "Conditions d'utilisation",
+    "page_description": "Conditions d'utilisation de la plateforme, frais et nature irréversible des actions on-chain.",
+    "eyebrow": "Juridique",
+    "last_updated": "Dernière mise à jour : 29 juillet 2026",
+    "section1_title": "1. Acceptation des conditions",
+    "section1_content": "En utilisant ScoutOff, vous acceptez les présentes Conditions d'utilisation. Si vous n'êtes pas d'accord, n'utilisez pas la plateforme. ScoutOff est une plateforme décentralisée de recrutement de footballeurs construite sur le réseau Stellar.",
+    "section2_title": "2. Utilisation autorisée",
+    "section2_content": "Vous acceptez d'utiliser ScoutOff uniquement à des fins légales. Vous ne devez pas soumettre de fausses informations, utiliser la plateforme pour harceler autrui, contourner les frais d'abonnement, utiliser des outils automatisés sans autorisation ou soumettre du contenu illégal. Nous nous réservons le droit de suspendre l'accès en cas de violation.",
+    "section3_title": "3. Frais et paiements",
+    "section3_content": "Tous les frais sont libellés en XLM (Stellar Lumens). Les frais comprennent les abonnements des recruteurs et les frais de plateforme. Les frais ne sont pas remboursables, sauf indication contraire. Tous les paiements sont traités on-chain via des contrats intelligents Soroban.",
+    "section4_title": "4. Actions on-chain et irréversibilité",
+    "section4_content": "Les actions effectuées sur la blockchain Stellar sont permanentes et irréversibles. Cela inclut les inscriptions de joueurs, les approbations de jalons, les paiements d'abonnement et les retraits de frais. ScoutOff ne peut pas annuler une transaction on-chain une fois confirmée.",
+    "section5_title": "5. Propriété intellectuelle",
+    "section5_content": "Les joueurs conservent la propriété du contenu de leur profil et de leurs données personnelles. En soumettant du contenu à ScoutOff, vous nous accordez une licence pour afficher ce contenu uniquement aux fins de l'exploitation de la plateforme. Le code de la plateforme est open source.",
+    "section6_title": "6. Avertissements et limitations",
+    "section6_content": "ScoutOff est fourni « en l'état » sans garantie. Nous ne sommes pas responsables de l'exactitude des informations sur les joueurs, du contenu IPFS, des pertes dues à des problèmes de réseau blockchain ou à des bugs de contrats intelligents. Notre responsabilité n'excédera pas les frais que vous nous avez versés au cours des 12 mois précédant la réclamation."
+  },
+  "settings": {
+    "back_to_home": "Retour à l'accueil",
+    "page_title": "Paramètres du compte",
+    "page_description": "Gérez vos préférences et vos données.",
+    "eyebrow": "Paramètres",
+    "data_deletion_title": "Demander la suppression des données",
+    "data_deletion_description": "Demandez la suppression de vos données personnelles off-chain (historique de chat, métadonnées de profil, analyses). Les données on-chain (transactions, inscriptions) sont permanentes et ne peuvent pas être supprimées.",
+    "data_deletion_button": "Demander la suppression",
+    "connect_wallet_to_request": "Connectez votre portefeuille pour demander la suppression des données."
+  },
+  "dataDeletion": {
+    "modal_title": "Demander la suppression des données",
+    "onchain_heading": "Données on-chain (ne peuvent pas être supprimées)",
+    "onchain_description": "Votre clé publique Stellar, l'historique des transactions, l'inscription du joueur et les paiements sont stockés de façon permanente sur la blockchain. Personne — pas même ScoutOff — ne peut modifier ou supprimer ces données.",
+    "offchain_heading": "Données off-chain (peuvent être supprimées)",
+    "offchain_description": "L'historique de chat, les métadonnées de profil, les coordonnées et les données d'analyse stockées sur nos serveurs peuvent être supprimées sur demande.",
+    "request_button": "Demander la suppression des données",
+    "request_note": "Seuls les enregistrements off-chain peuvent être supprimés. Les données on-chain sont permanentes.",
+    "confirm_title": "Êtes-vous sûr ?",
+    "confirm_message": "Cette action enverra une demande de suppression de vos données personnelles off-chain des serveurs de ScoutOff. Les données on-chain ne peuvent pas être supprimées et resteront définitivement sur la blockchain Stellar.",
+    "confirm_button": "Oui, demander la suppression",
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "retry": "Réessayer",
+    "success_title": "Demande envoyée",
+    "success_message": "Votre demande de suppression de données a été envoyée. Vous recevrez une confirmation une fois vos enregistrements off-chain traités.",
+    "success_toast": "Demande de suppression des données envoyée avec succès.",
+    "error_toast": "Échec de l'envoi de la demande. Veuillez réessayer.",
+    "error_message": "Une erreur s'est produite lors de l'envoi de votre demande. Veuillez réessayer.",
+    "submitting": "Envoi de votre demande…",
+    "done": "Terminé"
+  },
+  "cookieConsent": {
+    "title": "Consentement aux cookies",
+    "message": "Nous utilisons Vercel Analytics et Sentry à des fins de surveillance. Nous n'utilisons jamais de traceurs publicitaires tiers.",
+    "accept": "Accepter",
+    "decline": "Refuser",
+    "privacy_link": "Politique de confidentialité"
   }
 }

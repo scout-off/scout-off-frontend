@@ -89,7 +89,8 @@ function ParseIds() {
       </div>
       {players.length < ids.length && (
         <p className="text-sm text-gray-500">
-          {ids.length - players.length} player{ids.length - players.length !== 1 ? 's' : ''} could not be loaded.
+          {ids.length - players.length} player
+          {ids.length - players.length !== 1 ? 's' : ''} could not be loaded.
         </p>
       )}
       <PlayerCompareView players={players} />
@@ -100,11 +101,13 @@ function ParseIds() {
 export default function ComparePage() {
   return (
     <ErrorBoundary>
-      <Suspense fallback={
-        <div className="flex justify-center py-20">
-          <Spinner size="lg" />
-        </div>
-      }>
+      <Suspense
+        fallback={
+          <div className="flex justify-center py-20">
+            <Spinner size="lg" />
+          </div>
+        }
+      >
         <ParseIds />
       </Suspense>
     </ErrorBoundary>

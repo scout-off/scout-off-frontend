@@ -21,9 +21,15 @@ const PAGE_SIZE = 5;
 // project's "leave blank to disable" convention for optional integrations.
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
-function copyToClipboard(text: string) {
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(text);
+async function copyToClipboard(text: string): Promise<boolean> {
+  if (!navigator.clipboard) return false;
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // Clipboard API unavailable/denied — silent fail, matches
+    // TruncatedAddress's copy-to-clipboard convention.
+    return false;
   }
 }
 
@@ -50,8 +56,9 @@ export default function ReferralPanel({ scoutId }: { scoutId?: string } = {}) {
     [],
   );
 
-  const handleCopy = useCallback((index: number, inviteUrl: string) => {
-    copyToClipboard(inviteUrl);
+  const handleCopy = useCallback(async (index: number, inviteUrl: string) => {
+    const copied = await copyToClipboard(inviteUrl);
+    if (!copied) return;
     setCopiedIndex(index);
     if (copyResetTimer.current !== null) clearTimeout(copyResetTimer.current);
     copyResetTimer.current = setTimeout(
@@ -146,7 +153,10 @@ export default function ReferralPanel({ scoutId }: { scoutId?: string } = {}) {
     <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-white">Refer a Colleague</h2>
-        <span className="text-sm text-gray-400">
+        <span
+          className="text-sm text-gray-400"
+          {...(loading ? { 'aria-label': 'Loading stats' } : {})}
+        >
           {loading
             ? '…'
             : `${stats?.successfulReferrals ?? 0} referral${(stats?.successfulReferrals ?? 0) !== 1 ? 's' : ''}`}
@@ -178,7 +188,9 @@ export default function ReferralPanel({ scoutId }: { scoutId?: string } = {}) {
         <button
           onClick={handleGenerate}
           disabled={
-            generating || !publicKey || (!!TURNSTILE_SITE_KEY && !turnstileToken)
+            generating ||
+            !publicKey ||
+            (!!TURNSTILE_SITE_KEY && !turnstileToken)
           }
           className="self-start px-4 py-2 rounded-lg bg-brand-green text-black font-medium transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
         >

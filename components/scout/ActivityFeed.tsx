@@ -74,7 +74,8 @@ function renderDescription(ev: FeedEvent) {
     }
     case 'player_contacted': {
       const who = ev.payload?.scoutName || ev.payload?.scoutId || 'A scout';
-      const player = ev.payload?.playerName || ev.payload?.playerId || 'a player';
+      const player =
+        ev.payload?.playerName || ev.payload?.playerId || 'a player';
       return (
         <>
           {who} contacted {player}

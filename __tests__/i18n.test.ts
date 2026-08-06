@@ -91,7 +91,9 @@ describe('i18n.ts', () => {
 
       availableLocales.forEach((locale) => {
         expect(messageFiles[locale as keyof typeof messageFiles]).toBeDefined();
-        expect(Object.keys(messageFiles[locale as keyof typeof messageFiles]).length).toBeGreaterThan(0);
+        expect(
+          Object.keys(messageFiles[locale as keyof typeof messageFiles]).length,
+        ).toBeGreaterThan(0);
       });
     });
 
@@ -109,19 +111,25 @@ describe('i18n.ts', () => {
       expect(Object.keys(messages).length).toBeGreaterThan(0);
 
       // At least one nested key should exist
-      expect(Object.keys(messages.nav as Record<string, unknown>).length).toBeGreaterThan(0);
+      expect(
+        Object.keys(messages.nav as Record<string, unknown>).length,
+      ).toBeGreaterThan(0);
     });
 
     it('French messages are not empty objects', () => {
       const messages = frMessages as Record<string, unknown>;
       expect(Object.keys(messages).length).toBeGreaterThan(0);
-      expect(Object.keys(messages.nav as Record<string, unknown>).length).toBeGreaterThan(0);
+      expect(
+        Object.keys(messages.nav as Record<string, unknown>).length,
+      ).toBeGreaterThan(0);
     });
 
     it('Swahili messages are not empty objects', () => {
       const messages = swMessages as Record<string, unknown>;
       expect(Object.keys(messages).length).toBeGreaterThan(0);
-      expect(Object.keys(messages.nav as Record<string, unknown>).length).toBeGreaterThan(0);
+      expect(
+        Object.keys(messages.nav as Record<string, unknown>).length,
+      ).toBeGreaterThan(0);
     });
   });
 

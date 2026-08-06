@@ -73,7 +73,9 @@ export function useChunkedUpload(): UseChunkedUploadResult {
           setCanResume(false);
         }
         const message =
-          err instanceof Error ? err.message : 'Upload failed. Please try again.';
+          err instanceof Error
+            ? err.message
+            : 'Upload failed. Please try again.';
         setError(message);
         return { cid: null, error: message };
       } finally {

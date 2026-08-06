@@ -33,7 +33,9 @@ describe('NotificationPreferencesPanel', () => {
     render(<NotificationPreferencesPanel />);
 
     expect(
-      screen.getByText('Connect your wallet to manage notification preferences.'),
+      screen.getByText(
+        'Connect your wallet to manage notification preferences.',
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByRole('switch')).not.toBeInTheDocument();
   });
@@ -76,9 +78,7 @@ describe('NotificationPreferencesPanel', () => {
     const user = userEvent.setup({ delay: null });
     render(<NotificationPreferencesPanel />);
 
-    await user.click(
-      screen.getByRole('switch', { name: 'Contact unlocks' }),
-    );
+    await user.click(screen.getByRole('switch', { name: 'Contact unlocks' }));
 
     expect(update).toHaveBeenCalledWith({
       milestoneApprovals: true,

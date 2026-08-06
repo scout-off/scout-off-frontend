@@ -5,8 +5,12 @@ import useSWR from 'swr';
 import { fetchPendingMilestoneSubmissions } from '@/lib/api';
 import type { MilestoneSubmission } from '@/types';
 
-export function pendingQueueKey(validatorAddress: string | null): string | null {
-  return validatorAddress ? `pending-milestone-submissions:${validatorAddress}` : null;
+export function pendingQueueKey(
+  validatorAddress: string | null,
+): string | null {
+  return validatorAddress
+    ? `pending-milestone-submissions:${validatorAddress}`
+    : null;
 }
 
 /**

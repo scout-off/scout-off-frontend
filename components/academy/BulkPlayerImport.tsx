@@ -63,7 +63,8 @@ function StatusBadge({
   submission?: RowSubmission;
 }) {
   if (!row.isValid) {
-    const label = phase === 'upload' || phase === 'preview' ? 'Invalid' : 'Skipped';
+    const label =
+      phase === 'upload' || phase === 'preview' ? 'Invalid' : 'Skipped';
     return (
       <span className="inline-flex items-center rounded-full border border-red-500/40 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-300">
         {label}
@@ -259,9 +260,9 @@ export default function BulkPlayerImport() {
       <div>
         <h1 className="text-2xl font-bold text-white">Bulk Player Import</h1>
         <p className="text-sm text-gray-400 mt-1">
-          Upload a CSV or JSON file listing multiple players to register them
-          in one session. Each player is still registered as its own
-          on-chain transaction — you will be asked to sign once per player.
+          Upload a CSV or JSON file listing multiple players to register them in
+          one session. Each player is still registered as its own on-chain
+          transaction — you will be asked to sign once per player.
         </p>
       </div>
 
@@ -276,8 +277,8 @@ export default function BulkPlayerImport() {
           </label>
           <p id="bulk-import-hint" className="text-xs text-gray-400 mt-1">
             Required columns/fields: name, age, nationality, region, position.
-            Optional: bio. One row/object per player. No highlight reel
-            upload here — add those later per-player.
+            Optional: bio. One row/object per player. No highlight reel upload
+            here — add those later per-player.
           </p>
         </div>
         <input
@@ -296,7 +297,11 @@ export default function BulkPlayerImport() {
           className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-green transition file:mr-4 file:py-1 file:px-4 file:rounded-lg file:border-0 file:bg-brand-green file:text-black file:font-medium hover:file:opacity-90 disabled:opacity-50"
         />
         {fileError && (
-          <p id="bulk-import-file-error" role="alert" className="text-sm text-red-500">
+          <p
+            id="bulk-import-file-error"
+            role="alert"
+            className="text-sm text-red-500"
+          >
             {fileError}
           </p>
         )}
@@ -354,7 +359,7 @@ export default function BulkPlayerImport() {
                     key={row.rowNumber}
                     className="border-b border-gray-800/60 align-top"
                   >
-                    <td className="py-2 pr-4 text-gray-400">{row.row}</td>
+                    <td className="py-2 pr-4 text-gray-400">{row.rowNumber}</td>
                     <td className="py-2 pr-4 text-white">
                       {row.data.name || '—'}
                     </td>
@@ -365,10 +370,14 @@ export default function BulkPlayerImport() {
                       {row.data.nationality || '—'}
                     </td>
                     <td className="py-2 pr-4 text-gray-300">
-                      {row.valid ? regionLabel(row.valid.region) : row.data.region || '—'}
+                      {row.valid
+                        ? regionLabel(row.valid.region)
+                        : row.data.region || '—'}
                     </td>
                     <td className="py-2 pr-4 text-gray-300">
-                      {row.valid ? positionLabel(row.valid.position) : row.data.position || '—'}
+                      {row.valid
+                        ? positionLabel(row.valid.position)
+                        : row.data.position || '—'}
                     </td>
                     <td className="py-2 pr-4">
                       <div className="flex flex-col gap-1">
@@ -448,7 +457,9 @@ export default function BulkPlayerImport() {
               onClick={resetAll}
               disabled={phase === 'submitting'}
             >
-              {phase === 'done' ? 'Import another batch' : 'Choose another file'}
+              {phase === 'done'
+                ? 'Import another batch'
+                : 'Choose another file'}
             </Button>
           </div>
         </section>

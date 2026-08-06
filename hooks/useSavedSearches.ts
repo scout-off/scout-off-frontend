@@ -56,7 +56,10 @@ export function useSavedSearches(scoutWallet: string | null) {
         id: entry.id,
         message: 'Saved search removed',
         onOptimisticRemove: () =>
-          mutate((current) => (current ?? []).filter((e) => e.id !== entry.id), false),
+          mutate(
+            (current) => (current ?? []).filter((e) => e.id !== entry.id),
+            false,
+          ),
         onRestore: () =>
           mutate((current) => [entry, ...(current ?? [])], false),
         onCommit: async () => {

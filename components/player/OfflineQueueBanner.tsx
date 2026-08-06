@@ -33,7 +33,10 @@ export default function OfflineQueueBanner({
     >
       <div className="flex items-start gap-3">
         {isProcessing ? (
-          <RefreshCw className="h-5 w-5 mt-0.5 animate-spin text-amber-400" aria-hidden="true" />
+          <RefreshCw
+            className="h-5 w-5 mt-0.5 animate-spin text-amber-400"
+            aria-hidden="true"
+          />
         ) : (
           <Clock className="h-5 w-5 mt-0.5 text-amber-400" aria-hidden="true" />
         )}

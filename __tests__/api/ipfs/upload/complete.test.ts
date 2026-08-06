@@ -50,11 +50,17 @@ describe('POST /api/ipfs/upload/complete', () => {
   });
 
   it('returns 400 for invalid JSON', async () => {
-    const req = new NextRequest('http://localhost:3000/api/ipfs/upload/complete', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-forwarded-for': 'ip-badjson' },
-      body: 'not json',
-    });
+    const req = new NextRequest(
+      'http://localhost:3000/api/ipfs/upload/complete',
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-forwarded-for': 'ip-badjson',
+        },
+        body: 'not json',
+      },
+    );
     const res = await POST(req);
     expect(res.status).toBe(400);
   });
@@ -95,7 +101,9 @@ describe('POST /api/ipfs/upload/complete', () => {
 
   it('assembles the file and uploads it to Pinata, returning the CID', async () => {
     const sessionId = await seedSession(JPEG_HEADER, 'ip-success');
-    mockedAxios.post.mockResolvedValueOnce({ data: { IpfsHash: 'QmChunkedCID' } });
+    mockedAxios.post.mockResolvedValueOnce({
+      data: { IpfsHash: 'QmChunkedCID' },
+    });
     mockedAxios.get.mockResolvedValueOnce({ data: JPEG_HEADER.buffer });
 
     const res = await POST(makeRequest({ sessionId }, 'ip-success'));
@@ -129,7 +137,9 @@ describe('POST /api/ipfs/upload/complete', () => {
   describe('post-upload integrity verification (issue #699)', () => {
     it('returns 502 and preserves the session when the gateway serves mismatched content', async () => {
       const sessionId = await seedSession(JPEG_HEADER, 'ip-verify-mismatch');
-      mockedAxios.post.mockResolvedValueOnce({ data: { IpfsHash: 'QmMismatch' } });
+      mockedAxios.post.mockResolvedValueOnce({
+        data: { IpfsHash: 'QmMismatch' },
+      });
       mockedAxios.get.mockResolvedValueOnce({
         data: new Uint8Array([9, 9, 9, 9]).buffer,
       });
@@ -144,10 +154,14 @@ describe('POST /api/ipfs/upload/complete', () => {
 
     it('returns 502 with a retryable error when the gateway cannot be reached for verification', async () => {
       const sessionId = await seedSession(JPEG_HEADER, 'ip-verify-unreachable');
-      mockedAxios.post.mockResolvedValueOnce({ data: { IpfsHash: 'QmGatewayDown' } });
+      mockedAxios.post.mockResolvedValueOnce({
+        data: { IpfsHash: 'QmGatewayDown' },
+      });
       mockedAxios.get.mockRejectedValueOnce(new Error('gateway timeout'));
 
-      const res = await POST(makeRequest({ sessionId }, 'ip-verify-unreachable'));
+      const res = await POST(
+        makeRequest({ sessionId }, 'ip-verify-unreachable'),
+      );
 
       expect(res.status).toBe(502);
       const body = await res.json();

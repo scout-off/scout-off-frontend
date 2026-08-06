@@ -32,9 +32,7 @@ describe('DisputeMilestoneModal', () => {
     await user.type(screen.getByLabelText('Reason'), 'too short');
     await user.click(screen.getByRole('button', { name: 'Submit dispute' }));
 
-    expect(
-      screen.getByText(/at least 10 characters/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/at least 10 characters/i)).toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
   });
 

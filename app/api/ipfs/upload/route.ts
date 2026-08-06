@@ -79,7 +79,11 @@ export async function POST(req: NextRequest) {
 
   // ── 2. Size check (issue #119) ──────────────────────────────────────────────
   if (file.size > MAX_FILE_SIZE_BYTES) {
-    log.warn('Rejected oversized file', { size: file.size, type: file.type, ip });
+    log.warn('Rejected oversized file', {
+      size: file.size,
+      type: file.type,
+      ip,
+    });
     return NextResponse.json(
       {
         error: `File exceeds the 100 MB size limit (received ${(file.size / 1024 / 1024).toFixed(1)} MB)`,
@@ -94,7 +98,11 @@ export async function POST(req: NextRequest) {
     mimeType.startsWith(prefix),
   );
   if (!mimeAllowed) {
-    log.warn('Rejected disallowed MIME type', { type: file.type, size: file.size, ip });
+    log.warn('Rejected disallowed MIME type', {
+      type: file.type,
+      size: file.size,
+      ip,
+    });
     return NextResponse.json(
       {
         error: `File type "${file.type}" is not allowed. Only image/* and video/* files are accepted.`,

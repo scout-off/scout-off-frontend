@@ -51,7 +51,9 @@ export function ColorSwatches() {
               }}
               title={value}
             />
-            <div style={{ fontWeight: 600, color: '#f9fafb' }}>brand.{name}</div>
+            <div style={{ fontWeight: 600, color: '#f9fafb' }}>
+              brand.{name}
+            </div>
             <code style={{ ...labelStyle, display: 'block' }}>{value}</code>
           </div>
         ))}

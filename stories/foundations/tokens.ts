@@ -5,7 +5,8 @@ import tailwindConfig from '../../tailwind.config';
 export const theme = resolveConfig(tailwindConfig).theme;
 
 /** Brand color tokens from `tailwind.config.ts` (CSS-variable backed). */
-export const brandColors = theme.colors.brand as Record<string, string>;
+export const brandColors = (theme.colors as unknown as Record<string, unknown>)
+  .brand as Record<string, string>;
 
 /** Default Tailwind spacing scale from the resolved config. */
 export const spacingScale = theme.spacing as Record<string, string>;
@@ -36,16 +37,7 @@ export const SPACING_KEYS = [
 ];
 
 /** Pick a readable subset of type sizes for the live demo. */
-export const TYPE_KEYS = [
-  'xs',
-  'sm',
-  'base',
-  'lg',
-  'xl',
-  '2xl',
-  '3xl',
-  '4xl',
-];
+export const TYPE_KEYS = ['xs', 'sm', 'base', 'lg', 'xl', '2xl', '3xl', '4xl'];
 
 export function fontSizeValue(
   entry: string | [string, { lineHeight?: string }],

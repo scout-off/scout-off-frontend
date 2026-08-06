@@ -110,16 +110,18 @@ describe('walletAdapters.freighter', () => {
 });
 
 describe('walletAdapters.albedo', () => {
-  it('rejects getPublicKey as unconfigured', async () => {
+  it('rejects getPublicKey when the Albedo SDK returns no public key', async () => {
     await expect(walletAdapters.albedo.getPublicKey()).rejects.toThrow(
-      'Albedo adapter not configured',
+      'Albedo did not return a public key. Please try again.',
     );
   });
 
-  it('rejects signTransaction as unconfigured', async () => {
+  it('rejects signTransaction when the Albedo SDK returns no signed envelope', async () => {
     await expect(
       walletAdapters.albedo.signTransaction('xdr', 'passphrase'),
-    ).rejects.toThrow('Albedo adapter not configured');
+    ).rejects.toThrow(
+      'Albedo did not return a signed envelope. Please try again.',
+    );
   });
 });
 
@@ -184,18 +186,14 @@ describe('walletAdapters.ledger', () => {
     });
 
     it('maps "user refused" errors to a user-friendly message', async () => {
-      mockStrInstance.getPublicKey.mockRejectedValue(
-        new Error('User refused'),
-      );
+      mockStrInstance.getPublicKey.mockRejectedValue(new Error('User refused'));
       await expect(walletAdapters.ledger.getPublicKey()).rejects.toThrow(
         'Request cancelled',
       );
     });
 
     it('maps "not supported" errors to a user-friendly message', async () => {
-      mockWebHIDCreate.mockRejectedValue(
-        new Error('WebHID is not supported'),
-      );
+      mockWebHIDCreate.mockRejectedValue(new Error('WebHID is not supported'));
       await expect(walletAdapters.ledger.getPublicKey()).rejects.toThrow(
         'WebHID is not supported',
       );
@@ -203,8 +201,7 @@ describe('walletAdapters.ledger', () => {
   });
 
   describe('signTransaction', () => {
-    const MOCK_XDR =
-      'AAAAAgAAAAA...';
+    const MOCK_XDR = 'AAAAAgAAAAA...';
     const NETWORK = 'Test SDF Network ; September 2015';
 
     it('parses the XDR, signs, and returns a signed XDR', async () => {

@@ -45,7 +45,10 @@ jest.mock('@upstash/redis', () => {
 
     async incr(key: string): Promise<number> {
       const entry = this.store.get(key);
-      if (!entry || (entry.expiresAt !== null && Date.now() >= entry.expiresAt)) {
+      if (
+        !entry ||
+        (entry.expiresAt !== null && Date.now() >= entry.expiresAt)
+      ) {
         this.store.set(key, { count: 1, expiresAt: null });
         return 1;
       }
@@ -181,7 +184,10 @@ describe('rateLimit under multiple "serverless instances" (issue #658)', () => {
     }
 
     expect(lastResult).toEqual(
-      expect.objectContaining({ limited: true, retryAfterSec: expect.any(Number) }),
+      expect.objectContaining({
+        limited: true,
+        retryAfterSec: expect.any(Number),
+      }),
     );
     expect(lastResult!.retryAfterSec).toBeGreaterThan(0);
   });
@@ -195,15 +201,24 @@ describe('rateLimit under multiple "serverless instances" (issue #658)', () => {
 
     await checkRateLimit('route-a:1.1.1.1', { limit, windowMs });
     await checkRateLimit('route-a:1.1.1.1', { limit, windowMs });
-    const overLimit = await checkRateLimit('route-a:1.1.1.1', { limit, windowMs });
+    const overLimit = await checkRateLimit('route-a:1.1.1.1', {
+      limit,
+      windowMs,
+    });
     expect(overLimit.limited).toBe(true);
 
     // A different key (different route prefix, same IP) must be unaffected.
-    const otherRoute = await checkRateLimit('route-b:1.1.1.1', { limit, windowMs });
+    const otherRoute = await checkRateLimit('route-b:1.1.1.1', {
+      limit,
+      windowMs,
+    });
     expect(otherRoute.limited).toBe(false);
 
     // A different IP under the same route prefix must also be unaffected.
-    const otherIp = await checkRateLimit('route-a:2.2.2.2', { limit, windowMs });
+    const otherIp = await checkRateLimit('route-a:2.2.2.2', {
+      limit,
+      windowMs,
+    });
     expect(otherIp.limited).toBe(false);
   });
 
@@ -214,8 +229,12 @@ describe('rateLimit under multiple "serverless instances" (issue #658)', () => {
     const windowMs = 10_000;
     const key = 'in-memory-fallback:9.9.9.9';
 
-    expect((await checkRateLimit(key, { limit, windowMs })).limited).toBe(false);
-    expect((await checkRateLimit(key, { limit, windowMs })).limited).toBe(false);
+    expect((await checkRateLimit(key, { limit, windowMs })).limited).toBe(
+      false,
+    );
+    expect((await checkRateLimit(key, { limit, windowMs })).limited).toBe(
+      false,
+    );
     const third = await checkRateLimit(key, { limit, windowMs });
     expect(third.limited).toBe(true);
   });

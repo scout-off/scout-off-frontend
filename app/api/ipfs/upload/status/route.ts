@@ -13,7 +13,10 @@ export const runtime = 'nodejs';
 export async function GET(req: NextRequest) {
   const sessionId = req.nextUrl.searchParams.get('sessionId');
   if (!sessionId) {
-    return NextResponse.json({ error: 'sessionId is required' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'sessionId is required' },
+      { status: 400 },
+    );
   }
 
   const status = getSessionStatus(sessionId);

@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface WorkboxLike {
-  addEventListener: (type: 'waiting' | 'controlling', listener: () => void) => void;
+  addEventListener: (
+    type: 'waiting' | 'controlling',
+    listener: () => void,
+  ) => void;
   removeEventListener: (
     type: 'waiting' | 'controlling',
     listener: () => void,

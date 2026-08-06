@@ -41,13 +41,10 @@ export function useVirtualizedRows<T>({
     };
   }, []);
 
-  const startIndex = Math.max(
-    0,
-    Math.floor(scrollTop / rowHeight) - overscan
-  );
+  const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight) - overscan);
   const endIndex = Math.min(
     items.length,
-    Math.ceil((scrollTop + viewportHeight) / rowHeight) + overscan
+    Math.ceil((scrollTop + viewportHeight) / rowHeight) + overscan,
   );
 
   return {

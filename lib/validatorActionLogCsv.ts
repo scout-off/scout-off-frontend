@@ -15,7 +15,9 @@ function escapeCsvValue(value: string): string {
 }
 
 /** Mirrors lib/auditLogCsv.ts's build<Thing>Csv(data) => string convention. */
-export function buildValidatorActionLogCsv(entries: ValidatorActionEntry[]): string {
+export function buildValidatorActionLogCsv(
+  entries: ValidatorActionEntry[],
+): string {
   const rows = entries.map((entry) =>
     [
       new Date(entry.timestamp * 1000).toISOString(),

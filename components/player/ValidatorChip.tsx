@@ -35,7 +35,11 @@ function truncateAddress(addr: string): string {
   return `${addr.slice(0, 8)}…${addr.slice(-4)}`;
 }
 
-export default function ValidatorChip({ address, label, className }: ValidatorChipProps) {
+export default function ValidatorChip({
+  address,
+  label,
+  className,
+}: ValidatorChipProps) {
   const [status, setStatus] = useState<Status>('loading');
   const [milestoneCount, setMilestoneCount] = useState<number | null>(null);
   const [academyName, setAcademyName] = useState<string | null>(null);
@@ -101,13 +105,11 @@ export default function ValidatorChip({ address, label, className }: ValidatorCh
       : milestoneCount !== null
         ? `${statusLabel[status]} · ${milestoneCount} milestone${milestoneCount !== 1 ? 's' : ''} approved`
         : `${statusLabel[status]} · ${truncateAddress(address)}`;
-  const tooltipContent = academyName ? `${academyName} · ${statusAndCount}` : statusAndCount;
-  const displayLabel = label ?? (academyName ?? truncateAddress(address));
-  const displayKind = label
-    ? undefined
-    : academyName
-      ? 'academy'
-      : 'address';
+  const tooltipContent = academyName
+    ? `${academyName} · ${statusAndCount}`
+    : statusAndCount;
+  const displayLabel = label ?? academyName ?? truncateAddress(address);
+  const displayKind = label ? undefined : academyName ? 'academy' : 'address';
 
   const chip = (
     <span
@@ -134,7 +136,9 @@ export default function ValidatorChip({ address, label, className }: ValidatorCh
           shown once resolved. The optional label prop lets callers override
           the display name entirely. */}
       {displayLabel ? (
-        <span className={displayKind === 'address' ? 'font-mono' : 'font-medium'}>
+        <span
+          className={displayKind === 'address' ? 'font-mono' : 'font-medium'}
+        >
           {displayLabel}
         </span>
       ) : (

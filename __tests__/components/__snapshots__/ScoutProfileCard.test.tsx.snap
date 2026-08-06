@@ -36,7 +36,7 @@ exports[`ScoutProfileCard — snapshot matches snapshot with a full scout profil
     >
       <span
         aria-label="Wallet address GCFW7QAO3WZQ6X4CZ3OYZFXX3A3DL7XVI5DNVTXA5VJUGE5SU6ZRG5OV"
-        class="font-mono cursor-default select-all outline-none text-sm text-gray-400"
+        class="font-mono cursor-default select-all outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green focus-visible:outline-offset-2 text-sm text-gray-400"
         role="button"
         tabindex="0"
       >
@@ -45,14 +45,14 @@ exports[`ScoutProfileCard — snapshot matches snapshot with a full scout profil
     </span>
   </div>
   <p
-    class="text-xs text-gray-500"
+    class="text-xs text-gray-400"
   >
     Expires
      
     <span
       class="text-gray-300"
     >
-      Jul 31, 2026
+      Jan 1, 2030
     </span>
   </p>
   <div
@@ -65,7 +65,7 @@ exports[`ScoutProfileCard — snapshot matches snapshot with a full scout profil
         class="h-6 w-10 mx-auto bg-gray-700 rounded animate-pulse"
       />
       <p
-        class="text-xs text-gray-500 mt-0.5"
+        class="text-xs text-gray-400 mt-0.5"
       >
         Players Contacted
       </p>
@@ -77,7 +77,7 @@ exports[`ScoutProfileCard — snapshot matches snapshot with a full scout profil
         class="h-6 w-10 mx-auto bg-gray-700 rounded animate-pulse"
       />
       <p
-        class="text-xs text-gray-500 mt-0.5"
+        class="text-xs text-gray-400 mt-0.5"
       >
         Trial Offers
       </p>

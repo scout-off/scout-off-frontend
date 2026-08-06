@@ -38,9 +38,7 @@ export default function LegalPageLayout({
               {description}
             </p>
             {lastUpdated && (
-              <p className="mt-2 text-xs text-gray-500">
-                {lastUpdated}
-              </p>
+              <p className="mt-2 text-xs text-gray-500">{lastUpdated}</p>
             )}
           </div>
           <div className="flex justify-start">

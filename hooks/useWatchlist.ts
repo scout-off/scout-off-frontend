@@ -47,7 +47,10 @@ export function useWatchlist(scoutWallet: string | null) {
         id: entry.id,
         message: 'Removed from watchlist',
         onOptimisticRemove: () =>
-          mutate((current) => (current ?? []).filter((e) => e.id !== entry.id), false),
+          mutate(
+            (current) => (current ?? []).filter((e) => e.id !== entry.id),
+            false,
+          ),
         onRestore: () =>
           mutate((current) => [entry, ...(current ?? [])], false),
         onCommit: async () => {
@@ -68,7 +71,8 @@ export function useWatchlist(scoutWallet: string | null) {
     entries,
     loading: isValidating && !data,
     error: error?.message ?? null,
-    isWatched: (playerId: string) => entries.some((e) => e.playerId === playerId),
+    isWatched: (playerId: string) =>
+      entries.some((e) => e.playerId === playerId),
     add,
     remove,
   };

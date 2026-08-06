@@ -56,7 +56,7 @@ describe('middleware.ts locale configuration', () => {
       const fs = require('fs');
       const path = require('path');
       const middlewarePath = path.join(process.cwd(), 'middleware.ts');
-      
+
       expect(fs.existsSync(middlewarePath)).toBe(true);
     });
   });

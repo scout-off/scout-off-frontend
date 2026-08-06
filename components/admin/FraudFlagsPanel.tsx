@@ -43,7 +43,11 @@ function FlagCard({ flag }: { flag: FraudFlag }) {
 
       <div className="flex flex-wrap gap-2">
         {flag.wallets.map((wallet, i) => (
-          <TruncatedAddress key={`${wallet}-${i}`} address={wallet} className="text-gray-400" />
+          <TruncatedAddress
+            key={`${wallet}-${i}`}
+            address={wallet}
+            className="text-gray-400"
+          />
         ))}
       </div>
 

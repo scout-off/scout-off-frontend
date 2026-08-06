@@ -55,7 +55,10 @@ export class UploadVerificationError extends Error {
 // app/api/ipfs/upload/complete/route.ts already uses when constructing a
 // `File` from a `Buffer`.
 export function sha256Hex(bytes: Buffer): string {
-  return crypto.createHash('sha256').update(new Uint8Array(bytes)).digest('hex');
+  return crypto
+    .createHash('sha256')
+    .update(new Uint8Array(bytes))
+    .digest('hex');
 }
 
 /**

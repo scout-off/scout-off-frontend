@@ -8,7 +8,9 @@ export async function fetchWatchlist(): Promise<WatchlistEntry[]> {
   return res.json();
 }
 
-export async function addToWatchlist(playerId: string): Promise<WatchlistEntry> {
+export async function addToWatchlist(
+  playerId: string,
+): Promise<WatchlistEntry> {
   const res = await fetch('/api/watchlist', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

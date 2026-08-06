@@ -78,9 +78,8 @@ function HealthDashboardContent() {
     loading: contractLoading,
   } = useContractHealth();
 
-  const [remoteHealth, setRemoteHealth] = useState<AggregateHealthResponse | null>(
-    null,
-  );
+  const [remoteHealth, setRemoteHealth] =
+    useState<AggregateHealthResponse | null>(null);
   const [remoteLoading, setRemoteLoading] = useState(true);
   const [remoteFetchError, setRemoteFetchError] = useState<string | null>(null);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
@@ -165,15 +164,13 @@ function HealthDashboardContent() {
       </div>
 
       <p className="text-sm text-gray-400" data-testid="health-last-checked">
-        Last checked:{' '}
-        {lastChecked ? lastChecked.toLocaleTimeString() : 'never'}
+        Last checked: {lastChecked ? lastChecked.toLocaleTimeString() : 'never'}
       </p>
 
       <HealthSection title="Contract" status={contractStatus}>
         {contractPaused && (
           <p className="text-sm text-yellow-400">
-            The circuit breaker is engaged; on-chain transactions are
-            disabled.
+            The circuit breaker is engaged; on-chain transactions are disabled.
           </p>
         )}
         {!contractLoading && !contractHealthy && (

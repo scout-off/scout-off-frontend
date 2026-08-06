@@ -33,7 +33,10 @@ async function connectWallet(page: import('@playwright/test').Page) {
 }
 
 test.describe('Admin access control', () => {
-  test('non-admin wallet is denied access to /admin', async ({ page, context }) => {
+  test('non-admin wallet is denied access to /admin', async ({
+    page,
+    context,
+  }) => {
     // Install mock wallet with non-admin address
     await installMockFreighter(page, {
       secret: NON_ADMIN_SECRET,
@@ -46,7 +49,9 @@ test.describe('Admin access control', () => {
 
     // Connect non-admin wallet
     await connectWallet(page);
-    await expect(page.getByText(truncateAddress(NON_ADMIN_ADDRESS))).toBeVisible();
+    await expect(
+      page.getByText(truncateAddress(NON_ADMIN_ADDRESS)),
+    ).toBeVisible();
 
     // Attempt to navigate to admin panel
     await page.goto('/en/admin');
@@ -112,7 +117,9 @@ test.describe('Admin access control', () => {
     await page.goto('/en/admin');
 
     // Verify we see the admin dashboard
-    await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible({
+    await expect(
+      page.getByRole('heading', { name: 'Admin Dashboard' }),
+    ).toBeVisible({
       timeout: 10000,
     });
 
@@ -168,7 +175,9 @@ test.describe('Admin access control', () => {
     await expect(contractSection.locator('code')).toBeVisible();
   });
 
-  test('non-admin sees unauthorized toast and is redirected', async ({ page }) => {
+  test('non-admin sees unauthorized toast and is redirected', async ({
+    page,
+  }) => {
     // Install non-admin wallet
     const wallet = await installMockFreighter(page, {
       secret: NON_ADMIN_SECRET,
@@ -177,7 +186,9 @@ test.describe('Admin access control', () => {
     expect(wallet.publicKey).not.toBe(ADMIN_ADDRESS);
 
     await connectWallet(page);
-    await expect(page.getByText(truncateAddress(NON_ADMIN_ADDRESS))).toBeVisible();
+    await expect(
+      page.getByText(truncateAddress(NON_ADMIN_ADDRESS)),
+    ).toBeVisible();
 
     // Try to access admin page
     await page.goto('/en/admin');

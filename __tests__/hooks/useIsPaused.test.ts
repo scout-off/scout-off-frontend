@@ -137,9 +137,9 @@ describe('useIsPaused — paused state', () => {
     // Settle all async state updates
     await flush();
 
-    expect(isPausedResult.current).toBe(true);          // isPaused: true
-    expect(healthResult.current.loading).toBe(false);   // loading: false
-    expect(healthResult.current.paused).toBe(true);     // underlying source agrees
+    expect(isPausedResult.current).toBe(true); // isPaused: true
+    expect(healthResult.current.loading).toBe(false); // loading: false
+    expect(healthResult.current.paused).toBe(true); // underlying source agrees
   });
 
   // Verify getContractPaused was called (mock data accurately simulates contract)
@@ -166,9 +166,9 @@ describe('useIsPaused — unpaused state', () => {
 
     await flush();
 
-    expect(isPausedResult.current).toBe(false);         // isPaused: false
-    expect(healthResult.current.loading).toBe(false);   // loading: false
-    expect(healthResult.current.paused).toBe(false);    // underlying source agrees
+    expect(isPausedResult.current).toBe(false); // isPaused: false
+    expect(healthResult.current.loading).toBe(false); // loading: false
+    expect(healthResult.current.paused).toBe(false); // underlying source agrees
   });
 });
 

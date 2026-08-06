@@ -270,7 +270,10 @@ function detectRapidContactBursts(
     let maxInWindow = 1;
     let windowStart = 0;
     for (let i = 0; i < timestamps.length; i++) {
-      while (timestamps[i] - timestamps[windowStart] > CONTACT_BURST_WINDOW_MS) {
+      while (
+        timestamps[i] - timestamps[windowStart] >
+        CONTACT_BURST_WINDOW_MS
+      ) {
         windowStart++;
       }
       maxInWindow = Math.max(maxInWindow, i - windowStart + 1);

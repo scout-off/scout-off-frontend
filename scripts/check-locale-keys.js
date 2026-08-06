@@ -19,12 +19,16 @@ function flattenKeys(obj, prefix = '') {
   });
 }
 
-const localeFiles = fs.readdirSync(messagesDir).filter((f) => f.endsWith('.json'));
+const localeFiles = fs
+  .readdirSync(messagesDir)
+  .filter((f) => f.endsWith('.json'));
 
 const keysByLocale = {};
 for (const file of localeFiles) {
   const locale = path.basename(file, '.json');
-  const content = JSON.parse(fs.readFileSync(path.join(messagesDir, file), 'utf8'));
+  const content = JSON.parse(
+    fs.readFileSync(path.join(messagesDir, file), 'utf8'),
+  );
   keysByLocale[locale] = new Set(flattenKeys(content));
 }
 
@@ -43,8 +47,12 @@ for (const key of allKeys) {
 }
 
 if (hasMismatch) {
-  console.error('\nLocale key check failed: some keys are missing translations.');
+  console.error(
+    '\nLocale key check failed: some keys are missing translations.',
+  );
   process.exit(1);
 }
 
-console.log(`Locale key check passed for: ${Object.keys(keysByLocale).join(', ')}`);
+console.log(
+  `Locale key check passed for: ${Object.keys(keysByLocale).join(', ')}`,
+);

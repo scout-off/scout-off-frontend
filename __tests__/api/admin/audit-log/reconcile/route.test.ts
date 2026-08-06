@@ -56,9 +56,7 @@ describe('GET /api/admin/audit-log/reconcile', () => {
   });
 
   it('flags an on-chain validator with no audit log record (CLI add)', async () => {
-    mockGetValidators.mockResolvedValue([
-      { address: 'GCLIADDED', addedAt: 1 },
-    ]);
+    mockGetValidators.mockResolvedValue([{ address: 'GCLIADDED', addedAt: 1 }]);
 
     const res = await GET(makeRequest(ADMIN));
     const body = await res.json();

@@ -48,7 +48,11 @@ const MIXED_CSV = [
   ',22,Nigerian,nigeria,ST',
 ].join('\n');
 
-async function uploadFile(container: HTMLElement, content: string, name: string) {
+async function uploadFile(
+  container: HTMLElement,
+  content: string,
+  name: string,
+) {
   const input = screen.getByLabelText(/player file/i) as HTMLInputElement;
   const file = new File([content], name, { type: 'text/csv' });
   fireEvent.change(input, { target: { files: [file] } });

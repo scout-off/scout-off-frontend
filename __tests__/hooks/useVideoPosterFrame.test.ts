@@ -44,9 +44,7 @@ function mockCanvasCapture(dataUrl: string, dimensions = { w: 320, h: 180 }) {
   jest
     .spyOn(HTMLCanvasElement.prototype, 'getContext')
     .mockReturnValue({ drawImage } as unknown as CanvasRenderingContext2D);
-  jest
-    .spyOn(HTMLCanvasElement.prototype, 'toDataURL')
-    .mockReturnValue(dataUrl);
+  jest.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue(dataUrl);
   // videoWidth/videoHeight back the canvas dimensions read inside the hook.
   Object.defineProperty(HTMLVideoElement.prototype, 'videoWidth', {
     value: dimensions.w,
@@ -66,9 +64,7 @@ describe('useVideoPosterFrame', () => {
   });
 
   it('does not create a video element when disabled', () => {
-    renderHook(() =>
-      useVideoPosterFrame(VIDEO_URL, { enabled: false }),
-    );
+    renderHook(() => useVideoPosterFrame(VIDEO_URL, { enabled: false }));
     expect(createdVideos).toHaveLength(0);
   });
 
@@ -83,9 +79,7 @@ describe('useVideoPosterFrame', () => {
   });
 
   it('seeks to the requested timestamp once metadata loads, clamped to the clip duration', () => {
-    renderHook(() =>
-      useVideoPosterFrame(VIDEO_URL, { timestampSeconds: 5 }),
-    );
+    renderHook(() => useVideoPosterFrame(VIDEO_URL, { timestampSeconds: 5 }));
     const video = createdVideos[0];
     loadMetadata(video, 2); // shorter than the requested 5s timestamp
     expect(video.currentTime).toBeCloseTo(1.9, 5); // duration - 0.1
@@ -117,11 +111,9 @@ describe('useVideoPosterFrame', () => {
   });
 
   it('degrades gracefully (returns null) when the canvas is CORS-tainted', () => {
-    jest
-      .spyOn(HTMLCanvasElement.prototype, 'getContext')
-      .mockReturnValue({
-        drawImage: jest.fn(),
-      } as unknown as CanvasRenderingContext2D);
+    jest.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+      drawImage: jest.fn(),
+    } as unknown as CanvasRenderingContext2D);
     jest
       .spyOn(HTMLCanvasElement.prototype, 'toDataURL')
       .mockImplementation(() => {

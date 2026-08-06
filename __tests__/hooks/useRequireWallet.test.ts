@@ -70,14 +70,17 @@ describe('useRequireWallet', () => {
 
     const redirectUrl: string = mockReplace.mock.calls[0][0];
     const url = new URL(redirectUrl, 'http://localhost');
-    const reason = url.searchParams.get('reason') as keyof typeof REDIRECT_REASONS;
+    const reason = url.searchParams.get(
+      'reason',
+    ) as keyof typeof REDIRECT_REASONS;
     expect(reason).toBeDefined();
     expect(REDIRECT_REASONS[reason]).toBeDefined();
   });
 
   it('does not redirect when the wallet is connected (isAuthenticated = true)', () => {
     mockWalletContext.isAuthenticated = true;
-    mockWalletContext.publicKey = 'GCFW7QAO3WZQ6X4CZ3OYZFXX3A3DL7XVI5DNVTXA5VJUGE5SU6ZRG5OV';
+    mockWalletContext.publicKey =
+      'GCFW7QAO3WZQ6X4CZ3OYZFXX3A3DL7XVI5DNVTXA5VJUGE5SU6ZRG5OV';
     renderHook(() => useRequireWallet());
     expect(mockReplace).not.toHaveBeenCalled();
   });

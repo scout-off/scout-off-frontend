@@ -27,7 +27,11 @@ test('createAcademy registers the owner wallet as the first member', () => {
 });
 
 test('addMember adds an additional signer under the same academy', () => {
-  const academy = academyService.createAcademy('FC Coastal', 'GOWNER2', 'GADMIN');
+  const academy = academyService.createAcademy(
+    'FC Coastal',
+    'GOWNER2',
+    'GADMIN',
+  );
   const updated = academyService.addMember(academy.id, 'GCOACH1', 'GADMIN');
 
   assert.equal(updated.members.length, 2);
@@ -35,7 +39,11 @@ test('addMember adds an additional signer under the same academy', () => {
 });
 
 test('addMember is idempotent for a wallet already in the same academy', () => {
-  const academy = academyService.createAcademy('FC Idempotent', 'GOWNER3', 'GADMIN');
+  const academy = academyService.createAcademy(
+    'FC Idempotent',
+    'GOWNER3',
+    'GADMIN',
+  );
   academyService.addMember(academy.id, 'GCOACH2', 'GADMIN');
   const again = academyService.addMember(academy.id, 'GCOACH2', 'GADMIN');
 
@@ -60,7 +68,11 @@ test('addMember throws AcademyNotFoundError for an unknown academy id', () => {
 });
 
 test('removeMember removes a signer and returns true; false when absent', () => {
-  const academy = academyService.createAcademy('FC Remove', 'GOWNER4', 'GADMIN');
+  const academy = academyService.createAcademy(
+    'FC Remove',
+    'GOWNER4',
+    'GADMIN',
+  );
   academyService.addMember(academy.id, 'GCOACH3', 'GADMIN');
 
   assert.equal(academyService.removeMember(academy.id, 'GCOACH3'), true);
@@ -71,7 +83,11 @@ test('removeMember removes a signer and returns true; false when absent', () => 
 });
 
 test('getAcademyForWallet finds the academy a wallet is registered under', () => {
-  const academy = academyService.createAcademy('FC Lookup', 'GOWNER5', 'GADMIN');
+  const academy = academyService.createAcademy(
+    'FC Lookup',
+    'GOWNER5',
+    'GADMIN',
+  );
 
   const found = academyService.getAcademyForWallet('GOWNER5');
   assert.equal(found.id, academy.id);

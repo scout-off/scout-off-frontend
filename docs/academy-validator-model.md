@@ -37,12 +37,13 @@ academy_members   (wallet PRIMARY KEY, academy_id, added_at, added_by)
 A wallet maps to **at most one** academy at a time (`wallet` is the primary
 key on `academy_members`) — this models real institutional staff, not
 individuals holding simultaneous membership in several academies. The
-roster is purely a *label*: "wallet G... is a registered signer for Academy
+roster is purely a _label_: "wallet G... is a registered signer for Academy
 X." It has no bearing on whether that wallet can actually call
 `approve_milestone` — that's decided entirely on-chain, independently.
 
 Why keep these separate instead of, say, extending the contract to store an
 academy tag per validator? Two reasons:
+
 1. **Blast radius.** A contract migration is expensive to deploy and risky
    to get wrong; an off-chain label is a schema migration on a service that
    already exists and already owns comparable off-chain, wallet-keyed data
@@ -100,6 +101,7 @@ does.
 ## Backward compatibility
 
 Nothing about existing single-wallet validator flows changes:
+
 - `ApproveForm`/`RevokeForm`/`ValidatorPlayerSearch` are untouched.
 - `useValidator`'s `isValidator` check is untouched — it's still a flat
   on-chain roster membership check, unaware of academies.
@@ -109,13 +111,13 @@ Nothing about existing single-wallet validator flows changes:
 
 ## API surface
 
-| Route | Auth | Purpose |
-| --- | --- | --- |
-| `POST /academies` (via `/api/admin/academies`) | super-admin | Create an academy; owner wallet becomes its first member |
-| `GET /academies` (via `/api/admin/academies`) | super-admin | List all academies with their members, for the admin panel |
-| `POST /academies/:id/members` (via `/api/admin/academies/:id/members`) | super-admin | Register an additional signer wallet under an academy |
-| `DELETE /academies/:id/members/:wallet` (via `/api/admin/academies/:id/members/:wallet`) | super-admin | Remove a signer wallet's academy membership (off-chain only) |
-| `GET /academies/wallet/:wallet` | public | Look up the academy (if any) a wallet is registered under, for milestone-attribution display |
+| Route                                                                                    | Auth        | Purpose                                                                                      |
+| ---------------------------------------------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------- |
+| `POST /academies` (via `/api/admin/academies`)                                           | super-admin | Create an academy; owner wallet becomes its first member                                     |
+| `GET /academies` (via `/api/admin/academies`)                                            | super-admin | List all academies with their members, for the admin panel                                   |
+| `POST /academies/:id/members` (via `/api/admin/academies/:id/members`)                   | super-admin | Register an additional signer wallet under an academy                                        |
+| `DELETE /academies/:id/members/:wallet` (via `/api/admin/academies/:id/members/:wallet`) | super-admin | Remove a signer wallet's academy membership (off-chain only)                                 |
+| `GET /academies/wallet/:wallet`                                                          | public      | Look up the academy (if any) a wallet is registered under, for milestone-attribution display |
 
 ## What this doesn't do
 

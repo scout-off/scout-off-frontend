@@ -56,6 +56,9 @@ describe('NotFound', () => {
 
   it('renders a back-to-home link pointing to the root path', () => {
     render(<NotFound />);
-    expect(screen.getByRole('link', { name: 'Go Home' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'Go Home' })).toHaveAttribute(
+      'href',
+      '/',
+    );
   });
 });

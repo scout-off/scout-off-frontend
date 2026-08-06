@@ -110,11 +110,12 @@ export function useOfflineQueue() {
   useEffect(() => {
     if ('serviceWorker' in navigator && 'sync' in navigator) {
       navigator.serviceWorker.ready.then((registration) => {
-        registration.sync
-          .register('offline-queue-sync')
-          .catch(() => {
-            // Background sync not supported — fall back to online event
-          });
+        const syncRegistration = registration as ServiceWorkerRegistration & {
+          sync: { register(tag: string): Promise<void> };
+        };
+        syncRegistration.sync.register('offline-queue-sync').catch(() => {
+          // Background sync not supported — fall back to online event
+        });
       });
     }
 

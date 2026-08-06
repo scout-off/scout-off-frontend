@@ -1,4 +1,10 @@
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+import {
+  render,
+  screen,
+  waitFor,
+  fireEvent,
+  act,
+} from '@testing-library/react';
 
 const ADMIN_ADDRESS = 'G'.padEnd(56, 'A');
 const NON_ADMIN_ADDRESS = 'G'.padEnd(56, 'B');
@@ -45,7 +51,10 @@ function mockFetchOnce(body: unknown, ok = true, status = 200) {
 
 function healthyRemoteBody() {
   return {
-    indexer: { status: 'ok', detail: { status: 'ok', lastLedger: 12345, uptime: 600 } },
+    indexer: {
+      status: 'ok',
+      detail: { status: 'ok', lastLedger: 12345, uptime: 600 },
+    },
     backend: { status: 'ok', detail: { status: 'ok' } },
     checkedAt: Date.now(),
   };
@@ -105,9 +114,13 @@ describe('Admin System Health page', () => {
       );
     });
 
-    const contractSection = await screen.findByTestId('health-section-contract');
+    const contractSection = await screen.findByTestId(
+      'health-section-contract',
+    );
     const indexerSection = await screen.findByTestId('health-section-indexer');
-    const backendSection = await screen.findByTestId('health-section-backend-api');
+    const backendSection = await screen.findByTestId(
+      'health-section-backend-api',
+    );
 
     expect(contractSection).toHaveTextContent('Healthy');
     await waitFor(() => expect(indexerSection).toHaveTextContent('Healthy'));
@@ -137,9 +150,13 @@ describe('Admin System Health page', () => {
 
     render(<HealthDashboard />);
 
-    const contractSection = await screen.findByTestId('health-section-contract');
+    const contractSection = await screen.findByTestId(
+      'health-section-contract',
+    );
     const indexerSection = await screen.findByTestId('health-section-indexer');
-    const backendSection = await screen.findByTestId('health-section-backend-api');
+    const backendSection = await screen.findByTestId(
+      'health-section-backend-api',
+    );
 
     expect(contractSection).toHaveTextContent('Healthy');
     await waitFor(() =>
@@ -162,11 +179,15 @@ describe('Admin System Health page', () => {
 
     render(<HealthDashboard />);
 
-    const contractSection = await screen.findByTestId('health-section-contract');
+    const contractSection = await screen.findByTestId(
+      'health-section-contract',
+    );
     expect(contractSection).toHaveTextContent('Healthy');
 
     const indexerSection = await screen.findByTestId('health-section-indexer');
-    const backendSection = await screen.findByTestId('health-section-backend-api');
+    const backendSection = await screen.findByTestId(
+      'health-section-backend-api',
+    );
     await waitFor(() =>
       expect(indexerSection).toHaveTextContent('Unreachable'),
     );
@@ -187,7 +208,9 @@ describe('Admin System Health page', () => {
 
     render(<HealthDashboard />);
 
-    const contractSection = await screen.findByTestId('health-section-contract');
+    const contractSection = await screen.findByTestId(
+      'health-section-contract',
+    );
     expect(contractSection).toHaveTextContent('Degraded');
     expect(contractSection).toHaveTextContent('circuit breaker is engaged');
   });

@@ -44,7 +44,8 @@ const CG_VS_CURRENCY: Record<string, string> = {
 };
 
 async function fetchXlmRate(targetCurrency: string): Promise<number> {
-  const vsCurrency = CG_VS_CURRENCY[targetCurrency] ?? targetCurrency.toLowerCase();
+  const vsCurrency =
+    CG_VS_CURRENCY[targetCurrency] ?? targetCurrency.toLowerCase();
   const url = `${COINGECKO_URL}/simple/price?ids=stellar&vs_currencies=${encodeURIComponent(vsCurrency)}`;
 
   const resp = await fetch(url, {
@@ -91,9 +92,7 @@ export interface XlmRateState {
  * @param targetCurrency - ISO 4217 code (default `'USD'`). See CG_VS_CURRENCY
  *   for supported values.
  */
-export function useXlmUsdRate(
-  targetCurrency: string = 'USD',
-): XlmRateState {
+export function useXlmUsdRate(targetCurrency: string = 'USD'): XlmRateState {
   const cacheKey = `xlm:${targetCurrency}`;
   const [rate, setRate] = useState<number | null>(() => {
     const cached = rateCache.get(cacheKey);
@@ -194,10 +193,7 @@ export function convertXlmToFiat(
 /**
  * Formats a fiat amount with appropriate currency symbol and 2 decimal places.
  */
-export function formatFiat(
-  amount: number,
-  currency: string = 'USD',
-): string {
+export function formatFiat(amount: number, currency: string = 'USD'): string {
   const symbols: Record<string, string> = {
     USD: '$',
     EUR: '€',

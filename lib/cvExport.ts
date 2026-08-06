@@ -31,7 +31,9 @@ export function buildCvFilename(playerName: string): string {
 async function resolveValidatorNames(
   milestones: Milestone[],
 ): Promise<Record<string, string>> {
-  const uniqueAddresses = Array.from(new Set(milestones.map((m) => m.validator)));
+  const uniqueAddresses = Array.from(
+    new Set(milestones.map((m) => m.validator)),
+  );
   const entries = await Promise.all(
     uniqueAddresses.map(async (address) => {
       const academy = await fetchAcademyForWallet(address);
@@ -131,13 +133,16 @@ export async function generatePlayerCvPdf(
   if (milestones.length === 0) {
     drawText('No milestones recorded yet.', { size: 11, color: MUTED });
   } else {
-    const chronological = [...milestones].sort((a, b) => a.timestamp - b.timestamp);
+    const chronological = [...milestones].sort(
+      (a, b) => a.timestamp - b.timestamp,
+    );
     for (const milestone of chronological) {
       ensureSpace(36);
       drawText(milestone.description, { size: 11, gapAfter: 2 });
       const date = new Date(milestone.timestamp * 1000).toLocaleDateString();
       const validatorName =
-        validatorNames[milestone.validator] ?? truncateAddress(milestone.validator);
+        validatorNames[milestone.validator] ??
+        truncateAddress(milestone.validator);
       drawText(`Validated by ${validatorName} · ${date}`, {
         size: 9,
         color: MUTED,
@@ -156,8 +161,11 @@ export async function generatePlayerCvPdf(
 }
 
 /** Triggers a browser download of the generated PDF bytes. */
-export function downloadPlayerCvPdf(bytes: Uint8Array, playerName: string): void {
-  const blob = new Blob([bytes], { type: 'application/pdf' });
+export function downloadPlayerCvPdf(
+  bytes: Uint8Array,
+  playerName: string,
+): void {
+  const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;

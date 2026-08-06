@@ -28,8 +28,6 @@ describe('formatXlm', () => {
 
   it('uses the exported precision constant', () => {
     expect(XLM_DISPLAY_DECIMALS).toBe(2);
-    expect(formatXlm(3.14159).split('.')[1]).toHaveLength(
-      XLM_DISPLAY_DECIMALS,
-    );
+    expect(formatXlm(3.14159).split('.')[1]).toHaveLength(XLM_DISPLAY_DECIMALS);
   });
 });

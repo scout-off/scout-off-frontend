@@ -29,7 +29,9 @@ export default function ConfigStatus() {
 
   return (
     <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
-      <h2 className="text-lg font-semibold text-white">Runtime Configuration Status</h2>
+      <h2 className="text-lg font-semibold text-white">
+        Runtime Configuration Status
+      </h2>
       <table className="w-full table-auto text-sm">
         <thead className="text-left text-gray-400">
           <tr>
@@ -43,7 +45,9 @@ export default function ConfigStatus() {
             config.map((c) => (
               <tr key={c.name} className="border-t border-gray-700">
                 <td className="py-2 text-gray-300">{c.name}</td>
-                <td className="py-2 text-gray-300">{c.required ? 'Yes' : 'No'}</td>
+                <td className="py-2 text-gray-300">
+                  {c.required ? 'Yes' : 'No'}
+                </td>
                 <td className="py-2">
                   {c.present ? (
                     <span className="text-green-400 font-medium">Present</span>

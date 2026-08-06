@@ -1,4 +1,10 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import '@testing-library/jest-dom';
 import BulkPlayerImport from '@/components/academy/BulkPlayerImport';
 import { useWallet } from '@/hooks/useWallet';
@@ -92,7 +98,9 @@ describe('BulkPlayerImport', () => {
     expect(screen.getByRole('table')).toBeInTheDocument();
     expect(screen.getByText('John Doe')).toBeInTheDocument();
     expect(screen.getByText('Jane Smith')).toBeInTheDocument();
-    expect(screen.getByText(/2 valid · 0 invalid · 2 total/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/2 valid · 0 invalid · 2 total/i),
+    ).toBeInTheDocument();
     // No signing has happened yet
     expect(mockedBuildRegisterPlayer).not.toHaveBeenCalled();
   });
@@ -101,7 +109,9 @@ describe('BulkPlayerImport', () => {
     render(<BulkPlayerImport />);
     await uploadFile(MIXED_CSV, 'players.csv');
 
-    expect(screen.getByText(/2 valid · 1 invalid · 3 total/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/2 valid · 1 invalid · 3 total/i),
+    ).toBeInTheDocument();
     expect(screen.getAllByText('Valid').length).toBe(2);
     expect(screen.getByText('Invalid')).toBeInTheDocument();
     expect(screen.getByText(/name: Name is required/i)).toBeInTheDocument();
@@ -120,7 +130,9 @@ describe('BulkPlayerImport', () => {
     await uploadFile(VALID_CSV, 'players.csv');
     expect(screen.getByRole('table')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /choose another file/i }));
+    fireEvent.click(
+      screen.getByRole('button', { name: /choose another file/i }),
+    );
     expect(screen.queryByRole('table')).toBeNull();
   });
 
@@ -135,7 +147,9 @@ describe('BulkPlayerImport', () => {
     await uploadFile(VALID_CSV, 'players.csv');
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /import 2 valid players/i }));
+      fireEvent.click(
+        screen.getByRole('button', { name: /import 2 valid players/i }),
+      );
     });
 
     await waitFor(() => {
@@ -146,20 +160,34 @@ describe('BulkPlayerImport', () => {
     expect(mockedBuildRegisterPlayer).toHaveBeenNthCalledWith(
       1,
       MOCK_PUBLIC_KEY,
-      { name: 'John Doe', age: 22, position: 'ST', region: 'nigeria', nationality: 'Nigerian' },
+      {
+        name: 'John Doe',
+        age: 22,
+        position: 'ST',
+        region: 'nigeria',
+        nationality: 'Nigerian',
+      },
       '',
     );
     expect(mockedBuildRegisterPlayer).toHaveBeenNthCalledWith(
       2,
       MOCK_PUBLIC_KEY,
-      { name: 'Jane Smith', age: 19, position: 'GK', region: 'kenya', nationality: 'Kenyan' },
+      {
+        name: 'Jane Smith',
+        age: 19,
+        position: 'GK',
+        region: 'kenya',
+        nationality: 'Kenyan',
+      },
       '',
     );
 
     await waitFor(() => {
       expect(screen.getByText(/import complete/i)).toBeInTheDocument();
     });
-    expect(screen.getByText(/2 registered, 0 failed, 0 skipped/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/2 registered, 0 failed, 0 skipped/i),
+    ).toBeInTheDocument();
   });
 
   it('continues the batch after one row fails or is rejected, and summarizes results', async () => {
@@ -174,7 +202,9 @@ describe('BulkPlayerImport', () => {
     await uploadFile(VALID_CSV, 'players.csv');
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /import 2 valid players/i }));
+      fireEvent.click(
+        screen.getByRole('button', { name: /import 2 valid players/i }),
+      );
     });
 
     await waitFor(() => {
@@ -184,7 +214,9 @@ describe('BulkPlayerImport', () => {
     // Batch continued to the second row despite the first... wait, order: row1 succeeds, row2 fails.
     expect(signAndSubmit).toHaveBeenCalledTimes(2);
     expect(mockedBuildRegisterPlayer).toHaveBeenCalledTimes(2);
-    expect(screen.getByText(/1 registered, 1 failed, 0 skipped/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/1 registered, 1 failed, 0 skipped/i),
+    ).toBeInTheDocument();
     expect(screen.getAllByText('Registered').length).toBe(1);
     expect(screen.getAllByText('Failed').length).toBe(1);
   });
@@ -198,7 +230,9 @@ describe('BulkPlayerImport', () => {
     await uploadFile(MIXED_CSV, 'players.csv');
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /import 2 valid players/i }));
+      fireEvent.click(
+        screen.getByRole('button', { name: /import 2 valid players/i }),
+      );
     });
 
     await waitFor(() => {
@@ -206,7 +240,9 @@ describe('BulkPlayerImport', () => {
     });
 
     expect(mockedBuildRegisterPlayer).toHaveBeenCalledTimes(2);
-    expect(screen.getByText(/2 registered, 0 failed, 1 skipped/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/2 registered, 0 failed, 1 skipped/i),
+    ).toBeInTheDocument();
   });
 
   it('does not start signing when no wallet is connected', async () => {
@@ -214,7 +250,9 @@ describe('BulkPlayerImport', () => {
     render(<BulkPlayerImport />);
     await uploadFile(VALID_CSV, 'players.csv');
 
-    const importButton = screen.getByRole('button', { name: /import 2 valid players/i });
+    const importButton = screen.getByRole('button', {
+      name: /import 2 valid players/i,
+    });
     expect(importButton).toBeDisabled();
   });
 
@@ -242,7 +280,9 @@ describe('BulkPlayerImport', () => {
     render(<BulkPlayerImport />);
     await uploadFile(VALID_CSV, 'players.csv');
 
-    fireEvent.click(screen.getByRole('button', { name: /import 2 valid players/i }));
+    fireEvent.click(
+      screen.getByRole('button', { name: /import 2 valid players/i }),
+    );
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /importing/i })).toBeDisabled();

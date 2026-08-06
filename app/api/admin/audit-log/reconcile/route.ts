@@ -43,7 +43,10 @@ async function reconcileValidators(
   const [onChainValidators, logEntries] = await Promise.all([
     getValidators(),
     Promise.resolve(
-      store.getAllByActionTypeOldestFirst(['validator_add', 'validator_remove']),
+      store.getAllByActionTypeOldestFirst([
+        'validator_add',
+        'validator_remove',
+      ]),
     ),
   ]);
 
@@ -114,8 +117,8 @@ async function reconcilePauseState(
         actionType: 'pause',
         kind: onChainPaused ? 'missing_audit_entry' : 'missing_onchain_effect',
         description: onChainPaused
-          ? 'The contract is currently paused on-chain, but the audit log\'s most recent recorded action was an unpause (or no pause since) — likely paused via a direct contract call outside the admin panel.'
-          : 'The audit log\'s most recent recorded action was a pause, but the contract is not currently paused on-chain — it may have been unpaused via a direct contract call, or the recorded pause transaction failed.',
+          ? "The contract is currently paused on-chain, but the audit log's most recent recorded action was an unpause (or no pause since) — likely paused via a direct contract call outside the admin panel."
+          : "The audit log's most recent recorded action was a pause, but the contract is not currently paused on-chain — it may have been unpaused via a direct contract call, or the recorded pause transaction failed.",
       },
     ];
   }
@@ -226,13 +229,19 @@ export async function GET(req: NextRequest) {
   const mismatches: ReconciliationMismatch[] = [];
 
   try {
-    const [validatorMismatches, pauseMismatches, feeResult] = await Promise.all([
-      reconcileValidators(store),
-      reconcilePauseState(store),
-      reconcileFeeWithdrawals(store),
-    ]);
+    const [validatorMismatches, pauseMismatches, feeResult] = await Promise.all(
+      [
+        reconcileValidators(store),
+        reconcilePauseState(store),
+        reconcileFeeWithdrawals(store),
+      ],
+    );
 
-    mismatches.push(...validatorMismatches, ...pauseMismatches, ...feeResult.mismatches);
+    mismatches.push(
+      ...validatorMismatches,
+      ...pauseMismatches,
+      ...feeResult.mismatches,
+    );
     if (feeResult.skipped) skipped.push(feeResult.skipped);
   } catch (err) {
     log.error('Reconciliation failed', {

@@ -70,7 +70,9 @@ const ROUTES = [
     pattern: /^\/players\/search$/,
     handler: (req, res, { searchParams }) => {
       const name = searchParams.get('name') || '';
-      sendJson(res, 200, [mockPlayer(`player_mock_${encodeURIComponent(name) || '1'}`)]);
+      sendJson(res, 200, [
+        mockPlayer(`player_mock_${encodeURIComponent(name) || '1'}`),
+      ]);
     },
   },
   {
@@ -162,16 +164,24 @@ const server = http.createServer(async (req, res) => {
     const match = url.pathname.match(route.pattern);
     if (match) {
       try {
-        await route.handler(req, res, { match, searchParams: url.searchParams });
+        await route.handler(req, res, {
+          match,
+          searchParams: url.searchParams,
+        });
       } catch (err) {
-        console.error(`[mock-api] handler failed for ${req.method} ${url.pathname}`, err);
+        console.error(
+          `[mock-api] handler failed for ${req.method} ${url.pathname}`,
+          err,
+        );
         sendJson(res, 500, { error: 'Internal mock-api error' });
       }
       return;
     }
   }
 
-  sendJson(res, 404, { error: `No mock route for ${req.method} ${url.pathname}` });
+  sendJson(res, 404, {
+    error: `No mock route for ${req.method} ${url.pathname}`,
+  });
 });
 
 server.listen(PORT, () => {

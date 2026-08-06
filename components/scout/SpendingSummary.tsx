@@ -50,11 +50,17 @@ export default function SpendingSummary() {
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-gray-900 rounded-lg p-4 text-center">
           <p className="text-xs text-gray-500 mb-1">Contact Fees</p>
-          <XlmFiatDisplay xlmAmount={data.totalContactFeesXlm} className="items-center" />
+          <XlmFiatDisplay
+            xlmAmount={data.totalContactFeesXlm}
+            className="items-center"
+          />
         </div>
         <div className="bg-gray-900 rounded-lg p-4 text-center">
           <p className="text-xs text-gray-500 mb-1">Subscriptions</p>
-          <XlmFiatDisplay xlmAmount={data.totalSubscriptionsXlm} className="items-center" />
+          <XlmFiatDisplay
+            xlmAmount={data.totalSubscriptionsXlm}
+            className="items-center"
+          />
         </div>
         <div className="bg-gray-900 rounded-lg p-4 text-center">
           <p className="text-xs text-gray-500 mb-1">Total</p>

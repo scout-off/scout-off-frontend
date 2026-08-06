@@ -19,7 +19,7 @@ function setHook(
   overrides: Partial<ReturnType<typeof mockUseTrialOffer>> = {},
 ) {
   mockUseTrialOffer.mockReturnValue({
-    submit: mockSubmit,
+    logTrialOffer: mockSubmit,
     loading: false,
     error: null,
     ...overrides,

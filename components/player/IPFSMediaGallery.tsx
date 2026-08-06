@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useVideoPosterFrame } from '@/hooks/useVideoPosterFrame';
+import { getMediaProxyUrl } from '@/lib/mediaUrl';
 
 /**
  * 10×10 gray WebP encoded as base64.
@@ -63,7 +64,7 @@ function IPFSMediaItem({ cid }: IPFSMediaItemProps) {
   }, []);
 
   const isVideo = cid.endsWith('.mp4') || cid.endsWith('.webm');
-  const mediaUrl = `${process.env.NEXT_PUBLIC_IPFS_GATEWAY}/${cid}`;
+  const mediaUrl = getMediaProxyUrl(cid);
   // Generated client-side once the item scrolls into view — no manual step
   // for the uploader, no server-side transcoding. Falls back to no poster
   // (not a broken image) if capture isn't possible for this clip.

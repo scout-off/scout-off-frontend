@@ -586,10 +586,10 @@ describe('PlayerOnboardingWizard', () => {
     renderWizard(jest.fn(), existingPlayer as any);
 
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'A profile already exists for this wallet. You cannot register again.'
+      'A profile already exists for this wallet. You cannot register again.',
     );
     expect(
-      screen.queryByRole('heading', { name: /personal information/i })
+      screen.queryByRole('heading', { name: /personal information/i }),
     ).toBeNull();
   });
 

@@ -22,7 +22,7 @@ activity feed (`fetchActivityEvents`, paginated up to a bounded cap), then
 runs the heuristics over the whole dataset in one pass. That's the
 difference from the rate-limiting already tracked elsewhere in the backlog:
 rate limiting looks at one wallet's request rate in isolation; this looks
-for patterns *across* wallets (one redeemer touching many scouts, a scout's
+for patterns _across_ wallets (one redeemer touching many scouts, a scout's
 redemptions clustering around one other wallet, etc.) that no single
 request could ever reveal.
 
@@ -38,25 +38,25 @@ a rewrite.
 
 ### Referral (self-dealing / wallet clustering)
 
-| Heuristic | Signal | False-positive guard |
-| --- | --- | --- |
-| `self_redemption` | Code redeemed by the same wallet that generated it | None needed — unambiguous by definition |
-| `fast_redemption_pattern` | ≥60% of a scout's redemptions land within 2 minutes of code generation | Requires ≥3 redemptions before judging a ratio |
-| `concentrated_redeemer` | ≥50% of a scout's redemptions come from one other wallet | Requires ≥5 redemptions |
-| `cross_scout_redeemer_ring` | One redeemer wallet has redeemed codes from ≥4 distinct scouts | Threshold set above what an organic "signed up via a few friends' links" pattern would hit |
+| Heuristic                   | Signal                                                                 | False-positive guard                                                                       |
+| --------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `self_redemption`           | Code redeemed by the same wallet that generated it                     | None needed — unambiguous by definition                                                    |
+| `fast_redemption_pattern`   | ≥60% of a scout's redemptions land within 2 minutes of code generation | Requires ≥3 redemptions before judging a ratio                                             |
+| `concentrated_redeemer`     | ≥50% of a scout's redemptions come from one other wallet               | Requires ≥5 redemptions                                                                    |
+| `cross_scout_redeemer_ring` | One redeemer wallet has redeemed codes from ≥4 distinct scouts         | Threshold set above what an organic "signed up via a few friends' links" pattern would hit |
 
 `cross_scout_redeemer_ring` is the one most directly aimed at "one actor
-controls many different scout accounts" — it's keyed on the *redeemer*, not
+controls many different scout accounts" — it's keyed on the _redeemer_, not
 the generator, so it catches a ring even when each individual scout's
 redeemer mix looks unremarkable on its own (`concentrated_redeemer` wouldn't
 catch that case, which is why both exist).
 
 ### Pay-to-contact (repeat abuse)
 
-| Heuristic | Signal | False-positive guard |
-| --- | --- | --- |
-| `rapid_contact_burst` | ≥8 pay-to-contact calls within a 10-minute window | Threshold set well above a human clicking through profiles by hand |
-| `subscription_cycling` | ≥3 subscriptions averaging ≤1.5 contacts each | Requires the repeated-cycle count; severity only reaches `high` at ≤1 avg contact and ≥5 cycles |
+| Heuristic              | Signal                                            | False-positive guard                                                                            |
+| ---------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `rapid_contact_burst`  | ≥8 pay-to-contact calls within a 10-minute window | Threshold set well above a human clicking through profiles by hand                              |
+| `subscription_cycling` | ≥3 subscriptions averaging ≤1.5 contacts each     | Requires the repeated-cycle count; severity only reaches `high` at ≤1 avg contact and ≥5 cycles |
 
 `subscription_cycling` is the direct answer to "pay-to-contact and
 immediately churn subscriptions" from the issue. It's also the heuristic
@@ -80,10 +80,10 @@ signal:
   referrals, or a scout doing a focused review session with several
   contacts in a row, is exactly the kind of power-user activity these
   heuristics must not routinely catch. That's why every heuristic requires
-  a minimum volume before judging a *ratio* (a single fast redemption or
+  a minimum volume before judging a _ratio_ (a single fast redemption or
   one burst of contacts proves nothing) and why the diversity-based
   heuristics (`cross_scout_redeemer_ring`, `concentrated_redeemer`) key on
-  *concentration*, not raw volume — a high-volume, diverse pattern
+  _concentration_, not raw volume — a high-volume, diverse pattern
   (many different redeemers, many different players contacted) is left
   alone regardless of scale.
 - **`subscription_cycling` is the exception**: it cannot distinguish a
@@ -118,8 +118,8 @@ automatically. Reasons:
 
 **What would change this:** if `cross_scout_redeemer_ring` or
 `self_redemption`-adjacent patterns keep showing up with high confidence
-after real tuning, a reasonable next step is auto-throttling *specifically
-that heuristic* (e.g., pausing further redemptions from a flagged redeemer
+after real tuning, a reasonable next step is auto-throttling _specifically
+that heuristic_ (e.g., pausing further redemptions from a flagged redeemer
 wallet pending review) rather than a blanket policy — and any such
 throttle should be **admin-gated to unlock**, not time-expiring, so a false
 positive doesn't quietly resolve itself without anyone having actually

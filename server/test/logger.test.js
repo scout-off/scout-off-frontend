@@ -10,7 +10,11 @@ const tmpDbPath = path.join(
 );
 process.env.DB_PATH = tmpDbPath;
 
-const { createRequestLogger, getOrCreateRequestId, REQUEST_ID_HEADER } = require('../src/logger');
+const {
+  createRequestLogger,
+  getOrCreateRequestId,
+  REQUEST_ID_HEADER,
+} = require('../src/logger');
 const createApp = require('../src/app');
 
 test.after(() => {
@@ -83,7 +87,9 @@ test('createRequestLogger emits structured JSON lines sharing one requestId', ()
 function captureOneLine(channel, fn) {
   const original = console[channel];
   let captured = null;
-  console[channel] = (line) => { captured = line; };
+  console[channel] = (line) => {
+    captured = line;
+  };
   try {
     fn();
   } finally {
@@ -116,7 +122,10 @@ test('info log includes a ISO-8601 timestamp', () => {
   const parsed = captureOneLine('log', () => log.info('ping'));
 
   assert.ok(typeof parsed.timestamp === 'string');
-  assert.ok(!isNaN(Date.parse(parsed.timestamp)), 'timestamp should be a valid date');
+  assert.ok(
+    !isNaN(Date.parse(parsed.timestamp)),
+    'timestamp should be a valid date',
+  );
 });
 
 test('info log passes through non-sensitive extra fields untouched', () => {
@@ -133,7 +142,9 @@ test('info log passes through non-sensitive extra fields untouched', () => {
 
 test('warn log writes to console.warn with level "warn" and the correct message', () => {
   const log = createRequestLogger(makeReq('/subscriptions'));
-  const parsed = captureOneLine('warn', () => log.warn('rate limit approaching'));
+  const parsed = captureOneLine('warn', () =>
+    log.warn('rate limit approaching'),
+  );
 
   assert.equal(parsed.level, 'warn');
   assert.equal(parsed.message, 'rate limit approaching');
@@ -148,8 +159,12 @@ test('warn log does NOT write to console.log or console.error', () => {
   const origLog = console.log;
   const origError = console.error;
   const origWarn = console.warn;
-  console.log = () => { logCalled = true; };
-  console.error = () => { errorCalled = true; };
+  console.log = () => {
+    logCalled = true;
+  };
+  console.error = () => {
+    errorCalled = true;
+  };
   console.warn = () => {};
   try {
     log.warn('only warn');
@@ -181,11 +196,24 @@ test('error log does NOT write to console.log or console.warn', () => {
   const origLog = console.log;
   const origWarn = console.warn;
   const origError = console.error;
-  console.log = () => { logCalled = true; };
-  console.warn = () => { warnCalled = true; };
+  console.log = () => {
+    logCalled = true;
+  };
+  console.warn = () => {
+    warnCalled = true;
+  };
   console.error = () => {};
   try {
     log.error('only error');
+  } finally {
+    console.log = origLog;
+    console.warn = origWarn;
+    console.error = origError;
+  }
+  assert.equal(logCalled, false);
+  assert.equal(warnCalled, false);
+});
+
 // ── #897: explicit log level assertions ──────────────────────────────────────
 
 test('info level: emits to console.log with level "info" and correct message', () => {
@@ -193,7 +221,10 @@ test('info level: emits to console.log with level "info" and correct message', (
   const originalLog = console.log;
   console.log = (line) => captured.push(line);
   try {
-    const req = { headers: { [REQUEST_ID_HEADER]: 'info-test' }, originalUrl: '/test' };
+    const req = {
+      headers: { [REQUEST_ID_HEADER]: 'info-test' },
+      originalUrl: '/test',
+    };
     const log = createRequestLogger(req);
     log.info('user signed in', { userId: 'u1' });
     assert.equal(captured.length, 1);
@@ -213,7 +244,10 @@ test('warn level: emits to console.warn with level "warn" and correct message', 
   const originalWarn = console.warn;
   console.warn = (line) => captured.push(line);
   try {
-    const req = { headers: { [REQUEST_ID_HEADER]: 'warn-test' }, originalUrl: '/test' };
+    const req = {
+      headers: { [REQUEST_ID_HEADER]: 'warn-test' },
+      originalUrl: '/test',
+    };
     const log = createRequestLogger(req);
     log.warn('rate limit approaching', { remaining: 5 });
     assert.equal(captured.length, 1);
@@ -231,7 +265,10 @@ test('error level: emits to console.error with level "error" and correct message
   const originalError = console.error;
   console.error = (line) => captured.push(line);
   try {
-    const req = { headers: { [REQUEST_ID_HEADER]: 'error-test' }, originalUrl: '/test' };
+    const req = {
+      headers: { [REQUEST_ID_HEADER]: 'error-test' },
+      originalUrl: '/test',
+    };
     const log = createRequestLogger(req);
     log.error('database connection failed', { code: 'ECONNREFUSED' });
     assert.equal(captured.length, 1);
@@ -280,7 +317,11 @@ test('does not redact safe fields that do not match the sensitive pattern', () =
   try {
     const req = { headers: {}, originalUrl: '/players' };
     const log = createRequestLogger(req);
-    log.info('player fetched', { playerId: 'p123', region: 'Africa', level: 2 });
+    log.info('player fetched', {
+      playerId: 'p123',
+      region: 'Africa',
+      level: 2,
+    });
     const parsed = JSON.parse(captured[0]);
     assert.equal(parsed.playerId, 'p123');
     assert.equal(parsed.region, 'Africa');
@@ -348,9 +389,18 @@ test('log output is valid JSON for all three levels', () => {
     log.info('msg');
     log.warn('msg');
     log.error('msg');
-    assert.doesNotThrow(() => JSON.parse(lines.log[0]), 'info line is valid JSON');
-    assert.doesNotThrow(() => JSON.parse(lines.warn[0]), 'warn line is valid JSON');
-    assert.doesNotThrow(() => JSON.parse(lines.error[0]), 'error line is valid JSON');
+    assert.doesNotThrow(
+      () => JSON.parse(lines.log[0]),
+      'info line is valid JSON',
+    );
+    assert.doesNotThrow(
+      () => JSON.parse(lines.warn[0]),
+      'warn line is valid JSON',
+    );
+    assert.doesNotThrow(
+      () => JSON.parse(lines.error[0]),
+      'error line is valid JSON',
+    );
   } finally {
     console.log = origLog;
     console.warn = origWarn;
@@ -450,7 +500,8 @@ test('a Stellar wallet address in a safe field (e.g. "walletAddress") is logged 
   // The logger redacts by *key name* pattern, not by value pattern.
   // A key like "walletAddress" does not match SENSITIVE_KEY_PATTERN, so the
   // value (a G… public key) passes through. This test documents that behaviour.
-  const stellarPublicKey = 'GCFW7QAO3WZQ6X4CZ3OYZFXX3A3DL7XVI5DNVTXA5VJUGE5SU6ZRG5OV';
+  const stellarPublicKey =
+    'GCFW7QAO3WZQ6X4CZ3OYZFXX3A3DL7XVI5DNVTXA5VJUGE5SU6ZRG5OV';
   const log = createRequestLogger(makeReq());
   const parsed = captureOneLine('log', () =>
     log.info('player lookup', { walletAddress: stellarPublicKey }),
@@ -462,7 +513,8 @@ test('a Stellar wallet address in a safe field (e.g. "walletAddress") is logged 
 test('a Stellar wallet address stored under a key matching "secret" is redacted', () => {
   // If a developer accidentally passes a *secret* key under a sensitive field
   // name, the redactor must catch it regardless of the value type.
-  const stellarSecretKey = 'SCZANGBA5YELKRYOVLV4OGJPJF5ZBQTHGCF5V6BLFA3XDVQNL3VQ2F5';
+  const stellarSecretKey =
+    'SCZANGBA5YELKRYOVLV4OGJPJF5ZBQTHGCF5V6BLFA3XDVQNL3VQ2F5';
   const log = createRequestLogger(makeReq());
   const parsed = captureOneLine('log', () =>
     log.info('auth', { stellarSecret: stellarSecretKey }),
@@ -500,7 +552,6 @@ test('logger works correctly when no extra fields object is provided', () => {
   const parsed = captureOneLine('log', () => log.info('status ok'));
   assert.equal(parsed.message, 'status ok');
   assert.equal(parsed.level, 'info');
-});
 });
 
 // ── App-level request-id header propagation ───────────────────────────────────

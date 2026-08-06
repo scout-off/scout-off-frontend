@@ -12,27 +12,30 @@ jest.mock('fs', () => {
 });
 
 jest.mock('next-intl/server', () => ({
-  getTranslations: jest.fn(async ({ namespace }: { namespace?: string } = {}) => {
-    return (key: string) => {
-      if (namespace === 'changelog') {
-        const translations: Record<string, string> = {
-          page_title: 'Changelog',
-          page_description: 'Recent platform updates and improvements.',
-          eyebrow: 'Platform updates',
-          english_notice: 'This changelog is currently available in English only.',
-          added: 'Added',
-          improved: 'Improved',
-          fixed: 'Fixed',
-          back_to_home: 'Back to home',
-          empty_title: 'Changelog unavailable',
-          empty_description:
-            "We couldn't load the changelog right now. Please check back later.",
-        };
-        return translations[key] ?? key;
-      }
-      return key;
-    };
-  }),
+  getTranslations: jest.fn(
+    async ({ namespace }: { namespace?: string } = {}) => {
+      return (key: string) => {
+        if (namespace === 'changelog') {
+          const translations: Record<string, string> = {
+            page_title: 'Changelog',
+            page_description: 'Recent platform updates and improvements.',
+            eyebrow: 'Platform updates',
+            english_notice:
+              'This changelog is currently available in English only.',
+            added: 'Added',
+            improved: 'Improved',
+            fixed: 'Fixed',
+            back_to_home: 'Back to home',
+            empty_title: 'Changelog unavailable',
+            empty_description:
+              "We couldn't load the changelog right now. Please check back later.",
+          };
+          return translations[key] ?? key;
+        }
+        return key;
+      };
+    },
+  ),
 }));
 
 describe('ChangelogPage', () => {

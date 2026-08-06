@@ -124,11 +124,21 @@ export default function FeeRevenueChart() {
           </div>
 
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={filtered} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+            <BarChart
+              data={filtered}
+              margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke="#1F2937" />
-              <XAxis dataKey="date" tick={{ fill: '#9CA3AF', fontSize: 11 }} minTickGap={24} />
+              <XAxis
+                dataKey="date"
+                tick={{ fill: '#9CA3AF', fontSize: 11 }}
+                minTickGap={24}
+              />
               <YAxis tick={{ fill: '#9CA3AF', fontSize: 11 }} width={40} />
-              <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={{ color: '#E5E7EB' }} />
+              <Tooltip
+                contentStyle={TOOLTIP_STYLE}
+                labelStyle={{ color: '#E5E7EB' }}
+              />
               <Legend wrapperStyle={{ fontSize: 12, color: '#9CA3AF' }} />
               <Bar
                 dataKey="contactFeeXlm"

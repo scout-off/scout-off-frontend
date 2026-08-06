@@ -227,7 +227,9 @@ describe('POST /api/ipfs/upload', () => {
     });
 
     it('returns 502 with a retryable error when the gateway cannot be reached for verification', async () => {
-      mockedAxios.post.mockResolvedValue({ data: { IpfsHash: 'QmGatewayDown' } });
+      mockedAxios.post.mockResolvedValue({
+        data: { IpfsHash: 'QmGatewayDown' },
+      });
       mockedAxios.get.mockRejectedValue(new Error('gateway timeout'));
 
       const file = makeFile(JPEG_HEADER, 'photo.jpg', 'image/jpeg');

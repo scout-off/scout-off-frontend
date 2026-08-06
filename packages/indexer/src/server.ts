@@ -65,7 +65,11 @@ function handleMetrics(res: http.ServerResponse): void {
 const PLAYER_EVENTS_PATH = /^\/players\/([^/]+)\/events$/;
 const VALIDATOR_EVENTS_PATH = /^\/validators\/([^/]+)\/events$/;
 
-function sendJson(res: http.ServerResponse, status: number, body: unknown): void {
+function sendJson(
+  res: http.ServerResponse,
+  status: number,
+  body: unknown,
+): void {
   res.writeHead(status, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(body));
 }
@@ -97,7 +101,10 @@ function parseQueryFilter(
   if (beforeParam !== null) {
     const before = Number(beforeParam);
     if (!Number.isInteger(before) || before < 0) {
-      return { ok: false, error: 'before must be a non-negative integer ledger sequence' };
+      return {
+        ok: false,
+        error: 'before must be a non-negative integer ledger sequence',
+      };
     }
     filter.before = before;
   }
@@ -134,7 +141,10 @@ function handleValidatorEventsQuery(
   }
 
   const store = EventStore.getInstance();
-  const result = store.getEvents({ ...parsed.filter, validator: validatorAddress });
+  const result = store.getEvents({
+    ...parsed.filter,
+    validator: validatorAddress,
+  });
 
   sendJson(res, 200, result);
 }
@@ -158,7 +168,11 @@ export const server = http.createServer(
     }
     const validatorMatch = url.pathname.match(VALIDATOR_EVENTS_PATH);
     if (req.method === 'GET' && validatorMatch) {
-      return handleValidatorEventsQuery(url, res, decodeURIComponent(validatorMatch[1]));
+      return handleValidatorEventsQuery(
+        url,
+        res,
+        decodeURIComponent(validatorMatch[1]),
+      );
     }
 
     res.writeHead(404);

@@ -1,7 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { fetchThreadMessages, sendThreadMessage, markThreadRead, ChatMessage } from '@/lib/messaging/chatApi';
+import {
+  fetchThreadMessages,
+  sendThreadMessage,
+  markThreadRead,
+  ChatMessage,
+} from '@/lib/messaging/chatApi';
 
 const POLL_INTERVAL_MS = 4000;
 
@@ -43,7 +48,9 @@ export default function ChatThread({ threadId }: { threadId: string }) {
   };
 
   if (loading) {
-    return <div className="p-4 text-sm text-gray-400">Loading conversation…</div>;
+    return (
+      <div className="p-4 text-sm text-gray-400">Loading conversation…</div>
+    );
   }
 
   return (
@@ -53,7 +60,10 @@ export default function ChatThread({ threadId }: { threadId: string }) {
           <p className="text-sm text-gray-400">No messages yet. Say hello!</p>
         ) : (
           messages.map((m) => (
-            <div key={m.id} className="rounded-lg bg-gray-100 px-3 py-2 text-sm">
+            <div
+              key={m.id}
+              className="rounded-lg bg-gray-100 px-3 py-2 text-sm"
+            >
               {m.body}
             </div>
           ))
@@ -67,7 +77,10 @@ export default function ChatThread({ threadId }: { threadId: string }) {
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
           placeholder="Write a message…"
         />
-        <button className="rounded bg-blue-600 px-3 py-1 text-sm text-white" onClick={handleSend}>
+        <button
+          className="rounded bg-blue-600 px-3 py-1 text-sm text-white"
+          onClick={handleSend}
+        >
           Send
         </button>
       </div>

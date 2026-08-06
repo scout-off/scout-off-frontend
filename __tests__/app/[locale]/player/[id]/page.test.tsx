@@ -114,6 +114,13 @@ jest.mock('@/components/ui/ConfirmDialog', () => ({
     ) : null,
 }));
 
+jest.mock('@/components/ui/XlmFiatDisplay', () => ({
+  __esModule: true,
+  default: ({ xlmAmount }: { xlmAmount: number }) => (
+    <span data-testid="xlm-fiat-display">{xlmAmount} XLM</span>
+  ),
+}));
+
 jest.mock('@/components/ui/QRModal', () => ({
   __esModule: true,
   default: () => <div data-testid="qr-modal" />,
@@ -369,14 +376,16 @@ describe('PlayerProfile pay-to-contact fee staleness check', () => {
 
   it('labels the pre-confirmation button fee as an estimate', () => {
     render(<PlayerProfile />);
-    expect(screen.getByText('Pay to Contact (~1 XLM)')).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: /Pay to Contact/ });
+    expect(button).toHaveTextContent('Pay to Contact');
+    expect(button).toHaveTextContent('1 XLM');
   });
 
   it('checks the live fee before showing the final confirm message, and shows the confirmed fee when it matches', async () => {
     mockGetContactFee.mockResolvedValue(1);
     render(<PlayerProfile />);
 
-    fireEvent.click(screen.getByText('Pay to Contact (~1 XLM)'));
+    fireEvent.click(screen.getByRole('button', { name: /Pay to Contact/ }));
 
     await waitFor(() => {
       expect(mockGetContactFee).toHaveBeenCalled();
@@ -392,7 +401,7 @@ describe('PlayerProfile pay-to-contact fee staleness check', () => {
     mockGetContactFee.mockResolvedValue(2);
     render(<PlayerProfile />);
 
-    fireEvent.click(screen.getByText('Pay to Contact (~1 XLM)'));
+    fireEvent.click(screen.getByRole('button', { name: /Pay to Contact/ }));
 
     await waitFor(() => {
       expect(
@@ -412,7 +421,7 @@ describe('PlayerProfile pay-to-contact fee staleness check', () => {
     );
     render(<PlayerProfile />);
 
-    fireEvent.click(screen.getByText('Pay to Contact (~1 XLM)'));
+    fireEvent.click(screen.getByRole('button', { name: /Pay to Contact/ }));
 
     expect(screen.getByText(/Confirming the current fee/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
@@ -429,7 +438,7 @@ describe('PlayerProfile pay-to-contact fee staleness check', () => {
     mockGetContactFee.mockRejectedValue(new Error('rpc down'));
     render(<PlayerProfile />);
 
-    fireEvent.click(screen.getByText('Pay to Contact (~1 XLM)'));
+    fireEvent.click(screen.getByRole('button', { name: /Pay to Contact/ }));
 
     await waitFor(() => {
       expect(

@@ -4,7 +4,10 @@ import {
   fetchActivityEvents,
   type ActivityEvent,
 } from '@/lib/api';
-import { analyzeReferralAbuse, analyzePayToContactAbuse } from '@/lib/fraudDetection';
+import {
+  analyzeReferralAbuse,
+  analyzePayToContactAbuse,
+} from '@/lib/fraudDetection';
 import type { FraudFlag } from '@/types';
 
 /**

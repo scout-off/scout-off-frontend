@@ -8,14 +8,14 @@ file.
 
 ## Specs
 
-| Spec | What it covers |
-| ---- | -------------- |
-| `landing-page.spec.ts` | Smoke test for the home page: hero heading visible, Player/Scout Dashboard nav links present, Scout Dashboard navigates to `/en/scout`. No wallet mock required. |
-| `wallet-connect-registration.spec.ts` | Freighter connect + optional real testnet player registration (see below). |
-| `player-registration.spec.ts` | Player registration with mocked Soroban RPC. |
-| `scout-pay-to-contact.spec.ts` | Scout pay-to-contact flow. |
-| `validator-milestones.spec.ts` | Validator milestone approve/revoke. |
-| `admin-access.spec.ts` / `admin-fee-withdrawal.spec.ts` | Admin gated flows. |
+| Spec                                                    | What it covers                                                                                                                                                   |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `landing-page.spec.ts`                                  | Smoke test for the home page: hero heading visible, Player/Scout Dashboard nav links present, Scout Dashboard navigates to `/en/scout`. No wallet mock required. |
+| `wallet-connect-registration.spec.ts`                   | Freighter connect + optional real testnet player registration (see below).                                                                                       |
+| `player-registration.spec.ts`                           | Player registration with mocked Soroban RPC.                                                                                                                     |
+| `scout-pay-to-contact.spec.ts`                          | Scout pay-to-contact flow.                                                                                                                                       |
+| `validator-milestones.spec.ts`                          | Validator milestone approve/revoke.                                                                                                                              |
+| `admin-access.spec.ts` / `admin-fee-withdrawal.spec.ts` | Admin gated flows.                                                                                                                                               |
 
 ## Running
 
@@ -46,7 +46,10 @@ any spec that needs a wallet:
 ```ts
 import { test, expect } from './fixtures';
 
-test('does something that needs a connected wallet', async ({ page, wallet }) => {
+test('does something that needs a connected wallet', async ({
+  page,
+  wallet,
+}) => {
   await page.goto('/en');
   await page.getByRole('button', { name: 'Connect Wallet' }).click();
   await page.getByRole('button', { name: /freighter/i }).click();
@@ -58,11 +61,11 @@ The `wallet` fixture is installed on `page` before any navigation happens, so
 it's live for the very first `getPublicKey()`/`isConnected()` call the app
 makes. Supported behaviors, settable per-test via `wallet.setBehavior(...)`:
 
-| Behavior       | Effect                                                                 |
-| -------------- | ----------------------------------------------------------------------- |
-| `'approve'`    | Default. Connects, and signs any transaction for real.                  |
-| `'reject'`     | Simulates the user declining the connection/signature prompt.           |
-| `'uninstalled'`| Simulates the extension not being present at all.                       |
+| Behavior        | Effect                                                        |
+| --------------- | ------------------------------------------------------------- |
+| `'approve'`     | Default. Connects, and signs any transaction for real.        |
+| `'reject'`      | Simulates the user declining the connection/signature prompt. |
+| `'uninstalled'` | Simulates the extension not being present at all.             |
 
 Signing is not faked: `signTransaction` requests are relayed (via
 `page.exposeFunction`) to a real `Keypair.sign()` call in Node, against the

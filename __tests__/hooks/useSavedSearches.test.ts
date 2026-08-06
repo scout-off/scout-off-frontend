@@ -60,7 +60,9 @@ afterEach(() => {
 
 describe('useSavedSearches', () => {
   test('loads saved searches', async () => {
-    const { result } = renderHook(() => useSavedSearches('GSCOUT'), { wrapper });
+    const { result } = renderHook(() => useSavedSearches('GSCOUT'), {
+      wrapper,
+    });
 
     await act(async () => {
       await Promise.resolve();
@@ -71,7 +73,9 @@ describe('useSavedSearches', () => {
   });
 
   test('remove hides the entry immediately and defers the DELETE call', async () => {
-    const { result } = renderHook(() => useSavedSearches('GSCOUT'), { wrapper });
+    const { result } = renderHook(() => useSavedSearches('GSCOUT'), {
+      wrapper,
+    });
     await act(async () => {
       await Promise.resolve();
       await Promise.resolve();
@@ -94,7 +98,9 @@ describe('useSavedSearches', () => {
   });
 
   test('undo restores the entry and the DELETE call never fires', async () => {
-    const { result } = renderHook(() => useSavedSearches('GSCOUT'), { wrapper });
+    const { result } = renderHook(() => useSavedSearches('GSCOUT'), {
+      wrapper,
+    });
     await act(async () => {
       await Promise.resolve();
       await Promise.resolve();
@@ -118,7 +124,9 @@ describe('useSavedSearches', () => {
   });
 
   test('save calls the API and refetches', async () => {
-    const { result } = renderHook(() => useSavedSearches('GSCOUT'), { wrapper });
+    const { result } = renderHook(() => useSavedSearches('GSCOUT'), {
+      wrapper,
+    });
     await act(async () => {
       await Promise.resolve();
       await Promise.resolve();

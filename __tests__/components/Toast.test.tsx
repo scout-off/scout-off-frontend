@@ -122,7 +122,6 @@ describe('Toast notifications', () => {
     expect(toast?.textContent).toContain('✓');
   });
 
-
   it('uses role="alert" for error and warning toasts', () => {
     render(
       <ToastProvider>
@@ -132,17 +131,17 @@ describe('Toast notifications', () => {
 
     // Trigger an error toast
     fireEvent.click(screen.getByText(/show error/i));
-    const errorToast = screen.getAllByRole('alert').find((node) =>
-      node.textContent?.includes('Error message'),
-    );
+    const errorToast = screen
+      .getAllByRole('alert')
+      .find((node) => node.textContent?.includes('Error message'));
     expect(errorToast).toBeDefined();
     expect(errorToast).toHaveAttribute('role', 'alert');
 
     // Trigger a warning toast
     fireEvent.click(screen.getByText(/show warning/i));
-    const warningToast = screen.getAllByRole('alert').find((node) =>
-      node.textContent?.includes('Warning message'),
-    );
+    const warningToast = screen
+      .getAllByRole('alert')
+      .find((node) => node.textContent?.includes('Warning message'));
     expect(warningToast).toBeDefined();
     expect(warningToast).toHaveAttribute('role', 'alert');
   });
@@ -155,17 +154,17 @@ describe('Toast notifications', () => {
     );
 
     // The initial toast is an info toast (role="status")
-    const infoToast = screen.getAllByRole('status').find((node) =>
-      node.textContent?.includes('Initial toast'),
-    );
+    const infoToast = screen
+      .getAllByRole('status')
+      .find((node) => node.textContent?.includes('Initial toast'));
     expect(infoToast).toBeDefined();
     expect(infoToast).toHaveAttribute('role', 'status');
 
     // Trigger a success toast
     fireEvent.click(screen.getByText(/show success/i));
-    const successToast = screen.getAllByRole('status').find((node) =>
-      node.textContent?.includes('Success message'),
-    );
+    const successToast = screen
+      .getAllByRole('status')
+      .find((node) => node.textContent?.includes('Success message'));
     expect(successToast).toBeDefined();
     expect(successToast).toHaveAttribute('role', 'status');
   });

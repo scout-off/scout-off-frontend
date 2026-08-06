@@ -63,7 +63,9 @@ export const fetchValidatorEvents = (
   params: EventQueryParams = {},
 ): Promise<IndexedEventsPage> =>
   indexerApi
-    .get(`/validators/${encodeURIComponent(validatorAddress)}/events`, { params })
+    .get(`/validators/${encodeURIComponent(validatorAddress)}/events`, {
+      params,
+    })
     .then((r) => r.data);
 
 const MAX_PAGES = 10; // caps at 10 * 200 = 2000 events per player before giving up
@@ -108,7 +110,9 @@ export async function getMilestoneHistoryFromIndexer(
       approved.set(milestoneId, {
         id: milestoneId,
         description:
-          typeof event.data.description === 'string' ? event.data.description : '',
+          typeof event.data.description === 'string'
+            ? event.data.description
+            : '',
         evidenceHash: '',
         validator:
           typeof event.data.validator === 'string' ? event.data.validator : '',
@@ -119,7 +123,9 @@ export async function getMilestoneHistoryFromIndexer(
     }
   }
 
-  return Array.from(approved.values()).sort((a, b) => a.timestamp - b.timestamp);
+  return Array.from(approved.values()).sort(
+    (a, b) => a.timestamp - b.timestamp,
+  );
 }
 
 export default indexerApi;

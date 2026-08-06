@@ -43,7 +43,13 @@ interface PlayerCardProps {
   onToggleCompare?: () => void;
 }
 
-function PlayerCard({ player, isWatched, onToggleWatchlist, isCompareSelected, onToggleCompare }: PlayerCardProps) {
+function PlayerCard({
+  player,
+  isWatched,
+  onToggleWatchlist,
+  isCompareSelected,
+  onToggleCompare,
+}: PlayerCardProps) {
   const { id, vitals, progressLevel, ipfsHash } = player;
   const {
     data: milestones,
@@ -135,7 +141,9 @@ function PlayerCard({ player, isWatched, onToggleWatchlist, isCompareSelected, o
             onToggleCompare();
           }}
           aria-pressed={!!isCompareSelected}
-          aria-label={isCompareSelected ? 'Remove from comparison' : 'Add to comparison'}
+          aria-label={
+            isCompareSelected ? 'Remove from comparison' : 'Add to comparison'
+          }
           className="absolute top-3 left-3 inline-flex h-6 w-6 items-center justify-center rounded border transition focus:outline-none focus:ring-2 focus:ring-brand-green"
           style={
             isCompareSelected
@@ -144,7 +152,12 @@ function PlayerCard({ player, isWatched, onToggleWatchlist, isCompareSelected, o
           }
         >
           {isCompareSelected && (
-            <svg className="w-4 h-4 text-black" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+            <svg
+              className="w-4 h-4 text-black"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+              aria-hidden="true"
+            >
               <path
                 fillRule="evenodd"
                 d="M16.707 5.293a1 1 0 00-1.414 0L8 12.586 4.707 9.293a1 1 0 00-1.414 1.414l4 4a1 1 0 001.414 0l8-8a1 1 0 000-1.414z"

@@ -48,12 +48,12 @@ function isProfileComplete(player: Player): boolean {
   const { vitals } = player;
   return Boolean(
     vitals.name &&
-      vitals.position &&
-      vitals.region &&
-      vitals.nationality &&
-      vitals.age &&
-      player.ipfsHash &&
-      player.stats,
+    vitals.position &&
+    vitals.region &&
+    vitals.nationality &&
+    vitals.age &&
+    player.ipfsHash &&
+    player.stats,
   );
 }
 

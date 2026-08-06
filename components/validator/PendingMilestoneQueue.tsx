@@ -46,9 +46,10 @@ export default function PendingMilestoneQueue({
   const [bulkRunning, setBulkRunning] = useState(false);
   const [itemStatus, setItemStatus] = useState<Record<string, ItemStatus>>({});
   const [itemError, setItemError] = useState<Record<string, string>>({});
-  const [bulkSummary, setBulkSummary] = useState<
-    { succeeded: number; failed: number } | null
-  >(null);
+  const [bulkSummary, setBulkSummary] = useState<{
+    succeeded: number;
+    failed: number;
+  } | null>(null);
 
   const previouslyApprovedIds = useMemo(
     () => new Set(approvedPlayers.map((p) => p.id)),
@@ -178,7 +179,10 @@ export default function PendingMilestoneQueue({
       {loading && (
         <div className="flex flex-col gap-3">
           {[1, 2, 3].map((n) => (
-            <div key={n} className="h-16 rounded-lg bg-gray-800/50 animate-pulse" />
+            <div
+              key={n}
+              className="h-16 rounded-lg bg-gray-800/50 animate-pulse"
+            />
           ))}
         </div>
       )}
@@ -222,7 +226,10 @@ export default function PendingMilestoneQueue({
               onClick={handleBulkApprove}
               isLoading={bulkRunning}
               disabled={
-                selectedCount === 0 || bulkRunning || isPaused || !validatorAddress
+                selectedCount === 0 ||
+                bulkRunning ||
+                isPaused ||
+                !validatorAddress
               }
               title={isPaused ? 'Contract is currently paused' : undefined}
             >
@@ -304,7 +311,10 @@ export default function PendingMilestoneQueue({
                       )}
                       {status === 'failed' && (
                         <span className="text-xs text-red-400 mt-1">
-                          ✕ Failed{itemError[submission.id] ? `: ${itemError[submission.id]}` : ''}
+                          ✕ Failed
+                          {itemError[submission.id]
+                            ? `: ${itemError[submission.id]}`
+                            : ''}
                         </span>
                       )}
                     </div>

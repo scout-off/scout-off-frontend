@@ -35,7 +35,9 @@ describe('GET /api/saved-searches', () => {
 
   it('lists searches scoped to the requesting scout', async () => {
     SavedSearchStore.getInstance().add(SCOUT, 'Mine', { region: 'Europe' });
-    SavedSearchStore.getInstance().add('GOTHER', 'Theirs', { region: 'Africa' });
+    SavedSearchStore.getInstance().add('GOTHER', 'Theirs', {
+      region: 'Africa',
+    });
 
     const res = await GET(
       makeRequest('http://localhost/api/saved-searches', { cookie: SCOUT }),

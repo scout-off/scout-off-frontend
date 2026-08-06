@@ -49,7 +49,9 @@ function toEntry(
     validator: event.validator,
     playerId: event.playerId,
     milestoneId:
-      typeof event.data.milestone_id === 'string' ? event.data.milestone_id : null,
+      typeof event.data.milestone_id === 'string'
+        ? event.data.milestone_id
+        : null,
     action,
   };
 }
@@ -104,16 +106,22 @@ export function useValidatorActionLog() {
 
   const filteredEntries = useMemo(() => {
     return entries.filter((entry) => {
-      if (filter.from !== undefined && entry.timestamp < filter.from) return false;
+      if (filter.from !== undefined && entry.timestamp < filter.from)
+        return false;
       if (filter.to !== undefined && entry.timestamp > filter.to) return false;
-      if (filter.validator && entry.validator !== filter.validator) return false;
+      if (filter.validator && entry.validator !== filter.validator)
+        return false;
       return true;
     });
   }, [entries, filter]);
 
   const validators = useMemo(
     () =>
-      [...new Set(entries.map((e) => e.validator).filter((v): v is string => !!v))].sort(),
+      [
+        ...new Set(
+          entries.map((e) => e.validator).filter((v): v is string => !!v),
+        ),
+      ].sort(),
     [entries],
   );
 

@@ -46,7 +46,7 @@ export default function AccountRecoveryPage() {
       setStep('verify');
     } catch (err) {
       setRecoveryError(
-        err instanceof Error ? err.message : t('errorConnectFailed')
+        err instanceof Error ? err.message : t('errorConnectFailed'),
       );
       setStep('error');
     }
@@ -100,7 +100,9 @@ export default function AccountRecoveryPage() {
         {step === 'intro' && (
           <div className="bg-brand-card border border-gray-800 rounded-xl p-6 space-y-6">
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-white">{t('howItWorks')}</h2>
+              <h2 className="text-lg font-semibold text-white">
+                {t('howItWorks')}
+              </h2>
               <ol className="space-y-3 text-sm text-gray-300">
                 <li className="flex gap-3">
                   <span className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-green text-black flex items-center justify-center text-xs font-semibold">
@@ -170,13 +172,19 @@ export default function AccountRecoveryPage() {
         {step === 'connect' && (
           <div className="bg-brand-card border border-gray-800 rounded-xl p-6 space-y-6">
             <div className="space-y-2">
-              <h2 className="text-lg font-semibold text-white">{t('connectBackupTitle')}</h2>
+              <h2 className="text-lg font-semibold text-white">
+                {t('connectBackupTitle')}
+              </h2>
               <p className="text-sm text-gray-400">{t('connectBackupDesc')}</p>
             </div>
 
             <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4">
-              <p className="text-xs text-gray-400 mb-2">Primary wallet (to recover):</p>
-              <p className="text-sm font-mono text-gray-300 break-all">{primaryWallet}</p>
+              <p className="text-xs text-gray-400 mb-2">
+                Primary wallet (to recover):
+              </p>
+              <p className="text-sm font-mono text-gray-300 break-all">
+                {primaryWallet}
+              </p>
             </div>
 
             <button
@@ -200,19 +208,31 @@ export default function AccountRecoveryPage() {
         {step === 'verify' && publicKey && (
           <div className="bg-brand-card border border-gray-800 rounded-xl p-6 space-y-6">
             <div className="space-y-2">
-              <h2 className="text-lg font-semibold text-white">{t('verifyTitle')}</h2>
+              <h2 className="text-lg font-semibold text-white">
+                {t('verifyTitle')}
+              </h2>
               <p className="text-sm text-gray-400">{t('verifyDesc')}</p>
             </div>
 
             <div className="space-y-3">
               <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4">
-                <p className="text-xs text-gray-400 mb-2">Primary wallet (lost access):</p>
-                <p className="text-sm font-mono text-gray-300 break-all">{primaryWallet}</p>
+                <p className="text-xs text-gray-400 mb-2">
+                  Primary wallet (lost access):
+                </p>
+                <p className="text-sm font-mono text-gray-300 break-all">
+                  {primaryWallet}
+                </p>
               </div>
               <div className="bg-gray-900/50 border border-brand-green rounded-lg p-4">
-                <p className="text-xs text-gray-400 mb-2">Backup wallet (connected):</p>
-                <p className="text-sm font-mono text-gray-300 break-all">{publicKey}</p>
-                <p className="text-xs text-brand-green mt-2">{t('connected')}</p>
+                <p className="text-xs text-gray-400 mb-2">
+                  Backup wallet (connected):
+                </p>
+                <p className="text-sm font-mono text-gray-300 break-all">
+                  {publicKey}
+                </p>
+                <p className="text-xs text-brand-green mt-2">
+                  {t('connected')}
+                </p>
               </div>
             </div>
 
@@ -241,7 +261,9 @@ export default function AccountRecoveryPage() {
               <CheckCircle2 className="w-12 h-12 text-brand-green" />
             </div>
             <div className="text-center space-y-2">
-              <h2 className="text-lg font-semibold text-white">{t('successTitle')}</h2>
+              <h2 className="text-lg font-semibold text-white">
+                {t('successTitle')}
+              </h2>
               <p className="text-sm text-gray-400">{t('successRedirect')}</p>
             </div>
             <Spinner size="md" />
@@ -253,7 +275,9 @@ export default function AccountRecoveryPage() {
             <div className="flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
               <div>
-                <h2 className="text-lg font-semibold text-white">{t('errorTitle')}</h2>
+                <h2 className="text-lg font-semibold text-white">
+                  {t('errorTitle')}
+                </h2>
                 <p className="text-sm text-gray-400 mt-1">{recoveryError}</p>
               </div>
             </div>

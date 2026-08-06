@@ -65,7 +65,10 @@ describe('decodeEvent', () => {
     const raw = makeRawEvent(
       'player_registered',
       { player_id: 'p1', wallet: 'GABC', ipfs_hash: 'Qm123' },
-      { ledger: 42, ledgerClosedAt: new Date(1_700_000_000 * 1000).toISOString() },
+      {
+        ledger: 42,
+        ledgerClosedAt: new Date(1_700_000_000 * 1000).toISOString(),
+      },
     );
 
     const decoded = decodeEvent(raw);
@@ -114,7 +117,9 @@ describe('pollOnce', () => {
   it('starts from the network tip when cursorLedger is 0 (START_LEDGER=0 = latest)', async () => {
     const rpc: jest.Mocked<RpcClient> = {
       getLatestLedger: jest.fn().mockResolvedValue({ sequence: 5000 }),
-      getEvents: jest.fn().mockResolvedValue({ latestLedger: 5000, events: [] }),
+      getEvents: jest
+        .fn()
+        .mockResolvedValue({ latestLedger: 5000, events: [] }),
     };
     const metrics = IndexerMetrics.getInstance();
 
@@ -126,9 +131,13 @@ describe('pollOnce', () => {
   });
 
   it('records a decoded event via IndexerMetrics.recordSuccess and advances the ledger cursor past it', async () => {
-    const raw = makeRawEvent('player_contacted', { scout: 'G1', player_id: 'p1' }, {
-      ledger: 1234,
-    });
+    const raw = makeRawEvent(
+      'player_contacted',
+      { scout: 'G1', player_id: 'p1' },
+      {
+        ledger: 1234,
+      },
+    );
     const rpc: jest.Mocked<RpcClient> = {
       getLatestLedger: jest.fn().mockResolvedValue({ sequence: 1234 }),
       getEvents: jest
@@ -176,7 +185,9 @@ describe('pollOnce', () => {
   it('calls updateNetworkLedger with the RPC-reported network tip even while behind it', async () => {
     const rpc: jest.Mocked<RpcClient> = {
       getLatestLedger: jest.fn().mockResolvedValue({ sequence: 9999 }),
-      getEvents: jest.fn().mockResolvedValue({ latestLedger: 9999, events: [] }),
+      getEvents: jest
+        .fn()
+        .mockResolvedValue({ latestLedger: 9999, events: [] }),
     };
     const metrics = IndexerMetrics.getInstance();
 
@@ -216,7 +227,9 @@ describe('pollOnce', () => {
 
   it('records an RPC-level failure, leaves the cursor unchanged, and does not throw', async () => {
     const rpc: jest.Mocked<RpcClient> = {
-      getLatestLedger: jest.fn().mockRejectedValue(new Error('RPC unreachable')),
+      getLatestLedger: jest
+        .fn()
+        .mockRejectedValue(new Error('RPC unreachable')),
       getEvents: jest.fn(),
     };
     const metrics = IndexerMetrics.getInstance();
@@ -335,7 +348,8 @@ describe('loadConfigFromEnv', () => {
   it('reads explicit overrides for the optional vars', () => {
     process.env.SOROBAN_RPC_URL = 'https://soroban-testnet.stellar.org';
     process.env.CONTRACT_ID = CONTRACT_ID;
-    process.env.NETWORK_PASSPHRASE = 'Public Global Stellar Network ; September 2015';
+    process.env.NETWORK_PASSPHRASE =
+      'Public Global Stellar Network ; September 2015';
     process.env.POLL_INTERVAL_MS = '10000';
     process.env.START_LEDGER = '123456';
 

@@ -9,12 +9,13 @@ describe('AdminDashboardSkeleton', () => {
     expect(container).toHaveAttribute('aria-busy', 'true');
   });
 
-  it('renders skeleton rows for the validators and activity lists', () => {
+  it('renders skeleton rows for the validators, activity, and flagged-activity lists', () => {
     render(<AdminDashboardSkeleton />);
 
     const lists = screen.getAllByRole('list', { hidden: true });
-    expect(lists).toHaveLength(2);
+    expect(lists).toHaveLength(3);
     expect(lists[0].children).toHaveLength(3);
     expect(lists[1].children).toHaveLength(5);
+    expect(lists[2].children).toHaveLength(2);
   });
 });

@@ -64,7 +64,7 @@ test('POST /referrals/generate requires scoutWallet', async () => {
   assert.equal(res.status, 400);
 });
 
-test('GET /referrals/scout/:wallet returns only that scout\'s codes', async () => {
+test("GET /referrals/scout/:wallet returns only that scout's codes", async () => {
   await post('/referrals/generate', { scoutWallet: 'GSCOUT_B' });
   await post('/referrals/generate', { scoutWallet: 'GSCOUT_B' });
   await post('/referrals/generate', { scoutWallet: 'GSCOUT_C' });
@@ -146,9 +146,7 @@ test('GET /referrals/overview reports totals and top referrers', async () => {
   assert.equal(res.status, 200);
   assert.ok(res.body.totalCodes >= 2);
   assert.ok(res.body.totalSuccessfulReferrals >= 1);
-  const entry = res.body.topReferrers.find(
-    (r) => r.scoutWallet === 'GSCOUT_E',
-  );
+  const entry = res.body.topReferrers.find((r) => r.scoutWallet === 'GSCOUT_E');
   assert.deepEqual(entry, {
     scoutWallet: 'GSCOUT_E',
     totalCodes: 2,

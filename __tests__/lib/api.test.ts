@@ -198,7 +198,10 @@ describe('searchPlayersByName', () => {
 
     const result = await searchPlayersByName('Alice');
 
-    expect(global.fetch).toHaveBeenCalledWith('/api/players/search?name=Alice');
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/players/search?name=Alice',
+      undefined,
+    );
     expect(result).toEqual(mockData);
   });
 
@@ -207,7 +210,9 @@ describe('searchPlayersByName', () => {
       ok: false,
       status: 429,
       headers: new Headers({ 'Retry-After': '7' }),
-      json: async () => ({ error: 'Too many search requests. Please slow down.' }),
+      json: async () => ({
+        error: 'Too many search requests. Please slow down.',
+      }),
     });
 
     await expect(searchPlayersByName('Alice')).rejects.toThrow(
@@ -217,7 +222,9 @@ describe('searchPlayersByName', () => {
       ok: false,
       status: 429,
       headers: new Headers({ 'Retry-After': '7' }),
-      json: async () => ({ error: 'Too many search requests. Please slow down.' }),
+      json: async () => ({
+        error: 'Too many search requests. Please slow down.',
+      }),
     });
     const err = await searchPlayersByName('Alice').catch((e) => e);
     expect(err).toBeInstanceOf(SearchRateLimitedError);
@@ -225,16 +232,23 @@ describe('searchPlayersByName', () => {
   });
 
   it('throws a generic error for other failed responses', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
+    // 500 is a retryable status (see lib/fetchWithRetry.ts), so every
+    // attempt — not just the first — needs to see this response; fake
+    // timers skip the real backoff delay between retries.
+    jest.useFakeTimers();
+    (global.fetch as jest.Mock).mockResolvedValue({
       ok: false,
       status: 500,
       headers: new Headers(),
       json: async () => ({}),
     });
 
-    await expect(searchPlayersByName('Alice')).rejects.toThrow(
+    const assertion = expect(searchPlayersByName('Alice')).rejects.toThrow(
       'Failed to search players',
     );
+    await jest.runAllTimersAsync();
+    await assertion;
+    jest.useRealTimers();
   });
 });
 
@@ -388,7 +402,14 @@ const ACADEMY = {
   name: 'FC Sahel',
   ownerWallet: 'GOWNER',
   createdAt: 1_700_000_000,
-  members: [{ wallet: 'GOWNER', academyId: 'academy-1', addedAt: 1_700_000_000, addedBy: 'GADMIN' }],
+  members: [
+    {
+      wallet: 'GOWNER',
+      academyId: 'academy-1',
+      addedAt: 1_700_000_000,
+      addedBy: 'GADMIN',
+    },
+  ],
 };
 
 describe('fetchAcademies', () => {
@@ -405,7 +426,10 @@ describe('fetchAcademies', () => {
 
     const result = await fetchAcademies();
 
-    expect(global.fetch).toHaveBeenCalledWith('/api/admin/academies');
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/admin/academies',
+      undefined,
+    );
     expect(result).toEqual([ACADEMY]);
   });
 
@@ -487,7 +511,10 @@ describe('removeAcademyMember', () => {
   });
 
   it('DELETEs the member from the admin proxy, URL-encoding both segments', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({}),
+    });
 
     await removeAcademyMember('academy 1', 'GCOACH/WITH SLASH');
 

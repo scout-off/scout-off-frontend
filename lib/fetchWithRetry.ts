@@ -115,7 +115,9 @@ export async function fetchJsonWithRetry<T = unknown>(
 ): Promise<T> {
   const response = await fetchWithRetry(url, init, config);
   if (!response.ok) {
-    throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `Request failed: ${response.status} ${response.statusText}`,
+    );
   }
   return response.json() as Promise<T>;
 }

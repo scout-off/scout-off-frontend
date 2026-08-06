@@ -41,7 +41,10 @@ export async function POST(req: NextRequest) {
   const chunk = form.get('chunk');
 
   if (typeof sessionId !== 'string' || !sessionId) {
-    return NextResponse.json({ error: 'sessionId is required' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'sessionId is required' },
+      { status: 400 },
+    );
   }
   if (typeof chunkIndexRaw !== 'string' || !/^\d+$/.test(chunkIndexRaw)) {
     return NextResponse.json(

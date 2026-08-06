@@ -12,7 +12,8 @@ export function useArchiveProfile() {
       const result = await archivePlayerProfile(playerId);
       return result;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to archive profile';
+      const message =
+        err instanceof Error ? err.message : 'Failed to archive profile';
       setError(message);
       throw err;
     } finally {
@@ -27,7 +28,8 @@ export function useArchiveProfile() {
       const result = await unarchivePlayerProfile(playerId);
       return result;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to unarchive profile';
+      const message =
+        err instanceof Error ? err.message : 'Failed to unarchive profile';
       setError(message);
       throw err;
     } finally {
