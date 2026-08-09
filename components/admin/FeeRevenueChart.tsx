@@ -15,8 +15,8 @@ import { useFeeRevenue } from '@/hooks/useFeeRevenue';
 import { formatXlm } from '@/lib/formatXlm';
 import EmptyState from '@/components/ui/EmptyState';
 
-const BRAND_GREEN = '#00C853';
-const BRAND_BLUE = '#3B82F6';
+const BRAND_GREEN = 'rgb(var(--green))' as const;
+const BRAND_BLUE = 'rgb(var(--blue))' as const;
 
 const PERIODS = [
   { key: '7', label: '7d', days: 7 },
@@ -28,8 +28,8 @@ const PERIODS = [
 type PeriodKey = (typeof PERIODS)[number]['key'];
 
 const TOOLTIP_STYLE = {
-  backgroundColor: '#111827',
-  border: '1px solid #374151',
+  backgroundColor: 'rgb(var(--card))',
+  border: '1px solid rgb(55 65 81)',
   borderRadius: 8,
   fontSize: 12,
 };

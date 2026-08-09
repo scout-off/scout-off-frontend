@@ -13,6 +13,7 @@ const config: Config = {
         // still support opacity modifiers, e.g. bg-brand-green/20.
         brand: {
           green: 'rgb(var(--green) / <alpha-value>)',
+          blue: 'rgb(var(--blue) / <alpha-value>)',
           // Keep the dark-theme values in sync with the .dark block in
           // app/globals.css and theme_color/background_color in
           // public/manifest.json and the theme-color meta tag in app/layout.tsx.

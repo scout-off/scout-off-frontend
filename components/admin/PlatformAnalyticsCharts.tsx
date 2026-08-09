@@ -16,8 +16,8 @@ import { usePlatformAnalytics } from '@/hooks/usePlatformAnalytics';
 import type { DailyPoint, WeeklyPoint } from '@/hooks/usePlatformAnalytics';
 import EmptyState from '@/components/ui/EmptyState';
 
-const BRAND_GREEN = '#00C853';
-const BRAND_BLUE = '#3B82F6';
+const BRAND_GREEN = 'rgb(var(--green))' as const;
+const BRAND_BLUE = 'rgb(var(--blue))' as const;
 
 function toUnixSeconds(dateInputValue: string): number | undefined {
   if (!dateInputValue) return undefined;
@@ -49,8 +49,8 @@ function filterByRange<T>(
 }
 
 const TOOLTIP_STYLE = {
-  backgroundColor: '#111827',
-  border: '1px solid #374151',
+  backgroundColor: 'rgb(var(--card))',
+  border: '1px solid rgb(55 65 81)',
   borderRadius: 8,
   fontSize: 12,
 };
