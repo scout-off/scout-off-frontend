@@ -67,6 +67,19 @@ describe('TruncatedAddress', () => {
     expect(writeTextSpy).toHaveBeenCalledWith(ADDRESS);
   });
 
+  it('has a title attribute on the copy button for tooltip-on-hover', () => {
+    render(<TruncatedAddress address={ADDRESS} />);
+
+    fireEvent.mouseEnter(
+      screen.getByRole('button', { name: `Wallet address ${ADDRESS}` }),
+    );
+
+    const copyBtn = screen.getByRole('button', {
+      name: 'Copy full address to clipboard',
+    });
+    expect(copyBtn).toHaveAttribute('title', 'Copy full address to clipboard');
+  });
+
   it('auto-hides the tooltip after the timeout elapses', () => {
     jest.useFakeTimers();
     render(<TruncatedAddress address={ADDRESS} />);
