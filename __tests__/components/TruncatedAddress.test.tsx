@@ -65,6 +65,11 @@ describe('TruncatedAddress', () => {
     });
 
     expect(writeTextSpy).toHaveBeenCalledWith(ADDRESS);
+    expect(
+      screen.getByRole('button', {
+        name: 'Copy full address to clipboard',
+      }),
+    ).toHaveAttribute('title', 'Copy full address to clipboard');
   });
 
   it('auto-hides the tooltip after the timeout elapses', () => {
