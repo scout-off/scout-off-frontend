@@ -30,4 +30,21 @@ describe('formatXlm', () => {
     expect(XLM_DISPLAY_DECIMALS).toBe(2);
     expect(formatXlm(3.14159).split('.')[1]).toHaveLength(XLM_DISPLAY_DECIMALS);
   });
+
+  it('handles very large XLM amounts without scientific notation', () => {
+    expect(formatXlm(1_000_000)).toBe('1000000.00');
+    expect(formatXlm(999999999)).toBe('999999999.00');
+  });
+
+  it('handles extremely small fractional amounts', () => {
+    expect(formatXlm(0.0000001)).toBe('0.00');
+    expect(formatXlm(0.004)).toBe('0.00');
+    expect(formatXlm(0.006)).toBe('0.01');
+  });
+
+  it('formats negative values with a minus sign', () => {
+    expect(formatXlm(-1)).toBe('-1.00');
+    expect(formatXlm(-0.5)).toBe('-0.50');
+    expect(formatXlm('-10')).toBe('-10.00');
+  });
 });
