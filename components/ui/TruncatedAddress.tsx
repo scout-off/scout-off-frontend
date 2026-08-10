@@ -165,6 +165,7 @@ export default function TruncatedAddress({
               type="button"
               onClick={copy}
               aria-label="Copy full address to clipboard"
+              title="Copy full address to clipboard"
               className="shrink-0 flex items-center justify-center w-6 h-6 rounded hover:bg-gray-700 transition text-gray-400 hover:text-white pointer-events-auto"
             >
               {copied ? (
