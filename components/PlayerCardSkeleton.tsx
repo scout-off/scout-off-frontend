@@ -1,7 +1,8 @@
 export default function PlayerCardSkeleton() {
   return (
     <div
-      aria-hidden="true"
+      role="status"
+      aria-label="Loading player card"
       className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-4 animate-pulse"
     >
       {/* Avatar */}

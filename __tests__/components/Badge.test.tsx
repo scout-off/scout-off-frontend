@@ -37,4 +37,12 @@ describe('Badge', () => {
     expect(el).toHaveAttribute('role', 'status');
     expect(el.className).not.toMatch(/undefined|\[|\]/);
   });
+
+  test('matches snapshot for all badge variants', () => {
+    const variants = ['level0', 'level1', 'level2', 'level3', 'position', 'region', 'achievement'] as const;
+    variants.forEach((variant) => {
+      const { container } = render(<Badge variant={variant} label={`Badge ${variant}`} />);
+      expect(container.firstChild).toMatchSnapshot();
+    });
+  });
 });
