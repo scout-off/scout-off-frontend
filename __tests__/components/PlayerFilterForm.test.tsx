@@ -18,6 +18,10 @@ jest.mock('next/navigation', () => ({
   }),
 }));
 
+jest.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => key,
+}));
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function renderForm(onSearch = jest.fn()) {

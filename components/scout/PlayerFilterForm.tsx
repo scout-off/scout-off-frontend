@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { AFRICAN_REGIONS_GROUPED } from '@/lib/regions';
 import { FOOTBALL_POSITIONS } from '@/lib/positions';
 import Select from '@/components/ui/Select';
@@ -49,6 +50,7 @@ export default function PlayerFilterForm({
 }: PlayerFilterFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useTranslations('scout_dashboard');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [filter, setFilter] = useState<FilterState>(() => ({
@@ -217,7 +219,7 @@ export default function PlayerFilterForm({
                     handleSaveSearch();
                   }
                 }}
-                placeholder="e.g. Lagos strikers"
+                placeholder={t('search_player')}
                 autoFocus
               />
             </div>
