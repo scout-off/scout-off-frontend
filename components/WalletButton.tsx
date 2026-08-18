@@ -205,6 +205,7 @@ export default function WalletButton({
         onClick={connect}
         disabled={isConnecting}
         aria-pressed={false}
+        aria-label={isConnecting ? t('connecting') : t('connect')}
         data-tour="wallet-button"
         className="text-sm bg-brand-green text-black font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition disabled:opacity-50"
       >
