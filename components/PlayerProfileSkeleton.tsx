@@ -1,12 +1,17 @@
+import { useTranslations } from 'next-intl';
+
 export default function PlayerProfileSkeleton({
   showContactButton = false,
 }: {
   showContactButton?: boolean;
 }) {
+  const t = useTranslations('common');
+
   return (
     <div
+      role="status"
       aria-busy="true"
-      aria-label="Loading player profile"
+      aria-label={t('loading')}
       className="max-w-2xl mx-auto flex flex-col gap-8"
     >
       {/* Header — mirrors profile card: avatar + name/stats/progress */}
