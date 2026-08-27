@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useWallet } from "@/hooks/useWallet";
 import ProgressBar from "@/components/ProgressBar";
 import Badge from "@/components/ui/Badge";
+import BlockedStateMessage from "@/components/messaging/BlockedStateMessage";
 import { getPlayer } from "@/lib/contract";
 import { buildPayToContact } from "@/lib/contract";
 import { ipfsUrl } from "@/lib/ipfs";
@@ -36,6 +37,9 @@ export default function PlayerProfile() {
 
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-8">
+      {/* Blocked State Message */}
+      <BlockedStateMessage targetId={id} targetType="player" action="contact" />
+
       {/* Elite Tier Banner */}
       {player.progressLevel === 3 && (
         <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-black rounded-xl p-4 text-center">
