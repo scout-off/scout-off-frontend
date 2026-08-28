@@ -14,13 +14,12 @@ export async function generateMetadata({
   const locale = params.locale;
   const t = await getTranslations({ locale, namespace: 'terms' });
 
-  return {
+  const { buildPageMetadata } = await import('@/lib/seo');
+  return buildPageMetadata({
     title: `${t('page_title')} | ScoutOff`,
     description: t('page_description'),
-    alternates: {
-      canonical: `/${locale}/terms`,
-    },
-  };
+    path: `/${locale}/terms`,
+  });
 }
 
 export default async function TermsPage({ params }: TermsPageProps) {

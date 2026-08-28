@@ -16,13 +16,12 @@ export async function generateMetadata({
   const locale = params.locale;
   const t = await getTranslations({ locale, namespace: 'status' });
 
-  return {
+  const { buildPageMetadata } = await import('@/lib/seo');
+  return buildPageMetadata({
     title: `${t('page_title')} | ScoutOff`,
     description: t('page_description'),
-    alternates: {
-      canonical: `/${locale}/status`,
-    },
-  };
+    path: `/${locale}/status`,
+  });
 }
 
 export default async function StatusPage({ params }: StatusPageProps) {

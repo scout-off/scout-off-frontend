@@ -88,6 +88,8 @@ function SubscribeContent() {
   const [selectedTier, setSelectedTier] = useState<SubscriptionTier | null>(
     null,
   );
+  const [showTierChangeWarning, setShowTierChangeWarning] = useState(false);
+  const [warningTier, setWarningTier] = useState<SubscriptionTier | null>(null);
   const redirectTimer = useRef<number | null>(null);
   const referralCode = searchParams.get('ref');
   const redirectReason = searchParams.get('reason');
@@ -143,10 +145,25 @@ function SubscribeContent() {
       return;
     }
 
+    // Check if the scout has an active subscription to a different tier
+    if (hasActiveSub && subscription.tier !== tier) {
+      // Show warning before proceeding
+      setWarningTier(tier);
+      setShowTierChangeWarning(true);
+      return;
+    }
+
+    // Proceed with subscription
+    await proceedWithSubscription(tier);
+  }
+
+  async function proceedWithSubscription(tier: SubscriptionTier) {
     setSelectedTier(tier);
     setTxStatus('pending');
     setFeePaid(undefined);
     setSuccessMessage(null);
+    setShowTierChangeWarning(false);
+    setWarningTier(null);
 
     try {
       await subscribe(tier);
@@ -280,6 +297,91 @@ function SubscribeContent() {
               {remainingDays(subscription.expiresAt)} day
               {remainingDays(subscription.expiresAt) !== 1 ? 's' : ''} remaining
             </span>
+          </div>
+        </div>
+      )}
+
+      {/* Tier change warning modal */}
+      {showTierChangeWarning && warningTier && hasActiveSub && subscription && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-gray-800 bg-brand-card p-6 shadow-xl">
+            <div className="mb-6">
+              <h3 className="text-xl font-bold text-white">
+                Change Subscription Tier
+              </h3>
+              <p className="mt-2 text-sm text-gray-300">
+                You are about to change your subscription from{' '}
+                <span className="font-semibold text-white">
+                  {subscription.tier.toUpperCase()}
+                </span>{' '}
+                to{' '}
+                <span className="font-semibold text-white">
+                  {warningTier.toUpperCase()}
+                </span>
+                .
+              </p>
+            </div>
+
+            <div className="mb-6 rounded-xl border border-amber-800/40 bg-amber-900/20 p-4">
+              <div className="flex items-start gap-3">
+                <svg
+                  className="mt-0.5 h-5 w-5 shrink-0 text-amber-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.998-.833-2.732 0L4.268 16.5c-.77.833.192 2.5 1.732 2.5z"
+                  />
+                </svg>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-amber-200">
+                    Important notice about your remaining time
+                  </p>
+                  <p className="text-sm text-amber-100/80">
+                    Changing your subscription tier will start a new{' '}
+                    {warningTier.toUpperCase()} subscription period immediately.
+                    Your remaining {remainingDays(subscription.expiresAt)} day
+                    {remainingDays(subscription.expiresAt) !== 1 ? 's' : ''} on
+                    the current {subscription.tier.toUpperCase()} plan will not
+                    be carried over or prorated.
+                  </p>
+                  <p className="text-sm text-amber-100/60 mt-2">
+                    The new {warningTier.toUpperCase()} subscription will be
+                    active immediately and will replace your current{' '}
+                    {subscription.tier.toUpperCase()} subscription.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowTierChangeWarning(false);
+                  setWarningTier(null);
+                }}
+                className="sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (warningTier) {
+                    proceedWithSubscription(warningTier);
+                  }
+                }}
+                className="sm:w-auto"
+                isLoading={loading && selectedTier === warningTier}
+              >
+                Confirm Change
+              </Button>
+            </div>
           </div>
         </div>
       )}

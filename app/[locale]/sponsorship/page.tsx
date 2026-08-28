@@ -14,13 +14,12 @@ export async function generateMetadata({
   const locale = params.locale;
   const t = await getTranslations({ locale, namespace: 'sponsorship' });
 
-  return {
+  const { buildPageMetadata } = await import('@/lib/seo');
+  return buildPageMetadata({
     title: `${t('title')} | ScoutOff`,
     description: t('metaDescription'),
-    alternates: {
-      canonical: `/${locale}/sponsorship`,
-    },
-  };
+    path: `/${locale}/sponsorship`,
+  });
 }
 
 export default function SponsorshipPage() {

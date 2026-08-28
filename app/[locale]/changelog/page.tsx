@@ -96,13 +96,12 @@ export async function generateMetadata({
   const locale = params.locale;
   const t = await getTranslations({ locale, namespace: 'changelog' });
 
-  return {
+  const { buildPageMetadata } = await import('@/lib/seo');
+  return buildPageMetadata({
     title: `${t('page_title')} | ScoutOff`,
     description: t('page_description'),
-    alternates: {
-      canonical: `/${locale}/changelog`,
-    },
-  };
+    path: `/${locale}/changelog`,
+  });
 }
 
 export default async function ChangelogPage({ params }: ChangelogPageProps) {

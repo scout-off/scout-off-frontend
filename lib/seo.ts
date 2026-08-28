@@ -111,3 +111,85 @@ export async function seoMetadata(): Promise<Metadata> {
     },
   };
 }
+
+/**
+ * Options for building comprehensive page metadata including OpenGraph and Twitter cards.
+ */
+export interface PageMetadataOptions {
+  /** Page title (displayed in browser tab) */
+  title: string;
+  /** Page description (displayed in search results and social cards) */
+  description: string;
+  /** Relative path for the page (e.g., '/changelog', '/privacy') */
+  path: string;
+  /** OpenGraph image URL (defaults to /og-image.svg) */
+  openGraphImage?: string;
+  /** OpenGraph type (defaults to 'website') */
+  openGraphType?: 'website' | 'article' | 'profile';
+  /** Twitter card type (defaults to 'summary_large_image') */
+  twitterCard?: 'summary' | 'summary_large_image';
+}
+
+/**
+ * Generates comprehensive SEO metadata for a page, including:
+ * - Title and description
+ * - Canonical URL and hreflang alternates
+ * - OpenGraph tags for social sharing
+ * - Twitter card tags for Twitter sharing
+ *
+ * Designed for use in static pages like changelog, privacy, terms, etc.
+ *
+ * @example
+ * ```ts
+ * // app/[locale]/changelog/page.tsx
+ * export async function generateMetadata({ params }: Props): Promise<Metadata> {
+ *   const t = await getTranslations({ locale: params.locale, namespace: 'changelog' });
+ *   return buildPageMetadata({
+ *     title: `${t('page_title')} | ScoutOff`,
+ *     description: t('page_description'),
+ *     path: `/${params.locale}/changelog`,
+ *   });
+ * }
+ * ```
+ */
+export async function buildPageMetadata({
+  title,
+  description,
+  path,
+  openGraphImage = `${getBaseUrl()}/og-image.svg`,
+  openGraphType = 'website',
+  twitterCard = 'summary_large_image',
+}: PageMetadataOptions): Promise<Metadata> {
+  const baseUrl = getBaseUrl();
+  const fullUrl = new URL(path, baseUrl).toString();
+
+  // Get canonical and alternates from seoMetadata
+  const baseMetadata = await seoMetadata();
+
+  return {
+    title,
+    description,
+    ...baseMetadata,
+    openGraph: {
+      title,
+      description,
+      url: fullUrl,
+      siteName: 'ScoutOff',
+      type: openGraphType,
+      images: [
+        {
+          url: openGraphImage,
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
+    },
+    twitter: {
+      card: twitterCard,
+      title,
+      description,
+      images: [openGraphImage],
+    },
+  };
+}
