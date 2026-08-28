@@ -72,6 +72,7 @@ Thumbs.db
 
 # Pull request description files
 pr-*.md
+PULL_REQUEST.md
 
 # Jest snapshot files
 __snapshots__/
