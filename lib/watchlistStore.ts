@@ -8,6 +8,7 @@
 import type Database from 'better-sqlite3';
 import { openSqliteDb } from './sqliteDb';
 import { watchlistMigrations } from './migrations/watchlistMigrations';
+import { normalizeStellarAddress } from './stellar';
 import type { WatchlistEntry } from '@/types';
 
 interface WatchlistRow {
@@ -53,14 +54,18 @@ export class WatchlistStore {
   }
 
   add(scoutWallet: string, playerId: string): WatchlistEntry {
+    // Normalize both addresses to uppercase to prevent case-sensitivity duplicates
+    const normalizedScoutWallet = normalizeStellarAddress(scoutWallet);
+    const normalizedPlayerId = normalizeStellarAddress(playerId);
+
     this.db
       .prepare(
         `INSERT OR IGNORE INTO watchlist (scout_wallet, player_id, created_at)
          VALUES (@scout_wallet, @player_id, @created_at)`,
       )
       .run({
-        scout_wallet: scoutWallet,
-        player_id: playerId,
+        scout_wallet: normalizedScoutWallet,
+        player_id: normalizedPlayerId,
         created_at: Date.now(),
       });
 
@@ -68,32 +73,35 @@ export class WatchlistStore {
       .prepare(
         'SELECT * FROM watchlist WHERE scout_wallet = ? AND player_id = ?',
       )
-      .get(scoutWallet, playerId) as WatchlistRow;
+      .get(normalizedScoutWallet, normalizedPlayerId) as WatchlistRow;
     return rowToEntry(row);
   }
 
   /** Deletes an entry scoped to its owner. Returns false if not found or not owned by scoutWallet. */
   remove(scoutWallet: string, id: number): boolean {
+    const normalizedScoutWallet = normalizeStellarAddress(scoutWallet);
     const result = this.db
       .prepare('DELETE FROM watchlist WHERE id = ? AND scout_wallet = ?')
-      .run(id, scoutWallet);
+      .run(id, normalizedScoutWallet);
     return result.changes > 0;
   }
 
   /** Deletes every entry owned by scoutWallet. Returns the number of rows removed. */
   clearForWallet(scoutWallet: string): number {
+    const normalizedScoutWallet = normalizeStellarAddress(scoutWallet);
     const result = this.db
       .prepare('DELETE FROM watchlist WHERE scout_wallet = ?')
-      .run(scoutWallet);
+      .run(normalizedScoutWallet);
     return result.changes;
   }
 
   list(scoutWallet: string): WatchlistEntry[] {
+    const normalizedScoutWallet = normalizeStellarAddress(scoutWallet);
     const rows = this.db
       .prepare(
         'SELECT * FROM watchlist WHERE scout_wallet = ? ORDER BY created_at DESC, id DESC',
       )
-      .all(scoutWallet) as WatchlistRow[];
+      .all(normalizedScoutWallet) as WatchlistRow[];
     return rows.map(rowToEntry);
   }
 
