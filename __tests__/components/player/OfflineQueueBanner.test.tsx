@@ -189,3 +189,93 @@ describe('OfflineQueueBanner', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument();
   });
 });
+
+describe('OfflineQueueBanner live count updates', () => {
+  // Mock indexedDB operations for this test suite
+  let mockQueueLength: number;
+  let mockFailedActions: FailedAction[];
+
+  beforeEach(() => {
+    mockQueueLength = 2;
+    mockFailedActions = [];
+    jest.clearAllMocks();
+
+    // Mock the offlineQueue module to control return values
+    jest.mock('@/lib/offlineQueue', () => {
+      const actual = jest.requireActual('@/lib/offlineQueue');
+      return {
+        ...actual,
+        getQueueLength: jest.fn().mockResolvedValue(() => mockQueueLength),
+        getFailedActions: jest.fn().mockResolvedValue(() => mockFailedActions),
+        getFailedCount: jest.fn().mockResolvedValue(mockFailedActions.length),
+      };
+    });
+  });
+
+  it('updates displayed count when an item completes (simulated)', async () => {
+    const user = userEvent.setup();
+
+    // Start with 2 pending items
+    mockQueueLength = 2;
+    render(
+      <OfflineQueueBanner
+        pendingCount={mockQueueLength}
+        isProcessing={false}
+        onRetry={onRetry}
+      />,
+    );
+
+    expect(
+      screen.getByText('2 action(s) queued — will submit when back online'),
+    ).toBeInTheDocument();
+
+    // Simulate one item completing (count becomes 1)
+    mockQueueLength = 1;
+
+    // Force a re-render to update props (simulating the polling effect updating state)
+    // In real usage, useOfflineQueue's polling would call refreshCounts() and update state
+    const { rerender } = render(
+      <OfflineQueueBanner
+        pendingCount={mockQueueLength}
+        isProcessing={false}
+        onRetry={onRetry}
+      />,
+    );
+
+    expect(
+      screen.getByText('1 action(s) queued — will submit when back online'),
+    ).toBeInTheDocument();
+
+    // Verify count decreased
+    expect(
+      screen.getByText('1 action(s) queued — will submit when back online'),
+    ).toBeInTheDocument();
+  });
+
+  it('hides banner when count reaches 0', () => {
+    const { container } = render(
+      <OfflineQueueBanner
+        pendingCount={0}
+        isProcessing={false}
+        onRetry={onRetry}
+      />,
+    );
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('shows processing state and hides retry button during isProcessing', () => {
+    render(
+      <OfflineQueueBanner
+        pendingCount={1}
+        isProcessing={true}
+        onRetry={onRetry}
+      />,
+    );
+
+    expect(screen.getByText('Submitting 1 action(s)…')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Retry queued actions' }),
+    ).not.toBeInTheDocument();
+  });
+});

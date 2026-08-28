@@ -25,6 +25,18 @@ export function isValidStellarAddress(key: string): boolean {
   return StrKey.isValidEd25519PublicKey(key);
 }
 
+/**
+ * Normalizes a Stellar public key to its canonical uppercase format.
+ * Uses StrKey.encodeEd25519PublicKey which validates and uppercases the key.
+ * Throws if the key is not a valid Ed25519 public key.
+ */
+export function normalizeStellarAddress(key: string): string {
+  // StrKey.encodeEd25519PublicKey validates the key and returns uppercase
+  // We first decode to verify it's valid, then re-encode to normalize
+  const decoded = StrKey.decodeEd25519PublicKey(key);
+  return StrKey.encodeEd25519PublicKey(decoded);
+}
+
 export { NETWORK, BASE_FEE, TransactionBuilder };
 
 export class TransactionFailedError extends Error {

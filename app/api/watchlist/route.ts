@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionWallet } from '@/lib/session';
 import { WatchlistStore } from '@/lib/watchlistStore';
+import { isValidStellarAddress, normalizeStellarAddress } from '@/lib/stellar';
 import { createRequestLogger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
@@ -56,8 +57,19 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Validate that playerId is a valid Stellar public key
+  if (!isValidStellarAddress(playerId)) {
+    return NextResponse.json(
+      { error: 'playerId must be a valid Stellar public key (G...)' },
+      { status: 400 },
+    );
+  }
+
+  // Normalize the address to uppercase to ensure consistent storage and lookup
+  const normalizedPlayerId = normalizeStellarAddress(playerId);
+
   try {
-    const entry = WatchlistStore.getInstance().add(scoutWallet, playerId);
+    const entry = WatchlistStore.getInstance().add(scoutWallet, normalizedPlayerId);
     return NextResponse.json(entry, { status: 201 });
   } catch (err) {
     log.error('Failed to add to watchlist', {

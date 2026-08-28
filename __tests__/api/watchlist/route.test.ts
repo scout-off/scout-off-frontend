@@ -154,3 +154,90 @@ describe('DELETE /api/watchlist', () => {
     expect(WatchlistStore.getInstance().list('GOTHER')).toHaveLength(1);
   });
 });
+
+describe('POST /api/watchlist address validation and normalization', () => {
+  it('returns 400 for an invalid playerId (not a valid Stellar address)', async () => {
+    const res = await POST(
+      makeRequest('http://localhost/api/watchlist', {
+        method: 'POST',
+        cookie: SCOUT,
+        body: { playerId: 'invalid-address' },
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 for a playerId that is too short', async () => {
+    const res = await POST(
+      makeRequest('http://localhost/api/watchlist', {
+        method: 'POST',
+        cookie: SCOUT,
+        body: { playerId: 'GA' },
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it('normalizes lowercase playerId to uppercase before storage', async () => {
+    const lowerCasePlayerId = 'gabc123def456ghi789jkl012mno345pqr678stu901vwx234yz567';
+    const res = await POST(
+      makeRequest('http://localhost/api/watchlist', {
+        method: 'POST',
+        cookie: SCOUT,
+        body: { playerId: lowerCasePlayerId },
+      }),
+    );
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    // Verify it's stored as uppercase
+    expect(body.playerId).toBe(lowerCasePlayerId.toUpperCase());
+  });
+
+  it('normalizes mixed-case playerId to uppercase before storage', async () => {
+    const mixedCasePlayerId = 'GaBc123DeF456GhI789JkL012MnO345PqR678StU901VwX234Yz567';
+    const res = await POST(
+      makeRequest('http://localhost/api/watchlist', {
+        method: 'POST',
+        cookie: SCOUT,
+        body: { playerId: mixedCasePlayerId },
+      }),
+    );
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    // Verify it's stored as uppercase
+    expect(body.playerId).toBe(mixedCasePlayerId.toUpperCase());
+  });
+
+  it('treats same address with different casing as duplicate', async () => {
+    const addrUpper = 'GABC123DEF456GHI789JKL012MNO345PQR678STU901VWX234YZ567';
+    const addrLower = 'gabc123def456ghi789jkl012mno345pqr678stu901vwx234yz567';
+
+    // Add with uppercase
+    await POST(
+      makeRequest('http://localhost/api/watchlist', {
+        method: 'POST',
+        cookie: SCOUT,
+        body: { playerId: addrUpper },
+      }),
+    );
+
+    // Add same address in lowercase - should be treated as duplicate
+    const res2 = await POST(
+      makeRequest('http://localhost/api/watchlist', {
+        method: 'POST',
+        cookie: SCOUT,
+        body: { playerId: addrLower },
+      }),
+    );
+
+    // Should still return 201 (INSERT OR IGNORE), but the list should have only 1 entry
+    expect(res2.status).toBe(201);
+
+    const listRes = await GET(
+      makeRequest('http://localhost/api/watchlist', { cookie: SCOUT }),
+    );
+    const entries = await listRes.json();
+    expect(entries).toHaveLength(1);
+    expect(entries[0].playerId).toBe(addrUpper);
+  });
+});

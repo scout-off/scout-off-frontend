@@ -211,6 +211,23 @@ export function useOfflineQueue() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Poll for queue updates to keep UI fresh (e.g. when items complete while
+  // mounted but before the next manual refreshCounts() call)
+  useEffect(() => {
+    const pollIntervalMs = 2_000; // 2 seconds is reasonable for this UX
+    const poll = async () => {
+      // Only poll when we're in a state that might change
+      if (status === 'processing' || pendingCount > 0 || failedCount > 0) {
+        await refreshCounts();
+      }
+    };
+
+    const intervalId = setInterval(poll, pollIntervalMs);
+    poll(); // Initial poll immediately
+
+    return () => clearInterval(intervalId);
+  }, [status, pendingCount, failedCount, refreshCounts]);
+
   return {
     enqueue,
     status,
