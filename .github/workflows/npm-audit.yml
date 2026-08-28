@@ -31,7 +31,7 @@ jobs:
           node <<'NODE'
           const fs = require('fs');
           const report = JSON.parse(fs.readFileSync('audit-report.json', 'utf8'));
-          // Packages with no non-breaking fix on the current Next 14 stack.
+          // Packages with no non-breaking fix on the current Next 14 / LHCI stack.
           const ALLOWLIST = new Set([
             'next',
             'sharp',
@@ -42,6 +42,12 @@ jobs:
             'serialize-javascript', // pulled only via next-pwa → workbox until PWA stack is replaced
             '@storybook/nextjs',
             'image-size', // storybook/next image pipeline; no non-breaking fix
+            '@lhci/cli',
+            '@lhci/utils',
+            'lighthouse',
+            'puppeteer-core',
+            '@puppeteer/browsers',
+            'extract-zip', // transitive dependency of @puppeteer/browsers without upstream patch > 2.0.1
           ]);
           const vulns = report.vulnerabilities || {};
           const blockers = Object.entries(vulns).filter(([, v]) => {

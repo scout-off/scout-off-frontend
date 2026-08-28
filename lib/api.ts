@@ -1,6 +1,8 @@
 import axios from 'axios';
 import type { Player } from '@/types';
 import { fetchWithRetry } from './fetchWithRetry';
+import { fetchValidatorEvents, type IndexedEvent } from './indexerClient';
+import type { ValidatorLeaderboardRange } from './validatorLeaderboard';
 
 // `API_URL_INTERNAL` (server-only, no NEXT_PUBLIC_ prefix) lets a Server
 // Component's SSR-time fetch reach the backend via a container-internal
@@ -141,8 +143,28 @@ export const fetchActivityEvents = (
  */
 export const fetchValidatorMilestoneCount = async (
   validatorAddress: string,
+  range?: { start: number; end: number },
 ): Promise<number | null> => {
   try {
+    if (range) {
+      const events: IndexedEvent[] = [];
+      let before: number | undefined;
+      for (let page = 0; page < 10; page++) {
+        const result = await fetchValidatorEvents(validatorAddress, {
+          type: 'milestone_approved',
+          limit: 200,
+          before,
+        });
+        events.push(...result.events);
+        if (result.nextCursor === null || result.events.length === 0) break;
+        before = result.nextCursor;
+      }
+      return events.filter(
+        (event) =>
+          event.timestamp >= range.start && event.timestamp <= range.end,
+      ).length;
+    }
+
     const data = await api
       .get(`/validators/${encodeURIComponent(validatorAddress)}/stats`)
       .then((r) => r.data);
@@ -164,6 +186,7 @@ import type {
   ReferralOverview,
   FraudFlag,
   FraudThrottle,
+  FraudFlagDismissal,
 } from '@/types';
 
 export const generateReferralCode = (
@@ -291,20 +314,46 @@ export const fetchFraudThrottles = async (): Promise<{
 /**
  * The only way a throttle changes state — no automatic expiry exists
  * anywhere in this codebase, per docs/fraud-detection.md.
+ *
+ * Deliberately a bare `fetch`, not `fetchWithRetry`: a POST with no
+ * idempotency key, so an automatic retry after a lost response risks a
+ * confusing double-lift attempt.
  */
 export const liftFraudThrottle = async (
   id: number,
   reason?: string,
 ): Promise<FraudThrottle> => {
-  const res = await fetchWithRetry(
-    `/api/admin/fraud-flags/throttles/${id}/lift`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason }),
-    },
-  );
+  const res = await fetch(`/api/admin/fraud-flags/throttles/${id}/lift`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason }),
+  });
   if (!res.ok) throw new Error('Failed to lift fraud throttle');
+  return res.json();
+};
+
+/**
+ * Persists an admin decision that `flag` is reviewed and not actually abuse
+ * (issue #1171), so it stops re-surfacing on subsequent `fetchFraudFlags`
+ * loads as long as the underlying evidence hasn't materially changed. See
+ * lib/fraudFlagDismissalStore.ts and app/api/admin/fraud-flags/dismiss/route.ts.
+ *
+ * Deliberately a bare `fetch`, not `fetchWithRetry`: a POST with no
+ * idempotency key, matching liftFraudThrottle's precedent above.
+ */
+export const dismissFraudFlag = async (
+  flag: Pick<
+    FraudFlag,
+    'category' | 'heuristic' | 'severity' | 'wallets' | 'reason'
+  >,
+  note?: string,
+): Promise<FraudFlagDismissal> => {
+  const res = await fetch('/api/admin/fraud-flags/dismiss', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ flag, note }),
+  });
+  if (!res.ok) throw new Error('Failed to dismiss fraud flag');
   return res.json();
 };
 
@@ -334,11 +383,30 @@ export const fetchAcademies = async (): Promise<Academy[]> => {
   return res.json();
 };
 
+/**
+ * Scoped academy-owner admin role (issue #1173) — returns the academy/
+ * academies the *connected* wallet is recorded as `ownerWallet` for, via
+ * the session cookie (not the super-admin-gated full list above). Used by
+ * AcademyOwnerManager to find which academy(ies) it may self-serve.
+ */
+export const fetchMyAcademies = async (): Promise<Academy[]> => {
+  const res = await fetchWithRetry('/api/admin/academies/mine');
+  if (!res.ok)
+    throw new Error(
+      await parseErrorMessage(res, 'Failed to fetch your academies'),
+    );
+  return res.json();
+};
+
+// createAcademy/addAcademyMember deliberately use a bare `fetch`, not
+// `fetchWithRetry`: both are POSTs with no idempotency key, so an automatic
+// retry after a lost response risks creating a duplicate academy or
+// membership row.
 export const createAcademy = async (
   name: string,
   ownerWallet: string,
 ): Promise<Academy> => {
-  const res = await fetchWithRetry('/api/admin/academies', {
+  const res = await fetch('/api/admin/academies', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, ownerWallet }),
@@ -352,7 +420,7 @@ export const addAcademyMember = async (
   academyId: string,
   wallet: string,
 ): Promise<Academy> => {
-  const res = await fetchWithRetry(
+  const res = await fetch(
     `/api/admin/academies/${encodeURIComponent(academyId)}/members`,
     {
       method: 'POST',
@@ -382,6 +450,28 @@ export const removeAcademyMember = async (
 };
 
 /**
+ * Sets (or, with `quorum: null`, clears) an academy's milestone-approval
+ * quorum (issue #1185). See types/index.ts's `Academy.quorum` doc comment —
+ * purely off-chain display/workflow, never on-chain authorization.
+ */
+export const setAcademyQuorum = async (
+  academyId: string,
+  quorum: number | null,
+): Promise<Academy> => {
+  const res = await fetchWithRetry(
+    `/api/admin/academies/${encodeURIComponent(academyId)}/quorum`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quorum }),
+    },
+  );
+  if (!res.ok)
+    throw new Error(await parseErrorMessage(res, 'Failed to set quorum'));
+  return res.json();
+};
+
+/**
  * Looks up the academy a validator wallet is registered under, for
  * milestone-attribution display. Returns `null` when the wallet isn't part
  * of any academy or the lookup fails, so callers (e.g. ValidatorChip) can
@@ -398,6 +488,28 @@ export const fetchAcademyForWallet = async (
   } catch {
     return null;
   }
+};
+
+import type { AcademyMilestoneRollup } from '@/types';
+
+/**
+ * Academy-scoped milestone-approval rollup (issue #1172): total approved
+ * milestones per academy, summed across its member wallets, for the last
+ * `rangeDays` days (or all-time when `rangeDays` is `'all'`). See
+ * docs/academy-validator-model.md's "Academy milestone rollup" section for
+ * the historical-attribution caveat this carries.
+ */
+export const fetchAcademyMilestoneRollup = async (
+  rangeDays: number | 'all' = 30,
+): Promise<AcademyMilestoneRollup> => {
+  const res = await fetchWithRetry(
+    `/api/admin/academies/rollup?rangeDays=${rangeDays}`,
+  );
+  if (!res.ok)
+    throw new Error(
+      await parseErrorMessage(res, 'Failed to fetch academy milestone rollup'),
+    );
+  return res.json();
 };
 
 // Milestone submissions (issues #567, #568) — an off-chain queue of

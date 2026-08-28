@@ -188,9 +188,13 @@ jest.mock('@/hooks/useWatchlist', () => ({
 const mockSavedSearchesSave = jest.fn();
 const mockSavedSearchesRename = jest.fn();
 const mockSavedSearchesRemove = jest.fn();
+const mockSavedSearchesMarkViewed = jest.fn();
 const mockUseSavedSearches = jest.fn();
+const mockUseSavedSearchNewCount = jest.fn();
 jest.mock('@/hooks/useSavedSearches', () => ({
   useSavedSearches: (...args: unknown[]) => mockUseSavedSearches(...args),
+  useSavedSearchNewCount: (...args: unknown[]) =>
+    mockUseSavedSearchNewCount(...args),
 }));
 
 const mockUseRecentlyViewed = jest.fn();
@@ -246,7 +250,9 @@ beforeEach(() => {
     save: mockSavedSearchesSave,
     rename: mockSavedSearchesRename,
     remove: mockSavedSearchesRemove,
+    markViewed: mockSavedSearchesMarkViewed,
   });
+  mockUseSavedSearchNewCount.mockReturnValue(0);
   mockUseRecentlyViewed.mockReturnValue({ entries: [], record: jest.fn() });
 });
 
@@ -1097,6 +1103,7 @@ describe('ScoutDashboardContent — dashboard panels', () => {
       name: 'My Filter',
       filter: { position: 'ST' },
       createdAt: 0,
+      lastViewedAt: 0,
     };
 
     beforeEach(() => {
@@ -1107,6 +1114,7 @@ describe('ScoutDashboardContent — dashboard panels', () => {
         save: mockSavedSearchesSave,
         rename: mockSavedSearchesRename,
         remove: mockSavedSearchesRemove,
+        markViewed: mockSavedSearchesMarkViewed,
       });
     });
 
@@ -1116,11 +1124,24 @@ describe('ScoutDashboardContent — dashboard panels', () => {
       expect(screen.getByText('My Filter')).toBeInTheDocument();
     });
 
-    it('applying a saved search triggers a new search with its filter', () => {
+    it('applying a saved search triggers a new search with its filter and marks it viewed', () => {
       render(<ScoutDashboardContent />);
       mockSearch.mockClear();
       fireEvent.click(screen.getByRole('button', { name: /^apply$/i }));
       expect(mockSearch).toHaveBeenCalledWith(savedSearch.filter);
+      expect(mockSavedSearchesMarkViewed).toHaveBeenCalledWith(savedSearch);
+    });
+
+    it('shows a "new" badge when new matches exist since last viewed', () => {
+      mockUseSavedSearchNewCount.mockReturnValue(3);
+      render(<ScoutDashboardContent />);
+      expect(screen.getByText('3 new')).toBeInTheDocument();
+    });
+
+    it('does not show a badge when there are no new matches', () => {
+      mockUseSavedSearchNewCount.mockReturnValue(0);
+      render(<ScoutDashboardContent />);
+      expect(screen.queryByText(/new$/)).not.toBeInTheDocument();
     });
 
     it('clicking Remove calls savedSearches.remove with the entry', () => {

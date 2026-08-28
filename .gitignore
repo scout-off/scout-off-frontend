@@ -67,6 +67,7 @@ Thumbs.db
 *.bak
 
 # Kiro IDE directory
+.kiro
 .kiro/
 
 # Pull request description files

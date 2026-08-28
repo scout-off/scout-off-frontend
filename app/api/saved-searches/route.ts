@@ -96,7 +96,10 @@ export async function POST(req: NextRequest) {
 /**
  * PATCH /api/saved-searches
  *
- * Renames a saved search for the authenticated scout. Body: { id, name }.
+ * Renames a saved search and/or marks it viewed for the authenticated scout.
+ * Body: { id, name?, markViewed? } — at least one of `name`/`markViewed`
+ * must be present. `markViewed: true` resets the "new since last viewed"
+ * baseline to now.
  */
 export async function PATCH(req: NextRequest) {
   const scoutWallet = getSessionWallet(req);
@@ -110,44 +113,63 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { id, name } = body as Record<string, unknown>;
+  const { id, name, markViewed } = body as Record<string, unknown>;
   if (typeof id !== 'number') {
     return NextResponse.json({ error: 'id must be a number' }, { status: 400 });
   }
-  if (typeof name !== 'string' || name.trim().length === 0) {
+  if (name === undefined && markViewed === undefined) {
     return NextResponse.json(
-      { error: 'name must be a non-empty string' },
-      { status: 400 },
-    );
-  }
-
-  const sanitizedName = sanitizeTextInput(name);
-  if (sanitizedName.length > SAVED_SEARCH_NAME_MAX) {
-    return NextResponse.json(
-      { error: `name must be at most ${SAVED_SEARCH_NAME_MAX} characters` },
+      { error: 'name or markViewed must be provided' },
       { status: 400 },
     );
   }
 
   try {
-    const updated = SavedSearchStore.getInstance().rename(
-      scoutWallet,
-      id,
-      sanitizedName,
-    );
-    if (!updated) {
-      return NextResponse.json(
-        { error: 'Saved search not found' },
-        { status: 404 },
-      );
+    const store = SavedSearchStore.getInstance();
+    let updated = null;
+
+    if (name !== undefined) {
+      if (typeof name !== 'string' || name.trim().length === 0) {
+        return NextResponse.json(
+          { error: 'name must be a non-empty string' },
+          { status: 400 },
+        );
+      }
+      const sanitizedName = sanitizeTextInput(name);
+      if (sanitizedName.length > SAVED_SEARCH_NAME_MAX) {
+        return NextResponse.json(
+          {
+            error: `name must be at most ${SAVED_SEARCH_NAME_MAX} characters`,
+          },
+          { status: 400 },
+        );
+      }
+      updated = store.rename(scoutWallet, id, sanitizedName);
+      if (!updated) {
+        return NextResponse.json(
+          { error: 'Saved search not found' },
+          { status: 404 },
+        );
+      }
     }
+
+    if (markViewed === true) {
+      updated = store.markViewed(scoutWallet, id);
+      if (!updated) {
+        return NextResponse.json(
+          { error: 'Saved search not found' },
+          { status: 404 },
+        );
+      }
+    }
+
     return NextResponse.json(updated);
   } catch (err) {
-    log.error('Failed to rename saved search', {
+    log.error('Failed to update saved search', {
       reason: err instanceof Error ? err.message : String(err),
     });
     return NextResponse.json(
-      { error: 'Failed to rename saved search' },
+      { error: 'Failed to update saved search' },
       { status: 500 },
     );
   }

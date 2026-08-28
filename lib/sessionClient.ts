@@ -4,6 +4,7 @@
  * treat the server (not localStorage) as the source of truth for
  * `isAuthenticated`/`publicKey`.
  */
+import { fetchWithRetry } from '@/lib/fetchWithRetry';
 
 export interface ServerSession {
   authenticated: boolean;
@@ -19,7 +20,7 @@ export interface ServerSession {
  */
 export async function getServerSession(): Promise<ServerSession | null> {
   try {
-    const res = await fetch('/api/auth/session');
+    const res = await fetchWithRetry('/api/auth/session');
     if (res.status === 401) return { authenticated: false, publicKey: null };
     if (!res.ok) return null;
     const data = await res.json();
@@ -42,6 +43,11 @@ let inFlightRefresh: Promise<ServerSession> | null = null;
  * Calls POST /api/auth/refresh, rotating the session. Concurrent callers
  * while a refresh is already in flight are given the same promise instead
  * of triggering their own request.
+ *
+ * Deliberately a bare `fetch`, not `fetchWithRetry`: this rotates the
+ * session, so it isn't idempotent — an automatic retry after a lost
+ * response could invalidate the session the first, successful attempt just
+ * issued.
  */
 export function refreshSession(): Promise<ServerSession> {
   if (inFlightRefresh) return inFlightRefresh;

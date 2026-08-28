@@ -4,6 +4,7 @@ import {
   fetchFraudFlags,
   fetchFraudThrottles,
   liftFraudThrottle,
+  dismissFraudFlag,
 } from '@/lib/api';
 import EmptyState from '@/components/ui/EmptyState';
 import TruncatedAddress from '@/components/ui/TruncatedAddress';
@@ -31,17 +32,40 @@ function SeverityBadge({ severity }: { severity: FraudFlagSeverity }) {
   );
 }
 
-function FlagCard({ flag }: { flag: FraudFlag }) {
+function FlagCard({
+  flag,
+  onDismiss,
+  dismissing,
+}: {
+  flag: FraudFlag;
+  onDismiss: (flag: FraudFlag, note: string) => void;
+  dismissing: boolean;
+}) {
+  const [showDismissForm, setShowDismissForm] = useState(false);
+  const [note, setNote] = useState('');
+
   return (
     <li className="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-3">
-      <div className="flex items-center gap-2 flex-wrap">
-        <SeverityBadge severity={flag.severity} />
-        <span className="text-xs text-gray-400 uppercase tracking-wide">
-          {CATEGORY_LABELS[flag.category]}
-        </span>
-        <span className="text-xs text-gray-600 font-mono">
-          {flag.heuristic}
-        </span>
+      <div className="flex items-center gap-2 flex-wrap justify-between">
+        <div className="flex items-center gap-2 flex-wrap">
+          <SeverityBadge severity={flag.severity} />
+          <span className="text-xs text-gray-400 uppercase tracking-wide">
+            {CATEGORY_LABELS[flag.category]}
+          </span>
+          <span className="text-xs text-gray-600 font-mono">
+            {flag.heuristic}
+          </span>
+        </div>
+        {!showDismissForm && (
+          <button
+            type="button"
+            disabled={dismissing}
+            onClick={() => setShowDismissForm(true)}
+            className="text-xs font-medium rounded-md border border-gray-700 px-3 py-1 text-gray-200 hover:bg-gray-800 disabled:opacity-50"
+          >
+            Dismiss
+          </button>
+        )}
       </div>
 
       <p className="text-sm text-gray-200">{flag.reason}</p>
@@ -71,6 +95,43 @@ function FlagCard({ flag }: { flag: FraudFlag }) {
           ))}
         </dl>
       </details>
+
+      {showDismissForm && (
+        <div className="flex flex-col gap-2 border-t border-gray-800 pt-3">
+          <label className="text-xs text-gray-400" htmlFor={`dismiss-note-${flag.id}`}>
+            Reviewed and not actually abuse — optional note
+          </label>
+          <textarea
+            id={`dismiss-note-${flag.id}`}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="e.g. reviewed history, this is a legitimate low-usage scout"
+            rows={2}
+            className="w-full rounded-md border border-gray-700 bg-gray-950 px-2 py-1 text-xs text-gray-200 placeholder:text-gray-600"
+          />
+          <div className="flex items-center gap-2 justify-end">
+            <button
+              type="button"
+              disabled={dismissing}
+              onClick={() => {
+                setShowDismissForm(false);
+                setNote('');
+              }}
+              className="text-xs font-medium rounded-md border border-gray-700 px-3 py-1 text-gray-400 hover:bg-gray-800 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={dismissing}
+              onClick={() => onDismiss(flag, note)}
+              className="text-xs font-medium rounded-md border border-gray-700 px-3 py-1 text-gray-200 hover:bg-gray-800 disabled:opacity-50"
+            >
+              {dismissing ? 'Dismissing…' : 'Confirm dismiss'}
+            </button>
+          </div>
+        </div>
+      )}
     </li>
   );
 }
@@ -151,6 +212,7 @@ export default function FraudFlagsPanel() {
   const [throttles, setThrottles] = useState<FraudThrottle[]>([]);
   const [throttlesLoading, setThrottlesLoading] = useState(true);
   const [liftingId, setLiftingId] = useState<number | null>(null);
+  const [dismissingId, setDismissingId] = useState<string | null>(null);
   const { show: showToast } = useToast();
 
   const loadThrottles = useCallback(() => {
@@ -202,6 +264,26 @@ export default function FraudFlagsPanel() {
     }
   }
 
+  /**
+   * Dismissal is content-keyed, not id-keyed (issue #1171) — there is no
+   * database row to reference until it's persisted by the API. On success,
+   * the flag is removed from local state immediately (the same content-key
+   * would also just be filtered out by the next GET /api/admin/fraud-flags
+   * load, but doing it here avoids waiting on a re-fetch).
+   */
+  async function handleDismiss(flag: FraudFlag, note: string) {
+    setDismissingId(flag.id);
+    try {
+      await dismissFraudFlag(flag, note.trim() || undefined);
+      showToast({ message: 'Flag dismissed.', variant: 'success' });
+      setFlags((prev) => prev.filter((f) => f.id !== flag.id));
+    } catch {
+      showToast({ message: 'Failed to dismiss flag.', variant: 'error' });
+    } finally {
+      setDismissingId(null);
+    }
+  }
+
   const activeThrottles = throttles.filter((t) => t.status === 'throttled');
   const liftedThrottles = throttles.filter((t) => t.status === 'lifted');
 
@@ -247,7 +329,12 @@ export default function FraudFlagsPanel() {
             ) : (
               <ul className="flex flex-col gap-3">
                 {flags.map((flag) => (
-                  <FlagCard key={flag.id} flag={flag} />
+                  <FlagCard
+                    key={flag.id}
+                    flag={flag}
+                    onDismiss={handleDismiss}
+                    dismissing={dismissingId === flag.id}
+                  />
                 ))}
               </ul>
             )}

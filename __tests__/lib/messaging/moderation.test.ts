@@ -18,6 +18,7 @@ import {
   fetchBlockedUsers,
   getBlockedUsers,
   isUserBlocked,
+  isBlockedByCounterpart,
   type BlockedUser,
 } from '@/lib/messaging/moderation';
 
@@ -157,5 +158,24 @@ describe('isUserBlocked', () => {
   it('returns false for a user that is not blocked', async () => {
     await blockUser('user-2');
     expect(isUserBlocked('user-3')).toBe(false);
+  });
+});
+
+describe('isBlockedByCounterpart', () => {
+  it('returns true when the server reports the counterpart has blocked the current wallet', async () => {
+    mockGet.mockResolvedValue({ data: { blocked: true } });
+
+    const result = await isBlockedByCounterpart('user-2');
+
+    expect(mockGet).toHaveBeenCalledWith('/moderation/blocks/user-2/status');
+    expect(result).toBe(true);
+  });
+
+  it('returns false when the counterpart has not blocked the current wallet', async () => {
+    mockGet.mockResolvedValue({ data: { blocked: false } });
+
+    const result = await isBlockedByCounterpart('user-2');
+
+    expect(result).toBe(false);
   });
 });

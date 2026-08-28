@@ -28,6 +28,7 @@ import {
   isValidStellarAddress,
 } from './stellar';
 import { ValidationError, ContractIncompatibleError } from './errors';
+import { CONTACT_FEE_XLM } from './feeSchedule';
 import type {
   PlayerVitals,
   ValidatorInfo,
@@ -50,8 +51,8 @@ function getContract() {
   return new Contract(contractId);
 }
 
-/** XLM required to unlock a player's contact details via pay_to_contact. */
-export const PLATFORM_CONTACT_FEE_XLM = 1;
+/** XLM required to unlock a player's contact details via pay_to_contact (canonical value from feeSchedule). */
+export const PLATFORM_CONTACT_FEE_XLM = CONTACT_FEE_XLM;
 
 /** Human-readable messages for every on-chain error code (codes 1–12). */
 export const CONTRACT_ERRORS: Record<number, string> = {

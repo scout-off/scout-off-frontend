@@ -86,4 +86,20 @@ db.exec(`
     ON milestone_submissions (validator_wallet, status, created_at);
 `);
 
+// Academy validator quorum (issue #1185): an optional, off-chain-only
+// minimum number of an academy's distinct member wallets that must each
+// endorse a milestone before it's shown as "academy-verified" in the UI —
+// purely additive, never touches on-chain approve_milestone authorization.
+// NULL (the default) means "no quorum configured," which must behave
+// identically to today. Added via a guarded ALTER TABLE rather than the
+// CREATE TABLE above, since IF NOT EXISTS is a no-op against an
+// already-existing `academies` table in any deployment that predates this
+// column — this repo has no migration-versioning framework on the server
+// side (unlike the Next app's lib/sqliteMigrations.ts), so the guard is
+// inlined here instead.
+const academyColumns = db.prepare('PRAGMA table_info(academies)').all();
+if (!academyColumns.some((c) => c.name === 'quorum')) {
+  db.exec('ALTER TABLE academies ADD COLUMN quorum INTEGER');
+}
+
 module.exports = db;

@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import api from '@/lib/api';
-import { requireAdminWallet } from '@/lib/adminAuth';
+import { requireAcademyManager } from '@/lib/academyAuth';
 
 // Stellar public key: 'G' followed by 55 uppercase base32 characters (A-Z, 2-7).
 const STELLAR_PUBLIC_KEY_RE = /^G[A-Z2-7]{55}$/;
 
+// Reachable by the super-admin (any academy) or that academy's recorded
+// ownerWallet (their own academy only) — see lib/academyAuth.ts and
+// docs/academy-validator-model.md's "Admin flow" section (issue #1173).
 export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const admin = requireAdminWallet(req);
-  if (!admin) {
+  const manager = await requireAcademyManager(req, params.id);
+  if (!manager) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -30,7 +33,7 @@ export async function POST(
     const academy = await api
       .post(`/academies/${encodeURIComponent(params.id)}/members`, {
         wallet,
-        addedBy: admin,
+        addedBy: manager.wallet,
       })
       .then((r) => r.data);
     return NextResponse.json(academy, { status: 201 });

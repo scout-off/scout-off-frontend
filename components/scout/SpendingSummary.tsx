@@ -1,6 +1,7 @@
 'use client';
 
 import { useSpendingSummary } from '@/hooks/useSpendingSummary';
+import { useFeeDriftDetection } from '@/hooks/useFeeDriftDetection';
 import { formatXlm } from '@/lib/formatXlm';
 import XlmFiatDisplay from '@/components/ui/XlmFiatDisplay';
 import Spinner from '@/components/ui/Spinner';
@@ -15,6 +16,7 @@ import Spinner from '@/components/ui/Spinner';
  */
 export default function SpendingSummary() {
   const { data, loading, error } = useSpendingSummary();
+  const { hasDrift, warningMessage } = useFeeDriftDetection();
 
   if (loading) {
     return (
@@ -45,6 +47,17 @@ export default function SpendingSummary() {
   return (
     <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-6">
       <h2 className="text-lg font-semibold text-white">Spending Summary</h2>
+
+      {hasDrift && warningMessage && (
+        <div
+          role="alert"
+          aria-live="polite"
+          className="rounded-lg border border-yellow-600/50 bg-yellow-950/30 p-3 text-xs text-yellow-300 flex items-start gap-2"
+        >
+          <span className="text-sm leading-none mt-0.5">⚠️</span>
+          <span>{warningMessage}</span>
+        </div>
+      )}
 
       {/* Totals */}
       <div className="grid grid-cols-3 gap-4">

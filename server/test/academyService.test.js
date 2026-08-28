@@ -101,3 +101,18 @@ test('listAcademies returns every academy with its members', () => {
 
   assert.equal(academyService.listAcademies().length, before + 1);
 });
+
+// issue #1173 — scoped academy-owner admin role
+test('listAcademiesByOwnerWallet finds academies owned by a wallet', () => {
+  const academy = academyService.createAcademy(
+    'FC OwnerLookup',
+    'GOWNER7',
+    'GADMIN',
+  );
+
+  const found = academyService.listAcademiesByOwnerWallet('GOWNER7');
+  assert.equal(found.length, 1);
+  assert.equal(found[0].id, academy.id);
+
+  assert.deepEqual(academyService.listAcademiesByOwnerWallet('GNOBODY'), []);
+});

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { locales, defaultLocale } from '@/lib/locales';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
 function getLocale(request: NextRequest): string {
   const cookieLocale = request.cookies.get('NEXT_LOCALE')?.value;
@@ -22,8 +23,33 @@ function getLocale(request: NextRequest): string {
   return defaultLocale;
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+
+  if (pathname.startsWith('/api/admin/')) {
+    const isReconciliation = pathname === '/api/admin/audit-log/reconcile';
+    const isFraudEvaluation = pathname === '/api/admin/fraud-flags';
+    const limit = isReconciliation || isFraudEvaluation ? 3 : 30;
+    const windowMs = isReconciliation ? 5 * 60 * 1000 : 60 * 1000;
+    const result = await checkRateLimit(
+      `admin-api:${pathname}:${getClientIp(request)}`,
+      { limit, windowMs },
+    );
+
+    if (result.limited) {
+      return NextResponse.json(
+        {
+          error: 'Admin request rate limit exceeded. Please try again shortly.',
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(result.retryAfterSec ?? 60),
+          },
+        },
+      );
+    }
+  }
 
   const pathnameHasLocale = locales.some(
     (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`,
@@ -49,5 +75,8 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|icons).*)'],
+  matcher: [
+    '/api/admin/:path*',
+    '/((?!api|_next/static|_next/image|favicon.ico|icons).*)',
+  ],
 };

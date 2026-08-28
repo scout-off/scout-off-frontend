@@ -3,17 +3,31 @@ import { GET, POST, PATCH, DELETE } from '@/app/api/saved-searches/route';
 import { NextRequest } from 'next/server';
 import { SavedSearchStore } from '@/lib/savedSearchStore';
 import { createSessionToken } from '@/lib/session';
+import { SessionStore } from '@/lib/sessionStore';
 
 const SCOUT = 'GSCOUT0000000000000000000000000000000000000000000000000';
 
+let sidCounter = 0;
+
+// getSessionWallet checks lib/sessionStore.ts in addition to the token's
+// signature (see #1179) — a cookie with no matching, active store row is
+// treated as unauthenticated, same as an unsigned one. Register the sid
+// alongside the token so it mirrors what a real SEP-10 login produces.
 function makeRequest(
   url: string,
   init: { method?: string; cookie?: string; body?: unknown } = {},
 ): NextRequest {
   const headers: Record<string, string> = {};
-  if (init.cookie !== undefined)
+  if (init.cookie !== undefined) {
+    const sid = `sid-${sidCounter++}`;
+    SessionStore.getInstance().create(
+      sid,
+      init.cookie,
+      Date.now() + 60 * 60 * 1000,
+    );
     headers['cookie'] =
-      `session=${createSessionToken(init.cookie, 'access', 20 * 60)}`;
+      `session=${createSessionToken(init.cookie, 'access', 20 * 60, { sid })}`;
+  }
   if (init.body !== undefined) headers['content-type'] = 'application/json';
   return new NextRequest(url, {
     method: init.method ?? 'GET',
@@ -24,10 +38,12 @@ function makeRequest(
 
 beforeEach(() => {
   SavedSearchStore.resetInstance();
+  SessionStore.resetInstance();
 });
 
 afterEach(() => {
   SavedSearchStore.resetInstance();
+  SessionStore.resetInstance();
 });
 
 describe('GET /api/saved-searches', () => {
@@ -237,6 +253,57 @@ describe('PATCH /api/saved-searches — name length validation (issue #1143)', (
         method: 'PATCH',
         cookie: SCOUT,
         body: { id: 999, name: 'renamed' },
+      }),
+    );
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('PATCH /api/saved-searches — markViewed', () => {
+  it('returns 400 when neither name nor markViewed is provided', async () => {
+    const entry = SavedSearchStore.getInstance().add(SCOUT, 'Original', {});
+    const res = await PATCH(
+      makeRequest('http://localhost/api/saved-searches', {
+        method: 'PATCH',
+        cookie: SCOUT,
+        body: { id: entry.id },
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it('updates lastViewedAt and returns the entry', async () => {
+    const entry = SavedSearchStore.getInstance().add(SCOUT, 'Original', {});
+    const res = await PATCH(
+      makeRequest('http://localhost/api/saved-searches', {
+        method: 'PATCH',
+        cookie: SCOUT,
+        body: { id: entry.id, markViewed: true },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.lastViewedAt).toBeGreaterThanOrEqual(entry.createdAt);
+  });
+
+  it('returns 404 when marking a non-existent saved search viewed', async () => {
+    const res = await PATCH(
+      makeRequest('http://localhost/api/saved-searches', {
+        method: 'PATCH',
+        cookie: SCOUT,
+        body: { id: 999, markViewed: true },
+      }),
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it('does not mark viewed a saved search owned by a different scout', async () => {
+    const entry = SavedSearchStore.getInstance().add('GOTHER', 'Theirs', {});
+    const res = await PATCH(
+      makeRequest('http://localhost/api/saved-searches', {
+        method: 'PATCH',
+        cookie: SCOUT,
+        body: { id: entry.id, markViewed: true },
       }),
     );
     expect(res.status).toBe(404);

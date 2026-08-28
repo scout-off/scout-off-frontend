@@ -47,6 +47,15 @@ async function del(pathname) {
   return { status: res.status, body: await res.json() };
 }
 
+async function patch(pathname, body) {
+  const res = await fetch(`${baseUrl}${pathname}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return { status: res.status, body: await res.json() };
+}
+
 test('POST /academies creates an academy with the owner as first member', async () => {
   const res = await post('/academies', {
     name: 'FC Sahel',
@@ -160,5 +169,56 @@ test('DELETE /academies/:id/members/:wallet removes a signer', async () => {
 
 test('DELETE /academies/:id/members/:wallet 404s when membership does not exist', async () => {
   const res = await del('/academies/does-not-exist/members/GNOBODY');
+  assert.equal(res.status, 404);
+});
+
+// ── Milestone approval quorum (issue #1185) ──────────────────────────────────
+
+test('PATCH /academies/:id/quorum sets a quorum', async () => {
+  const created = await post('/academies', {
+    name: 'FC Quorum Route',
+    ownerWallet: 'GOWNER_Q',
+    createdBy: 'GADMIN',
+  });
+
+  const res = await patch(`/academies/${created.body.id}/quorum`, {
+    quorum: 2,
+  });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.quorum, 2);
+});
+
+test('PATCH /academies/:id/quorum clears a quorum with null', async () => {
+  const created = await post('/academies', {
+    name: 'FC Quorum Clear',
+    ownerWallet: 'GOWNER_QC',
+    createdBy: 'GADMIN',
+  });
+  await patch(`/academies/${created.body.id}/quorum`, { quorum: 3 });
+
+  const res = await patch(`/academies/${created.body.id}/quorum`, {
+    quorum: null,
+  });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.quorum, null);
+});
+
+test('PATCH /academies/:id/quorum rejects a non-positive-integer quorum', async () => {
+  const created = await post('/academies', {
+    name: 'FC Quorum Invalid',
+    ownerWallet: 'GOWNER_QI',
+    createdBy: 'GADMIN',
+  });
+
+  for (const bad of [0, -1, 1.5, 'two']) {
+    const res = await patch(`/academies/${created.body.id}/quorum`, {
+      quorum: bad,
+    });
+    assert.equal(res.status, 400, `expected 400 for quorum=${bad}`);
+  }
+});
+
+test('PATCH /academies/:id/quorum 404s for an unknown academy', async () => {
+  const res = await patch('/academies/does-not-exist/quorum', { quorum: 2 });
   assert.equal(res.status, 404);
 });

@@ -4,6 +4,10 @@ import useSWR from 'swr';
 import { getValidators } from '@/lib/contract';
 import { fetchValidatorMilestoneCount, fetchAcademyForWallet } from '@/lib/api';
 import type { ValidatorInfo } from '@/types';
+import {
+  getValidatorLeaderboardRange,
+  type ValidatorLeaderboardRange,
+} from '@/lib/validatorLeaderboard';
 
 export interface LeaderboardEntry {
   address: string;
@@ -26,13 +30,19 @@ const LEADERBOARD_KEY = 'validator-leaderboard';
  * already-tracked per-validator approval count (issue #379's reputation
  * chip) and academy attribution — no new score is computed here.
  */
-async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
+async function fetchLeaderboard(
+  range: ValidatorLeaderboardRange,
+): Promise<LeaderboardEntry[]> {
   const validators = (await getValidators()) as ValidatorInfo[];
+  const bounds = getValidatorLeaderboardRange(range);
 
   const entries = await Promise.all(
     validators.map(async (v): Promise<LeaderboardEntry> => {
       const [approvalCount, academy] = await Promise.all([
-        fetchValidatorMilestoneCount(v.address),
+        fetchValidatorMilestoneCount(
+          v.address,
+          range === 'all-time' ? undefined : bounds,
+        ),
         fetchAcademyForWallet(v.address),
       ]);
       return {
@@ -60,14 +70,18 @@ async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
  * contract simulation and public indexer/academy endpoints, so it loads the
  * same for anonymous visitors and connected wallets.
  */
-export function useValidatorLeaderboard() {
+export function useValidatorLeaderboard(
+  range: ValidatorLeaderboardRange = 'all-time',
+  initialEntries?: LeaderboardEntry[],
+) {
   const { data, error, isValidating } = useSWR<LeaderboardEntry[]>(
-    LEADERBOARD_KEY,
-    fetchLeaderboard,
+    [LEADERBOARD_KEY, range],
+    () => fetchLeaderboard(range),
     {
       dedupingInterval: 30_000,
       revalidateOnFocus: false,
       errorRetryCount: 2,
+      fallbackData: initialEntries,
     },
   );
 

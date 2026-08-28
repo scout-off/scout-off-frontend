@@ -34,8 +34,16 @@ describe('getServerSession', () => {
   });
 
   it('returns null (inconclusive) on an unexpected server error', async () => {
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
-    expect(await getServerSession()).toBeNull();
+    // 500 is a retryable status (see lib/fetchWithRetry.ts), so every
+    // attempt — not just the first — needs to see this response; fake
+    // timers skip the real backoff delay between retries.
+    jest.useFakeTimers();
+    mockFetch.mockResolvedValue({ ok: false, status: 500 });
+
+    const assertion = expect(getServerSession()).resolves.toBeNull();
+    await jest.runAllTimersAsync();
+    await assertion;
+    jest.useRealTimers();
   });
 });
 

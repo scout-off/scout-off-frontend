@@ -18,6 +18,7 @@ import {
 import { useToast } from '@/components/ui/Toast';
 import { formatXlm } from '@/lib/formatXlm';
 import XlmFiatDisplay from '@/components/ui/XlmFiatDisplay';
+import { TIER_FEES_XLM } from '@/lib/feeSchedule';
 import type { SubscriptionTier } from '@/types';
 
 const TIERS: Array<{
@@ -31,7 +32,7 @@ const TIERS: Array<{
   {
     tier: 'basic',
     title: 'Basic',
-    priceXlm: 5,
+    priceXlm: TIER_FEES_XLM.basic,
     description:
       'Get started with essential scout access and basic player contact capabilities.',
     features: [
@@ -43,7 +44,7 @@ const TIERS: Array<{
   {
     tier: 'pro',
     title: 'Pro',
-    priceXlm: 12,
+    priceXlm: TIER_FEES_XLM.pro,
     description:
       'Recommended for active scouts who want priority access and advanced scouting tools.',
     features: [

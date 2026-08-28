@@ -131,6 +131,32 @@ describe('useSpendingSummary', () => {
     expect(result.current.data?.totalSubscriptionsXlm).toBe(35);
   });
 
+  it('prioritizes explicit charged amounts in event data over the tier table', async () => {
+    mockUseWallet.mockReturnValue({ publicKey: SCOUT });
+    mockFetchEvents.mockResolvedValueOnce({
+      events: [
+        makeEvent({
+          id: 1,
+          type: 'scout_subscribed',
+          data: { tier: 'basic', fee_xlm: 15 }, // Overrides basic (5) with actual charged 15
+        }),
+        makeEvent({
+          id: 2,
+          type: 'player_contacted',
+          data: { amount_xlm: 3 }, // Overrides default contact fee (1) with 3
+        }),
+      ],
+      nextCursor: null,
+    });
+
+    const { result } = renderHook(() => useSpendingSummary());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.data?.totalSubscriptionsXlm).toBe(15);
+    expect(result.current.data?.totalContactFeesXlm).toBe(3);
+    expect(result.current.data?.totalXlm).toBe(18);
+  });
+
   it('includes current-month spend in both totals and the monthly breakdown', async () => {
     mockUseWallet.mockReturnValue({ publicKey: SCOUT });
     mockFetchEvents.mockResolvedValueOnce({

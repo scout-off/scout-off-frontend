@@ -1,0 +1,38 @@
+name: Admin Audit Log Reconciliation
+
+# Periodically triggers GET /api/admin/audit-log/reconcile so drift between
+# on-chain truth and the audit log is caught even when no admin has the
+# panel open — the external-scheduler half of issue #1188, explicitly
+# green-lit by docs/admin-audit-log.md's "Periodic vs. on-demand
+# reconciliation" section ("...can be triggered by any external scheduler
+# ... exactly as-is, without further changes to this design").
+#
+# Requires a DEPLOYED_APP_URL variable and an ADMIN_SESSION_COOKIE secret —
+# see docs/admin-audit-log.md for how to obtain and rotate the cookie. This
+# workflow does not (and cannot, without further auth changes out of this
+# issue's scope) authenticate any other way: the endpoint is gated by the
+# same session-cookie admin check every other app/api/admin/** route uses.
+
+on:
+  schedule:
+    - cron: '*/15 * * * *' # Every 15 minutes
+  workflow_dispatch:
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger reconciliation
+        run: |
+          if [ -z "${{ vars.DEPLOYED_APP_URL }}" ] || [ -z "${{ secrets.ADMIN_SESSION_COOKIE }}" ]; then
+            echo "::error::DEPLOYED_APP_URL variable and ADMIN_SESSION_COOKIE secret must both be set for this workflow to do anything. See docs/admin-audit-log.md."
+            exit 1
+          fi
+          status=$(curl -s -o /tmp/response.json -w '%{http_code}' \
+            --cookie "session=${{ secrets.ADMIN_SESSION_COOKIE }}" \
+            "${{ vars.DEPLOYED_APP_URL }}/api/admin/audit-log/reconcile")
+          cat /tmp/response.json
+          if [ "$status" != "200" ]; then
+            echo "::error::Reconciliation request failed with status $status"
+            exit 1
+          fi

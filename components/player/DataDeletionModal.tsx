@@ -12,6 +12,7 @@ import {
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
+import { purgeAllContactDetails } from '@/lib/contactDetailsCache';
 
 interface DataDeletionModalProps {
   isOpen: boolean;
@@ -40,6 +41,14 @@ export default function DataDeletionModal({
         const body = await res.json().catch(() => ({}));
         throw new Error((body as { error?: string }).error ?? 'Request failed');
       }
+
+      // The server-side cascade (app/api/data-deletion/request) purges
+      // every store it can reach, but unlocked contact details live only in
+      // this tab's in-memory SWR cache (see lib/contactDetailsCache.ts) —
+      // no server route can see or clear them. Purge that cache explicitly
+      // here so a confirmed deletion request also covers it, same as the
+      // existing wallet-disconnect wipe.
+      await purgeAllContactDetails();
 
       setStatus('success');
       show({

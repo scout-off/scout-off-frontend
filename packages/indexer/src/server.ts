@@ -2,7 +2,11 @@ import * as http from 'http';
 import { IndexerMetrics } from './metrics/IndexerMetrics';
 import { getLastLedgerInfo, getLedgerLag } from './ledgerTracker';
 import { startEventPolling, isEventType } from './eventPoller';
-import { EventStore, type QueryFilter } from './db/eventStore';
+import {
+  EventStore,
+  type QueryFilter,
+  type WalletApprovalWindow,
+} from './db/eventStore';
 import type { EventType } from './metrics/IndexerMetrics';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
@@ -149,6 +153,110 @@ function handleValidatorEventsQuery(
   sendJson(res, 200, result);
 }
 
+const MAX_BODY_BYTES = 64 * 1024; // generous for a few hundred wallet+since pairs
+
+/** Reads and JSON-parses a request body, capped at MAX_BODY_BYTES to bound memory use. */
+function readJsonBody(req: http.IncomingMessage): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    let bytes = 0;
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk: Buffer) => {
+      bytes += chunk.length;
+      if (bytes > MAX_BODY_BYTES) {
+        reject(new Error('Request body too large'));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on('end', () => {
+      try {
+        resolve(
+          chunks.length
+            ? JSON.parse(Buffer.concat(chunks as unknown as Uint8Array[]).toString('utf8'))
+            : {},
+        );
+      } catch {
+        reject(new Error('Invalid JSON body'));
+      }
+    });
+    req.on('error', reject);
+  });
+}
+
+/**
+ * POST /validators/approval-counts — the academy-scoped rollup's building
+ * block (issue #1172). Body: `{ start, end, wallets: [{ wallet, since }] }`.
+ * Returns `{ range: { start, end }, counts: { [wallet]: number } }`.
+ *
+ * Grouping by academy itself doesn't happen here: the indexer has no
+ * knowledge of academy_members (that lives in the separate server/ service's
+ * own SQLite DB), so callers (app/api/admin/academies/rollup) pass the
+ * member-wallet list they already resolved from server/ and sum the
+ * per-wallet counts this returns into per-academy totals themselves.
+ */
+async function handleApprovalCountsQuery(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): Promise<void> {
+  let body: unknown;
+  try {
+    body = await readJsonBody(req);
+  } catch (err) {
+    return sendJson(res, 400, {
+      error: err instanceof Error ? err.message : 'Invalid request body',
+    });
+  }
+
+  const { start, end, wallets } = (body ?? {}) as Record<string, unknown>;
+
+  if (!Number.isFinite(start) || !Number.isFinite(end)) {
+    return sendJson(res, 400, {
+      error: 'start and end must be numeric unix-ms timestamps',
+    });
+  }
+  if ((start as number) > (end as number)) {
+    return sendJson(res, 400, { error: 'start must be <= end' });
+  }
+  if (!Array.isArray(wallets)) {
+    return sendJson(res, 400, { error: 'wallets must be an array' });
+  }
+
+  const parsedWallets: WalletApprovalWindow[] = [];
+  for (const entry of wallets) {
+    if (
+      !entry ||
+      typeof entry !== 'object' ||
+      typeof (entry as Record<string, unknown>).wallet !== 'string' ||
+      !Number.isFinite((entry as Record<string, unknown>).since)
+    ) {
+      return sendJson(res, 400, {
+        error: 'each wallet entry must be { wallet: string, since: number }',
+      });
+    }
+    parsedWallets.push({
+      wallet: (entry as Record<string, unknown>).wallet as string,
+      since: (entry as Record<string, unknown>).since as number,
+    });
+  }
+
+  const store = EventStore.getInstance();
+  try {
+    const counts = store.getApprovalCountsForWallets(
+      { start: start as number, end: end as number },
+      parsedWallets,
+    );
+    return sendJson(res, 200, {
+      range: { start, end },
+      counts,
+    });
+  } catch (err) {
+    return sendJson(res, 400, {
+      error: err instanceof Error ? err.message : 'Query failed',
+    });
+  }
+}
+
 export const server = http.createServer(
   (req: http.IncomingMessage, res: http.ServerResponse) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
@@ -161,6 +269,9 @@ export const server = http.createServer(
     }
     if (req.method === 'GET' && url.pathname === '/events') {
       return handleEventsQuery(url, res);
+    }
+    if (req.method === 'POST' && url.pathname === '/validators/approval-counts') {
+      return handleApprovalCountsQuery(req, res);
     }
     const playerMatch = url.pathname.match(PLAYER_EVENTS_PATH);
     if (req.method === 'GET' && playerMatch) {

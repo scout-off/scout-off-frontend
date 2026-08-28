@@ -9,6 +9,13 @@ import '@testing-library/jest-dom';
 import BulkPlayerImport from '@/components/academy/BulkPlayerImport';
 import { useWallet } from '@/hooks/useWallet';
 import { buildRegisterPlayer } from '@/lib/contract';
+import {
+  getOrCreateSession,
+  getSessionRows,
+  updateRowStatus,
+  deleteSession,
+  type BulkImportRowState,
+} from '@/lib/bulkImportStore';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -25,11 +32,36 @@ jest.mock('@/lib/contract', () => ({
   buildRegisterPlayer: jest.fn(),
 }));
 
+// Stub out IndexedDB-backed session store so the component's file-change
+// handler doesn't hang waiting for IDB callbacks that never fire in jsdom.
+jest.mock('@/lib/bulkImportStore', () => ({
+  hashFileContent: jest.fn().mockResolvedValue('testhash'),
+  getOrCreateSession: jest
+    .fn()
+    .mockResolvedValue({ sessionId: 'sess-1', rows: new Map() }),
+  getSessionRows: jest.fn().mockResolvedValue(new Map()),
+  updateRowStatus: jest.fn().mockResolvedValue(undefined),
+  deleteSession: jest.fn().mockResolvedValue(undefined),
+  cleanupExpiredSessions: jest.fn().mockResolvedValue(undefined),
+}));
+
 const mockedUseWallet = useWallet as jest.MockedFunction<typeof useWallet>;
 const mockedBuildRegisterPlayer = buildRegisterPlayer as jest.MockedFunction<
   typeof buildRegisterPlayer
 >;
 const mockedUseIsPaused = require('@/hooks/useIsPaused').default as jest.Mock;
+const mockedGetSessionRows = getSessionRows as jest.MockedFunction<
+  typeof getSessionRows
+>;
+const mockedGetOrCreateSession = getOrCreateSession as jest.MockedFunction<
+  typeof getOrCreateSession
+>;
+const mockedDeleteSession = deleteSession as jest.MockedFunction<
+  typeof deleteSession
+>;
+const mockedUpdateRowStatus = updateRowStatus as jest.MockedFunction<
+  typeof updateRowStatus
+>;
 
 const MOCK_PUBLIC_KEY = 'GACADEMYWALLET1234567890';
 
@@ -53,6 +85,10 @@ function makeFile(content: string, name: string, type = 'text/csv') {
 async function uploadFile(content: string, name: string, type?: string) {
   const input = screen.getByLabelText(/player file/i) as HTMLInputElement;
   const file = makeFile(content, name, type);
+  Object.defineProperty(input, 'files', {
+    value: [file],
+    configurable: true,
+  });
   fireEvent.change(input, { target: { files: [file] } });
   // FileReader resolves via a real macrotask in jsdom, not a microtask, so
   // fireEvent's implicit act() wrapper won't wait for it — poll instead.
@@ -130,9 +166,11 @@ describe('BulkPlayerImport', () => {
     await uploadFile(VALID_CSV, 'players.csv');
     expect(screen.getByRole('table')).toBeInTheDocument();
 
-    fireEvent.click(
-      screen.getByRole('button', { name: /choose another file/i }),
-    );
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: /choose another file/i }),
+      );
+    });
     expect(screen.queryByRole('table')).toBeNull();
   });
 
@@ -294,5 +332,308 @@ describe('BulkPlayerImport', () => {
     await act(async () => {
       resolveSign!({ hash: 'tx-hash-1' });
     });
+  });
+
+  // ── Pause / cancel ──────────────────────────────────────────────────────
+
+  it('shows a Pause button during submission and pauses the loop', async () => {
+    mockedBuildRegisterPlayer.mockResolvedValue('mock-xdr');
+    let resolveFirstSign: (val: unknown) => void;
+    let resolveSecondSign: (val: unknown) => void;
+    let callCount = 0;
+    const signAndSubmit = jest.fn().mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return new Promise((res) => {
+          resolveFirstSign = res;
+        });
+      }
+      return new Promise((res) => {
+        resolveSecondSign = res;
+      });
+    });
+    setupWallet({ signAndSubmit });
+
+    render(<BulkPlayerImport />);
+    await uploadFile(VALID_CSV, 'players.csv');
+
+    // Start import
+    fireEvent.click(
+      screen.getByRole('button', { name: /import 2 valid players/i }),
+    );
+
+    // Wait for first signature to be in-flight
+    await waitFor(() => {
+      expect(signAndSubmit).toHaveBeenCalledTimes(1);
+    });
+
+    // Click Pause
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /pause/i }));
+    });
+
+    // Finish the in-flight signature
+    await act(async () => {
+      resolveFirstSign!({ hash: 'tx-hash-1' });
+    });
+
+    // The second row should NOT have been submitted yet — loop is paused
+    // Give a tick for the polling interval
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    });
+    expect(mockedBuildRegisterPlayer).toHaveBeenCalledTimes(1);
+
+    // Click Resume
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /resume/i }));
+    });
+
+    // Now the second row should proceed
+    await waitFor(() => {
+      expect(mockedBuildRegisterPlayer).toHaveBeenCalledTimes(2);
+    });
+
+    await act(async () => {
+      resolveSecondSign!({ hash: 'tx-hash-2' });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/import complete/i)).toBeInTheDocument();
+    });
+  });
+
+  it('cancel stops the batch and shows a cancel message', async () => {
+    mockedBuildRegisterPlayer.mockResolvedValue('mock-xdr');
+    let resolveFirstSign: (val: unknown) => void;
+    let callCount = 0;
+    const signAndSubmit = jest.fn().mockImplementation(() => {
+      callCount++;
+      return new Promise((res) => {
+        resolveFirstSign = res;
+      });
+    });
+    setupWallet({ signAndSubmit });
+
+    render(<BulkPlayerImport />);
+    await uploadFile(VALID_CSV, 'players.csv');
+
+    // Start import
+    fireEvent.click(
+      screen.getByRole('button', { name: /import 2 valid players/i }),
+    );
+
+    // Wait for first signature to be in-flight
+    await waitFor(() => {
+      expect(signAndSubmit).toHaveBeenCalledTimes(1);
+    });
+
+    // Finish the in-flight signature
+    await act(async () => {
+      resolveFirstSign!({ hash: 'tx-hash-1' });
+    });
+
+    // Wait for row 1 to complete
+    await waitFor(() => {
+      expect(screen.getAllByText('Registered').length).toBe(1);
+    });
+
+    // Click Cancel
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+    });
+
+    // Should return to preview with cancel message, not "Import complete"
+    await waitFor(() => {
+      expect(screen.queryByText(/import complete/i)).toBeNull();
+    });
+    expect(screen.getByText(/batch cancelled/i)).toBeInTheDocument();
+
+    // updateRowStatus should have been called for the cancelled rows
+    expect(mockedUpdateRowStatus).toHaveBeenCalled();
+  });
+
+  it('preserves already-succeeded rows when cancelling mid-batch', async () => {
+    mockedBuildRegisterPlayer.mockResolvedValue('mock-xdr');
+    let resolveFirstSign: (val: unknown) => void;
+    let callCount = 0;
+    const signAndSubmit = jest.fn().mockImplementation(() => {
+      callCount++;
+      return new Promise((res) => {
+        resolveFirstSign = res;
+      });
+    });
+    setupWallet({ signAndSubmit });
+
+    render(<BulkPlayerImport />);
+    await uploadFile(VALID_CSV, 'players.csv');
+
+    // Start import
+    fireEvent.click(
+      screen.getByRole('button', { name: /import 2 valid players/i }),
+    );
+
+    // Wait for first signature to be in-flight
+    await waitFor(() => {
+      expect(signAndSubmit).toHaveBeenCalledTimes(1);
+    });
+
+    // Finish the in-flight signature with success
+    await act(async () => {
+      resolveFirstSign!({ hash: 'tx-hash-1' });
+    });
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Registered').length).toBe(1);
+    });
+
+    // Cancel the batch
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/batch cancelled/i)).toBeInTheDocument();
+    });
+
+    // Row 1 should still show as Registered
+    expect(screen.getAllByText('Registered').length).toBe(1);
+    // Row 2 should show as Waiting (pending, not lost)
+    expect(screen.getAllByText(/waiting/i).length).toBeGreaterThanOrEqual(1);
+
+    // Only 1 row was signed (row 1), not 2
+    expect(signAndSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  // ── Resume / idempotency ────────────────────────────────────────────────
+
+  it('shows a resume banner when re-uploading a file with an existing session that has completed rows', async () => {
+    // Mock an existing session with row 1 succeeded
+    const existingRows = new Map<number, BulkImportRowState>([
+      [
+        1,
+        {
+          rowNumber: 1,
+          fileHash: 'testhash',
+          status: 'success',
+          txHash: 'old-tx-hash',
+          updatedAt: Date.now(),
+        },
+      ],
+    ]);
+    mockedGetSessionRows.mockResolvedValueOnce(existingRows);
+
+    render(<BulkPlayerImport />);
+    await uploadFile(VALID_CSV, 'players.csv');
+
+    // Should show resume banner
+    await waitFor(() => {
+      expect(
+        screen.getByText(/incomplete batch found/i),
+      ).toBeInTheDocument();
+    });
+    expect(screen.getByText(/1 of 2 rows/i)).toBeInTheDocument();
+  });
+
+  it('does not show resume banner when session has no completed rows', async () => {
+    // Empty session (no rows completed)
+    mockedGetSessionRows.mockResolvedValueOnce(new Map());
+
+    render(<BulkPlayerImport />);
+    await uploadFile(VALID_CSV, 'players.csv');
+
+    await waitFor(() => {
+      expect(screen.getByRole('table')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/incomplete batch found/i)).toBeNull();
+  });
+
+  it('skips already-succeeded rows when re-importing the same file', async () => {
+    // Mock session: row 1 succeeded, row 2 is pending
+    const existingRows = new Map<number, BulkImportRowState>([
+      [
+        1,
+        {
+          rowNumber: 1,
+          fileHash: 'testhash',
+          status: 'success',
+          txHash: 'old-tx-hash',
+          updatedAt: Date.now(),
+        },
+      ],
+    ]);
+    mockedGetSessionRows.mockResolvedValueOnce(existingRows);
+
+    mockedBuildRegisterPlayer.mockResolvedValue('mock-xdr');
+    const signAndSubmit = jest.fn().mockResolvedValue({ hash: 'tx-hash-new' });
+    setupWallet({ signAndSubmit });
+
+    render(<BulkPlayerImport />);
+    await uploadFile(VALID_CSV, 'players.csv');
+
+    // Wait for resume banner
+    await waitFor(() => {
+      expect(
+        screen.getByText(/incomplete batch found/i),
+      ).toBeInTheDocument();
+    });
+
+    // Start import (resume)
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: /import 2 valid players/i }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/import complete/i)).toBeInTheDocument();
+    });
+
+    // Only 1 row was signed (row 2), row 1 was skipped
+    expect(signAndSubmit).toHaveBeenCalledTimes(1);
+    expect(mockedBuildRegisterPlayer).toHaveBeenCalledTimes(1);
+    // The signed row should be Jane Smith (row 2)
+    expect(mockedBuildRegisterPlayer).toHaveBeenCalledWith(
+      MOCK_PUBLIC_KEY,
+      {
+        name: 'Jane Smith',
+        age: 19,
+        position: 'GK',
+        region: 'kenya',
+        nationality: 'Kenyan',
+      },
+      '',
+    );
+  });
+
+  it('deletes session when clicking "Import another batch" after completion', async () => {
+    mockedBuildRegisterPlayer.mockResolvedValue('mock-xdr');
+    const signAndSubmit = jest.fn().mockResolvedValue({ hash: 'tx-hash-1' });
+    setupWallet({ signAndSubmit });
+
+    render(<BulkPlayerImport />);
+    await uploadFile(VALID_CSV, 'players.csv');
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: /import 2 valid players/i }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/import complete/i)).toBeInTheDocument();
+    });
+
+    mockedDeleteSession.mockClear();
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: /import another batch/i }),
+      );
+    });
+
+    expect(mockedDeleteSession).toHaveBeenCalledWith('sess-1');
+    expect(screen.queryByRole('table')).toBeNull();
   });
 });

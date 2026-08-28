@@ -18,6 +18,7 @@ interface SavedSearchRow {
   name: string;
   filter: string;
   created_at: number;
+  last_viewed_at: number;
 }
 
 function rowToEntry(row: SavedSearchRow): SavedSearch {
@@ -27,6 +28,7 @@ function rowToEntry(row: SavedSearchRow): SavedSearch {
     name: row.name,
     filter: JSON.parse(row.filter),
     createdAt: row.created_at,
+    lastViewedAt: row.last_viewed_at,
   };
 }
 
@@ -75,21 +77,42 @@ export class SavedSearchStore {
   }
 
   add(scoutWallet: string, name: string, filter: PlayerFilter): SavedSearch {
+    const now = Date.now();
     const result = this.db
       .prepare(
-        `INSERT INTO saved_search (scout_wallet, name, filter, created_at)
-         VALUES (@scout_wallet, @name, @filter, @created_at)`,
+        `INSERT INTO saved_search (scout_wallet, name, filter, created_at, last_viewed_at)
+         VALUES (@scout_wallet, @name, @filter, @created_at, @last_viewed_at)`,
       )
       .run({
         scout_wallet: scoutWallet,
         name,
         filter: JSON.stringify(filter),
-        created_at: Date.now(),
+        created_at: now,
+        last_viewed_at: now,
       });
 
     const row = this.db
       .prepare('SELECT * FROM saved_search WHERE id = ?')
       .get(result.lastInsertRowid) as SavedSearchRow;
+    return rowToEntry(row);
+  }
+
+  /**
+   * Marks a saved search as viewed now, scoped to its owner. Called when the
+   * scout opens/applies a saved search, so the "new since last viewed" count
+   * resets against the current result set.
+   */
+  markViewed(scoutWallet: string, id: number): SavedSearch | null {
+    const result = this.db
+      .prepare(
+        'UPDATE saved_search SET last_viewed_at = ? WHERE id = ? AND scout_wallet = ?',
+      )
+      .run(Date.now(), id, scoutWallet);
+    if (result.changes === 0) return null;
+
+    const row = this.db
+      .prepare('SELECT * FROM saved_search WHERE id = ?')
+      .get(id) as SavedSearchRow;
     return rowToEntry(row);
   }
 

@@ -250,8 +250,14 @@ export function removeRememberedAddress(publicKey: string) {
   localStorage.setItem(REMEMBERED_ADDRESSES_KEY, JSON.stringify(filtered));
 }
 
-export function clearAllRememberedAddresses() {
-  localStorage.removeItem(REMEMBERED_ADDRESSES_KEY);
+export function clearAllRememberedAddresses(): void {
+  // Clear the remembered addresses list on disconnect to prevent the
+  // account switcher from leaking wallet addresses between sessions
+  // on shared computers. Per docs/disconnect-state-policy.md, this
+  // per-wallet state should not persist after logout.
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(REMEMBERED_ADDRESSES_KEY);
+  }
 }
 
 // ── Context value ─────────────────────────────────────────────────────────────
@@ -284,6 +290,10 @@ interface WalletContextValue {
   refreshBalance: () => Promise<void>;
   /** When the current session expires (epoch ms), or null if unknown. */
   sessionExpiresAt: number | null;
+  /** The wallet address that the current session cookie authenticated. */
+  sessionCookieWallet: string | null;
+  /** Whether the connected wallet differs from the session cookie's wallet. */
+  sessionMismatch: boolean;
 }
 
 const WalletContext = createContext<WalletContextValue | null>(null);
@@ -303,6 +313,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   );
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [sessionExpiresAt, setSessionExpiresAt] = useState<number | null>(null);
+  const [sessionCookieWallet, setSessionCookieWallet] =
+    useState<string | null>(null);
 
   // ── Concurrency guard: de-duplicate concurrent doConnect calls ──────────
   // Multiple callers (e.g. reauthenticate from SessionExpiryWarning and a
@@ -311,6 +323,40 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // the first caller creates the promise, subsequent callers piggyback on
   // the same promise, and it is cleaned up on settlement.
   const inFlightConnectRef = useRef<Promise<void> | null>(null);
+
+  // ── Session cookie wallet reconciliation ──────────────────────────────────
+  // Compare the currently-connected wallet address with the identity the
+  // session cookie actually authenticated. If they differ, the session is
+  // stale and we need to prompt re-authentication.
+  const sessionMismatch = useMemo(() => {
+    if (!sessionCookieWallet || !publicKey) return false;
+    return sessionCookieWallet !== publicKey;
+  }, [sessionCookieWallet, publicKey]);
+
+  // Fetch the wallet address that the current session cookie authenticated.
+  // This runs on mount and whenever isAuthenticated changes, ensuring the
+  // cookie's wallet is always in sync with the server's view.
+  useEffect(() => {
+    if (!isAuthenticated || !isRestoringSession) return;
+
+    const fetchSessionCookieWallet = async () => {
+      try {
+        const session = await getServerSession();
+        if (session?.authenticated && session.publicKey) {
+          setSessionCookieWallet(session.publicKey);
+        } else {
+          setSessionCookieWallet(null);
+        }
+      } catch {
+        // If the server is unreachable, we can't determine the cookie's
+        // authenticated wallet. Leave it as null and the mismatch check
+        // will gracefully handle it.
+        setSessionCookieWallet(null);
+      }
+    };
+
+    fetchSessionCookieWallet();
+  }, [isAuthenticated, isRestoringSession]);
 
   const walletProviderInfo: WalletProviderInfo | null = walletProvider
     ? (WALLET_PROVIDERS.find((wp) => wp.provider === walletProvider) ?? null)
@@ -699,6 +745,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     // remaining valid until its natural expiry. Fire-and-forget: the
     // client-side cleanup below must not wait on (or be blocked by) the
     // network round trip.
+    //
+    // Per docs/disconnect-state-policy.md: on shared computers (common for
+    // scouts working from academy or club machines), we must clear all
+    // per-wallet state that shouldn't leak to the next wallet that connects.
     Promise.resolve(fetch('/api/auth/sep10', { method: 'DELETE' })).catch(
       () => {},
     );
@@ -710,6 +760,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setSessionExpiresAt(null);
     removeStoredSession();
     removeSessionExpiry();
+    clearAllRememberedAddresses();
     // Unlocked contact details (and any other cached data) must not survive
     // logout — see lib/contactDetailsCache.ts. The explicit purge below is
     // belt-and-suspenders on top of this blanket wipe: it also cancels any
@@ -790,6 +841,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       signOnly,
       refreshBalance,
       sessionExpiresAt,
+      sessionCookieWallet,
+      sessionMismatch,
     }),
     [
       publicKey,
@@ -813,6 +866,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       signOnly,
       refreshBalance,
       sessionExpiresAt,
+      sessionCookieWallet,
+      sessionMismatch,
     ],
   );
 

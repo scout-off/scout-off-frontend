@@ -17,9 +17,13 @@ jest.mock('@/components/ui/VideoUpload', () => ({
   default: ({
     onUpload,
     onValidationError,
+    onUploadStart,
+    onUploadingChange,
   }: {
     onUpload: (cid: string) => void;
     onValidationError?: (error: string | null) => void;
+    onUploadStart?: () => void;
+    onUploadingChange?: (uploading: boolean) => void;
   }) => (
     <div>
       <button type="button" onClick={() => onUpload('new-cid-1234567890')}>
@@ -44,6 +48,27 @@ jest.mock('@/components/ui/VideoUpload', () => ({
         }
       >
         Upload oversized
+      </button>
+      {/* Two-phase controls for simulating an in-flight replacement upload
+          (issue #1184): "start" fires before the CID is known, "finish"
+          fires once the (second) upload actually completes. */}
+      <button
+        type="button"
+        onClick={() => {
+          onUploadStart?.();
+          onUploadingChange?.(true);
+        }}
+      >
+        Start second upload
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          onUpload('replacement-cid-0987654321');
+          onUploadingChange?.(false);
+        }}
+      >
+        Finish second upload
       </button>
     </div>
   ),
@@ -322,5 +347,69 @@ describe('UpdateProfileForm', () => {
       screen.getByText(/Failed to update profile media/i),
     ).toBeInTheDocument();
     expect(onSuccess).not.toHaveBeenCalled();
+  });
+
+  // ── End-to-end CID integrity (issue #1184) ──────────────────────────────────
+
+  it('submits the second, replacement CID rather than the first when a highlight video is replaced mid-form', async () => {
+    const onSuccess = jest.fn();
+    mockedUpdateProfile.mockResolvedValue({
+      status: 'PENDING',
+      hash: 'tx-hash',
+      latestLedger: 1,
+      latestLedgerCloseTime: 1,
+    } as any);
+
+    renderComponent(onSuccess);
+
+    // First upload succeeds.
+    fireEvent.click(screen.getByRole('button', { name: /upload new media/i }));
+    const submit = screen.getByRole('button', { name: /update profile/i });
+    expect(submit).toBeEnabled();
+
+    // A second upload begins (replacing the first, already-verified CID).
+    fireEvent.click(
+      screen.getByRole('button', { name: /start second upload/i }),
+    );
+    expect(submit).toBeDisabled();
+
+    // Second upload completes with a different CID.
+    fireEvent.click(
+      screen.getByRole('button', { name: /finish second upload/i }),
+    );
+    expect(submit).toBeEnabled();
+
+    await act(async () => {
+      fireEvent.click(submit);
+    });
+
+    expect(mockedUpdateProfile).toHaveBeenCalledTimes(1);
+    expect(mockedUpdateProfile).toHaveBeenCalledWith(
+      player.wallet,
+      player.id,
+      'replacement-cid-0987654321',
+      expect.any(Function),
+    );
+  });
+
+  it('blocks submission while a replacement upload is still in flight, rather than submitting a stale CID', async () => {
+    renderComponent();
+
+    fireEvent.click(screen.getByRole('button', { name: /upload new media/i }));
+    const submit = screen.getByRole('button', { name: /update profile/i });
+    expect(submit).toBeEnabled();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /start second upload/i }),
+    );
+    expect(submit).toBeDisabled();
+
+    // Force-click despite the disabled state to confirm the guard in the
+    // submit handler itself, not just the disabled attribute.
+    await act(async () => {
+      fireEvent.click(submit);
+    });
+
+    expect(mockedUpdateProfile).not.toHaveBeenCalled();
   });
 });

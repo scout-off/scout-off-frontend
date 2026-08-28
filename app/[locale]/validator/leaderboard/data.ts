@@ -1,6 +1,10 @@
 import { getValidators } from '@/lib/contract';
 import { fetchValidatorMilestoneCount, fetchAcademyForWallet } from '@/lib/api';
 import type { ValidatorInfo } from '@/types';
+import {
+  getValidatorLeaderboardRange,
+  type ValidatorLeaderboardRange,
+} from '@/lib/validatorLeaderboard';
 
 export interface LeaderboardEntry {
   address: string;
@@ -10,13 +14,19 @@ export interface LeaderboardEntry {
   addedAt: number;
 }
 
-export async function getLeaderboardData(): Promise<LeaderboardEntry[]> {
+export async function getLeaderboardData(
+  range: ValidatorLeaderboardRange = 'all-time',
+): Promise<LeaderboardEntry[]> {
   const validators = (await getValidators()) as ValidatorInfo[];
+  const bounds = getValidatorLeaderboardRange(range);
 
   const entries = await Promise.all(
     validators.map(async (v): Promise<LeaderboardEntry> => {
       const [approvalCount, academy] = await Promise.all([
-        fetchValidatorMilestoneCount(v.address),
+        fetchValidatorMilestoneCount(
+          v.address,
+          range === 'all-time' ? undefined : bounds,
+        ),
         fetchAcademyForWallet(v.address),
       ]);
       return {
@@ -26,7 +36,7 @@ export async function getLeaderboardData(): Promise<LeaderboardEntry[]> {
         approvalCount,
         addedAt: v.addedAt,
       };
-    })
+    }),
   );
 
   return entries.sort((a, b) => {

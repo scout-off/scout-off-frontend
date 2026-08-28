@@ -15,6 +15,12 @@ const mockRefreshBalance = jest.fn();
 const mockCacheContactDetails = jest.fn();
 const mockPurgeContactDetails = jest.fn();
 const mockParseContractError = jest.fn();
+const mockIsBlockedByCounterpart = jest.fn();
+
+jest.mock('@/lib/messaging/moderation', () => ({
+  isBlockedByCounterpart: (...args: unknown[]) =>
+    mockIsBlockedByCounterpart(...args),
+}));
 
 jest.mock('@/hooks/useWallet', () => ({
   useWallet: () => mockUseWallet(),
@@ -71,10 +77,12 @@ describe('usePayToContact', () => {
     mockRefreshBalance.mockReset();
     mockCacheContactDetails.mockReset();
     mockPurgeContactDetails.mockReset();
+    mockIsBlockedByCounterpart.mockReset();
     mockParseContractError.mockImplementation((e: unknown) =>
       e instanceof Error ? e.message : 'unknown',
     );
     // Default happy path
+    mockIsBlockedByCounterpart.mockResolvedValue(false);
     mockGetSubscription.mockResolvedValue(baseSubscription());
     mockPayToContact.mockResolvedValue({
       email: 'p@example.com',
@@ -143,6 +151,24 @@ describe('usePayToContact', () => {
 
     expect(mockPayToContact).not.toHaveBeenCalled();
     expect(result.current.error).toMatch(/insufficient xlm/i);
+  });
+
+  test('blocked by counterpart: surfaces error, skips subscription fetch and payToContact', async () => {
+    mockIsBlockedByCounterpart.mockResolvedValueOnce(true);
+
+    const { result } = renderHook(() => usePayToContact('p1'), { wrapper });
+
+    await act(async () => {
+      await result.current.unlock();
+    });
+
+    expect(mockIsBlockedByCounterpart).toHaveBeenCalledWith('p1');
+    expect(mockGetSubscription).not.toHaveBeenCalled();
+    expect(mockPayToContact).not.toHaveBeenCalled();
+    expect(result.current.error).toBe(
+      'This player is not accepting new contact requests.',
+    );
+    expect(mockShow).toHaveBeenCalled();
   });
 
   test('wallet not connected: surfaces error immediately, skips subscription fetch', async () => {

@@ -7,22 +7,30 @@ jest.mock('@/lib/savedSearchClient', () => ({
   fetchSavedSearches: jest.fn(),
   saveSearch: jest.fn(),
   removeSavedSearch: jest.fn(),
+  markSavedSearchViewed: jest.fn(),
 }));
 jest.mock('@/components/ui/Toast', () => ({
   useToast: jest.fn(),
 }));
+jest.mock('@/lib/contract', () => ({
+  filterPlayers: jest.fn(),
+}));
 
 import {
   fetchSavedSearches,
+  markSavedSearchViewed,
   removeSavedSearch,
   saveSearch,
 } from '@/lib/savedSearchClient';
+import { filterPlayers } from '@/lib/contract';
 import { useToast } from '@/components/ui/Toast';
-import { useSavedSearches } from '@/hooks/useSavedSearches';
+import { useSavedSearches, useSavedSearchNewCount } from '@/hooks/useSavedSearches';
 
 const mockFetch = fetchSavedSearches as jest.Mock;
 const mockSave = saveSearch as jest.Mock;
 const mockRemove = removeSavedSearch as jest.Mock;
+const mockMarkViewed = markSavedSearchViewed as jest.Mock;
+const mockFilterPlayers = filterPlayers as jest.Mock;
 const mockUseToast = useToast as jest.Mock;
 
 function wrapper({ children }: { children: React.ReactNode }) {
@@ -39,6 +47,7 @@ const ENTRY: SavedSearch = {
   name: 'Lagos strikers',
   filter: { region: 'Lagos', position: 'Forward' },
   createdAt: 0,
+  lastViewedAt: 0,
 };
 
 let show: jest.Mock;
@@ -51,6 +60,8 @@ beforeEach(() => {
   mockFetch.mockResolvedValue([ENTRY]);
   mockSave.mockResolvedValue(ENTRY);
   mockRemove.mockResolvedValue(undefined);
+  mockMarkViewed.mockResolvedValue({ ...ENTRY, lastViewedAt: 12345 });
+  mockFilterPlayers.mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -137,5 +148,80 @@ describe('useSavedSearches', () => {
     });
 
     expect(mockSave).toHaveBeenCalledWith('New search', { region: 'Accra' });
+  });
+
+  test('markViewed calls the API and updates the entry in place', async () => {
+    const { result } = renderHook(() => useSavedSearches('GSCOUT'), {
+      wrapper,
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await result.current.markViewed(ENTRY);
+    });
+
+    expect(mockMarkViewed).toHaveBeenCalledWith(1);
+    expect(result.current.searches[0].lastViewedAt).toBe(12345);
+  });
+});
+
+describe('useSavedSearchNewCount', () => {
+  function countWrapper({ children }: { children: React.ReactNode }) {
+    return React.createElement(
+      SWRConfig,
+      { value: { provider: () => new Map(), shouldRetryOnError: false } },
+      children,
+    );
+  }
+
+  test('counts matching players created after lastViewedAt', async () => {
+    mockFilterPlayers.mockResolvedValue([
+      { id: 'p1', createdAt: 100, archived: false },
+      { id: 'p2', createdAt: 50, archived: false },
+      { id: 'p3', createdAt: 200, archived: false },
+    ]);
+
+    const { result } = renderHook(
+      () => useSavedSearchNewCount({ region: 'Lagos' }, 75),
+      { wrapper: countWrapper },
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current).toBe(2);
+  });
+
+  test('excludes archived players from the count', async () => {
+    mockFilterPlayers.mockResolvedValue([
+      { id: 'p1', createdAt: 100, archived: true },
+      { id: 'p2', createdAt: 100, archived: false },
+    ]);
+
+    const { result } = renderHook(
+      () => useSavedSearchNewCount({ region: 'Lagos' }, 0),
+      { wrapper: countWrapper },
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current).toBe(1);
+  });
+
+  test('returns 0 while data has not loaded yet', () => {
+    mockFilterPlayers.mockReturnValue(new Promise(() => {}));
+    const { result } = renderHook(
+      () => useSavedSearchNewCount({ region: 'Lagos' }, 0),
+      { wrapper: countWrapper },
+    );
+    expect(result.current).toBe(0);
   });
 });

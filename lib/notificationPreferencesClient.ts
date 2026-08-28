@@ -1,6 +1,7 @@
 /** Client for app/api/notification-preferences — same-origin, cookie-authenticated. */
 import type { NotificationPreferences } from '@/types';
 import { registerHandler, OfflineQueueConflictError } from '@/lib/offlineQueue';
+import { fetchWithRetry } from '@/lib/fetchWithRetry';
 
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   milestoneApprovals: true,
@@ -20,7 +21,7 @@ function versionFromEtag(res: Response): number | undefined {
 }
 
 export async function fetchNotificationPreferences(): Promise<NotificationPreferences> {
-  const res = await fetch('/api/notification-preferences');
+  const res = await fetchWithRetry('/api/notification-preferences');
   if (!res.ok) throw new Error('Failed to fetch notification preferences');
   return res.json();
 }
@@ -35,7 +36,7 @@ export async function fetchNotificationPreferencesWithVersion(): Promise<{
   preferences: NotificationPreferences;
   version?: number;
 }> {
-  const res = await fetch('/api/notification-preferences');
+  const res = await fetchWithRetry('/api/notification-preferences');
   if (!res.ok) throw new Error('Failed to fetch notification preferences');
   const preferences = await res.json();
   return { preferences, version: versionFromEtag(res) };

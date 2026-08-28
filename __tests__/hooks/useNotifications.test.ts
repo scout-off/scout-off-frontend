@@ -84,7 +84,7 @@ describe('useNotifications', () => {
     const { result } = renderHook(() => useNotifications(null), { wrapper });
     expect(result.current.notifications).toEqual([]);
     expect(result.current.unreadCount).toBe(0);
-    expect(mockFetchEvents).not.toHaveBeenCalled();
+    expect(mockFetchReadNotificationIds).not.toHaveBeenCalled();
   });
 
   it('loads and derives notifications for the given wallet', async () => {
@@ -235,6 +235,9 @@ describe('useNotifications', () => {
       events: [makeEvent({ id: 9, playerId: WALLET })],
       nextCursor: null,
     });
+    mockFetchReadNotificationIds
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([9]);
     mockMarkNotificationsRead.mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useNotifications(WALLET), {
@@ -259,6 +262,9 @@ describe('useNotifications', () => {
       nextCursor: null,
     });
     mockMarkNotificationsRead.mockRejectedValueOnce(new Error('network'));
+    mockFetchReadNotificationIds
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([9]);
 
     const { result } = renderHook(() => useNotifications(WALLET), {
       wrapper,
@@ -269,8 +275,8 @@ describe('useNotifications', () => {
       await expect(result.current.markRead(9)).rejects.toThrow('network');
     });
 
-    // mutate() (revalidate) re-invoked fetchEvents after the failed write.
-    await waitFor(() => expect(mockFetchEvents).toHaveBeenCalledTimes(2));
+    // mutate() (revalidate) re-invoked fetchReadNotificationIds after the failed write.
+    await waitFor(() => expect(mockFetchReadNotificationIds).toHaveBeenCalledTimes(2));
   });
 
   // ── markAllRead ──────────────────────────────────────────────────────
@@ -336,6 +342,9 @@ describe('useNotifications', () => {
       nextCursor: null,
     });
     mockMarkNotificationsRead.mockRejectedValueOnce(new Error('network'));
+    mockFetchReadNotificationIds
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([1]);
 
     const { result } = renderHook(() => useNotifications(WALLET), {
       wrapper,
@@ -346,6 +355,8 @@ describe('useNotifications', () => {
       await expect(result.current.markAllRead()).rejects.toThrow('network');
     });
 
-    await waitFor(() => expect(mockFetchEvents).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(mockFetchReadNotificationIds).toHaveBeenCalledTimes(2),
+    );
   });
 });

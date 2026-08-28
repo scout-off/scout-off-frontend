@@ -73,6 +73,36 @@ export const DEFAULT_THRESHOLDS: FraudThresholds = {
   CYCLING_MAX_CONTACTS_PER_SUBSCRIPTION,
 };
 
+/**
+ * Stable, content-derived key identifying "the same flag" across
+ * independent runs, for the admin-dismissal layer (issue #1171).
+ *
+ * `FraudFlag.id` (see `makeFlag` below) already dedupes *within* a single
+ * run and is close to this, but deliberately leaves severity out — it only
+ * encodes category + heuristic + subject wallets. That's fine for
+ * within-run dedup, but wrong for a dismissal key: a dismissal must stop
+ * suppressing once the *same* heuristic starts reporting a worse pattern
+ * for the *same* wallets (e.g. `fast_redemption_pattern`'s ratio crossing
+ * from 'medium' into 'high'), per docs/fraud-detection.md's "What would
+ * change this" section — a stale dismissal must never mask a worsening
+ * pattern. Folding `severity` into the key handles that: any change to a
+ * flag's evidence that's significant enough to move its severity band
+ * produces a different key, which was never dismissed, so it resurfaces.
+ * Evidence that fluctuates without crossing a severity boundary (e.g. a
+ * ratio nudging from 0.61 to 0.64, both 'medium') intentionally keeps the
+ * same key — that's "the same flag," not a new one, so a dismissal of it
+ * keeps holding.
+ *
+ * Wallets are sorted before joining so key stability doesn't depend on the
+ * heuristic's internal ordering of `flag.wallets`.
+ */
+export function computeFraudFlagDismissalKey(
+  flag: Pick<FraudFlag, 'category' | 'heuristic' | 'severity' | 'wallets'>,
+): string {
+  const wallets = [...flag.wallets].sort().join(',');
+  return `${flag.category}:${flag.heuristic}:${flag.severity}:${wallets}`;
+}
+
 function makeFlag(
   category: FraudFlag['category'],
   heuristic: string,

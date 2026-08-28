@@ -530,7 +530,7 @@ describe('isRetentionWindowError', () => {
 describe('IndexerMetrics stuck-cursor detection', () => {
   it('isStuck becomes true after STUCK_CYCLE_THRESHOLD consecutive same-cursor reports', () => {
     const metrics = IndexerMetrics.getInstance();
-    for (let i = 0; i < STUCK_CYCLE_THRESHOLD - 1; i++) {
+    for (let i = 0; i < STUCK_CYCLE_THRESHOLD; i++) {
       metrics.reportCursor(100);
       expect(metrics.snapshot().isStuck).toBe(false);
     }

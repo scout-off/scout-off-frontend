@@ -175,6 +175,10 @@ export default function PlayerOnboardingWizard({
   const [isLoading, setIsLoading] = useState(false);
   const [txStatus, setTxStatus] = useState<TxStatus | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
+  // Whether a highlight-reel upload is currently in flight (see #1184) —
+  // used to keep "Continue"/"Register" disabled for the full duration of an
+  // upload, not just until the CID field happens to be re-populated.
+  const [isUploadInProgress, setIsUploadInProgress] = useState(false);
 
   const nameRef = useRef<HTMLInputElement>(null);
   const ageRef = useRef<HTMLInputElement>(null);
@@ -378,7 +382,27 @@ export default function PlayerOnboardingWizard({
     });
   };
 
+  // Fires the instant a new (re-)upload begins — including replacing an
+  // already-uploaded, already-verified CID from an earlier attempt at step
+  // 2. Clearing `ipfsHash` immediately (rather than waiting for the new
+  // upload to finish) is what closes the race in issue #1184: for as long
+  // as a replacement upload is in flight, `data.ipfsHash` is empty, so
+  // `validateStep2` — and therefore "Continue" — cannot be satisfied by the
+  // stale CID from the previous upload. Only the new upload's own
+  // `handleVideoUpload` call can repopulate it.
+  const handleVideoUploadStart = () => {
+    updateField('ipfsHash', '');
+  };
+
   const validateStep2 = (): boolean => {
+    if (isUploadInProgress) {
+      setErrors({
+        ipfsHash: 'Please wait for the highlight reel upload to finish',
+      });
+      setValidationAttempted(true);
+      setStep2FocusTrigger((t) => t + 1);
+      return false;
+    }
     if (!data.ipfsHash) {
       setErrors({
         ipfsHash: 'Please upload your highlight reel before continuing',
@@ -415,6 +439,15 @@ export default function PlayerOnboardingWizard({
     }
     if (isPaused) {
       setErrors({ form: 'Transactions are currently disabled' });
+      return;
+    }
+    // Belt-and-suspenders guard mirroring validateStep2: step 3 can only be
+    // reached through a successful validateStep2 call, but this closes the
+    // gap defensively in case that ever changes, rather than trusting that
+    // step 3 is unreachable any other way (see issue #1184).
+    if (isUploadInProgress || !data.ipfsHash) {
+      setErrors({ form: 'Please finish uploading your highlight reel before submitting' });
+      setStep(2);
       return;
     }
 
@@ -756,7 +789,12 @@ export default function PlayerOnboardingWizard({
             </div>
           )}
 
-          <VideoUpload onUpload={handleVideoUpload} error={errors.ipfsHash} />
+          <VideoUpload
+            onUpload={handleVideoUpload}
+            onUploadStart={handleVideoUploadStart}
+            onUploadingChange={setIsUploadInProgress}
+            error={errors.ipfsHash}
+          />
 
           <div className="flex gap-3">
             <Button
@@ -767,7 +805,17 @@ export default function PlayerOnboardingWizard({
             >
               Back
             </Button>
-            <Button type="button" onClick={handleNext} className="flex-1">
+            <Button
+              type="button"
+              onClick={handleNext}
+              disabled={isUploadInProgress}
+              title={
+                isUploadInProgress
+                  ? 'Please wait for the highlight reel upload to finish'
+                  : undefined
+              }
+              className="flex-1"
+            >
               Continue
             </Button>
           </div>

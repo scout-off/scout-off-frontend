@@ -49,6 +49,16 @@ CREATE INDEX IF NOT EXISTS idx_events_ledger ON events(ledger DESC);
 `;
 
 /**
+ * Supports getApprovalCountsForWallets's per-wallet time-bounded lookup
+ * (issue #1172): a composite index on (validator, event_type, timestamp)
+ * lets that query's join do an indexed lookup per wallet instead of a table
+ * scan, since it filters by validator + event_type and ranges on timestamp.
+ */
+const VALIDATOR_TIMESTAMP_INDEX = `
+CREATE INDEX IF NOT EXISTS idx_events_validator_type_timestamp ON events(validator, event_type, timestamp);
+`;
+
+/**
  * Unique index enforcing exactly-once ingestion (issue #1180): `event_id`
  * is the content-derived id `eventPoller.decodeEvent` computes per raw
  * on-chain event (see `computeEventId`), so the same event observed across
@@ -94,6 +104,32 @@ export interface QueryResult {
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 
+/** One wallet + the earliest timestamp (inclusive) whose approvals should count for it. */
+export interface WalletApprovalWindow {
+  wallet: string;
+  /** Only events at or after this timestamp count — typically the wallet's academy_members.added_at. */
+  since: number;
+}
+
+/** Per-wallet approved-milestone counts for a time range, keyed by wallet. */
+export type ApprovalCountsByWallet = Record<string, number>;
+
+/** Hard cap on how many wallets a single getApprovalCountsForWallets call will accept. */
+const MAX_WALLETS_PER_QUERY = 500;
+
+/**
+ * Bounds how long a computed approval-counts result is reused before being
+ * recomputed (issue #1172's "don't re-scan on every request" requirement).
+ * Cleared eagerly on every new insertEvent so a fresh approval is reflected
+ * well before the TTL would otherwise expire it.
+ */
+const APPROVAL_COUNTS_CACHE_TTL_MS = 30_000;
+
+interface ApprovalCountsCacheEntry {
+  computedAt: number;
+  counts: ApprovalCountsByWallet;
+}
+
 interface EventRow {
   id: number;
   event_type: string;
@@ -133,6 +169,18 @@ export class EventStore {
 
   private db: Database.Database;
 
+  /**
+   * Memoizes getApprovalCountsForWallets results keyed by the exact
+   * (range, wallet+since set) requested, so repeated calls for the same
+   * academy-rollup request (e.g. an admin dashboard re-rendering, or two
+   * academies sharing a time range) within APPROVAL_COUNTS_CACHE_TTL_MS
+   * reuse one computed result instead of re-running the join. Cleared
+   * wholesale on every insertEvent rather than tracked per-key, since the
+   * cache is small and short-lived enough that this is simpler than
+   * fine-grained invalidation.
+   */
+  private approvalCountsCache = new Map<string, ApprovalCountsCacheEntry>();
+
   private constructor(dbPath: string) {
     if (dbPath !== ':memory:') {
       fs.mkdirSync(path.dirname(dbPath), { recursive: true });
@@ -145,6 +193,7 @@ export class EventStore {
     this.db.exec(SCHEMA);
     this.migrateEventIdColumn();
     this.db.exec(UNIQUE_EVENT_ID_INDEX);
+    this.db.exec(VALIDATOR_TIMESTAMP_INDEX);
   }
 
   /**
@@ -221,7 +270,14 @@ export class EventStore {
         event_id: decoded.eventId,
         inserted_at: Date.now(),
       });
-    return result.changes > 0;
+    const inserted = result.changes > 0;
+    if (inserted && decoded.type === 'milestone_approved') {
+      // A new approval can change any in-flight approval-counts result, so
+      // drop the cache rather than serve a stale rollup until the TTL
+      // happens to expire on its own.
+      this.approvalCountsCache.clear();
+    }
+    return inserted;
   }
 
   /** General event query, optionally filtered by type and/or player. */
@@ -270,6 +326,91 @@ export class EventStore {
     filter: Omit<QueryFilter, 'playerId'> = {},
   ): QueryResult {
     return this.getEvents({ ...filter, playerId });
+  }
+
+  /**
+   * Counts `milestone_approved` events per wallet within `[start, end]`
+   * (inclusive, unix ms timestamps), where each wallet additionally has its
+   * own lower bound via `since` — the academy-scoped rollup (issue #1172)
+   * uses this to pass each member wallet's `academy_members.added_at` so
+   * approvals from before a wallet joined its academy are excluded from
+   * that academy's total, rather than naively counting "current members x
+   * all-time approvals" for the whole requested range.
+   *
+   * This does NOT exclude approvals made by a wallet *after* it was removed
+   * from an academy — `academy_members` rows are hard-deleted on removal
+   * (no `removed_at`/tombstone), so a caller can only pass the wallets it
+   * currently considers members and has no way to ask "and only up to when
+   * this wallet left." See docs/academy-validator-model.md's "Academy
+   * milestone rollup" section for the resulting limitation.
+   *
+   * Grouped in SQL (one indexed query via idx_events_validator_type_timestamp)
+   * rather than fetched-then-grouped in application code, and memoized for
+   * APPROVAL_COUNTS_CACHE_TTL_MS so a burst of identical requests (e.g. an
+   * admin dashboard rendering several academies against the same range)
+   * doesn't re-run the query per call.
+   */
+  getApprovalCountsForWallets(
+    range: { start: number; end: number },
+    wallets: WalletApprovalWindow[],
+  ): ApprovalCountsByWallet {
+    if (wallets.length === 0) return {};
+    if (wallets.length > MAX_WALLETS_PER_QUERY) {
+      throw new Error(
+        `getApprovalCountsForWallets: at most ${MAX_WALLETS_PER_QUERY} wallets per call (got ${wallets.length})`,
+      );
+    }
+
+    const cacheKey = JSON.stringify({
+      start: range.start,
+      end: range.end,
+      // Sort so the same wallet set in a different order still hits the cache.
+      wallets: [...wallets]
+        .map((w) => [w.wallet, w.since] as const)
+        .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+    });
+    const cached = this.approvalCountsCache.get(cacheKey);
+    if (
+      cached &&
+      Date.now() - cached.computedAt < APPROVAL_COUNTS_CACHE_TTL_MS
+    ) {
+      return cached.counts;
+    }
+
+    const valuesSql = wallets
+      .map((_, i) => `(@wallet${i}, @since${i})`)
+      .join(', ');
+    const params: Record<string, unknown> = {
+      start: range.start,
+      end: range.end,
+    };
+    wallets.forEach((w, i) => {
+      params[`wallet${i}`] = w.wallet;
+      params[`since${i}`] = w.since;
+    });
+
+    const rows = this.db
+      .prepare(
+        `WITH member(wallet, since) AS (VALUES ${valuesSql})
+         SELECT m.wallet AS wallet, COUNT(e.id) AS count
+         FROM member m
+         LEFT JOIN events e
+           ON e.validator = m.wallet
+          AND e.event_type = 'milestone_approved'
+          AND e.timestamp >= MAX(m.since, @start)
+          AND e.timestamp <= @end
+         GROUP BY m.wallet`,
+      )
+      .all(params) as { wallet: string; count: number }[];
+
+    const counts: ApprovalCountsByWallet = {};
+    for (const row of rows) counts[row.wallet] = row.count;
+
+    this.approvalCountsCache.set(cacheKey, {
+      computedAt: Date.now(),
+      counts,
+    });
+    return counts;
   }
 
   close(): void {

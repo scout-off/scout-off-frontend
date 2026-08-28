@@ -84,6 +84,15 @@ const ValidatorActionLog = dynamic(
     ),
   },
 );
+const AutomatedModerationLog = dynamic(
+  () => import('@/components/admin/AutomatedModerationLog'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-brand-card border border-gray-800 rounded-xl p-6 animate-pulse h-48" />
+    ),
+  },
+);
 import type { TxStatus } from '@/components/ui/TransactionStatus';
 import {
   getValidators,
@@ -715,6 +724,8 @@ function AdminDashboardContent() {
       <AdminAuditLog />
 
       <ValidatorActionLog />
+
+      <AutomatedModerationLog />
 
       <FraudFlagsPanel />
 

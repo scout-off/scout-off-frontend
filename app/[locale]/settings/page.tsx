@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { ArrowLeft, Trash2, Shield, Bell, Download, LogOut } from 'lucide-react';
+import { ArrowLeft, Trash2, Shield, Bell, Download, LogOut, Laptop } from 'lucide-react';
 import DataDeletionModal from '@/components/player/DataDeletionModal';
 import NotificationPreferencesPanel from '@/components/NotificationPreferencesPanel';
+import ActiveSessions from '@/components/ActiveSessions';
 import { useWallet } from '@/hooks/useWallet';
 import { useToast } from '@/components/ui/Toast';
 
@@ -168,6 +169,29 @@ export default function SettingsPage({
               {t('connect_wallet_to_request')}
             </p>
           )}
+        </div>
+      </section>
+
+      {/* Active Sessions section */}
+      <section className="px-1 sm:px-0">
+        <div className="rounded-2xl border border-gray-800 bg-brand-card/70 p-6 sm:p-8">
+          <div className="flex items-start gap-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-green/10 text-brand-green">
+              <Laptop size={18} aria-hidden="true" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg font-semibold text-white">
+                Active sessions
+              </h2>
+              <p className="mt-1 max-w-lg text-sm leading-relaxed text-gray-400">
+                Every device and browser currently signed in to your wallet.
+                Revoke any session you don&apos;t recognize.
+              </p>
+              <div className="mt-4">
+                <ActiveSessions />
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

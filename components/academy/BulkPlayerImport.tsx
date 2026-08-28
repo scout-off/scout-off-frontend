@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, ChangeEvent, useEffect } from 'react';
+import { useRef, useState, useCallback, ChangeEvent, useEffect } from 'react';
 import { useWallet } from '@/hooks/useWallet';
 import useIsPaused from '@/hooks/useIsPaused';
 import { buildRegisterPlayer } from '@/lib/contract';
@@ -148,6 +148,19 @@ export default function BulkPlayerImport() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [fileHash, setFileHash] = useState<string | null>(null);
 
+  // ── Pause / cancel controls ────────────────────────────────────────────────
+  // Refs are used for the loop's hot path so it always reads the latest value
+  // without requiring a re-render or suffering from stale closures.
+  const pausedRef = useRef(false);
+  const cancelledRef = useRef(false);
+  const [isPausedBatch, setIsPausedBatch] = useState(false);
+
+  // ── Resume banner ──────────────────────────────────────────────────────────
+  const [resumedSessionInfo, setResumedSessionInfo] = useState<{
+    completedRows: number;
+    totalRows: number;
+  } | null>(null);
+
   const validRows = rows.filter((r) => r.isValid && r.valid);
   const invalidRows = rows.filter((r) => !r.isValid);
 
@@ -172,6 +185,10 @@ export default function BulkPlayerImport() {
     setFormError(null);
     setSessionId(null);
     setFileHash(null);
+    setIsPausedBatch(false);
+    pausedRef.current = false;
+    cancelledRef.current = false;
+    setResumedSessionInfo(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -207,17 +224,36 @@ export default function BulkPlayerImport() {
       // Restore persisted row states
       const persistedRows = await getSessionRows(session.sessionId);
       const submissionsMap: Record<number, RowSubmission> = {};
+      let completedCount = 0;
       persistedRows.forEach((rowState, rowNum) => {
         submissionsMap[rowNum] = {
           status: rowState.status as RowSubmissionStatus,
           txHash: rowState.txHash,
           error: rowState.error,
         };
+        if (
+          rowState.status === 'success' ||
+          rowState.status === 'failed' ||
+          rowState.status === 'skipped'
+        ) {
+          completedCount++;
+        }
       });
 
       setRows(result.rows);
       setSubmissions(submissionsMap);
       setPhase('preview');
+
+      // Show resume banner if there are previously completed/failed rows
+      const validRowCount = result.rows.filter((r) => r.isValid).length;
+      if (completedCount > 0 && validRowCount > 0) {
+        setResumedSessionInfo({
+          completedRows: completedCount,
+          totalRows: validRowCount,
+        });
+      } else {
+        setResumedSessionInfo(null);
+      }
     };
     reader.onerror = () => {
       setFileError('Failed to read the file. Please try again.');
@@ -234,6 +270,11 @@ export default function BulkPlayerImport() {
   // that row is marked failed and the batch continues to the next row rather
   // than aborting, so one bad row (or one rejected prompt) doesn't cost the
   // admin the rest of an otherwise-good batch.
+  //
+  // The loop respects pause/cancel controls via refs. Pausing waits (polling
+  // every 200ms) before the *next* row's signature prompt; in-flight
+  // signatures are allowed to finish. Cancelling breaks the loop immediately
+  // and records which rows were skipped so they can be retried on resume.
   const handleImport = async () => {
     if (!publicKey) {
       setFormError('Wallet not connected');
@@ -247,6 +288,12 @@ export default function BulkPlayerImport() {
 
     setFormError(null);
     setPhase('submitting');
+    setResumedSessionInfo(null);
+
+    // Reset pause/cancel flags for a fresh run
+    pausedRef.current = false;
+    cancelledRef.current = false;
+    setIsPausedBatch(false);
 
     const initial: Record<number, RowSubmission> = {};
     for (const r of validRows) {
@@ -260,6 +307,15 @@ export default function BulkPlayerImport() {
     setSubmissions(initial);
 
     for (const r of validRows) {
+      // Check for cancellation before starting the next row
+      if (cancelledRef.current) break;
+
+      // Wait while paused (poll every 200ms) — in-flight signatures finish
+      while (pausedRef.current && !cancelledRef.current) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+      if (cancelledRef.current) break;
+
       // Skip rows that already succeeded
       if (submissions[r.rowNumber]?.status === 'success') {
         continue;
@@ -314,8 +370,50 @@ export default function BulkPlayerImport() {
       }
     }
 
-    setPhase('done');
+    if (cancelledRef.current) {
+      // Batch was cancelled — mark remaining pending rows as skipped so
+      // they are recognized on resume and not silently lost.
+      for (const r of validRows) {
+        if (
+          !cancelledRef.current &&
+          submissions[r.rowNumber]?.status === 'success'
+        ) {
+          continue;
+        }
+        const current = submissions[r.rowNumber];
+        if (current && current.status !== 'success' && current.status !== 'failed') {
+          setSubmissions((prev) => ({
+            ...prev,
+            [r.rowNumber]: { status: 'pending' },
+          }));
+          if (sessionId) {
+            await updateRowStatus(sessionId, r.rowNumber, 'pending');
+          }
+        }
+      }
+      setIsPausedBatch(false);
+      setPhase('preview');
+      setFormError('Batch cancelled. Re-upload the same file to resume from where you left off.');
+    } else {
+      setPhase('done');
+    }
   };
+
+  const handlePause = useCallback(() => {
+    pausedRef.current = true;
+    setIsPausedBatch(true);
+  }, []);
+
+  const handleResume = useCallback(() => {
+    pausedRef.current = false;
+    setIsPausedBatch(false);
+  }, []);
+
+  const handleCancel = useCallback(() => {
+    cancelledRef.current = true;
+    pausedRef.current = false;
+    setIsPausedBatch(false);
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -384,6 +482,24 @@ export default function BulkPlayerImport() {
               {rows.length} total
             </p>
           </div>
+
+          {/* ── Resume banner ─────────────────────────────────────────────── */}
+          {resumedSessionInfo && phase === 'preview' && (
+            <div
+              role="status"
+              aria-live="polite"
+              className="rounded-md border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm text-yellow-200"
+            >
+              Incomplete batch found:{' '}
+              <span className="font-medium">
+                {resumedSessionInfo.completedRows} of{' '}
+                {resumedSessionInfo.totalRows} rows
+              </span>{' '}
+              already processed. Rows that previously succeeded will be
+              skipped. Click{' '}
+              <span className="font-medium">Import</span> to resume.
+            </div>
+          )}
 
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
@@ -490,28 +606,55 @@ export default function BulkPlayerImport() {
 
           <div className="flex flex-wrap gap-3">
             {(phase === 'preview' || phase === 'submitting') && (
-              <Button
-                type="button"
-                onClick={handleImport}
-                isLoading={phase === 'submitting'}
-                disabled={
-                  phase === 'submitting' ||
-                  validRows.length === 0 ||
-                  isPaused ||
-                  !publicKey
-                }
-                title={
-                  isPaused
-                    ? 'Contract is currently paused'
-                    : !publicKey
-                      ? 'Connect a wallet to import players'
-                      : undefined
-                }
-              >
-                {phase === 'submitting'
-                  ? 'Importing…'
-                  : `Import ${validRows.length} valid player${validRows.length === 1 ? '' : 's'}`}
-              </Button>
+              <>
+                {phase === 'submitting' && !isPausedBatch && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handlePause}
+                  >
+                    Pause
+                  </Button>
+                )}
+                {phase === 'submitting' && isPausedBatch && (
+                  <Button type="button" onClick={handleResume}>
+                    Resume
+                  </Button>
+                )}
+                {phase === 'submitting' && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleCancel}
+                  >
+                    Cancel
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  onClick={handleImport}
+                  isLoading={phase === 'submitting' && !isPausedBatch}
+                  disabled={
+                    phase === 'submitting' ||
+                    validRows.length === 0 ||
+                    isPaused ||
+                    !publicKey
+                  }
+                  title={
+                    isPaused
+                      ? 'Contract is currently paused'
+                      : !publicKey
+                        ? 'Connect a wallet to import players'
+                        : undefined
+                  }
+                >
+                  {phase === 'submitting'
+                    ? isPausedBatch
+                      ? 'Paused'
+                      : 'Importing…'
+                    : `Import ${validRows.length} valid player${validRows.length === 1 ? '' : 's'}`}
+                </Button>
+              </>
             )}
             <Button
               type="button"

@@ -12,11 +12,14 @@ const mockFetchAcademies = jest.fn();
 const mockCreateAcademy = jest.fn();
 const mockAddAcademyMember = jest.fn();
 const mockRemoveAcademyMember = jest.fn();
+const mockFetchAcademyMilestoneRollup = jest.fn();
 jest.mock('@/lib/api', () => ({
   fetchAcademies: (...args: unknown[]) => mockFetchAcademies(...args),
   createAcademy: (...args: unknown[]) => mockCreateAcademy(...args),
   addAcademyMember: (...args: unknown[]) => mockAddAcademyMember(...args),
   removeAcademyMember: (...args: unknown[]) => mockRemoveAcademyMember(...args),
+  fetchAcademyMilestoneRollup: (...args: unknown[]) =>
+    mockFetchAcademyMilestoneRollup(...args),
 }));
 
 const mockCheckIsValidator = jest.fn();
@@ -44,11 +47,17 @@ const ACADEMY = {
       addedBy: 'GADMIN',
     },
   ],
+  quorum: null,
 };
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockCheckIsValidator.mockResolvedValue(true);
+  mockFetchAcademyMilestoneRollup.mockResolvedValue({
+    range: { start: 0, end: 1 },
+    indexerAvailable: true,
+    academies: [],
+  });
 });
 
 describe('AcademyManager', () => {
@@ -199,6 +208,74 @@ describe('AcademyManager', () => {
 
     await waitFor(() =>
       expect(screen.getByText('not on-chain')).toBeInTheDocument(),
+    );
+  });
+
+  // ── Milestone-verification quorum (issue #1185) ───────────────────────────
+
+  it('shows "Not configured" for an academy with no quorum set', async () => {
+    mockFetchAcademies.mockResolvedValue([ACADEMY]);
+    render(<AcademyManager />);
+
+    await waitFor(() =>
+      expect(screen.getByText('FC Sahel')).toBeInTheDocument(),
+    );
+    expect(screen.getByText('Not configured')).toBeInTheDocument();
+  });
+
+  it('saves a new quorum value', async () => {
+    mockFetchAcademies.mockResolvedValue([ACADEMY]);
+    mockSetAcademyQuorum.mockResolvedValue({ ...ACADEMY, quorum: 2 });
+
+    render(<AcademyManager />);
+    await waitFor(() =>
+      expect(screen.getByText('FC Sahel')).toBeInTheDocument(),
+    );
+
+    const input = screen.getByLabelText(/milestone-verification quorum/i);
+    await userEvent.clear(input);
+    await userEvent.type(input, '2');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() =>
+      expect(mockSetAcademyQuorum).toHaveBeenCalledWith('academy-1', 2),
+    );
+    expect(await screen.findByText('2 signers required')).toBeInTheDocument();
+  });
+
+  it('clearing the quorum input and saving sends null', async () => {
+    mockFetchAcademies.mockResolvedValue([{ ...ACADEMY, quorum: 3 }]);
+    mockSetAcademyQuorum.mockResolvedValue({ ...ACADEMY, quorum: null });
+
+    render(<AcademyManager />);
+    await waitFor(() =>
+      expect(screen.getByText('FC Sahel')).toBeInTheDocument(),
+    );
+
+    const input = screen.getByLabelText(/milestone-verification quorum/i);
+    expect(input).toHaveValue(3);
+    await userEvent.clear(input);
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() =>
+      expect(mockSetAcademyQuorum).toHaveBeenCalledWith('academy-1', null),
+    );
+  });
+
+  it('rejects a non-positive quorum without calling the API', async () => {
+    mockFetchAcademies.mockResolvedValue([ACADEMY]);
+    render(<AcademyManager />);
+    await waitFor(() =>
+      expect(screen.getByText('FC Sahel')).toBeInTheDocument(),
+    );
+
+    const input = screen.getByLabelText(/milestone-verification quorum/i);
+    await userEvent.type(input, '0');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(mockSetAcademyQuorum).not.toHaveBeenCalled();
+    expect(mockShow).toHaveBeenCalledWith(
+      expect.objectContaining({ variant: 'error' }),
     );
   });
 });

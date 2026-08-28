@@ -205,7 +205,7 @@ This project uses Husky to run checks before each commit and push.
 
 ### Pre-commit hook
 
-The pre-commit hook at `.husky/pre-commit` executes `npx --no-install lint-staged`.
+The pre-commit hook at `.husky/pre-commit` executes `npx --no-install lint-staged` before each commit. It runs only against staged files, so it does not run the full test suite locally.
 
 `lint-staged` runs:
 
@@ -222,7 +222,7 @@ The commit-msg hook at `.husky/commit-msg` runs `@commitlint/cli` with `@commitl
 
 ### Bypassing hooks
 
-Only bypass hooks in an emergency:
+Only bypass the pre-commit hook in an emergency, such as when an unrelated local issue prevents a commit:
 
 ```bash
 git commit --no-verify

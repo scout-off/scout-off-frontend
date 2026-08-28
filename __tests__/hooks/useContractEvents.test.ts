@@ -6,9 +6,8 @@
  *  AC-1  New operation appended server-side between polls appears in state.
  *  AC-2  Burst > page size (20) between polls: no events are silently dropped.
  *  AC-3  No duplicate entries across polls that both return an already-seen op.
- *  AC-4  Both fallback trigger paths (no EventSource, SSE error events
- *        exceeding MAX_RECONNECT_ATTEMPTS) start polling and correctly advance
- *        afterward — not just fetchOperations/cursor logic in isolation.
+ *  AC-4  Both fallback trigger paths (no EventSource, SSE exhausted) start
+ *        polling and correctly advance the cursor afterwards.
  *
  * Plus the pre-existing behavioural cases that the original test suite covered,
  * updated to reflect the corrected cursor direction.

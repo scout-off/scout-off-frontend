@@ -128,4 +128,31 @@ export async function getMilestoneHistoryFromIndexer(
   );
 }
 
+/** One wallet + the earliest timestamp (inclusive, unix ms) whose approvals should count for it. */
+export interface WalletApprovalWindow {
+  wallet: string;
+  since: number;
+}
+
+export interface ApprovalCountsResponse {
+  range: { start: number; end: number };
+  /** Approved-milestone count per wallet within range, keyed by wallet address. */
+  counts: Record<string, number>;
+}
+
+/**
+ * Calls the indexer's POST /validators/approval-counts — the building block
+ * for the academy-scoped milestone rollup (issue #1172). Used server-side by
+ * app/api/admin/academies/rollup, which resolves the wallet→academy mapping
+ * (from server/'s academy service) and sums these per-wallet counts into
+ * per-academy totals.
+ */
+export const fetchApprovalCountsByWallets = (
+  range: { start: number; end: number },
+  wallets: WalletApprovalWindow[],
+): Promise<ApprovalCountsResponse> =>
+  indexerApi
+    .post('/validators/approval-counts', { ...range, wallets })
+    .then((r) => r.data);
+
 export default indexerApi;

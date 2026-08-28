@@ -30,18 +30,7 @@ export interface SpendingSummaryData {
   monthlyBreakdown: MonthlyBreakdown[];
 }
 
-// ── Constants ──────────────────────────────────────────────────────────────────
-
-/**
- * Approximate XLM fees by subscription tier. These are hardcoded because
- * the indexed events record the tier but not the amount paid — the contract
- * enforces these at submit time.
- */
-const TIER_FEES_XLM: Record<string, number> = {
-  basic: 5,
-  pro: 12,
-  elite: 20,
-};
+import { resolveContactFee, resolveSubscriptionFee } from '@/lib/feeSchedule';
 
 const MONTH_LABEL_FORMAT: Intl.DateTimeFormatOptions = {
   year: 'numeric',
@@ -188,14 +177,11 @@ export function useSpendingSummary(): {
       const entry = byMonth.get(key)!;
 
       if (event.type === 'player_contacted') {
-        // Contact fee is fixed at 1 XLM per contact.
-        const fee = 1;
+        const fee = resolveContactFee(event.data);
         entry.contactFeeXlm += fee;
         totalContactFees += fee;
       } else if (event.type === 'scout_subscribed') {
-        // Subscription fee inferred from the tier stored in event data.
-        const tier = String(event.data?.tier ?? 'basic');
-        const fee = TIER_FEES_XLM[tier] ?? 5;
+        const fee = resolveSubscriptionFee(event.data);
         entry.subscriptionXlm += fee;
         totalSubscriptions += fee;
       }

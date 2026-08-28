@@ -69,4 +69,30 @@ describe('SavedSearchStore', () => {
   it('returns false when removing a non-existent id', () => {
     expect(store.remove('GSCOUT', 999)).toBe(false);
   });
+
+  it('initializes lastViewedAt to createdAt on add', () => {
+    const entry = store.add('GSCOUT', 'My search', FILTER);
+    expect(entry.lastViewedAt).toBe(entry.createdAt);
+  });
+
+  it('markViewed updates lastViewedAt for the owning scout', () => {
+    const entry = store.add('GSCOUT', 'My search', FILTER);
+    const updated = store.markViewed('GSCOUT', entry.id);
+
+    expect(updated).not.toBeNull();
+    expect(updated!.lastViewedAt).toBeGreaterThanOrEqual(entry.createdAt);
+    expect(store.list('GSCOUT')[0].lastViewedAt).toBe(updated!.lastViewedAt);
+  });
+
+  it('markViewed does not update a search owned by a different scout', () => {
+    const entry = store.add('GSCOUT_A', 'My search', FILTER);
+    const updated = store.markViewed('GSCOUT_B', entry.id);
+
+    expect(updated).toBeNull();
+    expect(store.list('GSCOUT_A')[0].lastViewedAt).toBe(entry.createdAt);
+  });
+
+  it('markViewed returns null for a non-existent id', () => {
+    expect(store.markViewed('GSCOUT', 999)).toBeNull();
+  });
 });

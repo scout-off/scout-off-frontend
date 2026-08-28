@@ -52,6 +52,18 @@ router.get('/wallet/:wallet', (req, res) => {
   return res.json(academy);
 });
 
+// GET /academies/owner/:wallet
+// Used by app/api/admin/academies/mine (see lib/academyAuth.ts) to resolve
+// whether a session wallet is a scoped academy-owner (issue #1173). Not
+// itself an admin action — it only reveals which academies (if any) a
+// wallet owns, the same shape of information `GET /academies` already
+// exposes to any super-admin caller. Route-level authorization for actually
+// *managing* a roster is enforced by the Next.js proxy, not here — this
+// service has no auth of its own, matching every other route in this file.
+router.get('/owner/:wallet', (req, res) => {
+  return res.json(academyService.listAcademiesByOwnerWallet(req.params.wallet));
+});
+
 // POST /academies/:id/members
 // Body: { wallet: string, addedBy: string }
 router.post('/:id/members', (req, res) => {
@@ -81,6 +93,28 @@ router.delete('/:id/members/:wallet', (req, res) => {
     return res.status(404).json({ error: 'Membership not found' });
   }
   return res.json({ success: true });
+});
+
+// PATCH /academies/:id/quorum
+// Body: { quorum: number | null } — see issue #1185. null clears a
+// previously-configured quorum, restoring today's default behavior.
+router.patch('/:id/quorum', (req, res) => {
+  const { quorum } = req.body ?? {};
+  if (quorum !== null && (!Number.isInteger(quorum) || quorum < 1)) {
+    return res
+      .status(400)
+      .json({ error: 'quorum must be a positive integer, or null to clear it' });
+  }
+
+  try {
+    const academy = academyService.setAcademyQuorum(req.params.id, quorum);
+    return res.json(academy);
+  } catch (err) {
+    if (err instanceof academyService.AcademyNotFoundError) {
+      return res.status(404).json({ error: err.message });
+    }
+    throw err;
+  }
 });
 
 module.exports = router;

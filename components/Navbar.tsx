@@ -10,6 +10,7 @@ import { useContractStatus } from '@/hooks/useContractStatus';
 import { useWallet } from '@/hooks/useWallet';
 import { useCurrencyPreference } from '@/hooks/useCurrencyPreference';
 import NotificationBell from './NotificationBell';
+import SessionMismatchWarning from './SessionMismatchWarning';
 
 const NAV_LINKS = [
   { href: '/scout', labelKey: 'nav.scout_dashboard' },
@@ -20,7 +21,7 @@ const SPONSORSHIP_LINK = { href: '/sponsorship', labelKey: 'nav.sponsorship' };
 
 export default function Navbar() {
   const { isPaused } = useContractStatus();
-  const { xlmBalance, isLoadingBalance, isAuthenticated } = useWallet();
+  const { xlmBalance, isLoadingBalance, isAuthenticated, sessionMismatch } = useWallet();
   const { currency, setCurrency, supported } = useCurrencyPreference();
   const t = useTranslations();
   const router = useRouter();
@@ -104,6 +105,7 @@ export default function Navbar() {
 
   return (
     <>
+      {sessionMismatch && <SessionMismatchWarning />}
       {isPaused && (
         <div className="bg-yellow-500 text-black text-center text-sm font-medium py-2 px-4">
           {t('nav.maintenance_warning')}

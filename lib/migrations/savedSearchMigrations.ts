@@ -22,4 +22,25 @@ export const savedSearchMigrations: Migration[] = [
       `);
     },
   },
+  {
+    // Tracks when a scout last looked at a saved search's results, so the UI
+    // can surface how many matching players are new since then. Backfilled
+    // to created_at — a search nobody has re-opened yet counts new matches
+    // from the moment it was saved.
+    version: 2,
+    name: 'add_last_viewed_at',
+    up: (db) => {
+      const columns = db.prepare('PRAGMA table_info(saved_search)').all() as {
+        name: string;
+      }[];
+      if (!columns.some((c) => c.name === 'last_viewed_at')) {
+        db.exec(
+          'ALTER TABLE saved_search ADD COLUMN last_viewed_at INTEGER',
+        );
+        db.exec(
+          'UPDATE saved_search SET last_viewed_at = created_at WHERE last_viewed_at IS NULL',
+        );
+      }
+    },
+  },
 ];

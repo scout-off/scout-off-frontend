@@ -6,6 +6,7 @@ import { PROGRESS_LABELS } from '@/types';
 import Badge from '@/components/ui/Badge';
 import Tooltip from '@/components/ui/Tooltip';
 import ValidatorChip from '@/components/player/ValidatorChip';
+import AcademyQuorumBadge from '@/components/player/AcademyQuorumBadge';
 
 const DISPUTE_STATUS_LABEL: Record<MilestoneDispute['status'], string> = {
   pending: 'Dispute pending review',
@@ -67,6 +68,13 @@ interface MilestoneTimelineProps {
   disputes?: MilestoneDispute[];
   /** Called when the player clicks "Dispute" on a completed milestone. */
   onDisputeMilestone?: (milestone: Milestone) => void;
+  /**
+   * The player these milestones belong to (issue #1185) — needed to look up
+   * per-milestone academy-quorum endorsements. Omit to hide the
+   * academy-verification badge entirely (e.g. contexts with no stable
+   * player id available).
+   */
+  playerId?: string;
 }
 
 export default function MilestoneTimeline({
@@ -74,6 +82,7 @@ export default function MilestoneTimeline({
   currentLevel,
   disputes,
   onDisputeMilestone,
+  playerId,
 }: MilestoneTimelineProps) {
   const [expanded, setExpanded] = useState<ProgressLevel | null>(null);
 
@@ -246,6 +255,12 @@ export default function MilestoneTimeline({
                       </span>
                       <ValidatorChip address={milestone.validator} />
                     </p>
+                    {playerId && (
+                      <AcademyQuorumBadge
+                        playerId={playerId}
+                        milestone={milestone}
+                      />
+                    )}
                     <p>
                       <span className="text-gray-400">Date: </span>
                       <time

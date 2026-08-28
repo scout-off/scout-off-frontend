@@ -104,6 +104,16 @@ export interface Academy {
   ownerWallet: string;
   createdAt: number;
   members: AcademyMember[];
+  /**
+   * Optional milestone-approval quorum (issue #1185): the minimum number of
+   * this academy's distinct member wallets that must each endorse a
+   * milestone before it's shown as "academy-verified" in the UI. `null`
+   * (the default) means no quorum is configured — behaves identically to
+   * before this feature existed. Purely an off-chain display/workflow
+   * setting; never affects on-chain `approve_milestone` authorization,
+   * which stays single-signer regardless of this value.
+   */
+  quorum: number | null;
 }
 
 /** One wallet registered as a signer under an {@link Academy}. */
@@ -113,6 +123,28 @@ export interface AcademyMember {
   addedAt: number;
   /** Stellar public key of the admin who registered this wallet under the academy. */
   addedBy: string;
+}
+
+/**
+ * One academy's total approved-milestone count across its member wallets
+ * for a given time range (issue #1172 — see docs/academy-validator-model.md,
+ * "Academy milestone rollup"). `approvedMilestones` is `null` when the
+ * indexer couldn't be reached, matching `fetchValidatorMilestoneCount`'s
+ * fail-open convention rather than surfacing 0 (which would read as "no
+ * milestones" instead of "unknown").
+ */
+export interface AcademyMilestoneRollupEntry {
+  academyId: string;
+  academyName: string;
+  memberCount: number;
+  approvedMilestones: number | null;
+}
+
+export interface AcademyMilestoneRollup {
+  range: { start: number; end: number };
+  /** False when the indexer request failed — every entry's approvedMilestones is null in that case. */
+  indexerAvailable: boolean;
+  academies: AcademyMilestoneRollupEntry[];
 }
 
 // ── Scout ─────────────────────────────────────────────────────────────────────
@@ -237,6 +269,30 @@ export interface FraudThrottle {
   liftReason: string | null;
 }
 
+// ── Admin decisions on fraud flags (issue #1171) ────────────────────────────
+
+/**
+ * An admin's decision to dismiss a specific, content-keyed fraud flag as a
+ * false positive so it stops re-surfacing on every panel load. Keyed by
+ * `computeFraudFlagDismissalKey` (lib/fraudDetection.ts), not a database id
+ * carried on the flag itself — flags are recomputed from scratch on every
+ * run, so there is no such id to key on. See lib/fraudFlagDismissalStore.ts.
+ */
+export interface FraudFlagDismissal {
+  id: number;
+  flagKey: string;
+  category: FraudFlagCategory;
+  heuristic: string;
+  severity: FraudFlagSeverity;
+  wallets: string[];
+  /** Snapshot of `FraudFlag.reason` at the time of dismissal, for display. */
+  flagReason: string;
+  /** Optional free-form context the dismissing admin left. */
+  note: string | null;
+  dismissedBy: string;
+  dismissedAt: number;
+}
+
 // ── Contract call helpers ─────────────────────────────────────────────────────
 export interface ContractCallResult<T = unknown> {
   success: boolean;
@@ -258,6 +314,7 @@ export interface SavedSearch {
   name: string;
   filter: PlayerFilter;
   createdAt: number; // Unix ms
+  lastViewedAt: number; // Unix ms — when the scout last opened this search's results
 }
 
 // ── Notifications ────────────────────────────────────────────────────────────

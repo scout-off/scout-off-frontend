@@ -4,19 +4,7 @@ import { useCallback } from 'react';
 import { mutate } from 'swr';
 import { useIndexerEventCache, INDEXER_CACHE_KEY } from './useIndexerEventCache';
 
-/**
- * Approximate XLM fees by subscription tier — indexed events record the tier,
- * not the amount paid, since the contract enforces amounts at submit time.
- * Mirrors hooks/useSpendingSummary.ts's TIER_FEES_XLM.
- */
-const TIER_FEES_XLM: Record<string, number> = {
-  basic: 5,
-  pro: 12,
-  elite: 20,
-};
-
-/** Fixed pay-to-contact fee, per hooks/useSpendingSummary.ts. */
-const CONTACT_FEE_XLM = 1;
+import { resolveContactFee, resolveSubscriptionFee } from '@/lib/feeSchedule';
 
 export interface DailyRevenuePoint {
   /** 'YYYY-MM-DD', UTC day boundaries. */
@@ -69,12 +57,11 @@ export function useFeeRevenue() {
     if (event.type === 'player_contacted') {
       const day = dayKey(event.timestamp);
       const entry = byDay.get(day) ?? { contactFeeXlm: 0, subscriptionXlm: 0 };
-      entry.contactFeeXlm += CONTACT_FEE_XLM;
+      entry.contactFeeXlm += resolveContactFee(event.data);
       byDay.set(day, entry);
     } else if (event.type === 'scout_subscribed') {
       const day = dayKey(event.timestamp);
-      const tier = String(event.data?.tier ?? 'basic');
-      const fee = TIER_FEES_XLM[tier] ?? 5;
+      const fee = resolveSubscriptionFee(event.data);
       const entry = byDay.get(day) ?? { contactFeeXlm: 0, subscriptionXlm: 0 };
       entry.subscriptionXlm += fee;
       byDay.set(day, entry);

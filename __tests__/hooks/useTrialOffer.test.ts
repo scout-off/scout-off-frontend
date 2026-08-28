@@ -11,11 +11,17 @@ jest.mock('@/lib/contract', () => ({
   buildLogTrialOffer: jest.fn(),
 }));
 
+jest.mock('@/lib/messaging/moderation', () => ({
+  isBlockedByCounterpart: jest.fn(),
+}));
+
 import { useWallet } from '@/hooks/useWallet';
 import { buildLogTrialOffer } from '@/lib/contract';
+import { isBlockedByCounterpart } from '@/lib/messaging/moderation';
 
 const mockUseWallet = useWallet as jest.Mock;
 const mockBuildLogTrialOffer = buildLogTrialOffer as jest.Mock;
+const mockIsBlockedByCounterpart = isBlockedByCounterpart as jest.Mock;
 
 const PUBLIC_KEY =
   'GABCDE1234567890ABCDE1234567890ABCDE1234567890ABCDE1234567890';
@@ -52,6 +58,7 @@ describe('useTrialOffer', () => {
       publicKey: PUBLIC_KEY,
       signAndSubmit: mockSignAndSubmit,
     });
+    mockIsBlockedByCounterpart.mockResolvedValue(false);
   });
 
   // ── Initial state ─────────────────────────────────────────────────────────
@@ -226,6 +233,25 @@ describe('useTrialOffer', () => {
 
     expect(result.current.error).toBe('Wallet not connected');
     expect(mockBuildLogTrialOffer).not.toHaveBeenCalled();
+  });
+
+  it('rejects with an error and skips buildLogTrialOffer when the player has blocked the scout', async () => {
+    mockIsBlockedByCounterpart.mockResolvedValueOnce(true);
+
+    const { result } = renderHook(() => useTrialOffer());
+
+    await act(async () => {
+      await result.current.logTrialOffer(PLAYER_ID, DETAILS);
+    });
+
+    expect(mockIsBlockedByCounterpart).toHaveBeenCalledWith(PLAYER_ID);
+    expect(mockBuildLogTrialOffer).not.toHaveBeenCalled();
+    expect(mockSignAndSubmit).not.toHaveBeenCalled();
+    expect(result.current.error).toBe(
+      'This player is not accepting new contact requests.',
+    );
+    expect(result.current.txHash).toBeNull();
+    expect(result.current.loading).toBe(false);
   });
 
   // ── State reset on new call ───────────────────────────────────────────────

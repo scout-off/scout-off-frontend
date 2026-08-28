@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useWallet } from '@/hooks/useWallet';
 import { buildLogTrialOffer } from '@/lib/contract';
 import { extractContractErrorKey } from '@/lib/contractErrorMessage';
+import { isBlockedByCounterpart } from '@/lib/messaging/moderation';
 import type { TrialOfferDetails } from '@/types';
 
 export interface UseTrialOfferReturn {
@@ -39,6 +40,14 @@ export function useTrialOffer(): UseTrialOfferReturn {
 
       try {
         if (!publicKey) throw new Error('Wallet not connected');
+
+        // log_trial_offer is submitted directly to the chain (lib/contract.ts)
+        // and never touches the chat API, so it bypasses the block check that
+        // stops blocked users from messaging — this is the only place that
+        // check can happen before the offer is logged on-chain.
+        if (await isBlockedByCounterpart(playerId)) {
+          throw new Error('This player is not accepting new contact requests.');
+        }
 
         const xdr = await buildLogTrialOffer(publicKey, playerId, details);
         if (myCallId !== callIdRef.current) return;

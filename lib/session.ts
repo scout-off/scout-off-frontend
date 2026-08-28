@@ -176,3 +176,20 @@ export function getSessionWallet(req: NextRequest): string | null {
   if (!SessionStore.getInstance().isActive(payload.sid)) return null;
   return payload.sub;
 }
+
+/**
+ * Returns the `sid` (see lib/sessionStore.ts) of the session making `req`,
+ * under the same validity rules as {@link getSessionWallet} — signature,
+ * type, expiry, and server-side active-ness all checked. Lets a route tell
+ * "which one of this wallet's sessions is the one I'm currently handling"
+ * apart from its siblings (see #1187's active-sessions view, which needs to
+ * mark the caller's own row distinctly so it isn't revoked by accident).
+ */
+export function getSessionId(req: NextRequest): string | null {
+  const token = req.cookies.get('session')?.value;
+  if (!token) return null;
+  const payload = verifySessionToken(token, 'access');
+  if (!payload) return null;
+  if (!SessionStore.getInstance().isActive(payload.sid)) return null;
+  return payload.sid;
+}

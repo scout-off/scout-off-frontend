@@ -5,6 +5,7 @@ import { useWallet } from '@/hooks/useWallet';
 import useIsPaused from '@/hooks/useIsPaused';
 import { useValidator } from '@/hooks/useValidator';
 import { getPlayer } from '@/lib/contract';
+import { endorseMilestone } from '@/lib/api';
 import {
   isOnChainApproved,
   submitAndConfirmApproval,
@@ -153,6 +154,26 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
         setSubmitError(null);
       }
       onSuccess();
+
+      // Auto-record this approving validator's own endorsement (issue
+      // #1185) — the first signer's own approval always counts toward
+      // their academy's quorum, without a separate manual step. Best-effort
+      // and fire-and-forget: a failure here must never surface as an
+      // approval error, since the on-chain approval has already succeeded.
+      // Re-fetches the player rather than trusting a locally-known
+      // milestone id, since approve_milestone assigns the id server-side —
+      // ApproveForm never receives it directly from submitAndConfirmApproval.
+      (async () => {
+        try {
+          const p: any = await getPlayer(playerId.trim());
+          const lastMilestone = p?.milestones?.[p.milestones.length - 1];
+          if (lastMilestone && lastMilestone.validator === publicKey) {
+            await endorseMilestone(playerId.trim(), lastMilestone.id);
+          }
+        } catch {
+          // Best-effort — see comment above.
+        }
+      })();
     } catch (e: any) {
       setTxStatus('error');
       setSubmitError(e?.message ?? 'Approval failed');

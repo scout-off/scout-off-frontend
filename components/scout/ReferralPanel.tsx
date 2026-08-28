@@ -19,7 +19,14 @@ const PAGE_SIZE = 5;
 
 // Unset in local dev/tests to skip the challenge entirely — mirrors the
 // project's "leave blank to disable" convention for optional integrations.
+// This is only safe when the server's TURNSTILE_SECRET_KEY is *also* unset;
+// if the server has a secret configured but this client key is missing, the
+// widget never renders (so no token can ever be produced) and the server
+// will reject every submission — surface that misconfiguration loudly in
+// non-production instead of leaving the widget silently absent.
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+const TURNSTILE_MISCONFIGURED =
+  !TURNSTILE_SITE_KEY && process.env.NODE_ENV !== 'production';
 
 async function copyToClipboard(text: string): Promise<boolean> {
   if (!navigator.clipboard) return false;
@@ -111,11 +118,13 @@ export default function ReferralPanel({ scoutId }: { scoutId?: string } = {}) {
       );
       setCodes((prev) => [referral, ...prev]);
       await loadStats();
-    } catch {
-      show({
-        message: 'Failed to generate an invite link. Please try again.',
-        variant: 'error',
-      });
+    } catch (err) {
+      const serverMessage = axios.isAxiosError(err)
+        ? (err.response?.data as { error?: string } | undefined)?.error
+        : undefined;
+      setGenerateError(
+        serverMessage ?? 'Failed to generate an invite link. Please try again.',
+      );
     } finally {
       setGenerating(false);
       // Turnstile tokens are single-use — force a fresh widget/token for
@@ -176,6 +185,15 @@ export default function ReferralPanel({ scoutId }: { scoutId?: string } = {}) {
           onExpire={() => setTurnstileToken(null)}
           onError={() => setTurnstileToken(null)}
         />
+      )}
+
+      {TURNSTILE_MISCONFIGURED && (
+        <p role="alert" className="text-sm text-yellow-400">
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY is not set, so the bot-protection
+          challenge cannot render. If TURNSTILE_SECRET_KEY is set on the
+          server, every submission below will be rejected — set both or
+          neither.
+        </p>
       )}
 
       {generateError && (

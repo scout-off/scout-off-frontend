@@ -546,6 +546,7 @@ function PlayerDashboardContent() {
                   currentLevel={player.progressLevel}
                   disputes={disputes}
                   onDisputeMilestone={setDisputeTarget}
+                  playerId={player.id}
                 />
               </div>
 

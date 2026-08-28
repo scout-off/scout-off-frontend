@@ -12,12 +12,18 @@ const findAcademyById = db.prepare(`SELECT * FROM academies WHERE id = ?`);
 const listAcademiesStmt = db.prepare(
   `SELECT * FROM academies ORDER BY created_at DESC`,
 );
+const findAcademiesByOwnerWallet = db.prepare(
+  `SELECT * FROM academies WHERE owner_wallet = ? ORDER BY created_at DESC`,
+);
 const insertMember = db.prepare(
   `INSERT INTO academy_members (wallet, academy_id, added_at, added_by)
    VALUES (@wallet, @academyId, @addedAt, @addedBy)`,
 );
 const findMemberByWallet = db.prepare(
   `SELECT * FROM academy_members WHERE wallet = ?`,
+);
+const updateQuorumStmt = db.prepare(
+  `UPDATE academies SET quorum = @quorum WHERE id = @id`,
 );
 const listMembersByAcademy = db.prepare(
   `SELECT * FROM academy_members WHERE academy_id = ? ORDER BY added_at ASC`,
@@ -42,6 +48,9 @@ function toAcademy(row) {
     ownerWallet: row.owner_wallet,
     createdAt: row.created_at,
     members: listMembersByAcademy.all(row.id).map(toMember),
+    // NULL (unconfigured) is the default and must behave identically to
+    // today — see issue #1185.
+    quorum: row.quorum ?? null,
   };
 }
 
@@ -98,6 +107,17 @@ function getAcademyForWallet(wallet) {
   return member ? getAcademy(member.academy_id) : null;
 }
 
+/**
+ * Looks up every academy `wallet` is recorded as the `ownerWallet` of (see
+ * issue #1173 — the scoped academy-owner admin role). Nothing today
+ * prevents one wallet from being recorded as owner on more than one
+ * academy, so this returns an array rather than assuming at most one, even
+ * though the common case is a single academy.
+ */
+function listAcademiesByOwnerWallet(wallet) {
+  return findAcademiesByOwnerWallet.all(wallet).map(toAcademy);
+}
+
 module.exports = {
   AcademyNotFoundError,
   WalletAlreadyAssignedError,
@@ -107,4 +127,5 @@ module.exports = {
   addMember,
   removeMember,
   getAcademyForWallet,
+  listAcademiesByOwnerWallet,
 };

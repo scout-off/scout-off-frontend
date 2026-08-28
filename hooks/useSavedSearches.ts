@@ -4,12 +4,15 @@ import { useCallback } from 'react';
 import useSWR from 'swr';
 import {
   fetchSavedSearches,
+  markSavedSearchViewed,
   removeSavedSearch,
   renameSavedSearch,
   saveSearch,
 } from '@/lib/savedSearchClient';
+import { filterPlayers } from '@/lib/contract';
+import { scoutSearchKey } from './useScout';
 import { useUndoableRemoval } from './useUndoableRemoval';
-import type { PlayerFilter, SavedSearch } from '@/types';
+import type { Player, PlayerFilter, SavedSearch } from '@/types';
 
 /** SWR key for the current scout's saved-searches cache. */
 export function savedSearchesKey(scoutWallet: string | null): string | null {
@@ -50,6 +53,18 @@ export function useSavedSearches(scoutWallet: string | null) {
     [mutate],
   );
 
+  const markViewed = useCallback(
+    async (entry: SavedSearch) => {
+      const updated = await markSavedSearchViewed(entry.id);
+      mutate(
+        (current) =>
+          (current ?? []).map((e) => (e.id === updated.id ? updated : e)),
+        false,
+      );
+    },
+    [mutate],
+  );
+
   const remove = useCallback(
     (entry: SavedSearch) => {
       undoableRemove({
@@ -81,5 +96,38 @@ export function useSavedSearches(scoutWallet: string | null) {
     save,
     rename,
     remove,
+    markViewed,
   };
+}
+
+/**
+ * Counts players matching a saved search's filter that were created after
+ * `lastViewedAt` — the "new since last viewed" badge. Keyed identically to
+ * useScout's own search cache (scoutSearchKey), so a saved search sharing a
+ * filter with the scout's active search reuses that result instead of
+ * triggering a second contract call.
+ */
+export function useSavedSearchNewCount(
+  filter: PlayerFilter,
+  lastViewedAt: number,
+): number {
+  const { data } = useSWR<Player[]>(
+    scoutSearchKey(filter),
+    async () => {
+      const results = await filterPlayers(
+        filter.region ?? '',
+        filter.position ?? '',
+        filter.minLevel ?? 0,
+      );
+      return (results as Player[]).filter((p) => !p.archived);
+    },
+    {
+      dedupingInterval: 60_000,
+      revalidateOnFocus: false,
+      errorRetryCount: 2,
+    },
+  );
+
+  if (!data) return 0;
+  return data.filter((p) => p.createdAt > lastViewedAt).length;
 }

@@ -151,4 +151,91 @@ describe('EventStore', () => {
     expect(events).toHaveLength(1);
     expect(events[0].ledger).toBe(4200);
   });
+
+  // ── Academy-scoped milestone rollup (issue #1172) ──────────────────────
+
+  describe('getApprovalCountsForWallets', () => {
+    it('counts milestone_approved events per wallet within range', () => {
+      store.insertEvent(
+        makeDecoded({ data: { validator: 'GWALLET_A', milestone_id: 'm1' }, timestamp: 100 }),
+      );
+      store.insertEvent(
+        makeDecoded({ data: { validator: 'GWALLET_A', milestone_id: 'm2' }, timestamp: 200 }),
+      );
+      store.insertEvent(
+        makeDecoded({ data: { validator: 'GWALLET_B', milestone_id: 'm3' }, timestamp: 150 }),
+      );
+      // Different event type — must not be counted as an approval.
+      store.insertEvent(
+        makeDecoded({
+          type: 'milestone_revoked',
+          data: { validator: 'GWALLET_A', milestone_id: 'm1' },
+          timestamp: 300,
+        }),
+      );
+
+      const counts = store.getApprovalCountsForWallets({ start: 0, end: 1000 }, [
+        { wallet: 'GWALLET_A', since: 0 },
+        { wallet: 'GWALLET_B', since: 0 },
+      ]);
+
+      expect(counts).toEqual({ GWALLET_A: 2, GWALLET_B: 1 });
+    });
+
+    it('excludes approvals before a wallet-specific `since` (pre-membership), not just the range start', () => {
+      store.insertEvent(
+        makeDecoded({ data: { validator: 'GWALLET_A', milestone_id: 'm1' }, timestamp: 50 }),
+      );
+      store.insertEvent(
+        makeDecoded({ data: { validator: 'GWALLET_A', milestone_id: 'm2' }, timestamp: 150 }),
+      );
+
+      // Range starts at 0, but this wallet only joined its academy at t=100 —
+      // the m1 approval (t=50) must not count even though it's inside [0, 1000].
+      const counts = store.getApprovalCountsForWallets({ start: 0, end: 1000 }, [
+        { wallet: 'GWALLET_A', since: 100 },
+      ]);
+
+      expect(counts).toEqual({ GWALLET_A: 1 });
+    });
+
+    it('returns a 0 count (not an omitted key) for a wallet with no matching approvals', () => {
+      const counts = store.getApprovalCountsForWallets({ start: 0, end: 1000 }, [
+        { wallet: 'GWALLET_NONE', since: 0 },
+      ]);
+      expect(counts).toEqual({ GWALLET_NONE: 0 });
+    });
+
+    it('returns {} without querying for an empty wallet list', () => {
+      expect(store.getApprovalCountsForWallets({ start: 0, end: 1000 }, [])).toEqual(
+        {},
+      );
+    });
+
+    it('memoizes identical requests, and invalidates on the next approval instead of going stale', () => {
+      store.insertEvent(
+        makeDecoded({ data: { validator: 'GWALLET_A', milestone_id: 'm1' }, timestamp: 100 }),
+      );
+      const range = { start: 0, end: 1000 };
+      const wallets = [{ wallet: 'GWALLET_A', since: 0 }];
+
+      const first = store.getApprovalCountsForWallets(range, wallets);
+      const repeated = store.getApprovalCountsForWallets(range, wallets);
+      expect(first).toEqual({ GWALLET_A: 1 });
+      expect(repeated).toEqual({ GWALLET_A: 1 });
+
+      // A new approval must invalidate the memoized result immediately
+      // rather than waiting out the TTL — otherwise the rollup could
+      // under-report a fresh approval for up to APPROVAL_COUNTS_CACHE_TTL_MS.
+      store.insertEvent(
+        makeDecoded({
+          data: { validator: 'GWALLET_A', milestone_id: 'm2' },
+          timestamp: 200,
+          eventId: 'distinct-for-memo-test',
+        }),
+      );
+      const afterNewApproval = store.getApprovalCountsForWallets(range, wallets);
+      expect(afterNewApproval).toEqual({ GWALLET_A: 2 });
+    });
+  });
 });

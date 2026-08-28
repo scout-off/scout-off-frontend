@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import api from '@/lib/api';
-import { requireAdminWallet } from '@/lib/adminAuth';
+import { requireAcademyManager } from '@/lib/academyAuth';
 
+// Reachable by the super-admin (any academy) or that academy's recorded
+// ownerWallet (their own academy only) — see lib/academyAuth.ts (issue #1173).
 export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string; wallet: string } },
 ) {
-  const admin = requireAdminWallet(req);
-  if (!admin) {
+  const manager = await requireAcademyManager(req, params.id);
+  if (!manager) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

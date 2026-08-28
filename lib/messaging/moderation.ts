@@ -70,6 +70,24 @@ export function isUserBlocked(counterpartId: string): boolean {
   return getBlockedUsers().some((b) => b.userId === counterpartId);
 }
 
+/**
+ * Checks whether `counterpartId` has blocked the current wallet — the
+ * reverse of getBlockedUsers()/isUserBlocked(), which only ever reflect
+ * blocks *this* wallet made. Needed because pay-to-contact and trial-offer
+ * submissions go straight to the chain (see lib/contract.ts) and never pass
+ * through the chat API, so they aren't covered by its message-send block
+ * check; callers must gate those actions on this before building a
+ * transaction against `counterpartId`.
+ */
+export async function isBlockedByCounterpart(
+  counterpartId: string,
+): Promise<boolean> {
+  const { data } = await chatApi.get<{ blocked: boolean }>(
+    `/moderation/blocks/${counterpartId}/status`,
+  );
+  return data.blocked;
+}
+
 function persistBlockedUsers(blocked: BlockedUser[]): void {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(BLOCKED_USERS_KEY, JSON.stringify(blocked));

@@ -11,6 +11,7 @@ import {
 } from '@/lib/contract';
 import { checkFraudThrottle } from '@/lib/api';
 import { parseContractError } from '@/lib/contractErrorMessage';
+import { isBlockedByCounterpart } from '@/lib/messaging/moderation';
 import {
   cacheContactDetails,
   contactDetailsKey,
@@ -74,7 +75,17 @@ export function usePayToContact(playerId: string) {
       setError(null);
 
       try {
-        // ── 1. Subscription gate ────────────────────────────────────────────
+        // ── 1. Block gate ────────────────────────────────────────────────────
+        // pay_to_contact is submitted directly to the chain (lib/contract.ts)
+        // and never touches the chat API, so it bypasses the block check that
+        // stops blocked users from messaging — this is the only place that
+        // check can happen before an unlock (and its fee) goes through.
+        if (await isBlockedByCounterpart(playerId)) {
+          fail('This player is not accepting new contact requests.');
+          return undefined;
+        }
+
+        // ── 2. Subscription gate ────────────────────────────────────────────
         const subscription = await getSubscription(publicKey);
         const now = Date.now() / 1000;
         if (!subscription || subscription.expiresAt < now) {
@@ -84,7 +95,7 @@ export function usePayToContact(playerId: string) {
           return undefined;
         }
 
-        // ── 2. Balance gate ─────────────────────────────────────────────────
+        // ── 3. Balance gate ─────────────────────────────────────────────────
         const balance = parseFloat(xlmBalance ?? '0');
         if (balance < PLATFORM_CONTACT_FEE_XLM) {
           fail(
@@ -93,7 +104,7 @@ export function usePayToContact(playerId: string) {
           return undefined;
         }
 
-        // ── 3. Sign, submit, and cache the result ───────────────────────────
+        // ── 4. Sign, submit, and cache the result ───────────────────────────
         const details = await payToContact(publicKey, playerId, signOnly);
         await refreshBalance();
         await cacheContactDetails(

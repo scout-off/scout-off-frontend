@@ -19,6 +19,17 @@ jest.mock('@/lib/contract', () => ({
   buildRegisterPlayer: jest.fn(),
 }));
 
+jest.mock('@/lib/bulkImportStore', () => ({
+  hashFileContent: jest.fn().mockResolvedValue('testhash'),
+  getOrCreateSession: jest
+    .fn()
+    .mockResolvedValue({ sessionId: 'sess-1', rows: new Map() }),
+  getSessionRows: jest.fn().mockResolvedValue(new Map()),
+  updateRowStatus: jest.fn().mockResolvedValue(undefined),
+  deleteSession: jest.fn().mockResolvedValue(undefined),
+  cleanupExpiredSessions: jest.fn().mockResolvedValue(undefined),
+}));
+
 const mockedUseWallet = useWallet as jest.MockedFunction<typeof useWallet>;
 
 function setupWallet() {
@@ -55,6 +66,10 @@ async function uploadFile(
 ) {
   const input = screen.getByLabelText(/player file/i) as HTMLInputElement;
   const file = new File([content], name, { type: 'text/csv' });
+  Object.defineProperty(input, 'files', {
+    value: [file],
+    configurable: true,
+  });
   fireEvent.change(input, { target: { files: [file] } });
   await waitFor(() => {
     expect(

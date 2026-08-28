@@ -15,12 +15,22 @@
  *
  * Deliberately excluded, with reasons surfaced in the payload's `excluded`
  * section:
- *   - contactDetailsCache: never persisted by design (see
- *     docs/contact-details-privacy.md) — there is nothing to export or delete.
+ *   - contactDetailsCache: never persisted server-side by design (see
+ *     docs/contact-details-privacy.md) — it's an in-memory, 15-minute-TTL
+ *     SWR cache that only ever exists in a scout's own browser tab, so
+ *     there is nothing for a server route to export or delete. It's still
+ *     explicitly purged as part of the deletion *request* itself, just
+ *     client-side: DataDeletionModal calls
+ *     lib/contactDetailsCache.ts's purgeAllContactDetails() on success,
+ *     the same immediate wipe wallet-disconnect already triggers.
  *   - messaging (lib/messaging/* + the external chat service): message
  *     history lives in a separate Node chat service behind its own API, not
  *     in this repo's stores. It is documented as excluded so the registry
  *     can be extended to cover it later without touching export/deletion.
+ *
+ * deleteUserData additionally anonymizes (does not delete) admin audit log
+ * rows that reference the wallet — see AdminAuditStore.anonymizeWallet's
+ * doc comment for why that record must be retained.
  */
 
 import { WatchlistStore } from './watchlistStore';
@@ -28,6 +38,7 @@ import { SavedSearchStore } from './savedSearchStore';
 import { NotificationPreferencesStore } from './notificationPreferencesStore';
 import { NotificationReadStore } from './notificationReadStore';
 import { MilestoneDisputeStore } from './milestoneDisputeStore';
+import { AdminAuditStore } from './adminAuditStore';
 import {
   listSessionsForWallet,
   clearSessionsForWallet,
@@ -191,15 +202,20 @@ export async function collectUserData(
 
 /**
  * Deletes every off-chain record referencing `wallet` across the in-scope
- * stores. This is the deletion-cascade counterpart to {@link collectUserData}
- * — both iterate the same stores so what is exported is exactly what is
- * deletable. Throws if any store fails, so a partial deletion is never
- * reported as success.
+ * stores, and anonymizes (rather than deletes) admin audit log rows that
+ * reference it. This is the deletion-cascade counterpart to
+ * {@link collectUserData} — both iterate the same stores so what is
+ * exported is exactly what is deletable/anonymizable. Throws if any store
+ * fails, so a partial deletion is never reported as success — callers
+ * (app/api/data-deletion/request/route.ts) must await this and only confirm
+ * success to the user once it resolves.
  */
 export async function deleteUserData(wallet: string): Promise<{
   removed: Record<string, number>;
+  anonymized: Record<string, number>;
 }> {
   const removed: Record<string, number> = {};
+  const anonymized: Record<string, number> = {};
 
   removed.watchlist = WatchlistStore.getInstance().clearForWallet(wallet);
   removed.savedSearches = SavedSearchStore.getInstance().clearForWallet(wallet);
@@ -211,5 +227,8 @@ export async function deleteUserData(wallet: string): Promise<{
     MilestoneDisputeStore.getInstance().deleteForWallet(wallet);
   removed.activeUploadSessions = await clearSessionsForWallet(wallet);
 
-  return { removed };
+  // Retained-not-deleted: see AdminAuditStore.anonymizeWallet's doc comment.
+  anonymized.adminAuditLog = AdminAuditStore.getInstance().anonymizeWallet(wallet);
+
+  return { removed, anonymized };
 }

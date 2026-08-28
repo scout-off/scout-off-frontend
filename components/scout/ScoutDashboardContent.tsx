@@ -11,7 +11,7 @@ import { useMilestonesBatch } from '@/hooks/useMilestonesBatch';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useOnboardingTour } from '@/hooks/useOnboardingTour';
 import { useWatchlist } from '@/hooks/useWatchlist';
-import { useSavedSearches } from '@/hooks/useSavedSearches';
+import { useSavedSearches, useSavedSearchNewCount } from '@/hooks/useSavedSearches';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useToast } from '@/components/ui/Toast';
 import { getPlayer } from '@/lib/contract';
@@ -33,6 +33,23 @@ const PAGE_SIZE = 12;
 
 function isStellarKey(v: string) {
   return /^G[A-Z2-7]{55}$/.test(v);
+}
+
+/** Badge showing how many players matching a saved search appeared since it was last viewed. */
+function SavedSearchNewBadge({
+  filter,
+  lastViewedAt,
+}: {
+  filter: PlayerFilter;
+  lastViewedAt: number;
+}) {
+  const newCount = useSavedSearchNewCount(filter, lastViewedAt);
+  if (newCount === 0) return null;
+  return (
+    <span className="shrink-0 rounded-full bg-brand-green/20 px-2 py-0.5 text-xs font-medium text-brand-green">
+      {newCount} new
+    </span>
+  );
 }
 
 export default function ScoutDashboardContent() {
@@ -450,11 +467,20 @@ export default function ScoutDashboardContent() {
                     </div>
                   ) : (
                     <>
-                      <span className="truncate">{s.name}</span>
+                      <span className="flex items-center gap-2 truncate">
+                        <span className="truncate">{s.name}</span>
+                        <SavedSearchNewBadge
+                          filter={s.filter}
+                          lastViewedAt={s.lastViewedAt}
+                        />
+                      </span>
                       <div className="flex items-center gap-2 shrink-0">
                         <button
                           type="button"
-                          onClick={() => handleSearch(s.filter)}
+                          onClick={() => {
+                            handleSearch(s.filter);
+                            savedSearches.markViewed(s);
+                          }}
                           className="px-3 py-1 rounded-lg border border-brand-green text-xs text-brand-green hover:bg-brand-green hover:text-black transition"
                         >
                           Apply

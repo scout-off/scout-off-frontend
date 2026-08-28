@@ -4,6 +4,11 @@ import { AdminAuditStore } from '@/lib/adminAuditStore';
 import { getValidators, getContractPaused } from '@/lib/contract';
 import { fetchEvents } from '@/lib/indexerClient';
 import { createRequestLogger } from '@/lib/logger';
+import {
+  ReconciliationHistoryStore,
+  mismatchKey,
+} from '@/lib/reconciliationHistoryStore';
+import { notifyNewMismatches } from '@/lib/reconciliationNotify';
 import type {
   AdminAuditEntry,
   ReconciliationMismatch,
@@ -216,6 +221,15 @@ async function reconcileFeeWithdrawals(
  *   Soroban RPC independent of the frontend — so a CLI-invoked
  *   withdraw_fees still shows up as an indexed event with no matching
  *   audit log entry.
+ *
+ * Every call — whether from an admin's open panel (hooks/useAdminAuditLog.ts
+ * polls this every 5 minutes) or an external scheduler hitting this
+ * endpoint directly (see docs/admin-audit-log.md's "Periodic reconciliation
+ * via an external scheduler" section) — persists its result via
+ * ReconciliationHistoryStore (issue #1188) and fires a webhook notification
+ * (lib/reconciliationNotify.ts) for any mismatch that's new since the
+ * immediately preceding run, so drift is never only visible to whichever
+ * admin happens to have the page open at the time.
  */
 export async function GET(req: NextRequest) {
   const admin = requireAdminWallet(req);
@@ -257,10 +271,47 @@ export async function GET(req: NextRequest) {
     log.warn('Reconciliation found mismatches', { count: mismatches.length });
   }
 
+  const checkedAt = Math.floor(Date.now() / 1000);
   const result: ReconciliationResult = {
-    checkedAt: Math.floor(Date.now() / 1000),
+    checkedAt,
     mismatches,
     skipped,
   };
+
+  // Persist this run (issue #1188) so AdminAuditLog.tsx's history view has
+  // more than just the latest in-memory result, and so a mismatch that
+  // appears and is fixed between two admin sessions still leaves a trace.
+  // "New" is relative to the immediately preceding run — this is also what
+  // keeps a persistently-unresolved mismatch from re-triggering a fresh
+  // notification on every single run below.
+  const historyStore = ReconciliationHistoryStore.getInstance();
+  const previousRun = historyStore.getLatest();
+  const previousKeys = new Set(
+    (previousRun?.mismatches ?? []).map(mismatchKey),
+  );
+  const newMismatches = mismatches.filter(
+    (m) => !previousKeys.has(mismatchKey(m)),
+  );
+
+  historyStore.insertRun({
+    checkedAt,
+    mismatches,
+    newMismatchCount: newMismatches.length,
+    skipped,
+  });
+
+  if (newMismatches.length > 0) {
+    log.warn('Reconciliation found newly-appearing mismatches', {
+      count: newMismatches.length,
+    });
+    // Fire-and-forget — see lib/reconciliationNotify.ts's doc comment for
+    // why this must never block or fail the reconciliation response itself.
+    notifyNewMismatches({
+      checkedAt,
+      newMismatches,
+      totalMismatches: mismatches.length,
+    }).catch(() => {});
+  }
+
   return NextResponse.json(result);
 }

@@ -166,6 +166,45 @@ export class AdminAuditStore {
     };
   }
 
+  /**
+   * Redaction placeholder written into `admin_wallet`/`target` by
+   * {@link anonymizeWallet}. Kept as a stable, greppable constant (rather
+   * than e.g. deriving one from the wallet itself) so a redacted row is
+   * unambiguously distinguishable from a real wallet address in the UI and
+   * in `data`/CSV exports of the log.
+   */
+  static readonly REDACTED_WALLET_PLACEHOLDER = '[deleted-user]';
+
+  /**
+   * Anonymizes every audit entry that references `wallet`, in either the
+   * `admin_wallet` (who performed the action) or `target` (e.g. a validator
+   * address added/removed) column — used by the data-deletion cascade (see
+   * app/api/data-deletion/request/route.ts).
+   *
+   * The row itself is NOT deleted: the audit log exists to prove what
+   * privileged action was taken, by whom, and when (issue #670), and that
+   * integrity/accountability need outlives any one wallet's deletion
+   * request — matching DataDeletionModal's own on-chain/off-chain framing,
+   * where a small class of records must be retained rather than purged.
+   * Only the wallet reference is replaced with
+   * {@link AdminAuditStore.REDACTED_WALLET_PLACEHOLDER}; action type,
+   * amount, tx hash, status, and timestamp are left intact.
+   *
+   * Returns the number of rows touched (a row matching in both columns
+   * counts once).
+   */
+  anonymizeWallet(wallet: string): number {
+    const result = this.db
+      .prepare(
+        `UPDATE admin_audit_log
+         SET admin_wallet = CASE WHEN admin_wallet = @wallet THEN @placeholder ELSE admin_wallet END,
+             target = CASE WHEN target = @wallet THEN @placeholder ELSE target END
+         WHERE admin_wallet = @wallet OR target = @wallet`,
+      )
+      .run({ wallet, placeholder: AdminAuditStore.REDACTED_WALLET_PLACEHOLDER });
+    return result.changes;
+  }
+
   /** All entries for a given action type, oldest first — used by reconciliation to replay state. */
   getAllByActionTypeOldestFirst(
     actionTypes: AdminAuditActionType[],

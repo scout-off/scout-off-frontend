@@ -57,9 +57,13 @@ jest.mock('@/components/ui/VideoUpload', () => ({
   default: ({
     onUpload,
     error,
+    onUploadStart,
+    onUploadingChange,
   }: {
     onUpload: (cid: string) => void;
     error?: string;
+    onUploadStart?: () => void;
+    onUploadingChange?: (uploading: boolean) => void;
   }) => (
     <div>
       <button type="button" onClick={() => onUpload('QmTestCID1234567890')}>
@@ -70,6 +74,27 @@ jest.mock('@/components/ui/VideoUpload', () => ({
         onClick={() => onUpload('QmDifferentCID9999999')}
       >
         Upload different video
+      </button>
+      {/* Two-phase controls for simulating an in-flight replacement upload
+          (issue #1184): "start" fires before the new CID is known, "finish"
+          fires once the replacement upload actually completes. */}
+      <button
+        type="button"
+        onClick={() => {
+          onUploadStart?.();
+          onUploadingChange?.(true);
+        }}
+      >
+        Start replacement upload
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          onUpload('QmReplacementCID555555');
+          onUploadingChange?.(false);
+        }}
+      >
+        Finish replacement upload
       </button>
       {error && <p>{error}</p>}
     </div>
@@ -758,5 +783,60 @@ describe('PlayerOnboardingWizard', () => {
 
     expect(screen.queryByText(/QmTestCI/)).toBeNull();
     expect(screen.getByText(/QmDiffer/)).toBeInTheDocument();
+  });
+
+  // ── End-to-end CID integrity (issue #1184) ──────────────────────────────────
+
+  it('submits the second, replacement CID rather than the first when a highlight video is replaced mid-form', async () => {
+    mockedBuildRegisterPlayer.mockResolvedValue('unsigned-xdr');
+
+    renderWizard();
+    await act(async () => fillStep1AndAdvance());
+    fireEvent.click(screen.getByRole('button', { name: /upload video/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continue/i })); // -> step 3
+    fireEvent.click(screen.getByRole('button', { name: /back/i })); // -> step 2
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /start replacement upload/i }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: /finish replacement upload/i }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /continue/i })); // -> step 3
+    expect(screen.getByText(/QmReplac/)).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: /register as player/i }),
+      );
+    });
+
+    expect(mockedBuildRegisterPlayer).toHaveBeenCalledWith(
+      MOCK_PUBLIC_KEY,
+      expect.anything(),
+      'QmReplacementCID555555',
+    );
+  });
+
+  it('blocks advancing past step 2 while a replacement upload is still in flight, rather than proceeding with an incomplete CID', async () => {
+    renderWizard();
+    await act(async () => fillStep1AndAdvance());
+    fireEvent.click(screen.getByRole('button', { name: /upload video/i }));
+
+    // Start a replacement upload — the previously-accepted CID must not
+    // survive to let "Continue" through while it's in flight.
+    fireEvent.click(
+      screen.getByRole('button', { name: /start replacement upload/i }),
+    );
+
+    const continueButton = screen.getByRole('button', { name: /continue/i });
+    expect(continueButton).toBeDisabled();
+
+    fireEvent.click(continueButton);
+    expect(
+      screen.getByRole('heading', { name: /highlight reel/i }),
+    ).toBeInTheDocument();
+    expect(mockedBuildRegisterPlayer).not.toHaveBeenCalled();
   });
 });

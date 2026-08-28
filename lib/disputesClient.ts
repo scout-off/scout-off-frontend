@@ -1,5 +1,6 @@
 /** Client for app/api/disputes — same-origin, cookie-authenticated. */
 import type { MilestoneDispute, MilestoneDisputeStatus } from '@/types';
+import { fetchWithRetry } from '@/lib/fetchWithRetry';
 
 export interface CreateDisputeParams {
   playerId: string;
@@ -9,7 +10,7 @@ export interface CreateDisputeParams {
 }
 
 export async function fetchMyDisputes(): Promise<MilestoneDispute[]> {
-  const res = await fetch('/api/disputes');
+  const res = await fetchWithRetry('/api/disputes');
   if (!res.ok) throw new Error('Failed to fetch disputes');
   return res.json();
 }
@@ -18,11 +19,15 @@ export async function fetchDisputeQueue(
   status?: MilestoneDisputeStatus,
 ): Promise<MilestoneDispute[]> {
   const url = status ? `/api/disputes?status=${status}` : '/api/disputes';
-  const res = await fetch(url);
+  const res = await fetchWithRetry(url);
   if (!res.ok) throw new Error('Failed to fetch dispute queue');
   return res.json();
 }
 
+// createDispute/decideDispute deliberately use a bare `fetch`, not
+// `fetchWithRetry`: both are mutations with no idempotency key, so an
+// automatic retry after a lost response risks creating a duplicate dispute
+// or double-applying a decision.
 export async function createDispute(
   params: CreateDisputeParams,
 ): Promise<MilestoneDispute> {

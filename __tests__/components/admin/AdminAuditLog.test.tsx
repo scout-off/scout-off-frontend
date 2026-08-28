@@ -50,6 +50,8 @@ function baseState(
     reconciling: false,
     runReconciliation,
     refetch,
+    reconciliationHistory: [],
+    reconciliationHistoryLoading: false,
     ...overrides,
   };
 }
@@ -232,5 +234,84 @@ describe('AdminAuditLog', () => {
     expect(setFilter).toHaveBeenCalledWith(
       expect.objectContaining({ actionType: 'pause' }),
     );
+  });
+
+  // ── Reconciliation history (issue #1188) ──────────────────────────────────
+
+  it('hides history rows until the history section is expanded', () => {
+    mockUseAdminAuditLog.mockReturnValue(
+      baseState({
+        reconciliationHistory: [
+          {
+            id: 1,
+            checkedAt: 1_700_000_000,
+            mismatches: [],
+            newMismatchCount: 0,
+            skipped: [],
+          },
+        ],
+      }),
+    );
+    render(<AdminAuditLog />);
+
+    expect(screen.queryByText(/checked at/i)).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole('button', { name: /reconciliation history/i }),
+    );
+    expect(screen.getByText(/checked at/i)).toBeInTheDocument();
+  });
+
+  it('shows past run mismatch counts and types once expanded', () => {
+    mockUseAdminAuditLog.mockReturnValue(
+      baseState({
+        reconciliationHistory: [
+          {
+            id: 2,
+            checkedAt: 1_700_000_100,
+            mismatches: [
+              {
+                actionType: 'validator_add',
+                kind: 'missing_audit_entry',
+                description: 'x',
+                target: 'GABC',
+              },
+            ],
+            newMismatchCount: 1,
+            skipped: [],
+          },
+          {
+            id: 1,
+            checkedAt: 1_700_000_000,
+            mismatches: [],
+            newMismatchCount: 0,
+            skipped: [],
+          },
+        ],
+      }),
+    );
+    render(<AdminAuditLog />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /reconciliation history/i }),
+    );
+
+    const rows = screen.getAllByRole('row');
+    // Header row + 2 data rows.
+    expect(rows).toHaveLength(3);
+    expect(screen.getByText('missing_audit_entry')).toBeInTheDocument();
+  });
+
+  it('shows an empty message when no reconciliation runs are recorded yet', () => {
+    mockUseAdminAuditLog.mockReturnValue(
+      baseState({ reconciliationHistory: [] }),
+    );
+    render(<AdminAuditLog />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /reconciliation history/i }),
+    );
+    expect(
+      screen.getByText(/no reconciliation runs recorded yet/i),
+    ).toBeInTheDocument();
   });
 });

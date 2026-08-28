@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, ChangeEvent } from 'react';
+import { useState, useEffect, ChangeEvent } from 'react';
 import { useChunkedUpload } from '@/hooks/useChunkedUpload';
 import Spinner from '@/components/ui/Spinner';
 
@@ -40,12 +40,30 @@ interface VideoUploadProps {
   error?: string;
   /** Called whenever client-side file validation produces an error (or null to clear) */
   onValidationError?: (error: string | null) => void;
+  /**
+   * Called the instant a new upload begins (a file has passed client-side
+   * validation and is about to start uploading, or a resume is kicked off) —
+   * fires *before* `onUpload`. Callers use this to immediately invalidate
+   * any previously-accepted CID they're holding in form state, so a
+   * still-in-flight replacement upload can never be shadowed by a stale CID
+   * from an earlier, already-completed upload (see issue #1184).
+   */
+  onUploadStart?: () => void;
+  /**
+   * Mirrors this component's internal "an upload is currently in flight"
+   * state to the parent, so a submit/continue button can be disabled for
+   * the entire duration of an upload — not just while `onUpload` hasn't
+   * fired yet, but from the very first byte.
+   */
+  onUploadingChange?: (uploading: boolean) => void;
 }
 
 export default function VideoUpload({
   onUpload,
   error,
   onValidationError,
+  onUploadStart,
+  onUploadingChange,
 }: VideoUploadProps) {
   const [fileName, setFileName] = useState<string>('');
   const [localError, setLocalError] = useState<string | null>(null);
@@ -58,6 +76,11 @@ export default function VideoUpload({
     resume,
   } = useChunkedUpload();
   const isProcessing = isUploading && phase === 'processing';
+
+  useEffect(() => {
+    onUploadingChange?.(isUploading);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isUploading]);
 
   const displayError = error ?? localError;
   const errorId = displayError ? 'video-upload-error' : undefined;
@@ -95,12 +118,14 @@ export default function VideoUpload({
     setLocalError(null);
     onValidationError?.(null);
     setFileName(file.name);
+    onUploadStart?.();
 
     const outcome = await upload(file);
     handleUploadResult(outcome.cid, outcome.error);
   };
 
   const handleResume = async () => {
+    onUploadStart?.();
     const outcome = await resume();
     handleUploadResult(outcome.cid, outcome.error);
   };

@@ -144,6 +144,7 @@ function CompareColumn({ player }: { player: Player }) {
         <MilestoneTimeline
           milestones={player.milestones}
           currentLevel={player.progressLevel}
+          playerId={player.id}
         />
       </section>
     </div>
