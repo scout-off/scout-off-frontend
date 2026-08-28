@@ -79,8 +79,15 @@ function SubscribeContent() {
   const searchParams = useSearchParams();
   const isPaused = useIsPaused();
   const { publicKey } = useWallet();
-  const { subscription, isExpired, subscribe, loading, error } =
-    useSubscription();
+  const {
+    subscription,
+    isExpired,
+    subscribe,
+    subscribeStatus,
+    isConfirming,
+    loading,
+    error,
+  } = useSubscription();
   const { show: showToast } = useToast();
   const [txStatus, setTxStatus] = useState<TxStatus | null>(null);
   const [feePaid, setFeePaid] = useState<string | undefined>(undefined);
@@ -122,7 +129,10 @@ function SubscribeContent() {
     planTier: SubscriptionTier,
     isProcessing: boolean,
   ): string {
-    if (isProcessing) return 'Processing…';
+    if (isProcessing) {
+      if (subscribeStatus === 'confirming') return 'Confirming on-chain…';
+      return 'Processing…';
+    }
 
     if (!subscription || isExpired) {
       // Expired: same tier = Renew, higher tier = Upgrade, no sub = Subscribe
@@ -141,7 +151,7 @@ function SubscribeContent() {
   }
 
   async function handleSubscribe(tier: SubscriptionTier) {
-    if (loading || isPaused) {
+    if (loading || isConfirming || isPaused) {
       return;
     }
 
@@ -445,7 +455,7 @@ function SubscribeContent() {
                 className="mt-8 w-full"
                 isLoading={loading && isSelected}
                 onClick={() => handleSubscribe(plan.tier)}
-                disabled={loading || isPaused}
+                disabled={loading || isConfirming || isPaused}
                 title={isPaused ? 'Contract is currently paused' : undefined}
               >
                 {ctaLabel}
