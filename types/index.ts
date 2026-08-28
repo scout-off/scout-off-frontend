@@ -374,3 +374,12 @@ export interface MilestoneDispute {
   /** Set only when status is 'reversed' — the on-chain revoke_milestone tx hash. */
   revokeTxHash: string | null;
 }
+
+// â”€â”€ Recently Viewed â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+export interface RecentlyViewedEntry {
+  id: number;
+  playerId: string;
+  name: string;
+  position: string;
+  viewedAt: number; // Unix ms
+}
