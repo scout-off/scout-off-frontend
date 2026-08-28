@@ -61,6 +61,10 @@ export default function AcademyManager() {
   const [quorumInputs, setQuorumInputs] = useState<Record<string, string>>({});
   const [quorumSaving, setQuorumSaving] = useState<string | null>(null);
 
+  // Search and filter state for the member roster
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [showOnlyNotOnChain, setShowOnlyNotOnChain] = useState<boolean>(false);
+
   // Per-wallet on-chain validator status, so the panel can flag academy
   // members that haven't (yet) been added as validators via the section
   // above — academy membership and on-chain authorization are independent.
@@ -426,41 +430,106 @@ export default function AcademyManager() {
                 </div>
 
                 {academy.members.length > 0 && (
-                  <ul className="flex flex-col gap-2">
-                    {academy.members.map((m) => (
-                      <li
-                        key={m.wallet}
-                        className="flex items-center justify-between gap-3 text-sm"
-                      >
-                        <div className="flex items-center gap-2">
-                          <TruncatedAddress
-                            address={m.wallet}
-                            className="text-gray-300"
-                          />
-                          {onChainStatus[m.wallet] === false && (
-                            <span
-                              className="text-xs text-amber-400"
-                              title="Not currently authorized on-chain — add via the Validators section above"
-                            >
-                              not on-chain
-                            </span>
-                          )}
-                        </div>
-                        <button
-                          onClick={() =>
-                            setDialog({
-                              action: 'remove-member',
-                              academyId: academy.id,
-                              wallet: m.wallet,
-                            })
+                  <>
+                    {/* Search and filter controls */}
+                    <div className="flex flex-col sm:flex-row gap-3 pb-2 border-b border-gray-800">
+                      <div className="relative flex-1">
+                        <input
+                          className="input w-full text-sm pl-9"
+                          placeholder="Search by wallet address"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">
+                          🔍
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowOnlyNotOnChain((prev) => !prev)}
+                        className={`
+                          flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition border
+                          ${
+                            showOnlyNotOnChain
+                              ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                              : 'bg-gray-900/30 border-gray-700 text-gray-400 hover:border-gray-600'
                           }
-                          className="text-red-400 hover:text-red-300 transition text-xs shrink-0"
-                        >
-                          Remove
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
+                        `}
+                      >
+                        <span
+                          className={`
+                            w-2 h-2 rounded-full
+                            ${showOnlyNotOnChain ? 'bg-amber-400' : 'bg-gray-600'}
+                          `}
+                        />
+                        Not on-chain only
+                      </button>
+                    </div>
+
+                    {/* Filtered member list */}
+                    <ul className="flex flex-col gap-2">
+                      {academy.members
+                        .filter((m) => {
+                          // Wallet address substring search
+                          const matchesSearch = searchQuery.trim() === '' ||
+                            m.wallet.toLowerCase().includes(searchQuery.toLowerCase());
+
+                          // On-chain status filter
+                          const isNotOnChain = onChainStatus[m.wallet] === false;
+                          const matchesStatusFilter =
+                            !showOnlyNotOnChain || isNotOnChain;
+
+                          return matchesSearch && matchesStatusFilter;
+                        })
+                        .map((m) => (
+                          <li
+                            key={m.wallet}
+                            className="flex items-center justify-between gap-3 text-sm"
+                          >
+                            <div className="flex items-center gap-2">
+                              <TruncatedAddress
+                                address={m.wallet}
+                                className="text-gray-300"
+                              />
+                              {onChainStatus[m.wallet] === false && (
+                                <span
+                                  className="text-xs text-amber-400"
+                                  title="Not currently authorized on-chain — add via the Validators section above"
+                                >
+                                  not on-chain
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              onClick={() =>
+                                setDialog({
+                                  action: 'remove-member',
+                                  academyId: academy.id,
+                                  wallet: m.wallet,
+                                })
+                              }
+                              className="text-red-400 hover:text-red-300 transition text-xs shrink-0"
+                            >
+                              Remove
+                            </button>
+                          </li>
+                        ))}
+                    </ul>
+
+                    {/* Empty state when filtered */}
+                    {academy.members.filter((m) => {
+                      const matchesSearch = searchQuery.trim() === '' ||
+                        m.wallet.toLowerCase().includes(searchQuery.toLowerCase());
+                      const isNotOnChain = onChainStatus[m.wallet] === false;
+                      const matchesStatusFilter =
+                        !showOnlyNotOnChain || isNotOnChain;
+                      return matchesSearch && matchesStatusFilter;
+                    }).length === 0 && (
+                      <p className="text-xs text-gray-500 py-2">
+                        No members match your search/filter criteria.
+                      </p>
+                    )}
+                  </>
                 )}
 
                 <div className="flex gap-2">
