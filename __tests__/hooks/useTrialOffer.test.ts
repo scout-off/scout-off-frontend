@@ -9,6 +9,7 @@ jest.mock('@/hooks/useWallet', () => ({
 
 jest.mock('@/lib/contract', () => ({
   buildLogTrialOffer: jest.fn(),
+  getSubscription: jest.fn(),
 }));
 
 jest.mock('@/lib/messaging/moderation', () => ({
@@ -16,11 +17,12 @@ jest.mock('@/lib/messaging/moderation', () => ({
 }));
 
 import { useWallet } from '@/hooks/useWallet';
-import { buildLogTrialOffer } from '@/lib/contract';
+import { buildLogTrialOffer, getSubscription } from '@/lib/contract';
 import { isBlockedByCounterpart } from '@/lib/messaging/moderation';
 
 const mockUseWallet = useWallet as jest.Mock;
 const mockBuildLogTrialOffer = buildLogTrialOffer as jest.Mock;
+const mockGetSubscription = getSubscription as jest.Mock;
 const mockIsBlockedByCounterpart = isBlockedByCounterpart as jest.Mock;
 
 const PUBLIC_KEY =
@@ -59,6 +61,10 @@ describe('useTrialOffer', () => {
       signAndSubmit: mockSignAndSubmit,
     });
     mockIsBlockedByCounterpart.mockResolvedValue(false);
+    mockGetSubscription.mockResolvedValue({
+      tier: 'standard' as const,
+      expiresAt: Date.now() / 1000 + 86400, // expires in 24 hours
+    });
   });
 
   // ── Initial state ─────────────────────────────────────────────────────────
@@ -339,5 +345,46 @@ describe('useTrialOffer', () => {
     expect(result.current.txHash).toBe(MOCK_HASH);
     expect(result.current.loading).toBe(false);
     expect(result.current.error).toBeNull();
+  });
+
+  // ── Subscription gate ───────────────────────────────────────────────────────
+
+  it('rejects with an error when subscription is expired', async () => {
+    mockGetSubscription.mockResolvedValue({
+      tier: 'standard' as const,
+      expiresAt: Date.now() / 1000 - 3600, // expired 1 hour ago
+    });
+
+    const { result } = renderHook(() => useTrialOffer());
+
+    await act(async () => {
+      await result.current.logTrialOffer(PLAYER_ID, DETAILS);
+    });
+
+    expect(mockBuildLogTrialOffer).not.toHaveBeenCalled();
+    expect(mockSignAndSubmit).not.toHaveBeenCalled();
+    expect(result.current.error).toBe(
+      'An active subscription is required to log trial offers. Please subscribe or renew.',
+    );
+    expect(result.current.txHash).toBeNull();
+    expect(result.current.loading).toBe(false);
+  });
+
+  it('rejects with an error when subscription is null', async () => {
+    mockGetSubscription.mockResolvedValue(null);
+
+    const { result } = renderHook(() => useTrialOffer());
+
+    await act(async () => {
+      await result.current.logTrialOffer(PLAYER_ID, DETAILS);
+    });
+
+    expect(mockBuildLogTrialOffer).not.toHaveBeenCalled();
+    expect(mockSignAndSubmit).not.toHaveBeenCalled();
+    expect(result.current.error).toBe(
+      'An active subscription is required to log trial offers. Please subscribe or renew.',
+    );
+    expect(result.current.txHash).toBeNull();
+    expect(result.current.loading).toBe(false);
   });
 });

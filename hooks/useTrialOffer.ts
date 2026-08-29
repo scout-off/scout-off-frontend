@@ -2,7 +2,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { useWallet } from '@/hooks/useWallet';
-import { buildLogTrialOffer } from '@/lib/contract';
+import { buildLogTrialOffer, getSubscription } from '@/lib/contract';
 import { extractContractErrorKey } from '@/lib/contractErrorMessage';
 import { isBlockedByCounterpart } from '@/lib/messaging/moderation';
 import type { TrialOfferDetails } from '@/types';
@@ -47,6 +47,13 @@ export function useTrialOffer(): UseTrialOfferReturn {
         // check can happen before the offer is logged on-chain.
         if (await isBlockedByCounterpart(playerId)) {
           throw new Error('This player is not accepting new contact requests.');
+        }
+
+        // Subscription gate - check at action time, not just page load
+        const subscription = await getSubscription(publicKey);
+        const now = Date.now() / 1000;
+        if (!subscription || subscription.expiresAt < now) {
+          throw new Error('An active subscription is required to log trial offers. Please subscribe or renew.');
         }
 
         const xdr = await buildLogTrialOffer(publicKey, playerId, details);
