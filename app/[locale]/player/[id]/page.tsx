@@ -19,6 +19,7 @@ import PlayerStatsCard from '@/components/player/PlayerStatsCard';
 import IPFSMediaGallery from '@/components/player/IPFSMediaGallery';
 import TrialOfferForm from '@/components/scout/TrialOfferForm';
 import ContactModal from '@/components/scout/ContactModal';
+import BlockedStateMessage from '@/components/messaging/BlockedStateMessage';
 import Button from '@/components/ui/Button';
 import QRModal from '@/components/ui/QRModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -195,6 +196,9 @@ export default function PlayerProfile() {
       >
         {t('back_to_scout_dashboard')}
       </Link>
+
+      {/* Blocked State Message */}
+      <BlockedStateMessage targetId={id ?? ''} targetType="player" action="contact" />
 
       {/* Archived Profile Banner */}
       {isArchived && (
