@@ -80,16 +80,31 @@ export default function ScoutDashboardContent() {
   const recentlyViewed = useRecentlyViewed();
   const { show: showToast } = useToast();
   const [now, setNow] = useState(() => Date.now());
+  const [remainingSec, setRemainingSec] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!isRateLimited) return;
+    if (!isRateLimited || retryAfterSec === null) {
+      setRemainingSec(null);
+      return;
+    }
+    setRemainingSec(retryAfterSec);
     showToast({
-      message: retryAfterSec
-        ? `Searching too fast — please wait ${retryAfterSec}s and try again.`
-        : 'Searching too fast — please slow down and try again.',
+      message: `Searching too fast — please wait ${retryAfterSec}s and try again.`,
       variant: 'warning',
     });
   }, [isRateLimited, retryAfterSec, showToast]);
+
+  // Countdown timer for rate limit
+  useEffect(() => {
+    if (remainingSec === null || remainingSec <= 0) {
+      setRemainingSec(null);
+      return;
+    }
+    const interval = setInterval(() => {
+      setRemainingSec((prev) => (prev !== null && prev > 0 ? prev - 1 : null));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [remainingSec]);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 60_000);
@@ -581,7 +596,13 @@ export default function ScoutDashboardContent() {
             value={nameQuery}
             onChange={(e) => setNameQuery(e.target.value)}
             autoComplete="off"
+            disabled={remainingSec !== null}
           />
+          {remainingSec !== null && (
+            <p className="text-sm text-orange-400">
+              Rate limited. Try again in {remainingSec}s.
+            </p>
+          )}
           {nameQuery &&
             !loading &&
             players.length === 0 &&
@@ -602,6 +623,7 @@ export default function ScoutDashboardContent() {
             onSearch={handleSearch}
             resetKey={resetKey}
             onSaveSearch={handleSaveSearch}
+            disabled={remainingSec !== null}
           />
         </div>
 

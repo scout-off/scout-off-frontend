@@ -28,6 +28,8 @@ export interface UseChunkedUploadResult {
   phase: ChunkedUploadPhase;
   uploading: boolean;
   error: string | null;
+  /** Seconds until the rate limit expires, if the error was a 429 response. */
+  retryAfterSec: number | null;
   /** True after an interrupted upload that can continue from its last chunk. */
   canResume: boolean;
   /** Starts a fresh chunked upload for `file`. */
@@ -81,6 +83,7 @@ export function useChunkedUpload(): UseChunkedUploadResult {
   const [phase, setPhase] = useState<ChunkedUploadPhase>('uploading');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryAfterSec, setRetryAfterSec] = useState<number | null>(null);
   const [canResume, setCanResume] = useState(false);
   const [persistedSession, setPersistedSession] =
     useState<PersistedUploadState | null>(null);
@@ -98,6 +101,7 @@ export function useChunkedUpload(): UseChunkedUploadResult {
     async (file: File, resumeSessionId?: string): Promise<UploadOutcome> => {
       setUploading(true);
       setError(null);
+      setRetryAfterSec(null);
 
       try {
         const cid = await uploadToIPFSChunked(file, {
@@ -117,6 +121,7 @@ export function useChunkedUpload(): UseChunkedUploadResult {
         if (err instanceof ChunkedUploadError) {
           resumeStateRef.current = { file, sessionId: err.sessionId };
           setCanResume(true);
+          setRetryAfterSec(err.retryAfterSec ?? null);
           // Persist resumable session metadata to localStorage so the user
           // can continue after a page reload (issue #1003).
           const state: PersistedUploadState = {
@@ -132,6 +137,7 @@ export function useChunkedUpload(): UseChunkedUploadResult {
         } else {
           resumeStateRef.current = null;
           setCanResume(false);
+          setRetryAfterSec(null);
         }
         const message =
           err instanceof Error
@@ -221,6 +227,7 @@ export function useChunkedUpload(): UseChunkedUploadResult {
     phase,
     uploading,
     error,
+    retryAfterSec,
     canResume,
     upload,
     resume,
