@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import FraudFlagsPanel from '@/components/admin/FraudFlagsPanel';
 import { fetchFraudFlags, fetchFraudThrottles } from '@/lib/api';
@@ -134,6 +134,27 @@ describe('FraudFlagsPanel', () => {
 
     // Array evidence values are joined with commas
     expect(screen.getByText('p1, p2')).toBeInTheDocument();
+  });
+
+  it('rate-limits rapid refresh clicks with a short cooldown', async () => {
+    mockedFetchFraudFlags.mockResolvedValue({
+      flags: [],
+      warnings: [],
+      evaluatedAt: 1_700_000_000_000,
+    });
+
+    render(<FraudFlagsPanel />);
+    await screen.findByText('No flags');
+
+    mockedFetchFraudFlags.mockClear();
+    const refreshButton = screen.getByRole('button', { name: /^refresh$/i });
+
+    fireEvent.click(refreshButton);
+    fireEvent.click(refreshButton);
+
+    await waitFor(() => {
+      expect(mockedFetchFraudFlags).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('does not update state after unmount when the fetch resolves late (no act warning)', async () => {

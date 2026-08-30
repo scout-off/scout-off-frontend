@@ -1,4 +1,9 @@
-# fix(#1003): persist chunked upload resume state across page reloads
+<!-- Branch: fix/1003-upload-resume-persistence -->
+<!-- Title: fix(#1003): persist chunked upload resume state across page reloads -->
+
+## Summary
+
+Persist resumable upload session metadata in `localStorage` so a page reload or accidental navigation does not lose the user’s in-flight chunked upload state. The upload hook can resume the existing session when the server still has the data and the stored metadata matches the file being re-selected.
 
 ## Problem
 
@@ -24,14 +29,14 @@ needed to resume — `sessionId`, `filename`, `fileSize`, `fileType`,
 A thin `localStorage` wrapper with a TTL guard matching the server's 2-hour
 session lifetime:
 
-| Export | Purpose |
-|---|---|
-| `UPLOAD_RESUME_KEY` | `'scout-off:upload-resume'` — single storage key |
-| `SESSION_TTL_MS` | `2 * 60 * 60 * 1000` — mirrors `chunkedUploadStore.ts` |
-| `PersistedUploadState` | Interface: `sessionId`, `filename`, `fileSize`, `fileType`, `totalChunks`, `savedAt` |
-| `saveResumeState(state)` | Writes a `PersistedUploadState` to `localStorage` |
-| `loadResumeState()` | Reads + TTL-checks; auto-clears and returns `null` when expired |
-| `clearResumeState()` | Removes the stored entry |
+| Export                   | Purpose                                                                              |
+| ------------------------ | ------------------------------------------------------------------------------------ |
+| `UPLOAD_RESUME_KEY`      | `'scout-off:upload-resume'` — single storage key                                     |
+| `SESSION_TTL_MS`         | `2 * 60 * 60 * 1000` — mirrors `chunkedUploadStore.ts`                               |
+| `PersistedUploadState`   | Interface: `sessionId`, `filename`, `fileSize`, `fileType`, `totalChunks`, `savedAt` |
+| `saveResumeState(state)` | Writes a `PersistedUploadState` to `localStorage`                                    |
+| `loadResumeState()`      | Reads + TTL-checks; auto-clears and returns `null` when expired                      |
+| `clearResumeState()`     | Removes the stored entry                                                             |
 
 All three functions guard against SSR (`typeof window === 'undefined'`) and
 swallow `localStorage` errors (quota exceeded, blocked in private browsing)
@@ -46,10 +51,10 @@ require modification.
 
 New additions:
 
-| Addition | Behaviour |
-|---|---|
-| `persistedSession: PersistedUploadState \| null` | Populated on mount via `loadResumeState()`. Non-null when a previous upload was interrupted and its session is still within the 2 hr TTL. |
-| `promptResume(file)` | Validates that the re-supplied `file` matches the stored session (name **and** size), calls `GET /api/ipfs/upload/status` to confirm the server-side session still exists, then resumes from the last received chunk. Returns `{ cid: null, error }` on mismatch or expiry — with the stored state cleared so a fresh upload can begin. |
+| Addition                                         | Behaviour                                                                                                                                                                                                                                                                                                                               |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `persistedSession: PersistedUploadState \| null` | Populated on mount via `loadResumeState()`. Non-null when a previous upload was interrupted and its session is still within the 2 hr TTL.                                                                                                                                                                                               |
+| `promptResume(file)`                             | Validates that the re-supplied `file` matches the stored session (name **and** size), calls `GET /api/ipfs/upload/status` to confirm the server-side session still exists, then resumes from the last received chunk. Returns `{ cid: null, error }` on mismatch or expiry — with the stored state cleared so a fresh upload can begin. |
 
 Additional lifecycle hooks wired into `runUpload`:
 
@@ -66,12 +71,19 @@ user-friendly error before attempting to resume a gone session.
 
 ## Files changed
 
-| File | Change |
-|---|---|
-| `lib/uploadResumeStore.ts` | **New** — localStorage-backed resume state persistence |
-| `hooks/useChunkedUpload.ts` | **Updated** — `persistedSession` state + `promptResume` function; `saveResumeState`/`clearResumeState` lifecycle calls |
-| `app/api/ipfs/upload/status/route.ts` | No change (already complete) |
-| `docs/pr-bodies/fix-1003-upload-resume-persistence.md` | **New** — this document |
+| File                                                   | Change                                                                                                                 |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `lib/uploadResumeStore.ts`                             | **New** — localStorage-backed resume state persistence                                                                 |
+| `hooks/useChunkedUpload.ts`                            | **Updated** — `persistedSession` state + `promptResume` function; `saveResumeState`/`clearResumeState` lifecycle calls |
+| `app/api/ipfs/upload/status/route.ts`                  | No change (already complete)                                                                                           |
+| `docs/pr-bodies/fix-1003-upload-resume-persistence.md` | **New** — this document                                                                                                |
+
+## Validation
+
+| Check                                      | Result                                  |
+| ------------------------------------------ | --------------------------------------- |
+| `node scripts/validate-pr-bodies.js`       | ✅ contract passes on this body file    |
+| `__tests__/hooks/useChunkedUpload.test.ts` | ✅ existing API contract remains intact |
 
 ## Testing
 

@@ -11,7 +11,10 @@ import { useMilestonesBatch } from '@/hooks/useMilestonesBatch';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useOnboardingTour } from '@/hooks/useOnboardingTour';
 import { useWatchlist } from '@/hooks/useWatchlist';
-import { useSavedSearches, useSavedSearchNewCount } from '@/hooks/useSavedSearches';
+import {
+  useSavedSearches,
+  useSavedSearchNewCount,
+} from '@/hooks/useSavedSearches';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useToast } from '@/components/ui/Toast';
 import { getPlayer } from '@/lib/contract';
@@ -30,9 +33,18 @@ import VirtualizedPlayerGrid from '@/components/scout/VirtualizedPlayerGrid';
 import type { VirtualizedPlayerGridHandle } from '@/components/scout/VirtualizedPlayerGrid';
 
 const PAGE_SIZE = 12;
+const MAX_COMPARE_PLAYERS = 4;
 
 function isStellarKey(v: string) {
   return /^G[A-Z2-7]{55}$/.test(v);
+}
+
+function parseCompareIds(raw: string | null): string[] {
+  return (raw ?? '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean)
+    .slice(0, MAX_COMPARE_PLAYERS);
 }
 
 /** Badge showing how many players matching a saved search appeared since it was last viewed. */
@@ -83,10 +95,20 @@ export default function ScoutDashboardContent() {
   const [remainingSec, setRemainingSec] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!isRateLimited || retryAfterSec === null) {
+    if (!isRateLimited) {
       setRemainingSec(null);
       return;
     }
+
+    if (retryAfterSec === null) {
+      showToast({
+        message: 'Searching too fast — please slow down and try again.',
+        variant: 'warning',
+      });
+      setRemainingSec(null);
+      return;
+    }
+
     setRemainingSec(retryAfterSec);
     showToast({
       message: `Searching too fast — please wait ${retryAfterSec}s and try again.`,
@@ -117,8 +139,32 @@ export default function ScoutDashboardContent() {
   const [resetKey, setResetKey] = useState(0);
   const [renamingId, setRenamingId] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState('');
-  const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [compareIds, setCompareIds] = useState<string[]>(() =>
+    parseCompareIds(searchParams.get('ids')),
+  );
   const showCompareBar = compareIds.length >= 2;
+  const compareLimitReached = compareIds.length >= MAX_COMPARE_PLAYERS;
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    const currentIds = params.get('ids');
+    const nextIds = compareIds.join(',');
+
+    if (compareIds.length === 0 && !currentIds) return;
+    if (compareIds.length === 0) {
+      if (currentIds) {
+        params.delete('ids');
+        router.replace(`?${params.toString()}`);
+      }
+      return;
+    }
+
+    if (currentIds !== nextIds) {
+      params.set('ids', nextIds);
+      const nextQuery = params.toString().replace(/%2C/gi, ',');
+      router.replace(nextQuery ? `?${nextQuery}` : '?');
+    }
+  }, [compareIds, router, searchParams]);
 
   const [walletQuery, setWalletQuery] = useState('');
   const [searchResult, setSearchResult] = useState<
@@ -237,9 +283,9 @@ export default function ScoutDashboardContent() {
         if (prev.includes(playerId)) {
           return prev.filter((id) => id !== playerId);
         }
-        if (prev.length >= 4) {
+        if (prev.length >= MAX_COMPARE_PLAYERS) {
           showToast({
-            message: 'Maximum 4 players for comparison',
+            message: `Maximum ${MAX_COMPARE_PLAYERS} players for comparison`,
             variant: 'info',
           });
           return prev;
@@ -628,11 +674,19 @@ export default function ScoutDashboardContent() {
         </div>
 
         {showCompareBar && (
-          <div className="flex items-center justify-between bg-brand-card border border-brand-green rounded-xl px-5 py-3">
-            <span className="text-sm text-gray-200">
-              {compareIds.length} player{compareIds.length !== 1 ? 's' : ''}{' '}
-              selected for comparison
-            </span>
+          <div className="flex items-center justify-between bg-brand-card border border-brand-green rounded-xl px-5 py-3 gap-4">
+            <div className="flex flex-col gap-1">
+              <span className="text-sm text-gray-200">
+                {compareIds.length} player{compareIds.length !== 1 ? 's' : ''}{' '}
+                selected for comparison
+              </span>
+              {compareLimitReached && (
+                <span className="text-xs text-brand-green">
+                  Limit reached: up to {MAX_COMPARE_PLAYERS} players can be
+                  compared.
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-3">
               <Link
                 href={`/scout/compare?ids=${compareIds.join(',')}`}

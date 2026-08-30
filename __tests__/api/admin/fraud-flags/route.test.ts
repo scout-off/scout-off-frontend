@@ -11,12 +11,14 @@ jest.mock('@/lib/fraudDetection', () => ({
 import { GET } from '@/app/api/admin/fraud-flags/route';
 import { NextRequest } from 'next/server';
 import { fetchAllReferralCodes, fetchActivityEvents } from '@/lib/api';
+import { FraudFlagsStore } from '@/lib/fraudFlagsStore';
 import {
   analyzeReferralAbuse,
   analyzePayToContactAbuse,
 } from '@/lib/fraudDetection';
 import type { FraudFlag } from '@/types';
 import { createSessionToken } from '@/lib/session';
+import { SessionStore } from '@/lib/sessionStore';
 
 const ADMIN = 'GADMIN0000000000000000000000000000000000000000000000000';
 
@@ -27,9 +29,12 @@ const mockAnalyzePayToContactAbuse = analyzePayToContactAbuse as jest.Mock;
 
 function makeRequest(cookie?: string): NextRequest {
   const headers: Record<string, string> = {};
-  if (cookie !== undefined)
+  if (cookie !== undefined) {
+    const sid = `sid-${Math.random()}`;
+    SessionStore.getInstance().create(sid, cookie, Date.now() + 60_000);
     headers['cookie'] =
-      `session=${createSessionToken(cookie, 'access', 20 * 60)}`;
+      `session=${createSessionToken(cookie, 'access', 20 * 60, { sid })}`;
+  }
   return new NextRequest('http://localhost/api/admin/fraud-flags', {
     headers,
   });
@@ -53,6 +58,9 @@ function flag(
 
 beforeEach(() => {
   process.env.NEXT_PUBLIC_ADMIN_ADDRESS = ADMIN;
+  process.env.NEXT_PUBLIC_FRAUD_FLAGS_MIN_INTERVAL_MS = '60000';
+  SessionStore.resetInstance();
+  FraudFlagsStore.resetInstance();
   jest.clearAllMocks();
   mockFetchAllReferralCodes.mockResolvedValue([]);
   mockFetchActivityEvents.mockResolvedValue({ events: [], total: 0 });
@@ -62,6 +70,9 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env.NEXT_PUBLIC_ADMIN_ADDRESS;
+  delete process.env.NEXT_PUBLIC_FRAUD_FLAGS_MIN_INTERVAL_MS;
+  SessionStore.resetInstance();
+  FraudFlagsStore.resetInstance();
 });
 
 describe('GET /api/admin/fraud-flags', () => {
@@ -163,5 +174,23 @@ describe('GET /api/admin/fraud-flags', () => {
     expect(
       body.warnings.some((w: string) => w.includes('Activity feed backend')),
     ).toBe(true);
+  });
+
+  it('returns the last cached evaluation when a manual refresh is too soon', async () => {
+    const flagged = flag('referral', 'high', 'r1');
+    mockAnalyzeReferralAbuse.mockReturnValueOnce([flagged]);
+
+    const first = await GET(makeRequest(ADMIN));
+    expect(first.status).toBe(200);
+    expect(mockAnalyzeReferralAbuse).toHaveBeenCalledTimes(1);
+
+    mockAnalyzeReferralAbuse.mockClear();
+    mockAnalyzeReferralAbuse.mockReturnValue([flagged]);
+
+    const second = await GET(makeRequest(ADMIN));
+    expect(second.status).toBe(200);
+    const body = await second.json();
+    expect(body.flags).toEqual([flagged]);
+    expect(mockAnalyzeReferralAbuse).not.toHaveBeenCalled();
   });
 });

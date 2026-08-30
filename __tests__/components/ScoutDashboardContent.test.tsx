@@ -924,6 +924,14 @@ describe('ScoutDashboardContent — compare selection', () => {
     );
   });
 
+  it('stores the selected comparison ids in the URL query string', () => {
+    renderWithPlayers(3);
+    fireEvent.click(screen.getByRole('button', { name: 'toggle-compare-p0' }));
+    fireEvent.click(screen.getByRole('button', { name: 'toggle-compare-p1' }));
+
+    expect(mockRouterReplace).toHaveBeenLastCalledWith('?ids=p0,p1');
+  });
+
   it('clicking Clear resets the compare selection and hides the bar', () => {
     renderWithPlayers(3);
     fireEvent.click(screen.getByRole('button', { name: 'toggle-compare-p0' }));

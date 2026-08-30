@@ -98,7 +98,10 @@ function FlagCard({
 
       {showDismissForm && (
         <div className="flex flex-col gap-2 border-t border-gray-800 pt-3">
-          <label className="text-xs text-gray-400" htmlFor={`dismiss-note-${flag.id}`}>
+          <label
+            className="text-xs text-gray-400"
+            htmlFor={`dismiss-note-${flag.id}`}
+          >
             Reviewed and not actually abuse — optional note
           </label>
           <textarea
@@ -202,12 +205,15 @@ function ThrottleCard({
  * the ONLY surface that can lift it — there is no automatic expiry anywhere
  * in this codebase.
  */
+const REFRESH_COOLDOWN_MS = 5_000;
+
 export default function FraudFlagsPanel() {
   const [flags, setFlags] = useState<FraudFlag[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [evaluatedAt, setEvaluatedAt] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [refreshCooldownMs, setRefreshCooldownMs] = useState(0);
 
   const [throttles, setThrottles] = useState<FraudThrottle[]>([]);
   const [throttlesLoading, setThrottlesLoading] = useState(true);
@@ -228,7 +234,7 @@ export default function FraudFlagsPanel() {
       .finally(() => setThrottlesLoading(false));
   }, []);
 
-  useEffect(() => {
+  const loadFlags = useCallback(() => {
     let cancelled = false;
     setLoading(true);
     setError(false);
@@ -245,11 +251,32 @@ export default function FraudFlagsPanel() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    loadThrottles();
     return () => {
       cancelled = true;
     };
-  }, [loadThrottles]);
+  }, []);
+
+  useEffect(() => {
+    const cleanup = loadFlags();
+    loadThrottles();
+    return cleanup;
+  }, [loadFlags, loadThrottles]);
+
+  useEffect(() => {
+    if (refreshCooldownMs <= 0) return;
+    const tick = window.setInterval(() => {
+      setRefreshCooldownMs((prev) => Math.max(0, prev - 1000));
+    }, 1000);
+    return () => window.clearInterval(tick);
+  }, [refreshCooldownMs]);
+
+  const refreshFlags = useCallback(async () => {
+    if (loading || refreshCooldownMs > 0) return;
+    setRefreshCooldownMs(REFRESH_COOLDOWN_MS);
+    const cleanup = loadFlags();
+    loadThrottles();
+    return cleanup;
+  }, [loadFlags, loadThrottles, loading, refreshCooldownMs]);
 
   async function handleLift(id: number) {
     setLiftingId(id);
@@ -290,17 +317,33 @@ export default function FraudFlagsPanel() {
   return (
     <>
       <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-white">Flagged Activity</h2>
-          <p className="text-sm text-gray-400 mt-1">
-            Suspicious referral and pay-to-contact patterns detected across all
-            wallets. Alert-only — review and investigate manually.
-          </p>
-          {evaluatedAt !== null && (
-            <p className="text-xs text-gray-500 mt-2">
-              As of {new Date(evaluatedAt).toLocaleString()}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-white">
+              Flagged Activity
+            </h2>
+            <p className="text-sm text-gray-400 mt-1">
+              Suspicious referral and pay-to-contact patterns detected across
+              all wallets. Alert-only — review and investigate manually.
             </p>
-          )}
+            {evaluatedAt !== null && (
+              <p className="text-xs text-gray-500 mt-2">
+                As of {new Date(evaluatedAt).toLocaleString()}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={refreshFlags}
+            disabled={loading || refreshCooldownMs > 0}
+            className="shrink-0 rounded-md border border-gray-700 bg-gray-900 px-3 py-1.5 text-xs font-medium text-gray-200 transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loading
+              ? 'Refreshing…'
+              : refreshCooldownMs > 0
+                ? `Refresh (${Math.ceil(refreshCooldownMs / 1000)}s)`
+                : 'Refresh'}
+          </button>
         </div>
 
         {loading ? (
