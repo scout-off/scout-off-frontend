@@ -8,10 +8,12 @@ export function useIPFSUpload() {
   const [progress, setProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryAfterSec, setRetryAfterSec] = useState<number | null>(null);
 
   const upload = useCallback((file: File): Promise<string> => {
     setProgress(0);
     setError(null);
+    setRetryAfterSec(null);
 
     if (!ALLOWED_TYPES.test(file.type)) {
       const msg = 'Invalid file type. Only video and image files are allowed.';
@@ -48,6 +50,15 @@ export function useIPFSUpload() {
             setError(msg);
             reject(new Error(msg));
           }
+        } else if (xhr.status === 429) {
+          const retryAfter = xhr.getResponseHeader('Retry-After');
+          const retryAfterSec = retryAfter ? parseInt(retryAfter, 10) : null;
+          setRetryAfterSec(retryAfterSec);
+          const msg = retryAfterSec
+            ? `Too many upload requests. Please wait ${retryAfterSec}s and try again.`
+            : 'Too many upload requests. Please slow down and try again.';
+          setError(msg);
+          reject(new Error(msg));
         } else {
           const msg = `Upload failed with status ${xhr.status}.`;
           setError(msg);
@@ -67,5 +78,5 @@ export function useIPFSUpload() {
     });
   }, []);
 
-  return { upload, progress, uploading, error };
+  return { upload, progress, uploading, error, retryAfterSec };
 }

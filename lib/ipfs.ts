@@ -64,18 +64,21 @@ export class ChunkedUploadError extends Error {
   sessionId: string;
   uploadedChunks: number;
   totalChunks: number;
+  retryAfterSec?: number;
 
   constructor(
     message: string,
     sessionId: string,
     uploadedChunks: number,
     totalChunks: number,
+    retryAfterSec?: number,
   ) {
     super(message);
     this.name = 'ChunkedUploadError';
     this.sessionId = sessionId;
     this.uploadedChunks = uploadedChunks;
     this.totalChunks = totalChunks;
+    this.retryAfterSec = retryAfterSec;
   }
 }
 
@@ -124,6 +127,19 @@ async function uploadChunkWithRetry(
       return;
     } catch (err) {
       lastErr = err;
+      // If this is a 429 response, extract retryAfterSec and throw immediately
+      // rather than retrying (retries won't help against a rate limit)
+      if (axios.isAxiosError(err) && err.response?.status === 429) {
+        const retryAfter = (err.response?.headers as any)?.['retry-after'];
+        const retryAfterSec = retryAfter ? parseInt(retryAfter, 10) : undefined;
+        throw new ChunkedUploadError(
+          'Upload rate limited. Please wait and try again.',
+          sessionId,
+          chunkIndex,
+          0, // totalChunks not known at this point
+          retryAfterSec,
+        );
+      }
     }
   }
   throw lastErr;
@@ -168,13 +184,28 @@ export async function uploadToIPFSChunked(
     const status = await getChunkedUploadStatus(sessionId);
     startChunk = status.receivedChunks.length;
   } else {
-    const { data } = await axios.post('/api/ipfs/upload/init', {
-      filename: file.name,
-      fileType: file.type,
-      fileSize: file.size,
-      totalChunks,
-    });
-    sessionId = data.sessionId as string;
+    try {
+      const { data } = await axios.post('/api/ipfs/upload/init', {
+        filename: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        totalChunks,
+      });
+      sessionId = data.sessionId as string;
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 429) {
+        const retryAfter = (err.response?.headers as any)?.['retry-after'];
+        const retryAfterSec = retryAfter ? parseInt(retryAfter, 10) : undefined;
+        throw new ChunkedUploadError(
+          'Upload rate limited. Please wait and try again.',
+          '',
+          0,
+          totalChunks,
+          retryAfterSec,
+        );
+      }
+      throw err;
+    }
   }
 
   options.onProgress?.(startChunk / totalChunks);
@@ -198,8 +229,23 @@ export async function uploadToIPFSChunked(
   }
 
   options.onPhaseChange?.('processing');
-  const { data } = await axios.post('/api/ipfs/upload/complete', { sessionId });
-  return data.cid as string;
+  try {
+    const { data } = await axios.post('/api/ipfs/upload/complete', { sessionId });
+    return data.cid as string;
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.status === 429) {
+      const retryAfter = (err.response?.headers as any)?.['retry-after'];
+      const retryAfterSec = retryAfter ? parseInt(retryAfter, 10) : undefined;
+      throw new ChunkedUploadError(
+        'Upload rate limited. Please wait and try again.',
+        sessionId,
+        totalChunks,
+        totalChunks,
+        retryAfterSec,
+      );
+    }
+    throw err;
+  }
 }
 
 /**
