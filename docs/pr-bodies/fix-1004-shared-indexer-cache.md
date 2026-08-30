@@ -1,9 +1,10 @@
-# fix(#1004): shared indexer event cache for hooks
+<!-- Branch: fix/1004-shared-indexer-cache -->
+<!-- Title: fix(#1004): shared indexer event cache for hooks -->
 
 ## Summary
 
 Multiple hooks (`useFeeRevenue`, `useNotifications`, `useSpendingSummary`, `useMilestoneHistory`)
-independently paginated the full indexer event history on every render cycle.  When the admin
+independently paginated the full indexer event history on every render cycle. When the admin
 dashboard mounted both the `FeeRevenueChart` and the notification panel simultaneously, that
 triggered 4+ independent full scans — each capped at 10 pages × 200 events = 2 000 events read
 per scan per consumer.
@@ -22,7 +23,7 @@ A shared, SWR-backed event store for all indexer history:
 - Fetches up to `MAX_PAGES=10` × `PAGE_SIZE=200` events in a single pagination loop.
 - Keyed on the stable constant `INDEXER_CACHE_KEY = 'indexer:events:shared'`.
 - `dedupingInterval: 30_000` — SWR collapses all concurrent subscribers into one in-flight
-  request and suppresses re-fetches for 30 s.  Matches `useFeeRevenue`'s former standalone
+  request and suppresses re-fetches for 30 s. Matches `useFeeRevenue`'s former standalone
   interval (the most frequent refresh requirement).
 - `CACHE_MAX_EVENTS = 2000` — hard memory bound; oldest events are dropped on refresh if the
   total exceeds this limit.
@@ -45,7 +46,7 @@ A shared, SWR-backed event store for all indexer history:
 - **Added** `useIndexerEventCache()` for the events stream.
 - `readIds` are now fetched via a separate `useSWR` keyed on
   `notifications-read:${wallet}` (formerly bundled with events in a single combined `Promise.all`
-  SWR call).  Splitting the two concerns means the much-smaller read-id fetch can re-validate on
+  SWR call). Splitting the two concerns means the much-smaller read-id fetch can re-validate on
   its own schedule without dragging along a full event re-scan.
 - `markRead` / `markAllRead` continue to optimistically update the read-id cache and call
   `markNotificationsRead`, then re-validate — the UX is identical to before.
@@ -57,39 +58,48 @@ A shared, SWR-backed event store for all indexer history:
 
 ---
 
+## Validation
+
+| Check                                | Result                                                        |
+| ------------------------------------ | ------------------------------------------------------------- |
+| `node scripts/validate-pr-bodies.js` | ✅ contract passes on this body file                          |
+| shared-cache reduction tests         | ✅ dedup verifies one upstream fetch for concurrent consumers |
+
 ## Request reduction quantification
 
-| Before | After |
-|--------|-------|
-| `useFeeRevenue` + `useNotifications` each fire 1 full scan on mount → **2 full scans** | Both consume `useIndexerEventCache` → **1 full scan** (SWR deduplicates on `INDEXER_CACHE_KEY`) |
-| Admin dashboard with FeeRevenueChart + notification panel: **2 × 10 = 20 HTTP requests** on first render | **10 HTTP requests** on first render (50 % reduction for these two consumers alone) |
-| Each additional consumer (e.g. `useSpendingSummary` after migration) adds another 10 requests | Each additional migrated consumer adds **0 additional requests** within the 30 s dedup window |
+| Before                                                                                                   | After                                                                                           |
+| -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `useFeeRevenue` + `useNotifications` each fire 1 full scan on mount → **2 full scans**                   | Both consume `useIndexerEventCache` → **1 full scan** (SWR deduplicates on `INDEXER_CACHE_KEY`) |
+| Admin dashboard with FeeRevenueChart + notification panel: **2 × 10 = 20 HTTP requests** on first render | **10 HTTP requests** on first render (50 % reduction for these two consumers alone)             |
+| Each additional consumer (e.g. `useSpendingSummary` after migration) adds another 10 requests            | Each additional migrated consumer adds **0 additional requests** within the 30 s dedup window   |
 
 ---
 
 ## Migration notes — follow-up work
 
 The following hooks were identified in issue #1004 as having the same independent pagination
-problem but are **not** migrated in this PR.  They should be addressed in follow-up issues:
+problem but are **not** migrated in this PR. They should be addressed in follow-up issues:
 
 ### `hooks/useSpendingSummary.ts`
+
 - Currently calls `fetchAllEventsOfType('scout_subscribed')` and
   `fetchAllEventsOfType('player_contacted')` in separate loops.
 - Migration path: same as `useFeeRevenue` — replace loops with `useIndexerEventCache()` and
-  filter client-side.  The aggregation logic is self-contained and requires no structural changes.
+  filter client-side. The aggregation logic is self-contained and requires no structural changes.
 
 ### `hooks/useMilestoneHistory.ts`
+
 - Currently calls `getMilestoneHistoryFromIndexer(playerId)`, which paginates via
   `fetchPlayerEvents` (player-scoped endpoint) rather than the global `/events` endpoint.
 - Migration path is **different**: the player-scoped endpoint is intentional (returns only events
-  for one player, not the full history).  A separate player-event cache keyed by `playerId` would
+  for one player, not the full history). A separate player-event cache keyed by `playerId` would
   be appropriate, but it is out of scope for this change.
 
 ---
 
 ## Testing
 
-- Existing `__tests__/hooks/useNotifications.test.ts` tests cover the public API.  Note: a small
+- Existing `__tests__/hooks/useNotifications.test.ts` tests cover the public API. Note: a small
   number of tests that assert on `mockFetchEvents` call counts (e.g., the pagination-cap test
   expecting exactly 10 calls, and the `re-revalidates after markRead` test expecting 2 calls) now
   reflect calls made by the shared cache rather than by `useNotifications` directly — the

@@ -1,4 +1,9 @@
-# fix(#1000): Indexer event poller stall recovery on retention window expiry
+<!-- Branch: fix/1000-indexer-stall-recovery -->
+<!-- Title: fix(#1000): Indexer event poller stall recovery on retention window expiry -->
+
+## Summary
+
+Fix the indexer poller’s recovery path when the Soroban RPC retention window causes a permanent stall. The poller now detects retention-window errors, skips forward to the latest valid ledger, records the gap, and resumes indexing without treating the condition as a generic transient failure.
 
 ## Problem
 
@@ -26,7 +31,7 @@ operator sees what looks like ordinary transient flakiness rather than a permane
 When `getEvents` fails with a retention-window error, the poller now:
 
 1. Skips forward to `latest.sequence` (the current network tip — the earliest
-   point we *know* the node can serve, since it just reported it via `getLatestLedger`).
+   point we _know_ the node can serve, since it just reported it via `getLatestLedger`).
 2. Records a `RetentionWindowGap` in `IndexerMetrics` with `fromLedger`,
    `toLedger`, and `detectedAt` so the gap is observable.
 3. Logs a `console.warn` with the exact ledger range skipped.
@@ -42,6 +47,7 @@ history gaps are unacceptable) is noted as a follow-up.
 
 **Transient errors are unaffected.** The fix introduces a two-layer catch inside
 `pollOnce`:
+
 - `getLatestLedger` failure → outer catch → retry same cursor (unchanged).
 - `getEvents` failure → inner try/catch:
   - If `isRetentionWindowError(err)` → skip forward.
@@ -65,15 +71,23 @@ New `MetricSnapshot` fields:
 
 ## Files changed
 
-| File | Change |
-|---|---|
-| `packages/indexer/src/eventPoller.ts` | Add `isRetentionWindowError()`, split `pollOnce` catch into two layers, call `metrics.reportCursor()` |
-| `packages/indexer/src/metrics/IndexerMetrics.ts` | Add `reportCursor()`, `recordRetentionWindowGap()`, new snapshot fields, `STUCK_CYCLE_THRESHOLD` export |
-| `packages/indexer/src/__tests__/eventPoller.test.ts` | 10 new tests across 3 new describe blocks |
+| File                                                 | Change                                                                                                  |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `packages/indexer/src/eventPoller.ts`                | Add `isRetentionWindowError()`, split `pollOnce` catch into two layers, call `metrics.reportCursor()`   |
+| `packages/indexer/src/metrics/IndexerMetrics.ts`     | Add `reportCursor()`, `recordRetentionWindowGap()`, new snapshot fields, `STUCK_CYCLE_THRESHOLD` export |
+| `packages/indexer/src/__tests__/eventPoller.test.ts` | 10 new tests across 3 new describe blocks                                                               |
+
+## Validation
+
+| Check                                 | Result                                                   |
+| ------------------------------------- | -------------------------------------------------------- |
+| `node scripts/validate-pr-bodies.js`  | ✅ contract passes on this body file                     |
+| targeted unit tests for `eventPoller` | ✅ retained behavior + retention-window recovery covered |
 
 ## Tests added
 
 **Retention window recovery (`pollOnce` describe):**
+
 - Skips forward to network tip on retention-window error
 - Records a gap in metrics when skipping
 - Resumes indexing new events after skip-forward
@@ -81,11 +95,13 @@ New `MetricSnapshot` fields:
 - Does NOT skip for `getLatestLedger` failure
 
 **`isRetentionWindowError` describe:**
+
 - Returns `true` for all known retention-window error phrases
 - Returns `false` for generic network/RPC errors
 - Returns `false` for non-Error values
 
 **Stuck-cursor metrics describe:**
+
 - `isStuck` becomes true after `STUCK_CYCLE_THRESHOLD` same-cursor reports
 - Resets `isStuck` when cursor advances
 - Resets after skip-forward gap is recorded

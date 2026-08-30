@@ -27,12 +27,16 @@
 
 These documents contain implementation detail that is still actively relevant but lives at the repo root rather than under `docs/`. If you are working in the areas they cover, read them first.
 
-| Document | Covers |
-| -------- | ------ |
-| [ICON_GUIDE.md](ICON_GUIDE.md) | How the PWA icon system is structured — asset locations, design specs, all PNG generation methods (Node script, Inkscape, ImageMagick), manifest integration, and a production deployment checklist. |
-| [ICONS_IMPLEMENTATION.md](ICONS_IMPLEMENTATION.md) | Issue #115 implementation summary — records exactly which files were created or modified, what the SVG branding design contains, and the step-by-step process for regenerating PNGs if `icon.svg` ever changes. |
-| [SWAHILI_IMPLEMENTATION.md](SWAHILI_IMPLEMENTATION.md) | Verification report for the Swahili (`sw`) locale rollout — covers what was added to `messages/sw.json`, how the locale is wired into routing and middleware, and which translation strings are still marked for native-speaker review. |
-| [TRIAL_OFFER_STRUCTURE.md](TRIAL_OFFER_STRUCTURE.md) | Full reference for the `log_trial_offer` contract call — the `TrialOffer` TypeScript interface, how `details` should be serialized as a JSON string, how to encode it with `nativeToScVal`, and the `useTrialOffer` hook pattern that mirrors `usePayToContact`. |
+| Document                                               | Covers                                                                                                                                                                                                                                                           |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [ICON_GUIDE.md](ICON_GUIDE.md)                         | How the PWA icon system is structured — asset locations, design specs, all PNG generation methods (Node script, Inkscape, ImageMagick), manifest integration, and a production deployment checklist.                                                             |
+| [ICONS_IMPLEMENTATION.md](ICONS_IMPLEMENTATION.md)     | Issue #115 implementation summary — records exactly which files were created or modified, what the SVG branding design contains, and the step-by-step process for regenerating PNGs if `icon.svg` ever changes.                                                  |
+| [SWAHILI_IMPLEMENTATION.md](SWAHILI_IMPLEMENTATION.md) | Verification report for the Swahili (`sw`) locale rollout — covers what was added to `messages/sw.json`, how the locale is wired into routing and middleware, and which translation strings are still marked for native-speaker review.                          |
+| [TRIAL_OFFER_STRUCTURE.md](TRIAL_OFFER_STRUCTURE.md)   | Full reference for the `log_trial_offer` contract call — the `TrialOffer` TypeScript interface, how `details` should be serialized as a JSON string, how to encode it with `nativeToScVal`, and the `useTrialOffer` hook pattern that mirrors `usePayToContact`. |
+
+### Architecture decisions
+
+See [docs/adr/README.md](docs/adr/README.md) for the project’s architecture decision records and the ADR index.
 
 ---
 

@@ -1,4 +1,9 @@
-# fix(#1006): Track superseded IPFS CIDs and admin-triggerable unpin cleanup
+<!-- Branch: fix/1006-ipfs-unpin -->
+<!-- Title: fix(#1006): Track superseded IPFS CIDs and admin-triggerable unpin cleanup -->
+
+## Summary
+
+Track superseded IPFS CIDs so stale media can be safely unpinned after a grace period. The admin cleanup API can then review the registry, skip active references, and unpin eligible content without disturbing current player media.
 
 ## Problem
 
@@ -31,28 +36,28 @@ documented in the module.
 
 ### 2. `app/api/admin/ipfs-cleanup/route.ts` — admin-triggerable cleanup endpoint
 
-| Method | Path                        | Auth   | Description                                    |
-|--------|-----------------------------|--------|------------------------------------------------|
-| `GET`  | `/api/admin/ipfs-cleanup`   | Admin  | Returns all tracked superseded CID records     |
-| `POST` | `/api/admin/ipfs-cleanup`   | Admin  | Runs cleanup — unpins eligible CIDs via Pinata |
+| Method | Path                      | Auth  | Description                                    |
+| ------ | ------------------------- | ----- | ---------------------------------------------- |
+| `GET`  | `/api/admin/ipfs-cleanup` | Admin | Returns all tracked superseded CID records     |
+| `POST` | `/api/admin/ipfs-cleanup` | Admin | Runs cleanup — unpins eligible CIDs via Pinata |
 
 Both methods are protected by `requireAdminWallet` from `lib/adminAuth.ts`.
 
 **POST request body** (all fields optional):
+
 ```json
 {
-  "currentCids": [
-    { "playerId": "player-abc", "cid": "Qm..." }
-  ]
+  "currentCids": [{ "playerId": "player-abc", "cid": "Qm..." }]
 }
 ```
 
 **POST response**:
+
 ```json
 {
   "unpinned": ["Qm..."],
-  "skipped":  ["Qm..."],
-  "errors":   [{ "cid": "Qm...", "error": "Pinata responded 404: ..." }]
+  "skipped": ["Qm..."],
+  "errors": [{ "cid": "Qm...", "error": "Pinata responded 404: ..." }]
 }
 ```
 
@@ -62,22 +67,31 @@ Pinata unpin calls use `DELETE https://api.pinata.cloud/pinning/unpin/{CID}` wit
 
 ### 3. `app/api/ipfs/superseded/route.ts` — recording endpoint
 
-| Method | Path                   | Auth  | Description                            |
-|--------|------------------------|-------|----------------------------------------|
-| `POST` | `/api/ipfs/superseded` | None* | Records an old CID as superseded       |
+| Method | Path                   | Auth   | Description                      |
+| ------ | ---------------------- | ------ | -------------------------------- |
+| `POST` | `/api/ipfs/superseded` | None\* | Records an old CID as superseded |
 
 \* This endpoint is intended for server-side calls only (from within the Next.js API layer),
 not from the browser. It performs input validation on `oldCid` and `playerId`.
 
 **Request body**:
+
 ```json
 { "oldCid": "QmOldHash...", "playerId": "player-abc" }
 ```
 
 **Response** (`201 Created`):
+
 ```json
 { "id": "uuid-of-the-superseded-record" }
 ```
+
+## Validation
+
+| Check                                | Result                                            |
+| ------------------------------------ | ------------------------------------------------- |
+| `node scripts/validate-pr-bodies.js` | ✅ contract passes on this body file              |
+| cleanup safety guard coverage        | ✅ active CIDs are excluded from unpin operations |
 
 ---
 
@@ -88,7 +102,7 @@ The `UNPIN_GRACE_PERIOD_MS` constant is set to **72 hours (3 days)**. The reason
 - `app/api/media/[cid]/route.ts` sets `Cache-Control: public, max-age=31536000, immutable`
   (1-year CDN TTL).
 - Waiting a full year before unpinning would defeat the purpose of reclamation.
-- CDN *edge* copies are typically evicted within 7–30 days under normal cache pressure, but
+- CDN _edge_ copies are typically evicted within 7–30 days under normal cache pressure, but
   a cache-miss for an unpinned CID would return a 404 if the pin is gone. 72 hours is chosen
   to cover:
   - Any in-flight CDN edge copies that could receive a fresh request just after unpinning.
@@ -172,6 +186,7 @@ npm run test
 ```
 
 Manual validation:
+
 1. Set `PINATA_API_KEY` and `PINATA_SECRET` in `.env.local`.
 2. Call `POST /api/ipfs/superseded` with `{ "oldCid": "Qm...", "playerId": "p1" }`.
 3. Confirm `GET /api/admin/ipfs-cleanup` (admin session) shows the record.
