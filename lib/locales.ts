@@ -12,6 +12,16 @@
  * `lib/seo.ts`, which imports `next/headers`) so `middleware.ts` — which
  * runs in the Edge runtime — doesn't need to pull in unrelated server APIs
  * just to read this list.
+ *
+ * Note (issue #1009): a fully-translated Portuguese file previously existed
+ * at `messages/pt.json` but was never wired in here or in `i18n/routing.ts`.
+ * It was a dead file with no path to ever being used, so it was removed
+ * rather than left unreachable and unexplained — shipping `pt` is a
+ * deliberate future product decision, not something to silently half-build.
+ * If Portuguese support is picked back up, re-add the translations here,
+ * `i18n/routing.ts`'s `locales` array, and verify nested key parity against
+ * `messages/en.json` before shipping (a stale translation could silently
+ * fall back to English on missing nested keys).
  */
 const SUPPORTED_LOCALES = ['en', 'fr', 'sw'] as const;
 
