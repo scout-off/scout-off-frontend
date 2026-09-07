@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import Badge from '../../components/ui/Badge';
+import type { BadgeProps } from '../../components/ui/Badge';
 
 describe('Badge', () => {
   test('renders the label and uses a span', () => {
@@ -36,5 +37,26 @@ describe('Badge', () => {
     expect(el).toHaveAttribute('aria-label', 'Region');
     expect(el).toHaveAttribute('role', 'status');
     expect(el.className).not.toMatch(/undefined|\[|\]/);
+  });
+
+  describe('snapshots', () => {
+    const variants: Array<{ variant: BadgeProps['variant']; label: string }> = [
+      { variant: 'level0', label: 'Level 0' },
+      { variant: 'level1', label: 'Level 1' },
+      { variant: 'level2', label: 'Level 2' },
+      { variant: 'level3', label: 'Level 3' },
+      { variant: 'position', label: 'GK' },
+      { variant: 'region', label: 'Africa' },
+      { variant: 'achievement', label: 'Top Scorer' },
+    ];
+
+    variants.forEach(({ variant, label }) => {
+      it(`matches snapshot for variant="${variant}"`, () => {
+        const { container } = render(
+          <Badge variant={variant} label={label} />,
+        );
+        expect(container).toMatchSnapshot();
+      });
+    });
   });
 });
