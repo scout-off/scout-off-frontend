@@ -57,16 +57,16 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Validate that playerId is a valid Stellar public key
-  if (!isValidStellarAddress(playerId)) {
+  // Normalize first (case-fold) so a validly-keyed address submitted in
+  // lower/mixed case is accepted and stored in one canonical form, then
+  // gate on real Ed25519 validity.
+  const normalizedPlayerId = normalizeStellarAddress(playerId);
+  if (!isValidStellarAddress(normalizedPlayerId)) {
     return NextResponse.json(
       { error: 'playerId must be a valid Stellar public key (G...)' },
       { status: 400 },
     );
   }
-
-  // Normalize the address to uppercase to ensure consistent storage and lookup
-  const normalizedPlayerId = normalizeStellarAddress(playerId);
 
   try {
     const entry = WatchlistStore.getInstance().add(

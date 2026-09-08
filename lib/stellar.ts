@@ -37,13 +37,13 @@ export function isValidStellarAddress(key: string): boolean {
  * validation return a clean 4xx.
  */
 export function normalizeStellarAddress(key: string): string {
-  const trimmed = key.trim();
-  if (StrKey.isValidEd25519PublicKey(trimmed)) {
+  const canonical = key.trim().toUpperCase();
+  if (StrKey.isValidEd25519PublicKey(canonical)) {
     return StrKey.encodeEd25519PublicKey(
-      StrKey.decodeEd25519PublicKey(trimmed),
+      StrKey.decodeEd25519PublicKey(canonical),
     );
   }
-  return trimmed.toUpperCase();
+  return canonical;
 }
 
 export { NETWORK, BASE_FEE, TransactionBuilder };
