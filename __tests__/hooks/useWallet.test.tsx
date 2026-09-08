@@ -19,6 +19,19 @@ jest.mock('@/lib/stellar', () => ({
   NETWORK: 'Test SDF Network ; September 2015',
 }));
 
+// #778: restoreSession reconciles the local hint against the server via
+// GET /api/auth/session before trusting it. These specs exercise the
+// wallet hook itself, not that reconciliation — stub the session client so
+// restore resolves synchronously ("inconclusive → assume still valid")
+// instead of driving fetchWithRetry's real backoff against a bare fetch mock.
+jest.mock('@/lib/sessionClient', () => ({
+  getServerSession: jest.fn().mockResolvedValue(null),
+  refreshSession: jest.fn().mockResolvedValue({
+    authenticated: true,
+    publicKey: 'GABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890',
+  }),
+}));
+
 jest.mock('@/lib/sep10Validation', () => ({
   validateSep10Challenge: jest.fn(() => ({ valid: true })),
   getSep10ClientConfig: jest.fn(() => ({

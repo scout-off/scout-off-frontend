@@ -4,7 +4,7 @@ import React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { SWRConfig } from 'swr';
 import { useValidator, invalidateValidatorCache } from '@/hooks/useValidator';
-import type { ValidatorInfo, Player } from '@/types';
+import type { ValidatorInfo } from '@/types';
 
 const PUBLIC_KEY = 'G'.padEnd(56, 'X');
 
@@ -158,25 +158,12 @@ describe('useValidator', () => {
     });
   });
 
-  test('revokeMilestone happy path: signs revoke tx, returns updated Player', async () => {
+  test('revokeMilestone happy path: signs revoke tx, returns tx result', async () => {
     mockGetValidators.mockResolvedValueOnce([makeValidator()]);
     mockBuildRevokeMilestone.mockResolvedValueOnce('revoke-xdr');
-    const updated: Player = {
-      id: 'p1',
-      wallet: PUBLIC_KEY,
-      vitals: {
-        name: 'P1',
-        position: 'forward',
-        region: 'EU',
-        age: 20,
-      },
-      progressLevel: 0,
-      archived: false,
-      milestones: [],
-      stats: {},
-      ipfsHash: '',
-    } as unknown as Player;
-    mockSignAndSubmit.mockResolvedValueOnce(updated);
+    // signAndSubmit resolves the on-chain tx hash; revokeMilestone reports
+    // it back as `{ hash, confirmed }` (see hooks/useValidator.ts).
+    mockSignAndSubmit.mockResolvedValueOnce('revoke-tx-hash');
 
     const { result } = renderHook(() => useValidator(), { wrapper });
     await waitFor(() => expect(result.current.checking).toBe(false));
@@ -186,7 +173,7 @@ describe('useValidator', () => {
       out = await result.current.revokeMilestone('p1', 'milestone-1');
     });
 
-    expect(out).toEqual(updated);
+    expect(out).toEqual({ hash: 'revoke-tx-hash', confirmed: true });
     expect(mockBuildRevokeMilestone).toHaveBeenCalledWith(
       PUBLIC_KEY,
       'p1',

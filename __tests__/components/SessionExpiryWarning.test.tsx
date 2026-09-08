@@ -38,6 +38,20 @@ jest.mock('@/lib/stellar', () => ({
   TransactionBuilder: { fromXDR: jest.fn(() => ({})) },
 }));
 
+// #778: WalletProvider.restoreSession reconciles the local session hint
+// against GET /api/auth/session before trusting it. This suite drives the
+// component through a second provider that restores from the localStorage
+// hint written by the connected one — stub the session client so that
+// restore resolves synchronously ("inconclusive → assume still valid")
+// instead of stalling on fetchWithRetry's backoff under fake timers.
+jest.mock('@/lib/sessionClient', () => ({
+  getServerSession: jest.fn().mockResolvedValue(null),
+  refreshSession: jest.fn().mockResolvedValue({
+    authenticated: true,
+    publicKey: 'GCFW7QAO3WZQ6X4CZ3OYZFXX3A3DL7XVI5DNVTXA5VJUGE5SU6ZRG5OV',
+  }),
+}));
+
 jest.mock('@/lib/sep10Validation', () => ({
   validateSep10Challenge: jest.fn(() => ({ valid: true })),
   getSep10ClientConfig: jest.fn(() => ({
