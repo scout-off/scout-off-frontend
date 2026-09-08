@@ -24,6 +24,7 @@ import {
   addAcademyMember,
   removeAcademyMember,
   fetchAcademyMilestoneRollup,
+  setAcademyQuorum,
 } from '@/lib/api';
 import type { Academy, AcademyMilestoneRollupEntry } from '@/types';
 

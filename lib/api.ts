@@ -490,7 +490,52 @@ export const fetchAcademyForWallet = async (
   }
 };
 
-import type { AcademyMilestoneRollup } from '@/types';
+import type { AcademyMilestoneRollup, MilestoneEndorsement } from '@/types';
+
+/**
+ * Off-chain academy-quorum endorsements for a milestone (issue #1185).
+ * Public/unauthenticated — enrichment for the "N of M academy signers"
+ * badge, never an on-chain gate. See
+ * app/api/milestones/[playerId]/[milestoneId]/endorsements/route.ts.
+ */
+export const fetchMilestoneEndorsements = async (
+  playerId: string,
+  milestoneId: string,
+): Promise<MilestoneEndorsement[]> => {
+  const res = await fetchWithRetry(
+    `/api/milestones/${encodeURIComponent(playerId)}/${encodeURIComponent(
+      milestoneId,
+    )}/endorsements`,
+  );
+  if (!res.ok)
+    throw new Error(
+      await parseErrorMessage(res, 'Failed to fetch milestone endorsements'),
+    );
+  const data = await res.json();
+  return data.endorsements ?? [];
+};
+
+/**
+ * Records the caller's own off-chain endorsement of an
+ * already-on-chain-approved milestone (issue #1185). Requires a session
+ * whose wallet is a validator in the same academy as the approving
+ * validator; never triggers an on-chain `approve_milestone`.
+ */
+export const endorseMilestone = async (
+  playerId: string,
+  milestoneId: string,
+): Promise<void> => {
+  const res = await fetchWithRetry(
+    `/api/milestones/${encodeURIComponent(playerId)}/${encodeURIComponent(
+      milestoneId,
+    )}/endorsements`,
+    { method: 'POST' },
+  );
+  if (!res.ok)
+    throw new Error(
+      await parseErrorMessage(res, 'Failed to endorse milestone'),
+    );
+};
 
 /**
  * Academy-scoped milestone-approval rollup (issue #1172): total approved

@@ -1,7 +1,7 @@
 'use client';
 
 import { useWallet } from '@/hooks/useWallet';
-import { isBlocked } from '@/lib/messaging/moderation';
+import { isUserBlocked } from '@/lib/messaging/moderation';
 
 interface BlockedStateMessageProps {
   targetId: string;
@@ -18,7 +18,7 @@ export default function BlockedStateMessage({
 
   if (!publicKey) return null;
 
-  const blocked = isBlocked(targetId, publicKey);
+  const blocked = isUserBlocked(targetId);
 
   if (!blocked) return null;
 

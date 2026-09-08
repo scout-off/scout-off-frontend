@@ -33,6 +33,17 @@ export interface Milestone {
   timestamp: number; // Unix timestamp from ledger
 }
 
+/**
+ * An off-chain academy-quorum endorsement of an already-on-chain-approved
+ * milestone (issue #1185). See lib/milestoneEndorsementStore.ts.
+ */
+export interface MilestoneEndorsement {
+  playerId: string;
+  milestoneId: string;
+  wallet: string; // endorsing academy-member wallet
+  createdAt: number; // Unix ms
+}
+
 export interface Player {
   id: string;
   wallet: string;

@@ -1,5 +1,13 @@
 import { NextRequest } from 'next/server';
 import { AdminAuditStore } from '@/lib/adminAuditStore';
+import type { AdminAuditActionType } from '@/lib/adminAudit';
+
+// Automated moderation entries are persisted in the shared admin audit log
+// but aren't part of its closed `AdminAuditActionType` union (they're an
+// internal, system-generated category rather than an operator action). The
+// prefix is kept greppable and the concrete category is carried in `data`.
+const AUTOMATED_MODERATION_ACTION_TYPE =
+  'automated_moderation' as AdminAuditActionType;
 
 /**
  * POST /api/admin/automated-moderation-log
@@ -36,9 +44,10 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     const adminStore = AdminAuditStore.getInstance();
 
-    // Record in the admin audit store with our action type prefix
+    // Record in the admin audit store under the automated-moderation action
+    // type; the specific category lives in `data` for the admin UI to filter on.
     adminStore.insertEntry({
-      actionType: `automated_moderation_${category}`,
+      actionType: AUTOMATED_MODERATION_ACTION_TYPE,
       adminWallet: 'system',
       target: threadId ?? userId,
       amountStroops: null,
@@ -46,6 +55,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       status: 'confirmed',
       timestamp,
       data: {
+        category,
         rule,
         severity,
         userId,
@@ -80,9 +90,9 @@ export async function GET(request: NextRequest): Promise<Response> {
   try {
     const adminStore = AdminAuditStore.getInstance();
 
-    // Query entries with our action type prefix
-    const entries = adminStore.getEntries({
-      actionType: 'automated_moderation',
+    // Query entries recorded under the automated-moderation action type
+    const { entries } = adminStore.getEntries({
+      actionType: AUTOMATED_MODERATION_ACTION_TYPE,
       from: from ? parseInt(from, 10) : undefined,
       to: to ? parseInt(to, 10) : undefined,
       limit,
@@ -97,7 +107,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       });
     }
 
-    return new Response(JSON.stringify(filtered), {
+    return new Response(JSON.stringify({ entries: filtered }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });

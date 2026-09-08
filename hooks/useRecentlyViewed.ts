@@ -77,10 +77,14 @@ export function useRecentlyViewed() {
     : localEntries;
 
   const record = useCallback(
-    async (entryData: Omit<RecentlyViewedEntry, 'viewedAt'>) => {
+    async (entryData: Omit<RecentlyViewedEntry, 'viewedAt' | 'id'>) => {
+      const now = Date.now();
       const entry: RecentlyViewedEntry = {
         ...entryData,
-        viewedAt: Date.now(),
+        // The server assigns the real row id; for the localStorage fallback
+        // a timestamp-based id is enough (local removal dedupes on playerId).
+        id: now,
+        viewedAt: now,
       };
 
       if (isAuthenticated) {

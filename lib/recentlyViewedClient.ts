@@ -1,4 +1,4 @@
-import type { RecentlyViewedEntry } from './useRecentlyViewed';
+import type { RecentlyViewedEntry } from '@/types';
 import { fetchWithRetry } from '@/lib/fetchWithRetry';
 
 /** Client for app/api/recently-viewed — same-origin, cookie-authenticated. */

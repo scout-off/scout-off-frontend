@@ -9,7 +9,7 @@
 import type Database from 'better-sqlite3';
 import { openSqliteDb } from './sqliteDb';
 import { recentlyViewedMigrations } from './migrations/recentlyViewedMigrations';
-import type { RecentlyViewedEntry } from './useRecentlyViewed';
+import type { RecentlyViewedEntry } from '@/types';
 
 interface RecentlyViewedRow {
   id: number;
@@ -72,7 +72,7 @@ export class RecentlyViewedStore {
     viewedAt: number,
   ): RecentlyViewedEntry {
     // First, remove any existing entry for this player
-    this.remove(scoutWallet, playerId);
+    this.removeByPlayerId(scoutWallet, playerId);
 
     // Insert new entry
     const result = this.db
