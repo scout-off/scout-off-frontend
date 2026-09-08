@@ -43,6 +43,10 @@ jest.mock('@/hooks/useRecentlyViewed', () => ({
   useRecentlyViewed: jest.fn(() => ({ entries: [], record: jest.fn() })),
 }));
 
+jest.mock('@/components/ui/Toast', () => ({
+  useToast: jest.fn(() => ({ show: jest.fn() })),
+}));
+
 // ── Component mocks ───────────────────────────────────────────────────────────
 
 jest.mock('@/components/PlayerProfileSkeleton', () => ({
