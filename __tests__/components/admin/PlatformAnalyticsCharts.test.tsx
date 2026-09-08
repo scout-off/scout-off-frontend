@@ -180,19 +180,22 @@ describe('PlatformAnalyticsCharts', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('shows "No data in this range." inside each chart when the date filter excludes all points', () => {
+  it('shows the section empty state when the date filter excludes all points', () => {
     mockUsePlatformAnalytics.mockReturnValue(
       baseState({ data: ANALYTICS_FIXTURE }),
     );
     render(<PlatformAnalyticsCharts />);
 
-    // Filter to a future range that has no data
+    // Filter to a future range that has no data — every filtered series is
+    // empty, so the whole section collapses to its empty state rather than
+    // rendering three "No data in this range." charts.
     fireEvent.change(screen.getByLabelText(/^from$/i), {
       target: { value: '2099-01-01' },
     });
 
-    const emptyMessages = screen.getAllByText('No data in this range.');
-    // One per chart sub-component: players, scouts, milestones
-    expect(emptyMessages).toHaveLength(3);
+    expect(screen.getByText('No analytics data yet')).toBeInTheDocument();
+    expect(
+      screen.queryByText('No data in this range.'),
+    ).not.toBeInTheDocument();
   });
 });

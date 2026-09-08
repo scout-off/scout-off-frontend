@@ -110,7 +110,9 @@ describe('PlayerCompareView – accessibility', () => {
     const players = [makePlayer({ vitals: { name: 'Alpha' } })];
     render(<PlayerCompareView players={players} />);
 
-    const playerSection = screen.getByRole('region', { name: 'Player vitals' });
+    const playerSection = screen.getByRole('region', {
+      name: /Player vitals/i,
+    });
     expect(playerSection).toBeInTheDocument();
 
     const nameHeading = screen.getByRole('heading', {
@@ -124,7 +126,8 @@ describe('PlayerCompareView – accessibility', () => {
     const players = [makePlayer(), makePlayer(), makePlayer(), makePlayer()];
     render(<PlayerCompareView players={players} />);
 
-    const grid = screen.getByRole('group').parentElement;
+    // Each player column is a labelled group; the grid is their shared parent.
+    const grid = screen.getAllByRole('group')[0].parentElement;
     // The grid is the parent container with grid class
     expect(grid?.className).toContain('grid');
     // Check for responsive grid columns

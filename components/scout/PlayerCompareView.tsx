@@ -24,9 +24,17 @@ const POSITION_LABEL: Record<string, string> = Object.fromEntries(
 
 function CompareColumn({ player }: { player: Player }) {
   const levelLabel = getProgressLabel(player.progressLevel);
+  const nameId = `compare-col-name-${player.id}`;
 
   return (
-    <div className="flex flex-col gap-5 bg-brand-card border border-gray-800 rounded-xl p-5">
+    // Each column is a labelled group (not a landmark) so screen-reader users
+    // can navigate between players without every column's inner headings
+    // colliding as duplicate "Vitals"/"Stats" landmarks.
+    <div
+      role="group"
+      aria-labelledby={nameId}
+      className="flex flex-col gap-5 bg-brand-card border border-gray-800 rounded-xl p-5"
+    >
       {/* Avatar + Name */}
       <div className="flex flex-col items-center gap-3 text-center">
         <div
@@ -44,7 +52,7 @@ function CompareColumn({ player }: { player: Player }) {
           )}
         </div>
         <div>
-          <h3 className="font-semibold text-white text-lg">
+          <h3 id={nameId} className="font-semibold text-white text-lg">
             {player.vitals.name}
           </h3>
           <Badge
@@ -56,7 +64,7 @@ function CompareColumn({ player }: { player: Player }) {
       </div>
 
       {/* Vitals */}
-      <section aria-label="Player vitals">
+      <section aria-label={`${player.vitals.name} – Player vitals`}>
         <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
           Vitals
         </h4>
@@ -85,7 +93,7 @@ function CompareColumn({ player }: { player: Player }) {
 
       {/* Stats */}
       {player.stats && (
-        <section aria-label="Player stats">
+        <section aria-label={`${player.vitals.name} – Player stats`}>
           <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
             Stats
           </h4>
@@ -125,7 +133,7 @@ function CompareColumn({ player }: { player: Player }) {
       )}
 
       {/* Progress */}
-      <section aria-label="Progress level">
+      <section aria-label={`${player.vitals.name} – Progress level`}>
         <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
           Progress
         </h4>
@@ -133,7 +141,7 @@ function CompareColumn({ player }: { player: Player }) {
       </section>
 
       {/* Milestones */}
-      <section aria-label="Milestones">
+      <section aria-label={`${player.vitals.name} – Milestones`}>
         <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
           Milestones
         </h4>

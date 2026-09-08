@@ -141,7 +141,7 @@ describe('PlayerCompareView', () => {
       screen.getByRole('heading', { name: 'Kofi Mensah', level: 3 }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('region', { name: 'Player vitals' }),
+      screen.getByRole('region', { name: /Player vitals/i }),
     ).toBeInTheDocument();
   });
 
@@ -195,7 +195,7 @@ describe('PlayerCompareView', () => {
     render(<PlayerCompareView players={players} />);
 
     expect(
-      screen.getAllByRole('region', { name: 'Player vitals' }),
+      screen.getAllByRole('region', { name: /Player vitals/i }),
     ).toHaveLength(2);
   });
 
@@ -224,7 +224,7 @@ describe('PlayerCompareView', () => {
 
     // Each player's vitals should appear in their column.
     const vitalsRegions = screen.getAllByRole('region', {
-      name: 'Player vitals',
+      name: /Player vitals/i,
     });
     expect(within(vitalsRegions[0]).getByText('21')).toBeInTheDocument();
     expect(
@@ -241,7 +241,7 @@ describe('PlayerCompareView', () => {
     render(<PlayerCompareView players={[player]} />);
 
     expect(
-      screen.getByRole('region', { name: 'Player stats' }),
+      screen.getByRole('region', { name: /Player stats/i }),
     ).toBeInTheDocument();
     expect(screen.getByText('12')).toBeInTheDocument();
     expect(screen.getByText('4')).toBeInTheDocument();
@@ -253,7 +253,7 @@ describe('PlayerCompareView', () => {
     render(<PlayerCompareView players={[player]} />);
 
     expect(
-      screen.queryByRole('region', { name: 'Player stats' }),
+      screen.queryByRole('region', { name: /Player stats/i }),
     ).not.toBeInTheDocument();
   });
 
@@ -266,7 +266,7 @@ describe('PlayerCompareView', () => {
     render(<PlayerCompareView players={[player]} />);
 
     expect(
-      screen.getByRole('region', { name: 'Milestones' }),
+      screen.getByRole('region', { name: /[-–] Milestones/i }),
     ).toBeInTheDocument();
     expect(screen.getByText('2 milestones')).toBeInTheDocument();
     expect(screen.getByTestId('milestone-timeline')).toBeInTheDocument();
@@ -287,7 +287,7 @@ describe('PlayerCompareView', () => {
     render(<PlayerCompareView players={players} />);
 
     expect(
-      screen.getAllByRole('region', { name: 'Progress level' }),
+      screen.getAllByRole('region', { name: /Progress level/i }),
     ).toHaveLength(2);
     expect(screen.getAllByRole('progressbar')).toHaveLength(2);
   });
@@ -303,11 +303,14 @@ describe('PlayerCompareView', () => {
       },
       ipfsHash: 'QmAvatarCid',
     });
-    render(<PlayerCompareView players={[player]} />);
+    const { container } = render(<PlayerCompareView players={[player]} />);
 
-    const img = screen.getByRole('img', { name: 'With Avatar' });
+    // The avatar wrapper is aria-hidden (the name is announced via the h3),
+    // so query the DOM directly rather than by role.
+    const img = container.querySelector('img');
     expect(img).toBeInTheDocument();
-    expect(img.getAttribute('src')).toContain('QmAvatarCid');
+    expect(img).toHaveAttribute('alt', 'With Avatar');
+    expect(img?.getAttribute('src')).toContain('QmAvatarCid');
   });
 
   it('does not render an avatar image when ipfsHash is empty', () => {
@@ -321,10 +324,8 @@ describe('PlayerCompareView', () => {
       },
       ipfsHash: '',
     });
-    render(<PlayerCompareView players={[player]} />);
+    const { container } = render(<PlayerCompareView players={[player]} />);
 
-    expect(
-      screen.queryByRole('img', { name: 'No Avatar' }),
-    ).not.toBeInTheDocument();
+    expect(container.querySelector('img')).not.toBeInTheDocument();
   });
 });
