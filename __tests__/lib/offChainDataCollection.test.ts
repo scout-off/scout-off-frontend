@@ -62,8 +62,10 @@ describe('collectUserData', () => {
     const data = await collectUserData(WALLET);
 
     expect(data.wallet).toBe(WALLET);
+    // WatchlistStore.add normalizes the player id via normalizeStellarAddress
+    // (upper-cases, canonicalizes valid keys), so it round-trips as PLAYER-1.
     expect(data.sections.watchlist.map((e) => e.playerId)).toEqual([
-      'player-1',
+      'PLAYER-1',
     ]);
     expect(data.sections.savedSearches).toHaveLength(1);
     expect(data.sections.notificationPreferences).toEqual({
