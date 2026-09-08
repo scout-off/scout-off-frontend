@@ -404,15 +404,25 @@ describe('BulkPlayerImport', () => {
   });
 
   it('cancel stops the batch and shows a cancel message', async () => {
-    mockedBuildRegisterPlayer.mockResolvedValue('mock-xdr');
-    let resolveFirstSign: (val: unknown) => void;
-    let callCount = 0;
-    const signAndSubmit = jest.fn().mockImplementation(() => {
-      callCount++;
-      return new Promise((res) => {
-        resolveFirstSign = res;
-      });
-    });
+    // Row 1 builds immediately; row 2's XDR build is held open so the admin
+    // can hit Cancel while row 2 is still being prepared (before its wallet
+    // prompt).
+    let resolveSecondBuild: (val: unknown) => void = () => {};
+    mockedBuildRegisterPlayer
+      .mockResolvedValueOnce('mock-xdr-1')
+      .mockImplementationOnce(
+        () =>
+          new Promise((res) => {
+            resolveSecondBuild = res;
+          }),
+      );
+    let resolveFirstSign: (val: unknown) => void = () => {};
+    const signAndSubmit = jest.fn().mockImplementation(
+      () =>
+        new Promise((res) => {
+          resolveFirstSign = res;
+        }),
+    );
     setupWallet({ signAndSubmit });
 
     render(<BulkPlayerImport />);
@@ -428,9 +438,10 @@ describe('BulkPlayerImport', () => {
       expect(signAndSubmit).toHaveBeenCalledTimes(1);
     });
 
-    // Finish the in-flight signature
+    // Finish the in-flight signature; the loop advances to row 2 and blocks
+    // on its (still-pending) buildRegisterPlayer.
     await act(async () => {
-      resolveFirstSign!({ hash: 'tx-hash-1' });
+      resolveFirstSign({ hash: 'tx-hash-1' });
     });
 
     // Wait for row 1 to complete
@@ -438,9 +449,13 @@ describe('BulkPlayerImport', () => {
       expect(screen.getAllByText('Registered').length).toBe(1);
     });
 
-    // Click Cancel
+    // Click Cancel, then let row 2's build settle — the loop should see the
+    // cancellation and break before prompting the wallet for row 2.
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+    });
+    await act(async () => {
+      resolveSecondBuild('mock-xdr-2');
     });
 
     // Should return to preview with cancel message, not "Import complete"
@@ -449,20 +464,29 @@ describe('BulkPlayerImport', () => {
     });
     expect(screen.getByText(/batch cancelled/i)).toBeInTheDocument();
 
+    // Row 2 was never signed for.
+    expect(signAndSubmit).toHaveBeenCalledTimes(1);
     // updateRowStatus should have been called for the cancelled rows
     expect(mockedUpdateRowStatus).toHaveBeenCalled();
   });
 
   it('preserves already-succeeded rows when cancelling mid-batch', async () => {
-    mockedBuildRegisterPlayer.mockResolvedValue('mock-xdr');
-    let resolveFirstSign: (val: unknown) => void;
-    let callCount = 0;
-    const signAndSubmit = jest.fn().mockImplementation(() => {
-      callCount++;
-      return new Promise((res) => {
-        resolveFirstSign = res;
-      });
-    });
+    let resolveSecondBuild: (val: unknown) => void = () => {};
+    mockedBuildRegisterPlayer
+      .mockResolvedValueOnce('mock-xdr-1')
+      .mockImplementationOnce(
+        () =>
+          new Promise((res) => {
+            resolveSecondBuild = res;
+          }),
+      );
+    let resolveFirstSign: (val: unknown) => void = () => {};
+    const signAndSubmit = jest.fn().mockImplementation(
+      () =>
+        new Promise((res) => {
+          resolveFirstSign = res;
+        }),
+    );
     setupWallet({ signAndSubmit });
 
     render(<BulkPlayerImport />);
@@ -480,29 +504,43 @@ describe('BulkPlayerImport', () => {
 
     // Finish the in-flight signature with success
     await act(async () => {
-      resolveFirstSign!({ hash: 'tx-hash-1' });
+      resolveFirstSign({ hash: 'tx-hash-1' });
     });
 
     await waitFor(() => {
       expect(screen.getAllByText('Registered').length).toBe(1);
     });
 
-    // Cancel the batch
+    // Cancel the batch, then release row 2's pending build.
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+    });
+    await act(async () => {
+      resolveSecondBuild('mock-xdr-2');
     });
 
     await waitFor(() => {
       expect(screen.getByText(/batch cancelled/i)).toBeInTheDocument();
     });
 
-    // Row 1 should still show as Registered
-    expect(screen.getAllByText('Registered').length).toBe(1);
-    // Row 2 should show as Waiting (pending, not lost)
-    expect(screen.getAllByText(/waiting/i).length).toBeGreaterThanOrEqual(1);
+    // Row 1's success was persisted to the session (so a resume skips it)…
+    const row1Success = mockedUpdateRowStatus.mock.calls.find(
+      (c) => c[2] === 'success' && c[3] === 'tx-hash-1',
+    );
+    expect(row1Success).toBeTruthy();
+    // …and it was never rolled back to pending.
+    expect(
+      mockedUpdateRowStatus.mock.calls.some(
+        (c) => c[1] === row1Success![1] && c[2] === 'pending',
+      ),
+    ).toBe(false);
 
-    // Only 1 row was signed (row 1), not 2
+    // The second row was never signed for — its success is not persisted, so
+    // a resume re-attempts it rather than treating it as done.
     expect(signAndSubmit).toHaveBeenCalledTimes(1);
+    expect(
+      mockedUpdateRowStatus.mock.calls.some((c) => c[3] === 'tx-hash-2'),
+    ).toBe(false);
   });
 
   // ── Resume / idempotency ────────────────────────────────────────────────

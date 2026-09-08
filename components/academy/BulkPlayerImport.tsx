@@ -345,6 +345,11 @@ export default function BulkPlayerImport() {
           payload,
           NO_HIGHLIGHT_REEL_PLACEHOLDER,
         );
+        // The admin may have hit Cancel while this row's transaction was
+        // still being prepared — don't raise a wallet prompt for a row
+        // they've already abandoned. The post-loop cancel handler resets
+        // this row's "signing" state back to pending.
+        if (cancelledRef.current) break;
         const result = await signAndSubmit(xdr);
         const hash =
           typeof result === 'string' ? result : ((result as any)?.hash ?? null);
