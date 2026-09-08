@@ -144,9 +144,14 @@ jest.mock('@/lib/contract', () => ({
 
 const mockFetchActivityEvents = jest.fn();
 const mockGetReferralOverview = jest.fn();
+const mockFetchFraudFlagsStatus = jest.fn();
 jest.mock('@/lib/api', () => ({
   fetchActivityEvents: (...args: unknown[]) => mockFetchActivityEvents(...args),
   getReferralOverview: (...args: unknown[]) => mockGetReferralOverview(...args),
+  // FraudFlagsStalenessBadge (rendered inside the dashboard) reads this on
+  // mount — stub it so the module mock stays complete.
+  fetchFraudFlagsStatus: (...args: unknown[]) =>
+    mockFetchFraudFlagsStatus(...args),
 }));
 
 jest.mock('@/lib/contractErrorMessage', () => ({
@@ -177,6 +182,11 @@ describe('AdminDashboard page', () => {
     mockGetContractPaused.mockResolvedValue(false);
     mockFetchActivityEvents.mockResolvedValue(defaultActivity());
     mockGetReferralOverview.mockResolvedValue(defaultReferralOverview());
+    mockFetchFraudFlagsStatus.mockResolvedValue({
+      evaluatedAt: null,
+      highSeverityCount: 0,
+      trigger: null,
+    });
   });
 
   it('renders nothing when no wallet is connected', () => {

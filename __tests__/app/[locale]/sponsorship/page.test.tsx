@@ -5,6 +5,16 @@ import '@testing-library/jest-dom';
 import SponsorshipClient from '@/app/[locale]/sponsorship/SponsorshipClient';
 import { generateMetadata } from '@/app/[locale]/sponsorship/page';
 
+// generateMetadata → buildPageMetadata → seoMetadata reads the request's
+// x-pathname header (set by middleware in production). Stub next/headers so
+// the canonical/alternates resolve outside a request scope.
+const mockHeaders = new Map<string, string>();
+jest.mock('next/headers', () => ({
+  headers: jest.fn().mockImplementation(async () => ({
+    get: (key: string) => mockHeaders.get(key) ?? null,
+  })),
+}));
+
 // ── Mock next-intl/server for generateMetadata ────────────────────────────────
 jest.mock('next-intl/server', () => ({
   getTranslations: jest.fn().mockImplementation(({ namespace }) => {
@@ -43,6 +53,17 @@ describe('SponsorshipPage', () => {
 // ── generateMetadata tests ─────────────────────────────────────────────────────
 
 describe('generateMetadata — sponsorship page', () => {
+  const ORIGINAL_APP_URL = process.env.NEXT_PUBLIC_APP_URL;
+
+  beforeEach(() => {
+    mockHeaders.clear();
+    process.env.NEXT_PUBLIC_APP_URL = 'https://scoutoff.app';
+  });
+
+  afterAll(() => {
+    process.env.NEXT_PUBLIC_APP_URL = ORIGINAL_APP_URL;
+  });
+
   it('includes a description field sourced from the metaDescription i18n key', async () => {
     const metadata = await generateMetadata({
       params: { locale: 'en' },
@@ -73,10 +94,14 @@ describe('generateMetadata — sponsorship page', () => {
   });
 
   it('sets the canonical alternates URL for the given locale', async () => {
+    mockHeaders.set('x-pathname', '/fr/sponsorship');
+
     const metadata = await generateMetadata({
       params: { locale: 'fr' },
     });
 
-    expect(metadata.alternates?.canonical).toBe('/fr/sponsorship');
+    expect(metadata.alternates?.canonical).toBe(
+      'https://scoutoff.app/fr/sponsorship',
+    );
   });
 });
