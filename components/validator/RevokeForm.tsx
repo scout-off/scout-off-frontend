@@ -116,6 +116,13 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
       } else {
         const msg = parseContractError(err);
         setTxError(msg);
+        // Contract/validation error (not an on-chain failure): clear the
+        // in-flight state so the revoke button re-enables for a retry.
+        setRevokeState({
+          txHash: null,
+          confirmationState: 'idle',
+          error: null,
+        });
       }
       setTimeout(() => errorRef.current?.focus(), 0);
     } finally {
@@ -359,6 +366,13 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
         });
       } else {
         setError(parseContractError(err));
+        // Contract/validation error (not an on-chain failure): clear the
+        // in-flight state so the submit button re-enables for a retry.
+        setRevokeState({
+          txHash: null,
+          confirmationState: 'idle',
+          error: null,
+        });
       }
     } finally {
       setIsLoading(false);
