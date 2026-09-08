@@ -6,6 +6,14 @@ import {
 } from '@/lib/disputesClient';
 import type { MilestoneDispute } from '@/types';
 
+// fetchMyDisputes / fetchDisputeQueue go through fetchWithRetry; the retry
+// wrapper's backoff/attempt behaviour is covered by its own suite, so here
+// it just forwards straight to the mocked global fetch.
+jest.mock('@/lib/fetchWithRetry', () => ({
+  fetchWithRetry: (...args: unknown[]) =>
+    (global.fetch as jest.Mock)(...(args as [RequestInfo, RequestInit?])),
+}));
+
 const mockFetch = jest.fn();
 
 beforeEach(() => {

@@ -13,6 +13,7 @@ const mockCreateAcademy = jest.fn();
 const mockAddAcademyMember = jest.fn();
 const mockRemoveAcademyMember = jest.fn();
 const mockFetchAcademyMilestoneRollup = jest.fn();
+const mockSetAcademyQuorum = jest.fn();
 jest.mock('@/lib/api', () => ({
   fetchAcademies: (...args: unknown[]) => mockFetchAcademies(...args),
   createAcademy: (...args: unknown[]) => mockCreateAcademy(...args),
@@ -20,6 +21,7 @@ jest.mock('@/lib/api', () => ({
   removeAcademyMember: (...args: unknown[]) => mockRemoveAcademyMember(...args),
   fetchAcademyMilestoneRollup: (...args: unknown[]) =>
     mockFetchAcademyMilestoneRollup(...args),
+  setAcademyQuorum: (...args: unknown[]) => mockSetAcademyQuorum(...args),
 }));
 
 const mockCheckIsValidator = jest.fn();
