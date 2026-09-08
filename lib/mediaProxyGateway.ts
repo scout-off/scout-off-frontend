@@ -174,9 +174,7 @@ export async function fetchMediaFromGateways(options: {
 
       const upstream = await fetch(`${gateway}/${cid}`, { headers });
       if (!upstream.ok || !upstream.body) {
-        lastError = new Error(
-          `Gateway ${gateway} returned ${upstream.status}`,
-        );
+        lastError = new Error(`Gateway ${gateway} returned ${upstream.status}`);
         continue;
       }
 

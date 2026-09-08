@@ -49,7 +49,7 @@ describe('SessionStore', () => {
     expect(store.revoke('sid-3')).toBe(false);
   });
 
-  it('touch() extends an active session\'s expiry', () => {
+  it("touch() extends an active session's expiry", () => {
     store.create('sid-4', 'GWALLET', Date.now() + 1);
     store.touch('sid-4', Date.now() + 60_000);
     expect(store.isActive('sid-4')).toBe(true);

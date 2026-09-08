@@ -123,7 +123,9 @@ describe('deriveNotifications', () => {
     ];
     const notifications = deriveNotifications(events, WALLET);
 
-    expect(notifications.map((n) => n.createdAt)).toEqual([3_000, 2_000, 1_000]);
+    expect(notifications.map((n) => n.createdAt)).toEqual([
+      3_000, 2_000, 1_000,
+    ]);
   });
 
   it('always sets read to false regardless of input', () => {

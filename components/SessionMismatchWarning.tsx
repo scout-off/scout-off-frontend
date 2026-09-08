@@ -45,14 +45,12 @@ export default function SessionMismatchWarning() {
           />
         </svg>
         <div>
-          <p className="font-medium text-sm">
-            Session mismatch detected
-          </p>
+          <p className="font-medium text-sm">Session mismatch detected</p>
           <p className="text-sm text-red-100 mt-1">
-            The wallet address shown ({publicKey.slice(0, 8)}…) differs from
-            the identity your session is authenticated to. This may happen if
-            you switched accounts in your wallet extension without logging
-            out first.
+            The wallet address shown ({publicKey.slice(0, 8)}…) differs from the
+            identity your session is authenticated to. This may happen if you
+            switched accounts in your wallet extension without logging out
+            first.
           </p>
         </div>
       </div>

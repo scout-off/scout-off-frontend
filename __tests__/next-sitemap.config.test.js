@@ -178,7 +178,13 @@ describe('next-sitemap.config.js', () => {
     });
 
     it('fails if admin exclusions are removed', () => {
-      const adminPatterns = ['/admin', '/en/admin', '/fr/admin', '/sw/admin', '/*/admin'];
+      const adminPatterns = [
+        '/admin',
+        '/en/admin',
+        '/fr/admin',
+        '/sw/admin',
+        '/*/admin',
+      ];
       adminPatterns.forEach((pattern) => {
         expect(config.exclude).toContain(pattern);
       });

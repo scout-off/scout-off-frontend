@@ -134,8 +134,7 @@ export async function POST(req: NextRequest) {
       });
     } catch (auditErr) {
       log.error('Failed to write fraud flag dismissal to admin audit log', {
-        reason:
-          auditErr instanceof Error ? auditErr.message : String(auditErr),
+        reason: auditErr instanceof Error ? auditErr.message : String(auditErr),
       });
     }
 

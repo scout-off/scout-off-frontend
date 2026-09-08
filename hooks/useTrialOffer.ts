@@ -53,7 +53,9 @@ export function useTrialOffer(): UseTrialOfferReturn {
         const subscription = await getSubscription(publicKey);
         const now = Date.now() / 1000;
         if (!subscription || subscription.expiresAt < now) {
-          throw new Error('An active subscription is required to log trial offers. Please subscribe or renew.');
+          throw new Error(
+            'An active subscription is required to log trial offers. Please subscribe or renew.',
+          );
         }
 
         const xdr = await buildLogTrialOffer(publicKey, playerId, details);

@@ -113,9 +113,7 @@ describe('buildValidatorActionLogCsv', () => {
   });
 
   it('prefixes a value starting with "-" with a single-quote', () => {
-    const csv = buildValidatorActionLogCsv([
-      makeEntry({ playerId: '-2+3' }),
-    ]);
+    const csv = buildValidatorActionLogCsv([makeEntry({ playerId: '-2+3' })]);
     expect(csv).toContain("'-2+3");
   });
 

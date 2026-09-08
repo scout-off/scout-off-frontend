@@ -327,7 +327,7 @@ export default function BulkPlayerImport() {
         ...prev,
         [r.rowNumber]: { status: 'signing' },
       }));
-      
+
       if (sessionId) {
         await updateRowStatus(sessionId, r.rowNumber, 'signing');
       }
@@ -353,7 +353,7 @@ export default function BulkPlayerImport() {
           ...prev,
           [r.rowNumber]: { status: 'success', txHash: hash },
         }));
-        
+
         if (sessionId) {
           await updateRowStatus(sessionId, r.rowNumber, 'success', hash);
         }
@@ -363,9 +363,15 @@ export default function BulkPlayerImport() {
           ...prev,
           [r.rowNumber]: { status: 'failed', error: errorMsg },
         }));
-        
+
         if (sessionId) {
-          await updateRowStatus(sessionId, r.rowNumber, 'failed', null, errorMsg);
+          await updateRowStatus(
+            sessionId,
+            r.rowNumber,
+            'failed',
+            null,
+            errorMsg,
+          );
         }
       }
     }
@@ -381,7 +387,11 @@ export default function BulkPlayerImport() {
           continue;
         }
         const current = submissions[r.rowNumber];
-        if (current && current.status !== 'success' && current.status !== 'failed') {
+        if (
+          current &&
+          current.status !== 'success' &&
+          current.status !== 'failed'
+        ) {
           setSubmissions((prev) => ({
             ...prev,
             [r.rowNumber]: { status: 'pending' },
@@ -393,7 +403,9 @@ export default function BulkPlayerImport() {
       }
       setIsPausedBatch(false);
       setPhase('preview');
-      setFormError('Batch cancelled. Re-upload the same file to resume from where you left off.');
+      setFormError(
+        'Batch cancelled. Re-upload the same file to resume from where you left off.',
+      );
     } else {
       setPhase('done');
     }
@@ -495,9 +507,8 @@ export default function BulkPlayerImport() {
                 {resumedSessionInfo.completedRows} of{' '}
                 {resumedSessionInfo.totalRows} rows
               </span>{' '}
-              already processed. Rows that previously succeeded will be
-              skipped. Click{' '}
-              <span className="font-medium">Import</span> to resume.
+              already processed. Rows that previously succeeded will be skipped.
+              Click <span className="font-medium">Import</span> to resume.
             </div>
           )}
 

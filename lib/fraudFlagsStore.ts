@@ -89,9 +89,7 @@ export class FraudFlagsStore {
     warnings: string[],
     evaluatedAt: number = Date.now(),
   ): FraudFlagRun {
-    const highSeverityCount = flags.filter(
-      (f) => f.severity === 'high',
-    ).length;
+    const highSeverityCount = flags.filter((f) => f.severity === 'high').length;
     const result = this.db
       .prepare(
         `INSERT INTO fraud_flag_runs
@@ -115,7 +113,9 @@ export class FraudFlagsStore {
   /** Most recent run, regardless of what triggered it, or null if none exist yet. */
   getLatestRun(): FraudFlagRun | null {
     const row = this.db
-      .prepare('SELECT * FROM fraud_flag_runs ORDER BY evaluated_at DESC LIMIT 1')
+      .prepare(
+        'SELECT * FROM fraud_flag_runs ORDER BY evaluated_at DESC LIMIT 1',
+      )
       .get() as FraudFlagRunRow | undefined;
     return row ? rowToRun(row) : null;
   }

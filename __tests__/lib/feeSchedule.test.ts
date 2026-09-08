@@ -25,12 +25,18 @@ describe('lib/feeSchedule', () => {
 
   describe('resolveSubscriptionFee', () => {
     it('prioritizes explicit fee_xlm on event data over tier table', () => {
-      const fee = resolveSubscriptionFee({ fee_xlm: 18, tier: 'basic' }, 'basic');
+      const fee = resolveSubscriptionFee(
+        { fee_xlm: 18, tier: 'basic' },
+        'basic',
+      );
       expect(fee).toBe(18);
     });
 
     it('prioritizes explicit amount_xlm on event data', () => {
-      const fee = resolveSubscriptionFee({ amount_xlm: 25, tier: 'pro' }, 'pro');
+      const fee = resolveSubscriptionFee(
+        { amount_xlm: 25, tier: 'pro' },
+        'pro',
+      );
       expect(fee).toBe(25);
     });
 

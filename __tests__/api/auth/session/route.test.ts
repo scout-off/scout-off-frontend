@@ -25,7 +25,11 @@ let sidCounter = 0;
 function accessCookie(publicKey: string, ttlSec = 20 * 60): string {
   const sid = `sid-${sidCounter++}`;
   const token = createSessionToken(publicKey, 'access', ttlSec, { sid });
-  SessionStore.getInstance().create(sid, publicKey, Date.now() + 60 * 60 * 1000);
+  SessionStore.getInstance().create(
+    sid,
+    publicKey,
+    Date.now() + 60 * 60 * 1000,
+  );
   return `session=${token}`;
 }
 

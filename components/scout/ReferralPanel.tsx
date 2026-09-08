@@ -190,9 +190,8 @@ export default function ReferralPanel({ scoutId }: { scoutId?: string } = {}) {
       {TURNSTILE_MISCONFIGURED && (
         <p role="alert" className="text-sm text-yellow-400">
           NEXT_PUBLIC_TURNSTILE_SITE_KEY is not set, so the bot-protection
-          challenge cannot render. If TURNSTILE_SECRET_KEY is set on the
-          server, every submission below will be rejected — set both or
-          neither.
+          challenge cannot render. If TURNSTILE_SECRET_KEY is set on the server,
+          every submission below will be rejected — set both or neither.
         </p>
       )}
 

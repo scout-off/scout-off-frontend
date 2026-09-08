@@ -29,9 +29,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const candidates = UploadTrackingStore.getInstance().getOrphanCandidates(
-    ORPHAN_GRACE_MS,
-  );
+  const candidates =
+    UploadTrackingStore.getInstance().getOrphanCandidates(ORPHAN_GRACE_MS);
   return NextResponse.json({ candidates, graceMs: ORPHAN_GRACE_MS });
 }
 

@@ -179,7 +179,8 @@ describe('POST /api/watchlist address validation and normalization', () => {
   });
 
   it('normalizes lowercase playerId to uppercase before storage', async () => {
-    const lowerCasePlayerId = 'gabc123def456ghi789jkl012mno345pqr678stu901vwx234yz567';
+    const lowerCasePlayerId =
+      'gabc123def456ghi789jkl012mno345pqr678stu901vwx234yz567';
     const res = await POST(
       makeRequest('http://localhost/api/watchlist', {
         method: 'POST',
@@ -194,7 +195,8 @@ describe('POST /api/watchlist address validation and normalization', () => {
   });
 
   it('normalizes mixed-case playerId to uppercase before storage', async () => {
-    const mixedCasePlayerId = 'GaBc123DeF456GhI789JkL012MnO345PqR678StU901VwX234Yz567';
+    const mixedCasePlayerId =
+      'GaBc123DeF456GhI789JkL012MnO345PqR678StU901VwX234Yz567';
     const res = await POST(
       makeRequest('http://localhost/api/watchlist', {
         method: 'POST',

@@ -58,11 +58,15 @@ describe('ConfigStatus', () => {
     ]) {
       const row = screen.getByText(name).closest('tr');
       expect(row).not.toBeNull();
-      expect(within(row as HTMLElement).getByText('Missing')).toBeInTheDocument();
+      expect(
+        within(row as HTMLElement).getByText('Missing'),
+      ).toBeInTheDocument();
     }
 
     const presentRow = screen.getByText('NEXT_PUBLIC_NETWORK').closest('tr');
     expect(presentRow).not.toBeNull();
-    expect(within(presentRow as HTMLElement).getByText('Present')).toBeInTheDocument();
+    expect(
+      within(presentRow as HTMLElement).getByText('Present'),
+    ).toBeInTheDocument();
   });
 });

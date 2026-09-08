@@ -822,8 +822,7 @@ describe('WalletContext', () => {
 //   AC4 – Session state (localStorage wallet_session) is NOT set to the
 //         unintended account after a mismatched switch attempt.
 
-const SECOND_KEY =
-  'GBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB';
+const SECOND_KEY = 'GBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB';
 
 describe('connectWithProvider — account-switch mismatch verification', () => {
   const freighter = walletAdapters.freighter as jest.Mocked<
@@ -899,7 +898,11 @@ describe('connectWithProvider — account-switch mismatch verification', () => {
 
     await expect(
       act(async () => {
-        await result.current.connectWithProvider('freighter', false, SECOND_KEY);
+        await result.current.connectWithProvider(
+          'freighter',
+          false,
+          SECOND_KEY,
+        );
       }),
     ).rejects.toThrow(WalletAccountMismatchError);
   });
@@ -912,7 +915,11 @@ describe('connectWithProvider — account-switch mismatch verification', () => {
     let caughtError: unknown;
     try {
       await act(async () => {
-        await result.current.connectWithProvider('freighter', false, SECOND_KEY);
+        await result.current.connectWithProvider(
+          'freighter',
+          false,
+          SECOND_KEY,
+        );
       });
     } catch (err) {
       caughtError = err;
@@ -931,7 +938,11 @@ describe('connectWithProvider — account-switch mismatch verification', () => {
 
     await expect(
       act(async () => {
-        await result.current.connectWithProvider('freighter', false, SECOND_KEY);
+        await result.current.connectWithProvider(
+          'freighter',
+          false,
+          SECOND_KEY,
+        );
       }),
     ).rejects.toThrow(WalletAccountMismatchError);
 
@@ -946,7 +957,11 @@ describe('connectWithProvider — account-switch mismatch verification', () => {
 
     await expect(
       act(async () => {
-        await result.current.connectWithProvider('freighter', false, SECOND_KEY);
+        await result.current.connectWithProvider(
+          'freighter',
+          false,
+          SECOND_KEY,
+        );
       }),
     ).rejects.toThrow(WalletAccountMismatchError);
 
@@ -964,7 +979,11 @@ describe('connectWithProvider — account-switch mismatch verification', () => {
 
     await expect(
       act(async () => {
-        await result.current.connectWithProvider('freighter', false, SECOND_KEY);
+        await result.current.connectWithProvider(
+          'freighter',
+          false,
+          SECOND_KEY,
+        );
       }),
     ).rejects.toThrow(WalletAccountMismatchError);
 
@@ -984,7 +1003,11 @@ describe('connectWithProvider — account-switch mismatch verification', () => {
 
     await expect(
       act(async () => {
-        await result.current.connectWithProvider('freighter', false, SECOND_KEY);
+        await result.current.connectWithProvider(
+          'freighter',
+          false,
+          SECOND_KEY,
+        );
       }),
     ).rejects.toThrow(WalletAccountMismatchError);
 

@@ -92,18 +92,16 @@ describe('OfflineQueueBanner', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Retry queued actions' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Retry queued actions' }),
+    );
 
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
   it('shows a processing state without a retry button while isProcessing is true', () => {
     render(
-      <OfflineQueueBanner
-        pendingCount={2}
-        isProcessing
-        onRetry={onRetry}
-      />,
+      <OfflineQueueBanner pendingCount={2} isProcessing onRetry={onRetry} />,
     );
 
     expect(screen.getByText('Submitting 2 action(s)…')).toBeInTheDocument();
@@ -155,7 +153,9 @@ describe('OfflineQueueBanner', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Discard all failed' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Discard all failed' }),
+    );
 
     expect(onDiscardAllFailed).toHaveBeenCalledTimes(1);
   });

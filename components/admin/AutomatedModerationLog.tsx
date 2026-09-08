@@ -30,7 +30,9 @@ export default function AutomatedModerationLog() {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'low' | 'medium' | 'high'>('all');
+  const [filter, setFilter] = useState<'all' | 'low' | 'medium' | 'high'>(
+    'all',
+  );
   const [filterUserId, setFilterUserId] = useState('');
 
   useEffect(() => {
@@ -110,9 +112,7 @@ export default function AutomatedModerationLog() {
         <h2 className="text-lg font-semibold text-white">
           Automated Moderation Log
         </h2>
-        <span className="text-sm text-gray-400">
-          {entries.length} entries
-        </span>
+        <span className="text-sm text-gray-400">{entries.length} entries</span>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -150,7 +150,9 @@ export default function AutomatedModerationLog() {
       </div>
 
       {loading && (
-        <p className="text-sm text-gray-400">Loading automated moderation entries...</p>
+        <p className="text-sm text-gray-400">
+          Loading automated moderation entries...
+        </p>
       )}
 
       {error && (
@@ -171,7 +173,9 @@ export default function AutomatedModerationLog() {
             <thead>
               <tr className="border-b border-gray-700">
                 <th className="py-2 pr-4 font-medium text-gray-400">Time</th>
-                <th className="py-2 pr-4 font-medium text-gray-400">Severity</th>
+                <th className="py-2 pr-4 font-medium text-gray-400">
+                  Severity
+                </th>
                 <th className="py-2 pr-4 font-medium text-gray-400">Rule</th>
                 <th className="py-2 pr-4 font-medium text-gray-400">User</th>
                 <th className="py-2 pr-4 font-medium text-gray-400">Thread</th>
@@ -182,7 +186,10 @@ export default function AutomatedModerationLog() {
               {filteredEntries.map((entry) => {
                 const severity = entry.data?.severity as string | undefined;
                 return (
-                  <tr key={entry.id} className="border-b border-gray-700/50 hover:bg-gray-800/50">
+                  <tr
+                    key={entry.id}
+                    className="border-b border-gray-700/50 hover:bg-gray-800/50"
+                  >
                     <td className="py-2 pr-4 text-gray-300">
                       {formatDate(entry.timestamp)}
                     </td>
@@ -194,7 +201,7 @@ export default function AutomatedModerationLog() {
                       </span>
                     </td>
                     <td className="py-2 pr-4 text-gray-200 font-medium">
-                      {entry.data?.rule as string | undefined ?? 'Unknown'}
+                      {(entry.data?.rule as string | undefined) ?? 'Unknown'}
                     </td>
                     <td className="py-2 pr-4 text-gray-300 font-mono">
                       {entry.data?.userId as string | undefined}
@@ -220,10 +227,7 @@ export default function AutomatedModerationLog() {
           Record automated moderation decisions for admin review. Missing
           entries may indicate a connectivity issue with the chat service.
         </p>
-        <Link
-          href="/admin"
-          className="text-brand-green hover:underline"
-        >
+        <Link href="/admin" className="text-brand-green hover:underline">
           Back to Admin Dashboard
         </Link>
       </div>

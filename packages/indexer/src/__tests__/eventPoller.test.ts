@@ -12,7 +12,10 @@ import {
   type RpcClient,
   type RawEvent,
 } from '../eventPoller';
-import { IndexerMetrics, STUCK_CYCLE_THRESHOLD } from '../metrics/IndexerMetrics';
+import {
+  IndexerMetrics,
+  STUCK_CYCLE_THRESHOLD,
+} from '../metrics/IndexerMetrics';
 import { getLastLedgerInfo, resetLedgerState } from '../ledgerTracker';
 import { EventStore } from '../db/eventStore';
 

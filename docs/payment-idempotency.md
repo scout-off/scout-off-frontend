@@ -28,7 +28,7 @@ is:
   is no way to confirm whether the deployed contract has any nonce/replay
   protection for `pay_to_contact`/`subscribe`, and no way to add one from
   here if it doesn't. Soroban's account sequence-number mechanics prevent
-  *exact XDR replay*, but a second, freshly-built transaction for the same
+  _exact XDR replay_, but a second, freshly-built transaction for the same
   logical action is a distinct transaction with its own sequence number and
   is not caught by that.
 
@@ -43,7 +43,7 @@ handler) in:
    call stack before any `await`, so it doesn't depend on React having
    re-rendered a disabled button yet — a fast double-click (or any other
    re-invocation of `unlock()`/`subscribe()` while one is already pending)
-   returns the *same* in-flight promise instead of starting a second
+   returns the _same_ in-flight promise instead of starting a second
    `payToContact`/`subscribe` call. This is real, verified protection — see
    the "double-click" tests below — for the specific failure mode named in
    the issue (a click registering before the button visually disables).
@@ -51,8 +51,8 @@ handler) in:
    `crypto.randomUUID()`) created fresh per new attempt and passed into the
    wrapped action, so it's available to include in any future request/log
    metadata.
-3. **A short-lived cache of the last *successful* result**, keyed by that
-   idempotency key. A call that passes the *same explicit key* as an
+3. **A short-lived cache of the last _successful_ result**, keyed by that
+   idempotency key. A call that passes the _same explicit key_ as an
    already-completed call short-circuits to the cached result instead of
    re-running the action. A failed attempt is never cached, so retrying
    with the same key after a failure genuinely retries. This is what would
@@ -60,7 +60,7 @@ handler) in:
    request without resubmitting — but as of this change, neither hook wires
    an explicit key back in on retry, because neither `usePayToContact` nor
    `useSubscription` currently has a retry path that would carry one. Every
-   *new* user-initiated click still gets a fresh key and a fresh attempt, as
+   _new_ user-initiated click still gets a fresh key and a fresh attempt, as
    it should.
 
 Applied to both `hooks/usePayToContact.ts`'s `unlock()` and
@@ -69,11 +69,11 @@ Applied to both `hooks/usePayToContact.ts`'s `unlock()` and
 ## What this explicitly does NOT cover
 
 - **No contract-level guarantee.** If the deployed contract itself has no
-  replay/dedup protection, two *independent browser tabs* (or two
+  replay/dedup protection, two _independent browser tabs_ (or two
   independent page loads — different `useSubmissionGuard` instances, since
   the mutex is per-hook-instance, not global/cross-tab) could still each
   submit a genuine, valid transaction for the same logical action. This fix
-  only prevents *one browser tab's one hook instance* from submitting twice.
+  only prevents _one browser tab's one hook instance_ from submitting twice.
 - **No server-side dedup**, because no server sits between the browser and
   Soroban RPC for these two calls today. If that boundary is ever
   introduced (per the notes accompanying this issue, contingent on

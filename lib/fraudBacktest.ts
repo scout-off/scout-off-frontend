@@ -142,10 +142,7 @@ export async function loadSnapshot(
   path: string = SNAPSHOT_FILE,
 ): Promise<BacktestSnapshot> {
   const raw = (await readJsonFile(path)) as Partial<BacktestSnapshot>;
-  if (
-    !Array.isArray(raw.referralCodes) ||
-    !Array.isArray(raw.activityEvents)
-  ) {
+  if (!Array.isArray(raw.referralCodes) || !Array.isArray(raw.activityEvents)) {
     throw new Error(
       `Snapshot at ${path} must contain "referralCodes" and "activityEvents" arrays.`,
     );
@@ -251,8 +248,18 @@ export function generateSampleSnapshot(): BacktestSnapshot {
     });
   }
   activityEvents.push(
-    { id: 'cc-1', type: 'player_contacted', timestamp: Math.floor((SAMPLE_BASE_MS + 1) / 1000), actor: 'GCYCLE' },
-    { id: 'cc-2', type: 'player_contacted', timestamp: Math.floor((SAMPLE_BASE_MS + 2) / 1000), actor: 'GCYCLE' },
+    {
+      id: 'cc-1',
+      type: 'player_contacted',
+      timestamp: Math.floor((SAMPLE_BASE_MS + 1) / 1000),
+      actor: 'GCYCLE',
+    },
+    {
+      id: 'cc-2',
+      type: 'player_contacted',
+      timestamp: Math.floor((SAMPLE_BASE_MS + 2) / 1000),
+      actor: 'GCYCLE',
+    },
   );
 
   // Clean noise so "no flag" cases are also represented.
@@ -315,7 +322,10 @@ export function runBacktest(
   const warnings: string[] = [];
   const thresholds = mergeThresholds(options.thresholds);
 
-  const referralFlags = analyzeReferralAbuse(snapshot.referralCodes, thresholds);
+  const referralFlags = analyzeReferralAbuse(
+    snapshot.referralCodes,
+    thresholds,
+  );
   const payToContactFlags = analyzePayToContactAbuse(
     snapshot.activityEvents,
     thresholds,
@@ -404,12 +414,16 @@ function formatText(report: BacktestReport): string {
       `Threshold sweep: ${s.heuristic} / ${String(s.thresholdKey)} (total flags per value)`,
     );
     for (const p of s.points) {
-      lines.push(`  ${String(s.thresholdKey)} = ${p.value}  ->  ${p.totalFlags} flags`);
+      lines.push(
+        `  ${String(s.thresholdKey)} = ${p.value}  ->  ${p.totalFlags} flags`,
+      );
     }
   }
 
   lines.push('');
-  lines.push(`Flagged cases for manual review (${report.flaggedCases.length}):`);
+  lines.push(
+    `Flagged cases for manual review (${report.flaggedCases.length}):`,
+  );
   for (const f of report.flaggedCases) {
     lines.push('');
     lines.push(`  [${f.severity}] ${f.heuristic} (${f.category})`);

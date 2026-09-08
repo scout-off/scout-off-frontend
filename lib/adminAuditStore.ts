@@ -201,7 +201,10 @@ export class AdminAuditStore {
              target = CASE WHEN target = @wallet THEN @placeholder ELSE target END
          WHERE admin_wallet = @wallet OR target = @wallet`,
       )
-      .run({ wallet, placeholder: AdminAuditStore.REDACTED_WALLET_PLACEHOLDER });
+      .run({
+        wallet,
+        placeholder: AdminAuditStore.REDACTED_WALLET_PLACEHOLDER,
+      });
     return result.changes;
   }
 

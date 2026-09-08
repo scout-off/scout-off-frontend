@@ -18,7 +18,16 @@ import { AdminAuditStore } from '@/lib/adminAuditStore';
 export async function POST(request: NextRequest): Promise<Response> {
   try {
     const body = await request.json();
-    const { id, category, rule, severity, userId, threadId, timestamp, context } = body;
+    const {
+      id,
+      category,
+      rule,
+      severity,
+      userId,
+      threadId,
+      timestamp,
+      context,
+    } = body;
 
     // Validate required fields
     if (!id || !category || !rule || !severity || !userId || !timestamp) {

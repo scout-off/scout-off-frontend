@@ -31,9 +31,23 @@ describe('GET /api/auth/sessions', () => {
   it("lists only the caller's own active sessions, marking the current one", async () => {
     const store = SessionStore.getInstance();
     const callerSid = 'sid-caller';
-    store.create(callerSid, PUBLIC_KEY, Date.now() + 60_000, 'Mozilla/5.0 (Macintosh) Chrome/120.0 Safari/537.36');
-    store.create('sid-other-device', PUBLIC_KEY, Date.now() + 60_000, 'Mozilla/5.0 (iPhone) CriOS/120.0 Safari/605.1');
-    store.create('sid-other-wallet', 'GSOMEONEELSE0000000000000000000000000000000000000000000', Date.now() + 60_000);
+    store.create(
+      callerSid,
+      PUBLIC_KEY,
+      Date.now() + 60_000,
+      'Mozilla/5.0 (Macintosh) Chrome/120.0 Safari/537.36',
+    );
+    store.create(
+      'sid-other-device',
+      PUBLIC_KEY,
+      Date.now() + 60_000,
+      'Mozilla/5.0 (iPhone) CriOS/120.0 Safari/605.1',
+    );
+    store.create(
+      'sid-other-wallet',
+      'GSOMEONEELSE0000000000000000000000000000000000000000000',
+      Date.now() + 60_000,
+    );
 
     const callerToken = createSessionToken(PUBLIC_KEY, 'access', 20 * 60, {
       sid: callerSid,

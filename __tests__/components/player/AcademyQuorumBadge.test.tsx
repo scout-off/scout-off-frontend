@@ -1,4 +1,10 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import '@testing-library/jest-dom';
 import AcademyQuorumBadge from '@/components/player/AcademyQuorumBadge';
 import { ToastProvider } from '@/components/ui/Toast';
@@ -22,7 +28,8 @@ jest.mock('@/lib/api', () => ({
 const mockedUseWallet = useWallet as jest.MockedFunction<typeof useWallet>;
 const mockedUseValidator = useValidator as jest.Mock;
 const mockedFetchAcademyForWallet = fetchAcademyForWallet as jest.Mock;
-const mockedFetchMilestoneEndorsements = fetchMilestoneEndorsements as jest.Mock;
+const mockedFetchMilestoneEndorsements =
+  fetchMilestoneEndorsements as jest.Mock;
 const mockedEndorseMilestone = endorseMilestone as jest.Mock;
 
 const APPROVER = 'GAPPROVER000000000000000000000000000000000000000000000';
@@ -44,9 +51,24 @@ function makeAcademy(overrides: Partial<Academy> = {}): Academy {
     ownerWallet: APPROVER,
     createdAt: 1,
     members: [
-      { wallet: APPROVER, academyId: 'academy-1', addedAt: 1, addedBy: 'GADMIN' },
-      { wallet: MEMBER_A, academyId: 'academy-1', addedAt: 1, addedBy: 'GADMIN' },
-      { wallet: MEMBER_B, academyId: 'academy-1', addedAt: 1, addedBy: 'GADMIN' },
+      {
+        wallet: APPROVER,
+        academyId: 'academy-1',
+        addedAt: 1,
+        addedBy: 'GADMIN',
+      },
+      {
+        wallet: MEMBER_A,
+        academyId: 'academy-1',
+        addedAt: 1,
+        addedBy: 'GADMIN',
+      },
+      {
+        wallet: MEMBER_B,
+        academyId: 'academy-1',
+        addedAt: 1,
+        addedBy: 'GADMIN',
+      },
     ],
     quorum: 2,
     ...overrides,
@@ -85,7 +107,9 @@ describe('AcademyQuorumBadge', () => {
   });
 
   it('renders nothing when the academy has no quorum configured (default, no regression)', async () => {
-    mockedFetchAcademyForWallet.mockResolvedValue(makeAcademy({ quorum: null }));
+    mockedFetchAcademyForWallet.mockResolvedValue(
+      makeAcademy({ quorum: null }),
+    );
     mockedFetchMilestoneEndorsements.mockResolvedValue([]);
 
     render(
@@ -100,7 +124,12 @@ describe('AcademyQuorumBadge', () => {
   it('shows "Academy pending" when fewer signers than the quorum have endorsed', async () => {
     mockedFetchAcademyForWallet.mockResolvedValue(makeAcademy({ quorum: 2 }));
     mockedFetchMilestoneEndorsements.mockResolvedValue([
-      { playerId: 'player-1', milestoneId: 'milestone-1', wallet: APPROVER, createdAt: 1 },
+      {
+        playerId: 'player-1',
+        milestoneId: 'milestone-1',
+        wallet: APPROVER,
+        createdAt: 1,
+      },
     ]);
 
     render(
@@ -116,8 +145,18 @@ describe('AcademyQuorumBadge', () => {
   it('shows "Academy-verified" once the configured quorum of distinct academy signers is met', async () => {
     mockedFetchAcademyForWallet.mockResolvedValue(makeAcademy({ quorum: 2 }));
     mockedFetchMilestoneEndorsements.mockResolvedValue([
-      { playerId: 'player-1', milestoneId: 'milestone-1', wallet: APPROVER, createdAt: 1 },
-      { playerId: 'player-1', milestoneId: 'milestone-1', wallet: MEMBER_A, createdAt: 2 },
+      {
+        playerId: 'player-1',
+        milestoneId: 'milestone-1',
+        wallet: APPROVER,
+        createdAt: 1,
+      },
+      {
+        playerId: 'player-1',
+        milestoneId: 'milestone-1',
+        wallet: MEMBER_A,
+        createdAt: 2,
+      },
     ]);
 
     render(
@@ -135,13 +174,28 @@ describe('AcademyQuorumBadge', () => {
       makeAcademy({
         quorum: 2,
         members: [
-          { wallet: APPROVER, academyId: 'academy-1', addedAt: 1, addedBy: 'GADMIN' },
+          {
+            wallet: APPROVER,
+            academyId: 'academy-1',
+            addedAt: 1,
+            addedBy: 'GADMIN',
+          },
         ],
       }),
     );
     mockedFetchMilestoneEndorsements.mockResolvedValue([
-      { playerId: 'player-1', milestoneId: 'milestone-1', wallet: APPROVER, createdAt: 1 },
-      { playerId: 'player-1', milestoneId: 'milestone-1', wallet: MEMBER_A, createdAt: 2 }, // no longer a member
+      {
+        playerId: 'player-1',
+        milestoneId: 'milestone-1',
+        wallet: APPROVER,
+        createdAt: 1,
+      },
+      {
+        playerId: 'player-1',
+        milestoneId: 'milestone-1',
+        wallet: MEMBER_A,
+        createdAt: 2,
+      }, // no longer a member
     ]);
 
     render(
@@ -159,7 +213,12 @@ describe('AcademyQuorumBadge', () => {
     mockedUseValidator.mockReturnValue({ isValidator: true, checking: false });
     mockedFetchAcademyForWallet.mockResolvedValue(makeAcademy({ quorum: 3 }));
     mockedFetchMilestoneEndorsements.mockResolvedValue([
-      { playerId: 'player-1', milestoneId: 'milestone-1', wallet: APPROVER, createdAt: 1 },
+      {
+        playerId: 'player-1',
+        milestoneId: 'milestone-1',
+        wallet: APPROVER,
+        createdAt: 1,
+      },
     ]);
 
     render(
@@ -168,7 +227,9 @@ describe('AcademyQuorumBadge', () => {
       </ToastProvider>,
     );
 
-    expect(await screen.findByRole('button', { name: /endorse/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: /endorse/i }),
+    ).toBeInTheDocument();
   });
 
   it('hides the Endorse button once the connected wallet has already endorsed', async () => {
@@ -176,8 +237,18 @@ describe('AcademyQuorumBadge', () => {
     mockedUseValidator.mockReturnValue({ isValidator: true, checking: false });
     mockedFetchAcademyForWallet.mockResolvedValue(makeAcademy({ quorum: 3 }));
     mockedFetchMilestoneEndorsements.mockResolvedValue([
-      { playerId: 'player-1', milestoneId: 'milestone-1', wallet: APPROVER, createdAt: 1 },
-      { playerId: 'player-1', milestoneId: 'milestone-1', wallet: MEMBER_A, createdAt: 2 },
+      {
+        playerId: 'player-1',
+        milestoneId: 'milestone-1',
+        wallet: APPROVER,
+        createdAt: 1,
+      },
+      {
+        playerId: 'player-1',
+        milestoneId: 'milestone-1',
+        wallet: MEMBER_A,
+        createdAt: 2,
+      },
     ]);
 
     render(
@@ -187,7 +258,9 @@ describe('AcademyQuorumBadge', () => {
     );
     await screen.findByText(/academy pending/i);
 
-    expect(screen.queryByRole('button', { name: /endorse/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /endorse/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('calls endorseMilestone and refreshes the count when Endorse is clicked', async () => {
@@ -196,11 +269,26 @@ describe('AcademyQuorumBadge', () => {
     mockedFetchAcademyForWallet.mockResolvedValue(makeAcademy({ quorum: 3 }));
     mockedFetchMilestoneEndorsements
       .mockResolvedValueOnce([
-        { playerId: 'player-1', milestoneId: 'milestone-1', wallet: APPROVER, createdAt: 1 },
+        {
+          playerId: 'player-1',
+          milestoneId: 'milestone-1',
+          wallet: APPROVER,
+          createdAt: 1,
+        },
       ])
       .mockResolvedValueOnce([
-        { playerId: 'player-1', milestoneId: 'milestone-1', wallet: APPROVER, createdAt: 1 },
-        { playerId: 'player-1', milestoneId: 'milestone-1', wallet: MEMBER_B, createdAt: 2 },
+        {
+          playerId: 'player-1',
+          milestoneId: 'milestone-1',
+          wallet: APPROVER,
+          createdAt: 1,
+        },
+        {
+          playerId: 'player-1',
+          milestoneId: 'milestone-1',
+          wallet: MEMBER_B,
+          createdAt: 2,
+        },
       ]);
     mockedEndorseMilestone.mockResolvedValue(undefined);
 
@@ -215,7 +303,10 @@ describe('AcademyQuorumBadge', () => {
       fireEvent.click(btn);
     });
 
-    expect(mockedEndorseMilestone).toHaveBeenCalledWith('player-1', 'milestone-1');
+    expect(mockedEndorseMilestone).toHaveBeenCalledWith(
+      'player-1',
+      'milestone-1',
+    );
     expect(await screen.findByText(/\(2\/3\)/)).toBeInTheDocument();
   });
 });

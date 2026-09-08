@@ -69,10 +69,7 @@ jest.mock('@/components/ui/VideoUpload', () => ({
       <button type="button" onClick={() => onUpload('QmTestCID1234567890')}>
         Upload video
       </button>
-      <button
-        type="button"
-        onClick={() => onUpload('QmDifferentCID9999999')}
-      >
+      <button type="button" onClick={() => onUpload('QmDifferentCID9999999')}>
         Upload different video
       </button>
       {/* Two-phase controls for simulating an in-flight replacement upload
@@ -110,8 +107,8 @@ const {
   trackUploadedCid: mockedTrackUploadedCid,
   matchTrackedUpload: mockedMatchTrackedUpload,
 } = require('@/lib/uploadTrackingClient');
-const mockedSubmitSignedTransaction =
-  require('@/lib/sorobanRpc').submitSignedTransaction as jest.Mock;
+const mockedSubmitSignedTransaction = require('@/lib/sorobanRpc')
+  .submitSignedTransaction as jest.Mock;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

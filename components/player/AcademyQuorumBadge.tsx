@@ -42,9 +42,7 @@ export default function AcademyQuorumBadge({
   const { isValidator } = useValidator(publicKey);
   const { show } = useToast();
 
-  const [academy, setAcademy] = useState<Academy | null | undefined>(
-    undefined,
-  );
+  const [academy, setAcademy] = useState<Academy | null | undefined>(undefined);
   const [endorserWallets, setEndorserWallets] = useState<string[]>([]);
   const [endorsing, setEndorsing] = useState(false);
 

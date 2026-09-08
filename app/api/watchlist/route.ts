@@ -69,7 +69,10 @@ export async function POST(req: NextRequest) {
   const normalizedPlayerId = normalizeStellarAddress(playerId);
 
   try {
-    const entry = WatchlistStore.getInstance().add(scoutWallet, normalizedPlayerId);
+    const entry = WatchlistStore.getInstance().add(
+      scoutWallet,
+      normalizedPlayerId,
+    );
     return NextResponse.json(entry, { status: 201 });
   } catch (err) {
     log.error('Failed to add to watchlist', {

@@ -21,7 +21,9 @@ const HEURISTICS = [
 ];
 
 function countFor(report: ReturnType<typeof runBacktest>, heuristic: string) {
-  return report.heuristicCounts.find((h) => h.heuristic === heuristic)?.count ?? 0;
+  return (
+    report.heuristicCounts.find((h) => h.heuristic === heuristic)?.count ?? 0
+  );
 }
 
 describe('fraudBacktest', () => {
@@ -147,7 +149,9 @@ describe('fraudBacktest', () => {
       await writeSnapshot(snapshot, path);
       const loaded = await loadSnapshot(path);
       expect(loaded.referralCodes).toHaveLength(snapshot.referralCodes.length);
-      expect(loaded.activityEvents).toHaveLength(snapshot.activityEvents.length);
+      expect(loaded.activityEvents).toHaveLength(
+        snapshot.activityEvents.length,
+      );
     });
 
     it('loads the on-disk referral store format and converts it', async () => {

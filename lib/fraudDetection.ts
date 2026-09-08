@@ -398,9 +398,7 @@ function detectSubscriptionCycling(
 
     const contacts = contactsByScout.get(scoutWallet) ?? [];
     const avgContactsPerSubscription = contacts.length / subs.length;
-    if (
-      avgContactsPerSubscription > t.CYCLING_MAX_CONTACTS_PER_SUBSCRIPTION
-    ) {
+    if (avgContactsPerSubscription > t.CYCLING_MAX_CONTACTS_PER_SUBSCRIPTION) {
       continue;
     }
 
@@ -448,6 +446,10 @@ export function analyzePayToContactAbuse(
 
   return [
     ...detectRapidContactBursts(contactsByScout, thresholds),
-    ...detectSubscriptionCycling(subscriptionsByScout, contactsByScout, thresholds),
+    ...detectSubscriptionCycling(
+      subscriptionsByScout,
+      contactsByScout,
+      thresholds,
+    ),
   ];
 }

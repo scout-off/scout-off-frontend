@@ -44,7 +44,8 @@ export function useFeeDriftDetection(): FeeDriftState {
     checkDrift();
   }, [checkDrift]);
 
-  const hasDrift = liveContactFee !== null && liveContactFee !== CONTACT_FEE_XLM;
+  const hasDrift =
+    liveContactFee !== null && liveContactFee !== CONTACT_FEE_XLM;
   const warningMessage = hasDrift
     ? `On-chain fee drift detected: Contract pay-to-contact fee is currently ${liveContactFee} XLM, but the frontend fee schedule is configured for ${CONTACT_FEE_XLM} XLM. Revenue and spending analytics for events without explicit amounts may be approximations.`
     : null;

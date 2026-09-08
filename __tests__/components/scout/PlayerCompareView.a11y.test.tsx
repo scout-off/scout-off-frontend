@@ -31,15 +31,8 @@ jest.mock('next/image', () => ({
 // the comparison layout rather than timeline internals.
 jest.mock('@/components/player/MilestoneTimeline', () => ({
   __esModule: true,
-  default: ({
-    milestones,
-  }: {
-    milestones: Player[];
-    currentLevel: number;
-  }) => (
-    <div data-testid="milestone-timeline">
-      {milestones.length} milestone(s)
-    </div>
+  default: ({ milestones }: { milestones: Player[]; currentLevel: number }) => (
+    <div data-testid="milestone-timeline">{milestones.length} milestone(s)</div>
   ),
 }));
 
@@ -74,7 +67,11 @@ function makePlayer(overrides: Partial<Player> = {}): Player {
       region: 'West Africa',
       nationality: 'Ghanaian',
     },
-    stats: { goals: playerCounter * 5, assists: playerCounter * 2, appearances: 30 },
+    stats: {
+      goals: playerCounter * 5,
+      assists: playerCounter * 2,
+      appearances: 30,
+    },
     ipfsHash: '',
     progressLevel: 1,
     milestones: [],
@@ -96,7 +93,9 @@ describe('PlayerCompareView – accessibility', () => {
   });
 
   it('has no axe violations when showing a single player', async () => {
-    const { container } = render(<PlayerCompareView players={[makePlayer()]} />);
+    const { container } = render(
+      <PlayerCompareView players={[makePlayer()]} />,
+    );
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
@@ -114,7 +113,10 @@ describe('PlayerCompareView – accessibility', () => {
     const playerSection = screen.getByRole('region', { name: 'Player vitals' });
     expect(playerSection).toBeInTheDocument();
 
-    const nameHeading = screen.getByRole('heading', { name: 'Alpha', level: 3 });
+    const nameHeading = screen.getByRole('heading', {
+      name: 'Alpha',
+      level: 3,
+    });
     expect(nameHeading).toBeInTheDocument();
   });
 

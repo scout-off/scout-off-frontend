@@ -48,7 +48,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'oldCid is required' }, { status: 400 });
   }
   if (!playerId || typeof playerId !== 'string' || playerId.trim() === '') {
-    return NextResponse.json({ error: 'playerId is required' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'playerId is required' },
+      { status: 400 },
+    );
   }
 
   const record = recordSupersededCid(oldCid.trim(), playerId.trim());

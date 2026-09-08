@@ -24,10 +24,17 @@ const ADMIN = 'GADMIN0000000000000000000000000000000000000000000000000';
 const OWNER = 'GOWNER0000000000000000000000000000000000000000000000000';
 const STRANGER = 'GSTRANGER000000000000000000000000000000000000000000000';
 
-const ACADEMY_A = { id: 'academy-a', name: 'FC A', ownerWallet: OWNER, members: [] };
+const ACADEMY_A = {
+  id: 'academy-a',
+  name: 'FC A',
+  ownerWallet: OWNER,
+  members: [],
+};
 
 function req() {
-  return new NextRequest('http://localhost/api/admin/academies/academy-a/members');
+  return new NextRequest(
+    'http://localhost/api/admin/academies/academy-a/members',
+  );
 }
 
 describe('resolveAcademyRole', () => {
@@ -59,9 +66,7 @@ describe('resolveAcademyRole', () => {
       academyIds: ['academy-a'],
       academies: [ACADEMY_A],
     });
-    expect(mockApiGet).toHaveBeenCalledWith(
-      `/academies/owner/${OWNER}`,
-    );
+    expect(mockApiGet).toHaveBeenCalledWith(`/academies/owner/${OWNER}`);
   });
 
   it('returns null for a wallet that owns nothing and is not the super-admin', async () => {

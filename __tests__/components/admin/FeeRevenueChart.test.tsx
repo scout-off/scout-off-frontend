@@ -22,11 +22,9 @@ jest.mock('recharts', () => {
   const actual = jest.requireActual('recharts') as Record<string, unknown>;
   return {
     ...actual,
-    ResponsiveContainer: ({
-      children,
-    }: {
-      children: React.ReactNode;
-    }) => <div data-testid="responsive-container">{children}</div>,
+    ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
+      <div data-testid="responsive-container">{children}</div>
+    ),
   };
 });
 
@@ -124,9 +122,7 @@ describe('FeeRevenueChart', () => {
 
   // ── Empty-data state ─────────────────────────────────────────────────────────
   it('renders the empty state when daily array is empty', () => {
-    mockUseFeeRevenue.mockReturnValue(
-      baseRevenue({ data: { daily: [] } }),
-    );
+    mockUseFeeRevenue.mockReturnValue(baseRevenue({ data: { daily: [] } }));
 
     render(<FeeRevenueChart />);
 
@@ -165,9 +161,7 @@ describe('FeeRevenueChart', () => {
 
   // ── Populated revenue series ─────────────────────────────────────────────────
   it('renders totals and the chart when data is present for the selected period', () => {
-    mockUseFeeRevenue.mockReturnValue(
-      baseRevenue({ data: POPULATED_DATA }),
-    );
+    mockUseFeeRevenue.mockReturnValue(baseRevenue({ data: POPULATED_DATA }));
 
     render(<FeeRevenueChart />);
 
@@ -194,9 +188,7 @@ describe('FeeRevenueChart', () => {
   });
 
   it('renders all four period filter buttons', () => {
-    mockUseFeeRevenue.mockReturnValue(
-      baseRevenue({ data: POPULATED_DATA }),
-    );
+    mockUseFeeRevenue.mockReturnValue(baseRevenue({ data: POPULATED_DATA }));
 
     render(<FeeRevenueChart />);
 
@@ -236,9 +228,7 @@ describe('FeeRevenueChart', () => {
 
   // ── Fee drift warning ────────────────────────────────────────────────────────
   it('shows an accessible drift warning banner when fee drift is detected', () => {
-    mockUseFeeRevenue.mockReturnValue(
-      baseRevenue({ data: POPULATED_DATA }),
-    );
+    mockUseFeeRevenue.mockReturnValue(baseRevenue({ data: POPULATED_DATA }));
     mockUseFeeDriftDetection.mockReturnValue({
       hasDrift: true,
       liveContactFee: 2,
@@ -257,9 +247,7 @@ describe('FeeRevenueChart', () => {
   });
 
   it('does not show a drift warning when there is no drift', () => {
-    mockUseFeeRevenue.mockReturnValue(
-      baseRevenue({ data: POPULATED_DATA }),
-    );
+    mockUseFeeRevenue.mockReturnValue(baseRevenue({ data: POPULATED_DATA }));
     mockUseFeeDriftDetection.mockReturnValue(noDrift);
 
     render(<FeeRevenueChart />);

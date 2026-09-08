@@ -72,8 +72,8 @@ const mockedUseIPFSUpload = useIPFSUpload as jest.MockedFunction<
 const mockedBuildRegisterPlayer = buildRegisterPlayer as jest.MockedFunction<
   typeof buildRegisterPlayer
 >;
-const mockedSubmitSignedTransaction =
-  require('@/lib/sorobanRpc').submitSignedTransaction as jest.Mock;
+const mockedSubmitSignedTransaction = require('@/lib/sorobanRpc')
+  .submitSignedTransaction as jest.Mock;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

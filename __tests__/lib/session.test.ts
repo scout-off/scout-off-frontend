@@ -148,7 +148,11 @@ describe('getSessionWallet', () => {
     // Same as before #1179's store was added: a well-formed, correctly
     // signed, unexpired token whose sid was never registered (or whose
     // session has since been pruned) must not be trusted.
-    const token = createSessionToken(PUBLIC_KEY, 'access', ACCESS_TOKEN_TTL_SEC);
+    const token = createSessionToken(
+      PUBLIC_KEY,
+      'access',
+      ACCESS_TOKEN_TTL_SEC,
+    );
     expect(getSessionWallet(requestWithCookie(`session=${token}`))).toBeNull();
   });
 
@@ -176,9 +180,14 @@ describe('getSessionWallet', () => {
 
   it('rejects a previously-valid session cookie once its session has been revoked (see #1179)', () => {
     const sid = 'sid-revocation-test';
-    const token = createSessionToken(PUBLIC_KEY, 'access', ACCESS_TOKEN_TTL_SEC, {
-      sid,
-    });
+    const token = createSessionToken(
+      PUBLIC_KEY,
+      'access',
+      ACCESS_TOKEN_TTL_SEC,
+      {
+        sid,
+      },
+    );
     const store = SessionStore.getInstance();
     store.create(sid, PUBLIC_KEY, Date.now() + 60_000);
 

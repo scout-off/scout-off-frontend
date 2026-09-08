@@ -23,7 +23,9 @@ describe('TruncatedAddress', () => {
 
   it('does not render copy button when copyable is false', () => {
     render(<TruncatedAddress address={mockAddress} copyable={false} />);
-    expect(screen.queryByTitle('Click to copy address')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTitle('Click to copy address'),
+    ).not.toBeInTheDocument();
   });
 
   it('copies address to clipboard on click', async () => {
@@ -36,9 +38,9 @@ describe('TruncatedAddress', () => {
 
     render(<TruncatedAddress address={mockAddress} />);
     const button = screen.getByTitle('Click to copy address');
-    
+
     await fireEvent.click(button);
-    
+
     expect(writeTextMock).toHaveBeenCalledWith(mockAddress);
   });
 
@@ -52,10 +54,12 @@ describe('TruncatedAddress', () => {
 
     render(<TruncatedAddress address={mockAddress} />);
     const button = screen.getByTitle('Click to copy address');
-    
+
     await fireEvent.click(button);
-    
-    expect(screen.getByRole('button')).toContainElement(screen.getByTitle('Click to copy address'));
+
+    expect(screen.getByRole('button')).toContainElement(
+      screen.getByTitle('Click to copy address'),
+    );
   });
 
   it('applies custom className', () => {

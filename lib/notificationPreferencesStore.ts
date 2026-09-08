@@ -105,7 +105,9 @@ export class NotificationPreferencesStore {
 
   get(wallet: string): NotificationPreferences {
     const row = this.getRow(wallet);
-    return row ? rowToPreferences(row) : { ...DEFAULT_NOTIFICATION_PREFERENCES };
+    return row
+      ? rowToPreferences(row)
+      : { ...DEFAULT_NOTIFICATION_PREFERENCES };
   }
 
   /**

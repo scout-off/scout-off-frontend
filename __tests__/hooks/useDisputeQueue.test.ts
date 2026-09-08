@@ -117,7 +117,9 @@ describe('useDisputeQueue', () => {
   });
 
   it('surfaces error.message when fetchDisputeQueue rejects', async () => {
-    mockFetchDisputeQueue.mockRejectedValue(new Error('Failed to fetch dispute queue'));
+    mockFetchDisputeQueue.mockRejectedValue(
+      new Error('Failed to fetch dispute queue'),
+    );
     const { result } = renderHook(() => useDisputeQueue(), { wrapper });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -149,7 +151,11 @@ describe('useDisputeQueue', () => {
 
   it('resolves decide() with the updated dispute returned by decideDispute', async () => {
     mockFetchDisputeQueue.mockResolvedValue([DISPUTE_A, DISPUTE_B]);
-    const updated = { ...DISPUTE_A, status: 'upheld' as const, decidedAt: 1700000001000 };
+    const updated = {
+      ...DISPUTE_A,
+      status: 'upheld' as const,
+      decidedAt: 1700000001000,
+    };
     mockDecideDispute.mockResolvedValue(updated);
 
     const { result } = renderHook(() => useDisputeQueue(), { wrapper });

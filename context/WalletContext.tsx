@@ -313,8 +313,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   );
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [sessionExpiresAt, setSessionExpiresAt] = useState<number | null>(null);
-  const [sessionCookieWallet, setSessionCookieWallet] =
-    useState<string | null>(null);
+  const [sessionCookieWallet, setSessionCookieWallet] = useState<string | null>(
+    null,
+  );
 
   // ── Concurrency guard: de-duplicate concurrent doConnect calls ──────────
   // Multiple callers (e.g. reauthenticate from SessionExpiryWarning and a
@@ -552,7 +553,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
               }),
             );
           }
-        } else if (refreshed.publicKey && publicKey && refreshed.publicKey !== publicKey) {
+        } else if (
+          refreshed.publicKey &&
+          publicKey &&
+          refreshed.publicKey !== publicKey
+        ) {
           // Refresh returned a different address — force re-auth.
           setPublicKey(null);
           setIsAuthenticated(false);
@@ -564,7 +569,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    const intervalId = setInterval(reconcileWithServer, RECONCILIATION_INTERVAL_MS);
+    const intervalId = setInterval(
+      reconcileWithServer,
+      RECONCILIATION_INTERVAL_MS,
+    );
     return () => clearInterval(intervalId);
   }, [isAuthenticated, publicKey]);
 
@@ -594,7 +602,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const closeWalletModal = useCallback(() => setShowWalletModal(false), []);
 
   const doConnect = useCallback(
-    async (provider: WalletProvider, rememberMe = false, expectedPublicKey?: string) => {
+    async (
+      provider: WalletProvider,
+      rememberMe = false,
+      expectedPublicKey?: string,
+    ) => {
       setIsConnecting(true);
       setConnectingProvider(provider);
       try {
@@ -712,7 +724,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [doConnect, openWalletModal]);
 
   const connectWithProvider = useCallback(
-    async (provider: WalletProvider, rememberMe = false, expectedPublicKey?: string) => {
+    async (
+      provider: WalletProvider,
+      rememberMe = false,
+      expectedPublicKey?: string,
+    ) => {
       await doConnect(provider, rememberMe, expectedPublicKey);
     },
     [doConnect],

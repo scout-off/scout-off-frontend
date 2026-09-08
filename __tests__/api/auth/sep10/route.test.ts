@@ -390,9 +390,7 @@ describe('DELETE /api/auth/sep10 — logout', () => {
     expect(beforeRes.status).toBe(200);
 
     const logoutRes = await DELETE(
-      deleteRequest(
-        `session=${accessToken}; session_refresh=${refreshToken}`,
-      ),
+      deleteRequest(`session=${accessToken}; session_refresh=${refreshToken}`),
     );
     expect(logoutRes.status).toBe(200);
 

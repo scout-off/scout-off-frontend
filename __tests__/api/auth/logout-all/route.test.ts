@@ -29,7 +29,7 @@ describe('POST /api/auth/logout-all', () => {
     expect(res.status).toBe(401);
   });
 
-  it('revokes every active session for the wallet, not just the caller\'s own', async () => {
+  it("revokes every active session for the wallet, not just the caller's own", async () => {
     const store = SessionStore.getInstance();
 
     // Two "other device" sessions plus the one making this request.
@@ -39,14 +39,15 @@ describe('POST /api/auth/logout-all', () => {
     store.create(callerSid, PUBLIC_KEY, Date.now() + 60_000);
 
     // A different wallet's session must be left untouched.
-    store.create('sid-other-wallet', 'GSOMEONEELSE000000000000000000000000000000000000000000', Date.now() + 60_000);
-
-    const callerToken = createSessionToken(
-      PUBLIC_KEY,
-      'access',
-      20 * 60,
-      { sid: callerSid },
+    store.create(
+      'sid-other-wallet',
+      'GSOMEONEELSE000000000000000000000000000000000000000000',
+      Date.now() + 60_000,
     );
+
+    const callerToken = createSessionToken(PUBLIC_KEY, 'access', 20 * 60, {
+      sid: callerSid,
+    });
 
     const res = await POST(makeRequest(`session=${callerToken}`));
     expect(res.status).toBe(200);

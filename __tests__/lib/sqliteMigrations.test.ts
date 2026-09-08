@@ -9,7 +9,9 @@ describe('sqliteMigrations', () => {
         version: 1,
         name: 'initial_schema',
         up: (d) => {
-          d.exec(`CREATE TABLE widgets (id INTEGER PRIMARY KEY, name TEXT NOT NULL)`);
+          d.exec(
+            `CREATE TABLE widgets (id INTEGER PRIMARY KEY, name TEXT NOT NULL)`,
+          );
         },
       },
       {
@@ -38,7 +40,9 @@ describe('sqliteMigrations', () => {
     // Simulate a production database that already has version-1 rows,
     // seeded BEFORE the migration runner or schema_version table existed.
     const db = new Database(':memory:');
-    db.exec(`CREATE TABLE widgets (id INTEGER PRIMARY KEY, name TEXT NOT NULL)`);
+    db.exec(
+      `CREATE TABLE widgets (id INTEGER PRIMARY KEY, name TEXT NOT NULL)`,
+    );
     db.prepare('INSERT INTO widgets (id, name) VALUES (1, ?)').run('sprocket');
     db.prepare('INSERT INTO widgets (id, name) VALUES (2, ?)').run('gadget');
 
@@ -127,7 +131,9 @@ describe('sqliteMigrations', () => {
 
   it('rolls back a failing migration and does not record its version', () => {
     const db = new Database(':memory:');
-    db.exec(`CREATE TABLE widgets (id INTEGER PRIMARY KEY, name TEXT NOT NULL)`);
+    db.exec(
+      `CREATE TABLE widgets (id INTEGER PRIMARY KEY, name TEXT NOT NULL)`,
+    );
     db.prepare('INSERT INTO widgets (id, name) VALUES (1, ?)').run('sprocket');
 
     const migrations: Migration[] = [

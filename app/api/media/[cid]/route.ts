@@ -149,7 +149,10 @@ export async function GET(
 
     if (!result) {
       log.error('All IPFS gateways exhausted', { cid });
-      return NextResponse.json({ error: 'Media not available' }, { status: 502 });
+      return NextResponse.json(
+        { error: 'Media not available' },
+        { status: 502 },
+      );
     }
 
     const responseHeaders: Record<string, string> = {

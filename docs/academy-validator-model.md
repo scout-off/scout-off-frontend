@@ -59,14 +59,14 @@ academy tag per validator? Two reasons:
 The platform super-admin (`NEXT_PUBLIC_ADMIN_ADDRESS`, checked both
 client-side in `app/[locale]/admin/page.tsx` and server-side via the
 `session` cookie in `app/api/admin/**` routes) can still manage every
-academy's roster, unchanged. Academy *creation* remains super-admin-only —
+academy's roster, unchanged. Academy _creation_ remains super-admin-only —
 `POST /api/admin/academies` and the full-listing `GET /api/admin/academies`
 are unreachable by anything but the super-admin, deliberately: issue #1173
 scoped the first version of the academy-owner role conservatively to roster
 add/remove, not academy self-service.
 
 On top of that, an academy's recorded `ownerWallet` can now manage that one
-academy's own roster (issue #1173) — this is an *additive* second role, not
+academy's own roster (issue #1173) — this is an _additive_ second role, not
 a replacement for the super-admin gate. `lib/academyAuth.ts`'s
 `resolveAcademyRole`/`requireAcademyManager` do the session-to-role
 resolution: a connected wallet is the super-admin if it matches
@@ -150,14 +150,14 @@ Nothing about existing single-wallet validator flows changes:
 
 ## API surface
 
-| Route                                                                                    | Auth        | Purpose                                                                                      |
-| ---------------------------------------------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------- |
-| `POST /academies` (via `/api/admin/academies`)                                           | super-admin | Create an academy; owner wallet becomes its first member                                     |
-| `GET /academies` (via `/api/admin/academies`)                                            | super-admin | List all academies with their members, for the admin panel                                   |
-| `POST /academies/:id/members` (via `/api/admin/academies/:id/members`)                   | super-admin or that academy's owner | Register an additional signer wallet under an academy                       |
-| `DELETE /academies/:id/members/:wallet` (via `/api/admin/academies/:id/members/:wallet`) | super-admin or that academy's owner | Remove a signer wallet's academy membership (off-chain only)                |
-| `GET /academies/wallet/:wallet`                                                          | public      | Look up the academy (if any) a wallet is registered under, for milestone-attribution display |
-| `GET /academies/owner/:wallet` (via `/api/admin/academies/mine`)                         | any authenticated wallet (returns only academies *that* wallet owns) | Session-to-role resolution for the academy-owner UI (issue #1173) |
+| Route                                                                                    | Auth                                                                 | Purpose                                                                                      |
+| ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `POST /academies` (via `/api/admin/academies`)                                           | super-admin                                                          | Create an academy; owner wallet becomes its first member                                     |
+| `GET /academies` (via `/api/admin/academies`)                                            | super-admin                                                          | List all academies with their members, for the admin panel                                   |
+| `POST /academies/:id/members` (via `/api/admin/academies/:id/members`)                   | super-admin or that academy's owner                                  | Register an additional signer wallet under an academy                                        |
+| `DELETE /academies/:id/members/:wallet` (via `/api/admin/academies/:id/members/:wallet`) | super-admin or that academy's owner                                  | Remove a signer wallet's academy membership (off-chain only)                                 |
+| `GET /academies/wallet/:wallet`                                                          | public                                                               | Look up the academy (if any) a wallet is registered under, for milestone-attribution display |
+| `GET /academies/owner/:wallet` (via `/api/admin/academies/mine`)                         | any authenticated wallet (returns only academies _that_ wallet owns) | Session-to-role resolution for the academy-owner UI (issue #1173)                            |
 
 ## Academy milestone rollup (issue #1172)
 
@@ -196,7 +196,7 @@ against. It cannot, however, exclude approvals a wallet made **after**
 being removed from an academy, because a removed wallet has no
 `academy_members` row left to resolve `since` from at all: instead of being
 misattributed, a removed wallet's entire history — including approvals made
-while it *was* a legitimate member — silently drops out of that academy's
+while it _was_ a legitimate member — silently drops out of that academy's
 total the moment it's removed. In practice, removal is rare relative to
 roster churn happening within the queried range, so this undercount is the
 deliberately safer failure mode versus overcounting, but it does mean the
@@ -234,7 +234,7 @@ renders nothing at all in that case.
 **Why endorsements, not repeated `approve_milestone` calls.** The most
 literal reading of "N validators must each call `approve_milestone`" runs
 into a real constraint: `approve_milestone` isn't a vote on an existing
-milestone record, it's what *creates* one — each call appends a new
+milestone record, it's what _creates_ one — each call appends a new
 milestone entry and advances the player's `progressLevel` by one step (see
 `buildApproveMilestone`'s doc comment in `lib/contract.ts`). Having a second
 academy member call it again "to add their signature" would be a genuinely
@@ -252,7 +252,7 @@ milestoneId, wallet)` rows. The wallet that originally called
 endorsement immediately after their transaction confirms (see
 `components/validator/ApproveForm.tsx` — best-effort, fire-and-forget, same
 `.catch(() => {})` precedent as `recordAuditEntry`). Any other validator who
-is a registered member of that *same* academy can then add their own
+is a registered member of that _same_ academy can then add their own
 endorsement via `POST /api/milestones/:playerId/:milestoneId/endorsements`
 — an off-chain-only write, never a wallet-signed transaction. Quorum is met
 once the count of distinct, still-current academy-member wallets among a
@@ -265,7 +265,7 @@ validator has no academy or that academy has no quorum configured (the
 "Academy pending (n/m)" (amber) below quorum, or "Academy-verified (n/m)"
 (emerald) once met — visually and semantically distinct from the plain
 on-chain-approved state `ValidatorChip` already conveys, which is accurate
-to contract state either way: the milestone *is* on-chain approved the
+to contract state either way: the milestone _is_ on-chain approved the
 moment `approve_milestone` confirms, regardless of quorum. A connected
 validator who is a member of the same academy and hasn't yet endorsed sees
 an "Endorse" button.
@@ -273,7 +273,7 @@ an "Endorse" button.
 **What this doesn't do.** No retroactive backfill — a milestone approved
 before this feature shipped starts with just its original approver's
 auto-recorded endorsement, same as any new one. No enforcement that an
-academy's *coordination* happens before endorsing (a member could endorse
+academy's _coordination_ happens before endorsing (a member could endorse
 without actually reviewing) — this is a workflow nudge, not a moderation
 gate, matching the issue's explicit framing as additive UI guidance.
 

@@ -314,10 +314,7 @@ describe('registerHandler / processQueue — basic behaviour', () => {
 
     // Use sequential enqueue to guarantee distinct queuedAt timestamps
     // so the IDB queuedAt index returns them in insertion order.
-    await enqueueSequential(
-      'process_multi_order2',
-      [{ n: 1 }, { n: 2 }],
-    );
+    await enqueueSequential('process_multi_order2', [{ n: 1 }, { n: 2 }]);
 
     const processed = await processQueue();
 
@@ -344,7 +341,9 @@ describe('Acceptance: head-of-line-blocking fix', () => {
 
     // First action: always fails with a permanent error
     registerHandler('perm_fail_type', () =>
-      Promise.reject(new OfflineQueueError('422 validation error', { permanent: true })),
+      Promise.reject(
+        new OfflineQueueError('422 validation error', { permanent: true }),
+      ),
     );
 
     // Second and third: succeed
@@ -384,7 +383,9 @@ describe('Acceptance: head-of-line-blocking fix', () => {
       return Promise.resolve();
     });
 
-    const [failId] = await enqueueSequential('transient_blocker', [{ data: 'will-retry' }]);
+    const [failId] = await enqueueSequential('transient_blocker', [
+      { data: 'will-retry' },
+    ]);
     await enqueueSequential('ok_type_ac1b', [{ n: 2 }, { n: 3 }]);
 
     const processed = await processQueue();
@@ -630,7 +631,10 @@ describe('discardFailedAction / discardAllFailedActions', () => {
       Promise.reject(new OfflineQueueError('gone', { permanent: true })),
     );
 
-    const [id1, id2] = await enqueueSequential('perm_fail_discard1', [{ n: 1 }, { n: 2 }]);
+    const [id1, id2] = await enqueueSequential('perm_fail_discard1', [
+      { n: 1 },
+      { n: 2 },
+    ]);
     await processQueue();
 
     let failed = await getFailedActions();
@@ -709,10 +713,13 @@ describe('Ordering: same-type actions process in enqueue order', () => {
 
     // Sequential enqueue guarantees distinct queuedAt timestamps and thus
     // deterministic ordering from the queuedAt index.
-    await enqueueSequential(
-      'ordered_type2',
-      [{ seq: 1 }, { seq: 2 }, { seq: 3 }, { seq: 4 }, { seq: 5 }],
-    );
+    await enqueueSequential('ordered_type2', [
+      { seq: 1 },
+      { seq: 2 },
+      { seq: 3 },
+      { seq: 4 },
+      { seq: 5 },
+    ]);
 
     await processQueue();
 

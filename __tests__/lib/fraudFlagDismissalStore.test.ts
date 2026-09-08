@@ -201,7 +201,9 @@ describe('computeFraudFlagDismissalKey', () => {
       heuristic: 'concentrated_redeemer',
       wallets: ['GY', 'GX'],
     });
-    expect(computeFraudFlagDismissalKey(a)).toBe(computeFraudFlagDismissalKey(b));
+    expect(computeFraudFlagDismissalKey(a)).toBe(
+      computeFraudFlagDismissalKey(b),
+    );
   });
 
   it('changes when severity changes', () => {

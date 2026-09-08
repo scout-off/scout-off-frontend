@@ -103,10 +103,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (typeof reason !== 'string') {
-    return NextResponse.json(
-      { error: 'reason is required' },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: 'reason is required' }, { status: 400 });
   }
 
   const reasonValidation = validateTextField('disputeReason', reason);

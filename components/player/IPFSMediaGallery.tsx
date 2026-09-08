@@ -188,11 +188,7 @@ function IPFSMediaItem({ cid }: IPFSMediaItemProps) {
           onClick={() => setIsPlaying(!isPlaying)}
         >
           {isVisible && isPlaying && (
-            <source
-              key={sourceKey}
-              src={mediaUrl}
-              type={videoMime}
-            />
+            <source key={sourceKey} src={mediaUrl} type={videoMime} />
           )}
         </video>
         {!isPlaying && (
@@ -222,7 +218,9 @@ function IPFSMediaItem({ cid }: IPFSMediaItemProps) {
             role="status"
             aria-live="polite"
           >
-            <span className="text-white text-sm font-medium">Reconnecting…</span>
+            <span className="text-white text-sm font-medium">
+              Reconnecting…
+            </span>
           </div>
         )}
         {isPlaying && playbackState === 'error' && (

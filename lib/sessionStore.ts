@@ -150,9 +150,7 @@ export class SessionStore {
   isActive(id: string): boolean {
     const row = this.db
       .prepare('SELECT revoked_at, expires_at FROM sessions WHERE id = ?')
-      .get(id) as
-      | { revoked_at: number | null; expires_at: number }
-      | undefined;
+      .get(id) as { revoked_at: number | null; expires_at: number } | undefined;
     if (!row) return false;
     if (row.revoked_at !== null) return false;
     if (row.expires_at < Date.now()) return false;

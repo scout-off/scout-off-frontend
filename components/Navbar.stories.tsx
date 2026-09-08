@@ -10,7 +10,8 @@ import enMessages from '@/messages/en.json';
 import frMessages from '@/messages/fr.json';
 import swMessages from '@/messages/sw.json';
 
-const DEMO_WALLET = 'GABCDEFGHIJKLMNOPQRSTUVWX234567890123456789012345678901234';
+const DEMO_WALLET =
+  'GABCDEFGHIJKLMNOPQRSTUVWX234567890123456789012345678901234';
 const WALLET_SESSION_KEY = 'wallet_session';
 
 const messages = {

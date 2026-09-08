@@ -28,7 +28,8 @@ function makeRequest(wallet?: string): NextRequest {
     // bare signed token alone is deliberately not enough.
     const sid = `sid-${wallet}`;
     SessionStore.getInstance().create(sid, wallet, Date.now() + 60_000);
-    headers['cookie'] = `session=${createSessionToken(wallet, 'access', 20 * 60, { sid })}`;
+    headers['cookie'] =
+      `session=${createSessionToken(wallet, 'access', 20 * 60, { sid })}`;
   }
   return new NextRequest('http://localhost/api/data-deletion/request', {
     method: 'POST',
@@ -76,7 +77,8 @@ describe('POST /api/data-deletion/request', () => {
     // target — must be retained (integrity/accountability) but anonymized.
     AdminAuditStore.getInstance().insertEntry({
       actionType: 'validator_add',
-      adminWallet: 'GADMIN00000000000000000000000000000000000000000000000000000',
+      adminWallet:
+        'GADMIN00000000000000000000000000000000000000000000000000000',
       target: WALLET,
       status: 'confirmed',
       timestamp: 1_700_000_000,
@@ -99,9 +101,9 @@ describe('POST /api/data-deletion/request', () => {
     expect(WatchlistStore.getInstance().list(WALLET)).toEqual([]);
     expect(SavedSearchStore.getInstance().list(WALLET)).toEqual([]);
     expect(NotificationReadStore.getInstance().getReadIds(WALLET)).toEqual([]);
-    expect(
-      MilestoneDisputeStore.getInstance().listForWallet(WALLET),
-    ).toEqual([]);
+    expect(MilestoneDisputeStore.getInstance().listForWallet(WALLET)).toEqual(
+      [],
+    );
 
     // The audit entry survives, but its wallet reference is redacted rather
     // than the row being deleted outright.

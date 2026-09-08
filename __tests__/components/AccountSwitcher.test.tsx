@@ -40,8 +40,7 @@ jest.mock('next-intl', () => ({
   useTranslations: () => (key: string) => {
     const t: Record<string, string> = {
       accountSwitched: 'Account switched successfully.',
-      accountSwitchFailed:
-        'Failed to switch account. Please try again.',
+      accountSwitchFailed: 'Failed to switch account. Please try again.',
       accountSwitchMismatch:
         'Your wallet extension is currently on a different account than the one you selected. Please switch the active account inside your wallet extension, then try again.',
       switchAccountTitle: 'Switch Account',
@@ -108,12 +107,9 @@ jest.mock('@/components/ui/Spinner', () => {
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
-const CURRENT_KEY =
-  'GCFW7QAO3WZQ6X4CZ3OYZFXX3A3DL7XVI5DNVTXA5VJUGE5SU6ZRG5OV';
-const TARGET_KEY =
-  'GBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB';
-const WRONG_KEY =
-  'GCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC';
+const CURRENT_KEY = 'GCFW7QAO3WZQ6X4CZ3OYZFXX3A3DL7XVI5DNVTXA5VJUGE5SU6ZRG5OV';
+const TARGET_KEY = 'GBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB';
+const WRONG_KEY = 'GCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC';
 
 const { getRememberedAddresses } = jest.requireMock('@/context/WalletContext');
 
@@ -142,8 +138,7 @@ function getSwitchButton(publicKey: string): HTMLElement {
   const prefix = publicKey.slice(0, 6);
   const match = buttons.find(
     (btn) =>
-      btn.textContent?.includes(prefix) &&
-      !btn.hasAttribute('aria-label'),
+      btn.textContent?.includes(prefix) && !btn.hasAttribute('aria-label'),
   );
   if (!match) {
     throw new Error(
@@ -175,8 +170,16 @@ describe('AccountSwitcher — account-switch mismatch verification', () => {
 
     // Default: one remembered address (the target) in addition to current
     getRememberedAddresses.mockReturnValue([
-      { publicKey: CURRENT_KEY, provider: 'freighter', lastUsed: new Date().toISOString() },
-      { publicKey: TARGET_KEY, provider: 'freighter', lastUsed: new Date().toISOString() },
+      {
+        publicKey: CURRENT_KEY,
+        provider: 'freighter',
+        lastUsed: new Date().toISOString(),
+      },
+      {
+        publicKey: TARGET_KEY,
+        provider: 'freighter',
+        lastUsed: new Date().toISOString(),
+      },
     ]);
   });
 
@@ -282,7 +285,8 @@ describe('AccountSwitcher — account-switch mismatch verification', () => {
       });
 
       const genericFailCall = mockShowToast.mock.calls.find(
-        ([arg]) => arg.message === 'Failed to switch account. Please try again.',
+        ([arg]) =>
+          arg.message === 'Failed to switch account. Please try again.',
       );
       expect(genericFailCall).toBeUndefined();
     });
@@ -402,7 +406,11 @@ describe('AccountSwitcher — account-switch mismatch verification', () => {
     it('does not call connectWithProvider when the same address is already active', async () => {
       // Only the current account is in the list (no other addresses)
       getRememberedAddresses.mockReturnValue([
-        { publicKey: CURRENT_KEY, provider: 'freighter', lastUsed: new Date().toISOString() },
+        {
+          publicKey: CURRENT_KEY,
+          provider: 'freighter',
+          lastUsed: new Date().toISOString(),
+        },
       ]);
 
       renderAccountSwitcher();

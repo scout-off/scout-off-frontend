@@ -528,9 +528,7 @@ describe('BulkPlayerImport', () => {
 
     // Should show resume banner
     await waitFor(() => {
-      expect(
-        screen.getByText(/incomplete batch found/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/incomplete batch found/i)).toBeInTheDocument();
     });
     expect(screen.getByText(/1 of 2 rows/i)).toBeInTheDocument();
   });
@@ -574,9 +572,7 @@ describe('BulkPlayerImport', () => {
 
     // Wait for resume banner
     await waitFor(() => {
-      expect(
-        screen.getByText(/incomplete batch found/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/incomplete batch found/i)).toBeInTheDocument();
     });
 
     // Start import (resume)

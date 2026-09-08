@@ -198,7 +198,11 @@ export default function PlayerProfile() {
       </Link>
 
       {/* Blocked State Message */}
-      <BlockedStateMessage targetId={id ?? ''} targetType="player" action="contact" />
+      <BlockedStateMessage
+        targetId={id ?? ''}
+        targetType="player"
+        action="contact"
+      />
 
       {/* Archived Profile Banner */}
       {isArchived && (

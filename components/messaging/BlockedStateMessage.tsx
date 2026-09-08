@@ -1,15 +1,19 @@
-"use client";
+'use client';
 
-import { useWallet } from "@/hooks/useWallet";
-import { isBlocked } from "@/lib/messaging/moderation";
+import { useWallet } from '@/hooks/useWallet';
+import { isBlocked } from '@/lib/messaging/moderation';
 
 interface BlockedStateMessageProps {
   targetId: string;
-  targetType: "player" | "scout";
-  action?: "contact" | "message" | "view";
+  targetType: 'player' | 'scout';
+  action?: 'contact' | 'message' | 'view';
 }
 
-export default function BlockedStateMessage({ targetId, targetType, action = "contact" }: BlockedStateMessageProps) {
+export default function BlockedStateMessage({
+  targetId,
+  targetType,
+  action = 'contact',
+}: BlockedStateMessageProps) {
   const { publicKey } = useWallet();
 
   if (!publicKey) return null;
@@ -19,9 +23,9 @@ export default function BlockedStateMessage({ targetId, targetType, action = "co
   if (!blocked) return null;
 
   const actionText = {
-    contact: "contact this player",
-    message: "send a message",
-    view: "view this profile",
+    contact: 'contact this player',
+    message: 'send a message',
+    view: 'view this profile',
   }[action];
 
   return (

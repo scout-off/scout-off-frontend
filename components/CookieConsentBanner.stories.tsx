@@ -48,7 +48,9 @@ export const AfterAccepting: Story = {
   render: () => <ConsentStoryFrame />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole('button', { name: 'Accept' }));
+    await userEvent.click(
+      await canvas.findByRole('button', { name: 'Accept' }),
+    );
     await expect(canvas.findByText('Consent accepted')).resolves.toBeVisible();
   },
 };

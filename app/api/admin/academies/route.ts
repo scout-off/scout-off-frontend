@@ -45,7 +45,11 @@ export async function POST(req: NextRequest) {
 
   try {
     const academy = await api
-      .post('/academies', { name: sanitizedName, ownerWallet, createdBy: admin })
+      .post('/academies', {
+        name: sanitizedName,
+        ownerWallet,
+        createdBy: admin,
+      })
       .then((r) => r.data);
     return NextResponse.json(academy, { status: 201 });
   } catch (err: any) {

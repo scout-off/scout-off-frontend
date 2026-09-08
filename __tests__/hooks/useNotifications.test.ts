@@ -276,7 +276,9 @@ describe('useNotifications', () => {
     });
 
     // mutate() (revalidate) re-invoked fetchReadNotificationIds after the failed write.
-    await waitFor(() => expect(mockFetchReadNotificationIds).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(mockFetchReadNotificationIds).toHaveBeenCalledTimes(2),
+    );
   });
 
   // ── markAllRead ──────────────────────────────────────────────────────

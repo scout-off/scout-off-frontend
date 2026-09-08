@@ -48,18 +48,21 @@ export function useRecentlyViewed() {
   const isAuthenticated = Boolean(publicKey);
 
   // Local state for anonymous mode (localStorage-backed)
-  const [localEntries, setLocalEntries] = useState<RecentlyViewedEntry[]>(
-    getStoredEntries,
-  );
+  const [localEntries, setLocalEntries] =
+    useState<RecentlyViewedEntry[]>(getStoredEntries);
 
   // SWR data for authenticated mode (server-backed)
   const { data: serverEntries, mutate: mutateServer } = useSWR<
     RecentlyViewedEntry[]
-  >(isAuthenticated ? `recently-viewed:${publicKey}` : null, fetchRecentlyViewed, {
-    dedupingInterval: 5_000,
-    revalidateOnFocus: false,
-    errorRetryCount: 2,
-  });
+  >(
+    isAuthenticated ? `recently-viewed:${publicKey}` : null,
+    fetchRecentlyViewed,
+    {
+      dedupingInterval: 5_000,
+      revalidateOnFocus: false,
+      errorRetryCount: 2,
+    },
+  );
 
   // Sync server entries to local state when switching from authenticated to anonymous
   useEffect(() => {
@@ -69,7 +72,9 @@ export function useRecentlyViewed() {
   }, [isAuthenticated, serverEntries]);
 
   // Get current effective entries list
-  const effectiveEntries = isAuthenticated ? (serverEntries ?? []) : localEntries;
+  const effectiveEntries = isAuthenticated
+    ? (serverEntries ?? [])
+    : localEntries;
 
   const record = useCallback(
     async (entryData: Omit<RecentlyViewedEntry, 'viewedAt'>) => {

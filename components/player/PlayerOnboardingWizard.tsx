@@ -59,9 +59,7 @@ interface PersistedWizardState {
   data: WizardData;
 }
 
-function loadPersistedWizardState(
-  wallet: string,
-): PersistedWizardState | null {
+function loadPersistedWizardState(wallet: string): PersistedWizardState | null {
   try {
     const raw = sessionStorage.getItem(wizardStorageKey(wallet));
     if (!raw) return null;
@@ -254,12 +252,7 @@ export default function PlayerOnboardingWizard({
       onboardingSync.discard();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    onboardingSync.loaded,
-    onboardingSyncSubmission,
-    playerLoading,
-    player,
-  ]);
+  }, [onboardingSync.loaded, onboardingSyncSubmission, playerLoading, player]);
 
   const updateField = (field: keyof WizardData, value: string) => {
     setData((prev) => ({ ...prev, [field]: value }));
@@ -446,7 +439,9 @@ export default function PlayerOnboardingWizard({
     // gap defensively in case that ever changes, rather than trusting that
     // step 3 is unreachable any other way (see issue #1184).
     if (isUploadInProgress || !data.ipfsHash) {
-      setErrors({ form: 'Please finish uploading your highlight reel before submitting' });
+      setErrors({
+        form: 'Please finish uploading your highlight reel before submitting',
+      });
       setStep(2);
       return;
     }
@@ -563,8 +558,8 @@ export default function PlayerOnboardingWizard({
           Your registration is signed and queued for submission.
         </p>
         <p className="text-sm text-gray-400">
-          It will finish automatically once you&apos;re back online — even
-          if you close this tab or the app.
+          It will finish automatically once you&apos;re back online — even if
+          you close this tab or the app.
         </p>
         <div className="flex gap-3 justify-center">
           <Button

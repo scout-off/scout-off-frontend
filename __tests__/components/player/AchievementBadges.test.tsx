@@ -74,7 +74,11 @@ describe('AchievementBadges', () => {
   });
 
   it('does not render the badge container when milestones array is empty', () => {
-    const player = makePlayer({ milestones: [], ipfsHash: '', stats: undefined });
+    const player = makePlayer({
+      milestones: [],
+      ipfsHash: '',
+      stats: undefined,
+    });
     render(<AchievementBadges player={player} />);
     expect(
       screen.queryByRole('generic', { name: /achievement badges/i }),
@@ -139,14 +143,20 @@ describe('AchievementBadges', () => {
   // ── elite_tier badge ─────────────────────────────────────────────────────
 
   it('renders "Elite Tier" badge when progressLevel is 3', () => {
-    const player = makePlayer({ progressLevel: 3, milestones: [makeMilestone()] });
+    const player = makePlayer({
+      progressLevel: 3,
+      milestones: [makeMilestone()],
+    });
     render(<AchievementBadges player={player} />);
 
     expect(screen.getByText('Elite Tier')).toBeInTheDocument();
   });
 
   it('does not render "Elite Tier" badge when progressLevel is below 3', () => {
-    const player = makePlayer({ progressLevel: 2, milestones: [makeMilestone()] });
+    const player = makePlayer({
+      progressLevel: 2,
+      milestones: [makeMilestone()],
+    });
     render(<AchievementBadges player={player} />);
 
     expect(screen.queryByText('Elite Tier')).not.toBeInTheDocument();

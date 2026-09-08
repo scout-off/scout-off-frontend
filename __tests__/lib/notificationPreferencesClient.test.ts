@@ -97,7 +97,9 @@ describe('fetchNotificationPreferences', () => {
   it('propagates a network-level rejection', async () => {
     mockFetch.mockRejectedValueOnce(new Error('network down'));
 
-    await expect(fetchNotificationPreferences()).rejects.toThrow('network down');
+    await expect(fetchNotificationPreferences()).rejects.toThrow(
+      'network down',
+    );
   });
 });
 
@@ -213,7 +215,10 @@ describe('updateNotificationPreferencesWithVersion', () => {
       headers,
     });
 
-    const result = await updateNotificationPreferencesWithVersion(PREFS, 1700000000);
+    const result = await updateNotificationPreferencesWithVersion(
+      PREFS,
+      1700000000,
+    );
 
     expect(mockFetch).toHaveBeenCalledWith('/api/notification-preferences', {
       method: 'PUT',
@@ -232,7 +237,10 @@ describe('updateNotificationPreferencesWithVersion', () => {
       headers,
     });
 
-    const result = await updateNotificationPreferencesWithVersion(PREFS, undefined);
+    const result = await updateNotificationPreferencesWithVersion(
+      PREFS,
+      undefined,
+    );
 
     expect(result.preferences).toEqual(PREFS);
     expect(result.version).toBeUndefined();
@@ -269,7 +277,9 @@ describe('updateNotificationPreferencesWithVersion', () => {
     ).catch((e) => e);
 
     expect(error).toBeInstanceOf(OfflineQueueConflictError);
-    expect((error as InstanceType<typeof OfflineQueueConflictError>).serverVersion).toBe(99);
+    expect(
+      (error as InstanceType<typeof OfflineQueueConflictError>).serverVersion,
+    ).toBe(99);
   });
 
   it('throws on a non-409 error response', async () => {

@@ -57,8 +57,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const timestamp =
-    typeof viewedAt === 'number' ? viewedAt : Date.now();
+  const timestamp = typeof viewedAt === 'number' ? viewedAt : Date.now();
 
   try {
     const entry = RecentlyViewedStore.getInstance().record(
@@ -102,7 +101,10 @@ export async function DELETE(req: NextRequest) {
   }
 
   try {
-    const removed = RecentlyViewedStore.getInstance().remove(scoutWallet, id as number);
+    const removed = RecentlyViewedStore.getInstance().remove(
+      scoutWallet,
+      id as number,
+    );
     if (!removed) {
       return NextResponse.json(
         { error: 'Recently viewed entry not found' },

@@ -45,7 +45,9 @@ function main() {
   const missing = findComponentsMissingStories();
 
   if (missing.length === 0) {
-    console.log('Storybook coverage check passed: components/ui/ is fully covered.');
+    console.log(
+      'Storybook coverage check passed: components/ui/ is fully covered.',
+    );
     return;
   }
 

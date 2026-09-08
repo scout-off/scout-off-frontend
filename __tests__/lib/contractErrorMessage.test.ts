@@ -79,9 +79,9 @@ describe('extractContractErrorKey', () => {
     });
 
     it('resolves code 9 → ContractPaused via "error code 9" format', () => {
-      expect(extractContractErrorKey('Transaction failed with error code 9')).toBe(
-        'ContractPaused',
-      );
+      expect(
+        extractContractErrorKey('Transaction failed with error code 9'),
+      ).toBe('ContractPaused');
     });
 
     it('resolves code 12 → Overflow (last key)', () => {
@@ -95,7 +95,9 @@ describe('extractContractErrorKey', () => {
 
   describe('no match', () => {
     it('returns null for an unrecognised error string', () => {
-      expect(extractContractErrorKey('Something totally unknown happened')).toBeNull();
+      expect(
+        extractContractErrorKey('Something totally unknown happened'),
+      ).toBeNull();
     });
 
     it('returns null for an empty string', () => {

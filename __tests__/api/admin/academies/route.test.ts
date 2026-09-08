@@ -53,7 +53,9 @@ describe('GET /api/admin/academies', () => {
   });
 
   it('proxies the list from the backend for admins', async () => {
-    (mockApi.get as jest.Mock).mockResolvedValue({ data: [{ id: 1, name: 'Test Academy' }] });
+    (mockApi.get as jest.Mock).mockResolvedValue({
+      data: [{ id: 1, name: 'Test Academy' }],
+    });
     const res = await GET(makeRequest({ cookie: ADMIN }));
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -72,7 +74,10 @@ describe('POST /api/admin/academies', () => {
       makeRequest({
         method: 'POST',
         cookie: ADMIN,
-        body: { ownerWallet: 'GSOMEWALLET000000000000000000000000000000000000000000000' },
+        body: {
+          ownerWallet:
+            'GSOMEWALLET000000000000000000000000000000000000000000000',
+        },
       }),
     );
     expect(res.status).toBe(400);
@@ -97,7 +102,8 @@ describe('POST /api/admin/academies', () => {
         cookie: ADMIN,
         body: {
           name: 'a'.repeat(101),
-          ownerWallet: 'GSOMEWALLET000000000000000000000000000000000000000000000',
+          ownerWallet:
+            'GSOMEWALLET000000000000000000000000000000000000000000000',
         },
       }),
     );
@@ -107,14 +113,17 @@ describe('POST /api/admin/academies', () => {
   });
 
   it('accepts a name at exactly 100 characters', async () => {
-    (mockApi.post as jest.Mock).mockResolvedValue({ data: { id: 1, name: 'a'.repeat(100) } });
+    (mockApi.post as jest.Mock).mockResolvedValue({
+      data: { id: 1, name: 'a'.repeat(100) },
+    });
     const res = await POST(
       makeRequest({
         method: 'POST',
         cookie: ADMIN,
         body: {
           name: 'a'.repeat(100),
-          ownerWallet: 'GSOMEWALLET000000000000000000000000000000000000000000000',
+          ownerWallet:
+            'GSOMEWALLET000000000000000000000000000000000000000000000',
         },
       }),
     );

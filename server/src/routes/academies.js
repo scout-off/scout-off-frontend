@@ -101,9 +101,9 @@ router.delete('/:id/members/:wallet', (req, res) => {
 router.patch('/:id/quorum', (req, res) => {
   const { quorum } = req.body ?? {};
   if (quorum !== null && (!Number.isInteger(quorum) || quorum < 1)) {
-    return res
-      .status(400)
-      .json({ error: 'quorum must be a positive integer, or null to clear it' });
+    return res.status(400).json({
+      error: 'quorum must be a positive integer, or null to clear it',
+    });
   }
 
   try {

@@ -44,9 +44,7 @@ describe('fetchMyDisputes', () => {
   it('throws a fixed error message when the response is not ok', async () => {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
 
-    await expect(fetchMyDisputes()).rejects.toThrow(
-      'Failed to fetch disputes',
-    );
+    await expect(fetchMyDisputes()).rejects.toThrow('Failed to fetch disputes');
   });
 
   it('propagates a network-level rejection', async () => {
@@ -193,9 +191,9 @@ describe('decideDispute', () => {
       json: async () => ({ error: 'Dispute already decided' }),
     });
 
-    await expect(
-      decideDispute(1, { status: 'upheld' }),
-    ).rejects.toThrow('Dispute already decided');
+    await expect(decideDispute(1, { status: 'upheld' })).rejects.toThrow(
+      'Dispute already decided',
+    );
   });
 
   it('falls back to a generic message when the error body is not JSON', async () => {
@@ -206,8 +204,8 @@ describe('decideDispute', () => {
       },
     });
 
-    await expect(
-      decideDispute(1, { status: 'reversed' }),
-    ).rejects.toThrow('Failed to decide dispute');
+    await expect(decideDispute(1, { status: 'reversed' })).rejects.toThrow(
+      'Failed to decide dispute',
+    );
   });
 });

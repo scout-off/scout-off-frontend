@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Leaderboard SSR', () => {
-  test('should contain actual data in HTML response without JS', async ({ page }) => {
+  test('should contain actual data in HTML response without JS', async ({
+    page,
+  }) => {
     await page.goto('/validator/leaderboard', {
       waitUntil: 'networkidle',
     });
@@ -13,7 +15,7 @@ test.describe('Leaderboard SSR', () => {
     expect(html).toContain('Rank');
     expect(html).toContain('Validator');
     expect(html).toContain('Approvals');
-    
+
     const hasData = html.includes('G') || html.includes('validator');
     expect(hasData).toBe(true);
   });

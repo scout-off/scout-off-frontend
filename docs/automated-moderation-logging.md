@@ -7,6 +7,7 @@ This document describes how automated moderation decisions (e.g., auto-blocking 
 ## The problem
 
 Chat moderation involves both:
+
 1. **User-initiated actions**: A scout manually reports a message or blocks a user (logged via existing audit trail)
 2. **Automated actions**: The chat API applies heuristics to auto-block or flag content
 
@@ -15,8 +16,9 @@ Without visibility into automated decisions, an overly aggressive filter could s
 ## The solution
 
 Automated moderation decisions are recorded with the following metadata:
+
 - **Rule/heuristic** that triggered the decision
-- **Severity** (low/medium/high)  
+- **Severity** (low/medium/high)
 - **User ID** affected
 - **Thread ID** (if message-level)
 - **Timestamp**
@@ -27,6 +29,7 @@ Automated moderation decisions are recorded with the following metadata:
 ## Where to review
 
 Admins can view recent automated moderation actions at:
+
 - **Admin Dashboard** → "Automated Moderation Log" panel
 - Filterable by user ID and severity
 
@@ -37,6 +40,7 @@ Admins can view recent automated moderation actions at:
 Records a new automated moderation decision.
 
 **Request body:**
+
 ```json
 {
   "id": "thread-123:block-user:spam-filter",
@@ -75,6 +79,7 @@ This matches the existing `recordAuditEntry` pattern used for admin actions.
 ## Future extensions
 
 If the chat service adds more sophisticated heuristics (e.g., AI-powered content analysis), the `context` field can be extended to include:
+
 - Matched regex patterns
 - AI confidence scores
 - Feature weights

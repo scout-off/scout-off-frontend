@@ -138,10 +138,10 @@ describe('NotificationPreferencesStore — optimistic concurrency (issue #1178)'
   });
 
   it('setWithVersionCheck rejects with PreferencesConflictError when baseVersion is stale', () => {
-    const { updatedAt: originalVersion } = store.setWithVersionCheck(
-      'GSTALE',
-      { milestoneApprovals: true, contactUnlocks: true },
-    );
+    const { updatedAt: originalVersion } = store.setWithVersionCheck('GSTALE', {
+      milestoneApprovals: true,
+      contactUnlocks: true,
+    });
     // A second write (e.g. from another tab) advances the version.
     store.setWithVersionCheck(
       'GSTALE',

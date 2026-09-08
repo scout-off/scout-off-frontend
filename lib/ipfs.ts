@@ -230,7 +230,9 @@ export async function uploadToIPFSChunked(
 
   options.onPhaseChange?.('processing');
   try {
-    const { data } = await axios.post('/api/ipfs/upload/complete', { sessionId });
+    const { data } = await axios.post('/api/ipfs/upload/complete', {
+      sessionId,
+    });
     return data.cid as string;
   } catch (err) {
     if (axios.isAxiosError(err) && err.response?.status === 429) {

@@ -85,8 +85,18 @@ describe('GET /api/admin/academies/rollup', () => {
           ownerWallet: 'GOWNER1',
           createdAt: 1,
           members: [
-            { wallet: 'GWALLET_A', academyId: 'acad-1', addedAt: 111, addedBy: ADMIN },
-            { wallet: 'GWALLET_B', academyId: 'acad-1', addedAt: 222, addedBy: ADMIN },
+            {
+              wallet: 'GWALLET_A',
+              academyId: 'acad-1',
+              addedAt: 111,
+              addedBy: ADMIN,
+            },
+            {
+              wallet: 'GWALLET_B',
+              academyId: 'acad-1',
+              addedAt: 222,
+              addedBy: ADMIN,
+            },
           ],
         },
       ],
@@ -130,7 +140,14 @@ describe('GET /api/admin/academies/rollup', () => {
           name: 'FC Sahel',
           ownerWallet: 'GOWNER1',
           createdAt: 1,
-          members: [{ wallet: 'GWALLET_A', academyId: 'acad-1', addedAt: 1, addedBy: ADMIN }],
+          members: [
+            {
+              wallet: 'GWALLET_A',
+              academyId: 'acad-1',
+              addedAt: 1,
+              addedBy: ADMIN,
+            },
+          ],
         },
       ],
     });

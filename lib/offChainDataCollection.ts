@@ -228,7 +228,8 @@ export async function deleteUserData(wallet: string): Promise<{
   removed.activeUploadSessions = await clearSessionsForWallet(wallet);
 
   // Retained-not-deleted: see AdminAuditStore.anonymizeWallet's doc comment.
-  anonymized.adminAuditLog = AdminAuditStore.getInstance().anonymizeWallet(wallet);
+  anonymized.adminAuditLog =
+    AdminAuditStore.getInstance().anonymizeWallet(wallet);
 
   return { removed, anonymized };
 }

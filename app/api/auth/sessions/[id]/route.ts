@@ -43,9 +43,7 @@ export async function DELETE(
   }
 
   const store = SessionStore.getInstance();
-  const owned = store
-    .listForWallet(wallet)
-    .some((row) => row.id === params.id);
+  const owned = store.listForWallet(wallet).some((row) => row.id === params.id);
   if (!owned) {
     return withRequestId(
       NextResponse.json({ error: 'Session not found' }, { status: 404 }),
@@ -62,10 +60,7 @@ export async function DELETE(
   const revoked = store.revoke(params.id);
   if (!revoked) {
     return withRequestId(
-      NextResponse.json(
-        { error: 'Session already revoked' },
-        { status: 409 },
-      ),
+      NextResponse.json({ error: 'Session already revoked' }, { status: 409 }),
       log.requestId,
     );
   }

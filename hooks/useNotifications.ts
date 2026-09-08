@@ -46,18 +46,14 @@ export function useNotifications(wallet: string | null) {
     error: readIdsError,
     isValidating: readIdsValidating,
     mutate: mutateReadIds,
-  } = useSWR<number[]>(
-    readIdsKey(wallet),
-    fetchReadNotificationIds,
-    {
-      dedupingInterval: 15_000,
-      revalidateOnFocus: false,
-      refreshInterval: 60_000,
-      errorRetryCount: 2,
-      // Suppress fetch when there is no wallet — SWR only fetches for non-null keys
-      // (readIdsKey already returns null when wallet is null).
-    },
-  );
+  } = useSWR<number[]>(readIdsKey(wallet), fetchReadNotificationIds, {
+    dedupingInterval: 15_000,
+    revalidateOnFocus: false,
+    refreshInterval: 60_000,
+    errorRetryCount: 2,
+    // Suppress fetch when there is no wallet — SWR only fetches for non-null keys
+    // (readIdsKey already returns null when wallet is null).
+  });
 
   // Derive notifications by combining the event cache with the read-id set.
   // useMemo keeps this stable across re-renders when neither input changes.
@@ -70,27 +66,27 @@ export function useNotifications(wallet: string | null) {
     }));
   }, [eventCache.events, readIds, wallet]);
 
-  const notifications = applyNotificationPreferences(allNotifications, preferences);
+  const notifications = applyNotificationPreferences(
+    allNotifications,
+    preferences,
+  );
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   // Loading: true while either the event cache or read-ids haven't resolved yet.
-  const loading = (eventCache.loading && !eventCache.events.length) ||
+  const loading =
+    (eventCache.loading && !eventCache.events.length) ||
     (readIdsValidating && readIds === undefined && wallet !== null);
 
   // Surface the first error we encounter.
-  const error =
-    eventCache.error ?? readIdsError?.message ?? null;
+  const error = eventCache.error ?? readIdsError?.message ?? null;
 
   const markRead = useCallback(
     async (id: number) => {
       // Optimistic update: flip the targeted notification to read in-cache.
-      mutateReadIds(
-        (current) => {
-          const existing = current ?? [];
-          return existing.includes(id) ? existing : [...existing, id];
-        },
-        false,
-      );
+      mutateReadIds((current) => {
+        const existing = current ?? [];
+        return existing.includes(id) ? existing : [...existing, id];
+      }, false);
       try {
         await markNotificationsRead([id]);
       } finally {
@@ -105,14 +101,11 @@ export function useNotifications(wallet: string | null) {
     const unreadIds = notifications.filter((n) => !n.read).map((n) => n.id);
     if (unreadIds.length === 0) return;
     // Optimistic update: add all unread IDs to the read set.
-    mutateReadIds(
-      (current) => {
-        const existing = current ?? [];
-        const toAdd = unreadIds.filter((id) => !existing.includes(id));
-        return toAdd.length > 0 ? [...existing, ...toAdd] : existing;
-      },
-      false,
-    );
+    mutateReadIds((current) => {
+      const existing = current ?? [];
+      const toAdd = unreadIds.filter((id) => !existing.includes(id));
+      return toAdd.length > 0 ? [...existing, ...toAdd] : existing;
+    }, false);
     try {
       await markNotificationsRead(unreadIds);
     } finally {

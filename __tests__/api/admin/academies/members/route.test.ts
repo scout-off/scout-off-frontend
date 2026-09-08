@@ -61,10 +61,9 @@ describe('POST /api/admin/academies/:id/members', () => {
   });
 
   it('returns 400 when wallet is missing', async () => {
-    const res = await POST(
-      makeRequest('1', { cookie: ADMIN, body: {} }),
-      { params: { id: '1' } },
-    );
+    const res = await POST(makeRequest('1', { cookie: ADMIN, body: {} }), {
+      params: { id: '1' },
+    });
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toMatch(/wallet/i);
@@ -83,7 +82,9 @@ describe('POST /api/admin/academies/:id/members', () => {
     const res = await POST(
       makeRequest('1', {
         cookie: ADMIN,
-        body: { wallet: 'XBVZP6CRCFMIQVXZLUVBZXGTM3ZJDZ55ZRR62UYAF4ODAHKJHTHAAAA' },
+        body: {
+          wallet: 'XBVZP6CRCFMIQVXZLUVBZXGTM3ZJDZ55ZRR62UYAF4ODAHKJHTHAAAA',
+        },
       }),
       { params: { id: '1' } },
     );
@@ -110,7 +111,9 @@ describe('POST /api/admin/academies/:id/members', () => {
     const res = await POST(
       makeRequest('1', {
         cookie: ADMIN,
-        body: { wallet: 'G1VZP6CRCFMIQVXZLUVBZXGTM3ZJDZ55ZRR62UYAF4ODAHKJHTHAAAA' },
+        body: {
+          wallet: 'G1VZP6CRCFMIQVXZLUVBZXGTM3ZJDZ55ZRR62UYAF4ODAHKJHTHAAAA',
+        },
       }),
       { params: { id: '1' } },
     );

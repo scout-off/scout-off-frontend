@@ -79,15 +79,23 @@ describe('WatchlistStore address normalization', () => {
 
   it('normalizes player addresses to uppercase before storage', () => {
     // Add with lowercase
-    store.add('GSCOUT', 'gabc123def456ghi789jkl012mno345pqr678stu901vwx234yz567');
+    store.add(
+      'GSCOUT',
+      'gabc123def456ghi789jkl012mno345pqr678stu901vwx234yz567',
+    );
     // Add with mixed case
-    store.add('GSCOUT', 'GABC123DEF456GHI789JKL012MNO345PQR678STU901VWX234YZ567');
+    store.add(
+      'GSCOUT',
+      'GABC123DEF456GHI789JKL012MNO345PQR678STU901VWX234YZ567',
+    );
 
     const entries = store.list('GSCOUT');
     // Should only have 1 entry because addresses are normalized to same value
     expect(entries).toHaveLength(1);
     // Verify it's stored as uppercase
-    expect(entries[0].playerId).toBe('GABC123DEF456GHI789JKL012MNO345PQR678STU901VWX234YZ567');
+    expect(entries[0].playerId).toBe(
+      'GABC123DEF456GHI789JKL012MNO345PQR678STU901VWX234YZ567',
+    );
   });
 
   it('normalizes scout wallet addresses to uppercase before storage', () => {

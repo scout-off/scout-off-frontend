@@ -34,9 +34,7 @@ export const savedSearchMigrations: Migration[] = [
         name: string;
       }[];
       if (!columns.some((c) => c.name === 'last_viewed_at')) {
-        db.exec(
-          'ALTER TABLE saved_search ADD COLUMN last_viewed_at INTEGER',
-        );
+        db.exec('ALTER TABLE saved_search ADD COLUMN last_viewed_at INTEGER');
         db.exec(
           'UPDATE saved_search SET last_viewed_at = created_at WHERE last_viewed_at IS NULL',
         );

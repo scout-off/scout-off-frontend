@@ -275,8 +275,7 @@ describe('i18n.ts', () => {
 
       discoveredLocales.forEach((locale) => {
         if (locale in messageFilesMap) {
-          const msgs =
-            messageFilesMap[locale as keyof typeof messageFilesMap];
+          const msgs = messageFilesMap[locale as keyof typeof messageFilesMap];
           expect(msgs).toBeDefined();
           expect(Object.keys(msgs).length).toBeGreaterThan(0);
         }

@@ -33,7 +33,7 @@ describe('requireAdminWallet', () => {
 
   function createMockRequest(cookieValue: string | null): NextRequest {
     const req = new NextRequest('http://localhost:3000/api/admin/test');
-    
+
     // Override cookies
     req.cookies = {
       get: jest.fn((name: string) => {
@@ -182,14 +182,14 @@ describe('requireAdminWallet', () => {
       process.env.NEXT_PUBLIC_ADMIN_ADDRESS = firstAdmin;
       const req1 = createMockRequest(firstAdmin);
       (getSessionWallet as jest.Mock).mockReturnValue(firstAdmin);
-      
+
       const result1 = requireAdminWallet(req1);
       expect(result1).toBe(firstAdmin);
 
       process.env.NEXT_PUBLIC_ADMIN_ADDRESS = secondAdmin;
       const req2 = createMockRequest(secondAdmin);
       (getSessionWallet as jest.Mock).mockReturnValue(secondAdmin);
-      
+
       const result2 = requireAdminWallet(req2);
       expect(result2).toBe(secondAdmin);
 

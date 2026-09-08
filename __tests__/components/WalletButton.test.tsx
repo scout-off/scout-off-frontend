@@ -66,9 +66,7 @@ describe('WalletButton — wallet-connect modal', () => {
   it('renders the LOBSTR option as disabled', async () => {
     renderWalletButton();
 
-    const lobstrButton = (await screen.findByText('LOBSTR')).closest(
-      'button',
-    );
+    const lobstrButton = (await screen.findByText('LOBSTR')).closest('button');
 
     expect(lobstrButton).not.toBeNull();
     expect(lobstrButton).toBeDisabled();
@@ -154,8 +152,7 @@ describe('WalletButton — disconnected state', () => {
 });
 
 describe('WalletButton — connected state', () => {
-  const PUBLIC_KEY =
-    'GCONNECTEDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+  const PUBLIC_KEY = 'GCONNECTEDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
 
   beforeEach(() => {
     mockUseWallet.mockReturnValue({

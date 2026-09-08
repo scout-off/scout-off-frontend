@@ -69,9 +69,7 @@ export class ReconciliationHistoryStore {
         'RECONCILIATION_HISTORY_DB_PATH',
         reconciliationHistoryMigrations,
       );
-      ReconciliationHistoryStore._instance = new ReconciliationHistoryStore(
-        db,
-      );
+      ReconciliationHistoryStore._instance = new ReconciliationHistoryStore(db);
     }
     return ReconciliationHistoryStore._instance;
   }

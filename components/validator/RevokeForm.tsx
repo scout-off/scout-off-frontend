@@ -6,7 +6,11 @@ import { useValidator } from '@/hooks/useValidator';
 import useIsPaused from '@/hooks/useIsPaused';
 import { buildRevokeMilestone } from '@/lib/contract';
 import { parseContractError } from '@/lib/contractErrorMessage';
-import { TransactionFailedError, TransactionTimeoutError, pollTransaction } from '@/lib/stellar';
+import {
+  TransactionFailedError,
+  TransactionTimeoutError,
+  pollTransaction,
+} from '@/lib/stellar';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import type { Player } from '@/types';
 
@@ -15,7 +19,12 @@ interface RevokeFormProps {
   onSuccess: () => void;
 }
 
-type ConfirmationState = 'idle' | 'confirming' | 'confirmed' | 'failed-on-chain' | 'timed-out';
+type ConfirmationState =
+  | 'idle'
+  | 'confirming'
+  | 'confirmed'
+  | 'failed-on-chain'
+  | 'timed-out';
 
 interface RevokeState {
   txHash: string | null;
@@ -64,10 +73,14 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
     if (!selected || !player) return;
     try {
       setTxError(null);
-      setRevokeState({ txHash: null, confirmationState: 'confirming', error: null });
-      
+      setRevokeState({
+        txHash: null,
+        confirmationState: 'confirming',
+        error: null,
+      });
+
       const result = await revokeMilestone(player.id, selected);
-      
+
       if (result.hash) {
         setRevokeState({
           txHash: result.hash,
@@ -77,7 +90,11 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
         // Wait a moment before resetting so UI shows success
         setTimeout(() => {
           onSuccess();
-          setRevokeState({ txHash: null, confirmationState: 'idle', error: null });
+          setRevokeState({
+            txHash: null,
+            confirmationState: 'idle',
+            error: null,
+          });
           setSelected(null);
         }, 1500);
       }
@@ -86,13 +103,15 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
         setRevokeState({
           txHash: (err as any).hash || revokeState.txHash,
           confirmationState: 'failed-on-chain',
-          error: 'Transaction failed on-chain. Please verify the milestone still exists and try again.',
+          error:
+            'Transaction failed on-chain. Please verify the milestone still exists and try again.',
         });
       } else if (err instanceof TransactionTimeoutError) {
         setRevokeState({
           txHash: (err as any).hash || revokeState.txHash,
           confirmationState: 'timed-out',
-          error: 'Confirmation timed out after 50 seconds. The transaction may still confirm later. Check the transaction hash on the blockchain explorer.',
+          error:
+            'Confirmation timed out after 50 seconds. The transaction may still confirm later. Check the transaction hash on the blockchain explorer.',
         });
       } else {
         const msg = parseContractError(err);
@@ -166,7 +185,11 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
             <button
               type="button"
               onClick={() => {
-                setRevokeState({ txHash: null, confirmationState: 'idle', error: null });
+                setRevokeState({
+                  txHash: null,
+                  confirmationState: 'idle',
+                  error: null,
+                });
               }}
               className="mt-2 text-xs underline hover:opacity-80"
             >
@@ -192,7 +215,11 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
             <button
               type="button"
               onClick={() => {
-                setRevokeState({ txHash: null, confirmationState: 'idle', error: null });
+                setRevokeState({
+                  txHash: null,
+                  confirmationState: 'idle',
+                  error: null,
+                });
               }}
               className="mt-2 text-xs underline hover:opacity-80"
             >
@@ -287,12 +314,17 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
   const handleConfirm = async () => {
     setIsLoading(true);
     setError(null);
-    setRevokeState({ txHash: null, confirmationState: 'confirming', error: null });
+    setRevokeState({
+      txHash: null,
+      confirmationState: 'confirming',
+      error: null,
+    });
     try {
       const xdr = await buildRevokeMilestone(publicKey!, playerId, milestoneId);
       const result = await signAndSubmit(xdr);
-      const hash = typeof result === 'string' ? result : (result as any)?.hash ?? null;
-      
+      const hash =
+        typeof result === 'string' ? result : ((result as any)?.hash ?? null);
+
       if (hash) {
         setRevokeState({
           txHash: hash,
@@ -303,7 +335,11 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
           onSuccess();
           setPlayerId('');
           setMilestoneId('');
-          setRevokeState({ txHash: null, confirmationState: 'idle', error: null });
+          setRevokeState({
+            txHash: null,
+            confirmationState: 'idle',
+            error: null,
+          });
         }, 1500);
       }
     } catch (err) {
@@ -311,13 +347,15 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
         setRevokeState({
           txHash: (err as any).hash || revokeState.txHash,
           confirmationState: 'failed-on-chain',
-          error: 'Transaction failed on-chain. Please verify the milestone still exists and try again.',
+          error:
+            'Transaction failed on-chain. Please verify the milestone still exists and try again.',
         });
       } else if (err instanceof TransactionTimeoutError) {
         setRevokeState({
           txHash: (err as any).hash || revokeState.txHash,
           confirmationState: 'timed-out',
-          error: 'Confirmation timed out after 50 seconds. The transaction may still confirm later. Check the transaction hash on the blockchain explorer.',
+          error:
+            'Confirmation timed out after 50 seconds. The transaction may still confirm later. Check the transaction hash on the blockchain explorer.',
         });
       } else {
         setError(parseContractError(err));

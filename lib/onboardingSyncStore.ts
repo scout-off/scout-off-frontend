@@ -25,7 +25,11 @@
  */
 import type { PlayerVitals } from '@/types';
 
-export type OnboardingSyncStatus = 'pending' | 'syncing' | 'complete' | 'failed';
+export type OnboardingSyncStatus =
+  | 'pending'
+  | 'syncing'
+  | 'complete'
+  | 'failed';
 
 export interface PendingOnboardingSubmission {
   /** Also the IndexedDB record key. */
@@ -131,7 +135,8 @@ export async function getOnboardingSubmission(
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readonly');
     const req = tx.objectStore(STORE_NAME).get(wallet);
-    req.onsuccess = () => resolve((req.result as PendingOnboardingSubmission) ?? null);
+    req.onsuccess = () =>
+      resolve((req.result as PendingOnboardingSubmission) ?? null);
     req.onerror = () => reject(req.error);
   });
 }
@@ -151,7 +156,8 @@ export async function getSyncableSubmissions(): Promise<
     (resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readonly');
       const req = tx.objectStore(STORE_NAME).getAll();
-      req.onsuccess = () => resolve((req.result as PendingOnboardingSubmission[]) ?? []);
+      req.onsuccess = () =>
+        resolve((req.result as PendingOnboardingSubmission[]) ?? []);
       req.onerror = () => reject(req.error);
     },
   );
@@ -194,7 +200,9 @@ export async function updateOnboardingSubmission(
 }
 
 /** Removes the queued record for `wallet` entirely (discard / cleanup). */
-export async function deleteOnboardingSubmission(wallet: string): Promise<void> {
+export async function deleteOnboardingSubmission(
+  wallet: string,
+): Promise<void> {
   if (!isIndexedDbAvailable()) return;
   const db = await getDb();
 

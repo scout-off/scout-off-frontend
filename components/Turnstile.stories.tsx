@@ -2,7 +2,8 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { useLayoutEffect } from 'react';
 import Turnstile from './ui/Turnstile';
 
-const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? 'storybook-site-key';
+const SITE_KEY =
+  process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? 'storybook-site-key';
 
 const meta: Meta<typeof Turnstile> = {
   title: 'Components/Turnstile',

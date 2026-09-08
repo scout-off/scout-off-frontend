@@ -128,7 +128,10 @@ export async function POST(req: NextRequest) {
   await Promise.all(
     eligible.map(async (record) => {
       // Safety guard: skip if this CID is still referenced as current
-      if (currentCidsByPlayer.size > 0 && isCidStillReferenced(record.cid, currentCidsByPlayer)) {
+      if (
+        currentCidsByPlayer.size > 0 &&
+        isCidStillReferenced(record.cid, currentCidsByPlayer)
+      ) {
         skipped.push(record.cid);
         return;
       }

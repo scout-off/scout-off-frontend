@@ -25,9 +25,7 @@ function formatTimestamp(ms: number): string {
 export default function ActiveSessions() {
   const { isAuthenticated, disconnect } = useWallet();
   const { show } = useToast();
-  const [sessions, setSessions] = useState<ActiveSessionSummary[] | null>(
-    null,
-  );
+  const [sessions, setSessions] = useState<ActiveSessionSummary[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [revokingId, setRevokingId] = useState<string | null>(null);
@@ -68,14 +66,22 @@ export default function ActiveSessions() {
 
       if (session.isCurrent) {
         disconnect();
-        show({ message: 'Session revoked — you have been logged out', variant: 'success', duration: 6000 });
+        show({
+          message: 'Session revoked — you have been logged out',
+          variant: 'success',
+          duration: 6000,
+        });
         return;
       }
 
       setSessions((prev) => prev?.filter((s) => s.id !== session.id) ?? null);
       show({ message: 'Session revoked', variant: 'success', duration: 5000 });
     } catch {
-      show({ message: 'Failed to revoke session', variant: 'error', duration: 6000 });
+      show({
+        message: 'Failed to revoke session',
+        variant: 'error',
+        duration: 6000,
+      });
     } finally {
       setRevokingId(null);
     }

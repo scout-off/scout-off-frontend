@@ -90,9 +90,7 @@ describe('PlatformAnalyticsCharts', () => {
 
     expect(screen.getByText('No analytics data yet')).toBeInTheDocument();
     expect(
-      screen.getByText(
-        /charts will populate as players register/i,
-      ),
+      screen.getByText(/charts will populate as players register/i),
     ).toBeInTheDocument();
   });
 
@@ -163,9 +161,7 @@ describe('PlatformAnalyticsCharts', () => {
       target: { value: '2024-01-01' },
     });
 
-    expect(
-      screen.getByRole('button', { name: /clear/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /clear/i })).toBeInTheDocument();
   });
 
   it('clears both date inputs when the Clear button is clicked', () => {

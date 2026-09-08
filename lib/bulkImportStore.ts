@@ -65,7 +65,9 @@ function openDb(): Promise<IDBDatabase> {
           keyPath: 'sessionId',
         });
         store.createIndex('fileHash', 'fileHash', { unique: false });
-        store.createIndex('lastActivityAt', 'lastActivityAt', { unique: false });
+        store.createIndex('lastActivityAt', 'lastActivityAt', {
+          unique: false,
+        });
       }
     };
 

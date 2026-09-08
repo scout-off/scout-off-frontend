@@ -178,8 +178,8 @@ describe('useContractEvents – polling fallback (no EventSource)', () => {
     // With the fix, the second call uses order=asc&cursor=10 so Horizon
     // returns op '11' — something that was not present at bootstrap time.
     mockFetchSequence([
-      [makeOp('10')],   // bootstrap (order=desc, no cursor) → seeds cursor='10'
-      [makeOp('11')],   // forward poll (order=asc, cursor='10') → new op
+      [makeOp('10')], // bootstrap (order=desc, no cursor) → seeds cursor='10'
+      [makeOp('11')], // forward poll (order=asc, cursor='10') → new op
     ]);
 
     const { result } = renderHook(() => useContractEvents(CONTRACT));
@@ -216,8 +216,8 @@ describe('useContractEvents – polling fallback (no EventSource)', () => {
 
     mockFetchSequence([
       [bootstrapOp], // bootstrap → cursor='1'
-      page1,         // forward poll #1 (20 ops, full page) → cursor='21'
-      page2,         // forward poll #2 drain (5 ops, not full) → cursor='26'
+      page1, // forward poll #1 (20 ops, full page) → cursor='21'
+      page2, // forward poll #2 drain (5 ops, not full) → cursor='26'
     ]);
 
     const { result } = renderHook(() => useContractEvents(CONTRACT));
@@ -244,7 +244,7 @@ describe('useContractEvents – polling fallback (no EventSource)', () => {
     // Both the bootstrap and the subsequent forward poll include op '5'
     // (which would happen if Horizon returns an already-seen record).
     mockFetchSequence([
-      [makeOp('5')],           // bootstrap
+      [makeOp('5')], // bootstrap
       [makeOp('5'), makeOp('6')], // forward poll overlaps with bootstrap op
     ]);
 
@@ -282,8 +282,8 @@ describe('useContractEvents – polling fallback (no EventSource)', () => {
 
   it('prepends new events to the top of the list (newest-first)', async () => {
     mockFetchSequence([
-      [makeOp('6')],  // bootstrap
-      [makeOp('7')],  // forward poll
+      [makeOp('6')], // bootstrap
+      [makeOp('7')], // forward poll
     ]);
 
     const { result } = renderHook(() => useContractEvents(CONTRACT));
@@ -325,9 +325,9 @@ describe('useContractEvents – polling fallback (no EventSource)', () => {
   // ── AC-4 continued: correct cursor advance after fallback starts ───────
   it('AC-4: cursor advances correctly after polling is triggered by absent EventSource', async () => {
     mockFetchSequence([
-      [makeOp('50')],   // bootstrap → cursor='50'
-      [makeOp('51')],   // forward poll (asc, cursor='50')
-      [makeOp('52')],   // forward poll (asc, cursor='51')
+      [makeOp('50')], // bootstrap → cursor='50'
+      [makeOp('51')], // forward poll (asc, cursor='50')
+      [makeOp('52')], // forward poll (asc, cursor='51')
     ]);
 
     const { result } = renderHook(() => useContractEvents(CONTRACT));
@@ -410,19 +410,27 @@ describe('useContractEvents – SSE path with reconnect / backoff', () => {
     const { result } = renderHook(() => useContractEvents(CONTRACT));
     const first = MockEventSource.instances[0];
 
-    act(() => { first.emit('open'); });
+    act(() => {
+      first.emit('open');
+    });
     expect(result.current.isLive).toBe(true);
 
-    act(() => { first.emit('error'); });
+    act(() => {
+      first.emit('error');
+    });
     expect(result.current.isLive).toBe(false);
     expect(first.closed).toBe(true);
     // No immediate reconnect — it is backed off.
     expect(MockEventSource.instances).toHaveLength(1);
 
-    act(() => { jest.advanceTimersByTime(BASE_RECONNECT_DELAY_MS); });
+    act(() => {
+      jest.advanceTimersByTime(BASE_RECONNECT_DELAY_MS);
+    });
     expect(MockEventSource.instances).toHaveLength(2);
 
-    act(() => { MockEventSource.instances[1].emit('open'); });
+    act(() => {
+      MockEventSource.instances[1].emit('open');
+    });
     expect(result.current.isLive).toBe(true);
   });
 
@@ -435,9 +443,13 @@ describe('useContractEvents – SSE path with reconnect / backoff', () => {
     for (let attempt = 0; attempt <= MAX_RECONNECT_ATTEMPTS; attempt += 1) {
       const current =
         MockEventSource.instances[MockEventSource.instances.length - 1];
-      act(() => { current.emit('error'); });
+      act(() => {
+        current.emit('error');
+      });
       if (attempt < MAX_RECONNECT_ATTEMPTS) {
-        act(() => { jest.runOnlyPendingTimers(); });
+        act(() => {
+          jest.runOnlyPendingTimers();
+        });
       }
     }
 
@@ -450,8 +462,8 @@ describe('useContractEvents – SSE path with reconnect / backoff', () => {
   // ── AC-4 continued: cursor advances after SSE-exhausted fallback ───────
   it('AC-4: cursor advances correctly after polling kicks in via SSE exhaustion', async () => {
     mockFetchSequence([
-      [makeOp('200')],   // bootstrap → cursor='200'
-      [makeOp('201')],   // forward poll (asc, cursor='200')
+      [makeOp('200')], // bootstrap → cursor='200'
+      [makeOp('201')], // forward poll (asc, cursor='200')
     ]);
 
     renderHook(() => useContractEvents(CONTRACT));
@@ -460,9 +472,13 @@ describe('useContractEvents – SSE path with reconnect / backoff', () => {
     for (let attempt = 0; attempt <= MAX_RECONNECT_ATTEMPTS; attempt += 1) {
       const current =
         MockEventSource.instances[MockEventSource.instances.length - 1];
-      act(() => { current.emit('error'); });
+      act(() => {
+        current.emit('error');
+      });
       if (attempt < MAX_RECONNECT_ATTEMPTS) {
-        act(() => { jest.runOnlyPendingTimers(); });
+        act(() => {
+          jest.runOnlyPendingTimers();
+        });
       }
     }
 
@@ -539,9 +555,7 @@ describe('useContractEvents – MAX_PAGES_PER_POLL guard', () => {
     const bootstrapPage = [makeOp('1')];
     // MAX_PAGES_PER_POLL forward pages, each full (20 ops).
     const forwardPages = Array.from({ length: MAX_PAGES_PER_POLL }, (_, p) =>
-      Array.from({ length: 20 }, (_, i) =>
-        makeOp(String(p * 20 + i + 2)),
-      ),
+      Array.from({ length: 20 }, (_, i) => makeOp(String(p * 20 + i + 2))),
     );
 
     mockFetchSequence([bootstrapPage, ...forwardPages]);

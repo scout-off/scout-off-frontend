@@ -57,12 +57,21 @@ function mockOwnerLookup() {
   mockApi.get.mockImplementation((url: string) => {
     if (url === `/academies/owner/${OWNER}`) {
       return Promise.resolve({
-        data: [{ id: ACADEMY_A_ID, name: 'FC A', ownerWallet: OWNER, members: [] }],
+        data: [
+          { id: ACADEMY_A_ID, name: 'FC A', ownerWallet: OWNER, members: [] },
+        ],
       });
     }
     if (url === `/academies/owner/${OTHER_OWNER}`) {
       return Promise.resolve({
-        data: [{ id: ACADEMY_B_ID, name: 'FC B', ownerWallet: OTHER_OWNER, members: [] }],
+        data: [
+          {
+            id: ACADEMY_B_ID,
+            name: 'FC B',
+            ownerWallet: OTHER_OWNER,
+            members: [],
+          },
+        ],
       });
     }
     return Promise.resolve({ data: [] });

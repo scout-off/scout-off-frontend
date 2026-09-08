@@ -210,7 +210,7 @@ export default function AcademyManager() {
   }
 
   function quorumDraftFor(academy: Academy): string {
-    return quorumInputs[academy.id] ?? (academy.quorum?.toString() ?? '');
+    return quorumInputs[academy.id] ?? academy.quorum?.toString() ?? '';
   }
 
   /**
@@ -223,7 +223,8 @@ export default function AcademyManager() {
     const quorum = raw === '' ? null : Number(raw);
     if (quorum !== null && (!Number.isInteger(quorum) || quorum < 1)) {
       show({
-        message: 'Quorum must be a positive whole number, or empty to clear it.',
+        message:
+          'Quorum must be a positive whole number, or empty to clear it.',
         variant: 'error',
       });
       return;
@@ -248,7 +249,10 @@ export default function AcademyManager() {
         variant: 'success',
       });
     } catch (e: any) {
-      show({ message: e?.message ?? 'Failed to set quorum.', variant: 'error' });
+      show({
+        message: e?.message ?? 'Failed to set quorum.',
+        variant: 'error',
+      });
     } finally {
       setQuorumSaving(null);
     }
@@ -374,8 +378,7 @@ export default function AcademyManager() {
                         >
                           {rollupByAcademy[academy.id]!.approvedMilestones}{' '}
                           milestone
-                          {rollupByAcademy[academy.id]!.approvedMilestones !==
-                          1
+                          {rollupByAcademy[academy.id]!.approvedMilestones !== 1
                             ? 's'
                             : ''}{' '}
                           approved
@@ -471,11 +474,15 @@ export default function AcademyManager() {
                       {academy.members
                         .filter((m) => {
                           // Wallet address substring search
-                          const matchesSearch = searchQuery.trim() === '' ||
-                            m.wallet.toLowerCase().includes(searchQuery.toLowerCase());
+                          const matchesSearch =
+                            searchQuery.trim() === '' ||
+                            m.wallet
+                              .toLowerCase()
+                              .includes(searchQuery.toLowerCase());
 
                           // On-chain status filter
-                          const isNotOnChain = onChainStatus[m.wallet] === false;
+                          const isNotOnChain =
+                            onChainStatus[m.wallet] === false;
                           const matchesStatusFilter =
                             !showOnlyNotOnChain || isNotOnChain;
 
@@ -518,8 +525,11 @@ export default function AcademyManager() {
 
                     {/* Empty state when filtered */}
                     {academy.members.filter((m) => {
-                      const matchesSearch = searchQuery.trim() === '' ||
-                        m.wallet.toLowerCase().includes(searchQuery.toLowerCase());
+                      const matchesSearch =
+                        searchQuery.trim() === '' ||
+                        m.wallet
+                          .toLowerCase()
+                          .includes(searchQuery.toLowerCase());
                       const isNotOnChain = onChainStatus[m.wallet] === false;
                       const matchesStatusFilter =
                         !showOnlyNotOnChain || isNotOnChain;

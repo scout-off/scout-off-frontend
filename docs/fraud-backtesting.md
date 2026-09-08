@@ -3,9 +3,9 @@
 `lib/fraudDetection.ts` ships every threshold as a named constant that the
 design doc is explicit is **unvalidated** — reasoned starting points, not
 calibrated against real traffic. This harness lets you replay a historical
-window of referral + activity data through the heuristics and see what *would*
-have fired, at the current thresholds *or at hypothetical ones, without
-editing `lib/fraudDetection.ts` or deploying anything*.
+window of referral + activity data through the heuristics and see what _would_
+have fired, at the current thresholds _or at hypothetical ones, without
+editing `lib/fraudDetection.ts` or deploying anything_.
 
 It is **strictly offline and side-effect free**: it only calls the pure
 `analyzeReferralAbuse` / `analyzePayToContactAbuse` functions, never the

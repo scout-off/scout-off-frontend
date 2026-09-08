@@ -161,10 +161,10 @@ export default function AcademyOwnerRoster() {
           Your Academy Roster
         </h2>
         <p className="text-xs text-gray-400">
-          Add or remove signer wallets for the academy/academies you own.
-          Each signer must still be added as a validator by the platform
-          admin for its milestone approvals to be authorized on-chain — this
-          panel only manages the off-chain roster label.
+          Add or remove signer wallets for the academy/academies you own. Each
+          signer must still be added as a validator by the platform admin for
+          its milestone approvals to be authorized on-chain — this panel only
+          manages the off-chain roster label.
         </p>
         <ul className="flex flex-col gap-6">
           {academies.map((academy) => (

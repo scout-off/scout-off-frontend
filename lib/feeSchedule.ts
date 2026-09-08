@@ -53,7 +53,11 @@ export const CONTACT_FEE_XLM = 1;
  * Extracts a numeric fee from an unknown event data field if present.
  */
 function extractNumericFee(value: unknown): number | null {
-  if (typeof value === 'number' && !Number.isNaN(value) && Number.isFinite(value)) {
+  if (
+    typeof value === 'number' &&
+    !Number.isNaN(value) &&
+    Number.isFinite(value)
+  ) {
     return value;
   }
   if (typeof value === 'string' && value.trim() !== '') {
@@ -92,7 +96,8 @@ export function resolveSubscriptionFee(
     }
   }
 
-  const resolvedTier = tier ?? (typeof eventData?.tier === 'string' ? eventData.tier : 'basic');
+  const resolvedTier =
+    tier ?? (typeof eventData?.tier === 'string' ? eventData.tier : 'basic');
   return TIER_FEES_XLM[resolvedTier] ?? DEFAULT_SUBSCRIPTION_FEE_XLM;
 }
 

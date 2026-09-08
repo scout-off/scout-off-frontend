@@ -34,9 +34,7 @@ jest.mock('@/components/player/MilestoneTimeline', () => ({
     milestones: Milestone[];
     currentLevel: number;
   }) => (
-    <div data-testid="milestone-timeline">
-      {milestones.length} milestone(s)
-    </div>
+    <div data-testid="milestone-timeline">{milestones.length} milestone(s)</div>
   ),
 }));
 
@@ -82,7 +80,11 @@ function makePlayer(overrides: Partial<Player> = {}): Player {
       region: 'West Africa',
       nationality: 'Ghanaian',
     },
-    stats: { goals: playerCounter * 5, assists: playerCounter * 2, appearances: 30 },
+    stats: {
+      goals: playerCounter * 5,
+      assists: playerCounter * 2,
+      appearances: 30,
+    },
     ipfsHash: '',
     progressLevel: 1,
     milestones: [],
@@ -105,7 +107,9 @@ describe('PlayerCompareView', () => {
     const { container } = render(<PlayerCompareView players={[]} />);
     // The wrapping grid div is present but contains no columns.
     expect(container.querySelector('.grid')).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: /vitals/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('region', { name: /vitals/i }),
+    ).not.toBeInTheDocument();
   });
 
   // ── Loading state ────────────────────────────────────────────────────────
@@ -136,22 +140,54 @@ describe('PlayerCompareView', () => {
     expect(
       screen.getByRole('heading', { name: 'Kofi Mensah', level: 3 }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Player vitals' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('region', { name: 'Player vitals' }),
+    ).toBeInTheDocument();
   });
 
   // ── Multiple players side by side ────────────────────────────────────────
 
   it('renders one column per player when multiple players are supplied', () => {
     const players = [
-      makePlayer({ vitals: { name: 'Alpha', age: 20, position: 'ST', region: 'West Africa', nationality: 'Ghanaian' } }),
-      makePlayer({ vitals: { name: 'Beta', age: 22, position: 'GK', region: 'North Africa', nationality: 'Egyptian' } }),
-      makePlayer({ vitals: { name: 'Gamma', age: 19, position: 'CB', region: 'Southern Africa', nationality: 'South African' } }),
+      makePlayer({
+        vitals: {
+          name: 'Alpha',
+          age: 20,
+          position: 'ST',
+          region: 'West Africa',
+          nationality: 'Ghanaian',
+        },
+      }),
+      makePlayer({
+        vitals: {
+          name: 'Beta',
+          age: 22,
+          position: 'GK',
+          region: 'North Africa',
+          nationality: 'Egyptian',
+        },
+      }),
+      makePlayer({
+        vitals: {
+          name: 'Gamma',
+          age: 19,
+          position: 'CB',
+          region: 'Southern Africa',
+          nationality: 'South African',
+        },
+      }),
     ];
     render(<PlayerCompareView players={players} />);
 
-    expect(screen.getByRole('heading', { name: 'Alpha', level: 3 })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Beta', level: 3 })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Gamma', level: 3 })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Alpha', level: 3 }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Beta', level: 3 }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Gamma', level: 3 }),
+    ).toBeInTheDocument();
   });
 
   it('renders a vitals section for each player', () => {
@@ -166,18 +202,34 @@ describe('PlayerCompareView', () => {
   it('shows the correct age, position, region, and nationality for each player', () => {
     const players = [
       makePlayer({
-        vitals: { name: 'Amara', age: 21, position: 'LW', region: 'West Africa', nationality: 'Senegalese' },
+        vitals: {
+          name: 'Amara',
+          age: 21,
+          position: 'LW',
+          region: 'West Africa',
+          nationality: 'Senegalese',
+        },
       }),
       makePlayer({
-        vitals: { name: 'Tunde', age: 25, position: 'CB', region: 'West Africa', nationality: 'Nigerian' },
+        vitals: {
+          name: 'Tunde',
+          age: 25,
+          position: 'CB',
+          region: 'West Africa',
+          nationality: 'Nigerian',
+        },
       }),
     ];
     render(<PlayerCompareView players={players} />);
 
     // Each player's vitals should appear in their column.
-    const vitalsRegions = screen.getAllByRole('region', { name: 'Player vitals' });
+    const vitalsRegions = screen.getAllByRole('region', {
+      name: 'Player vitals',
+    });
     expect(within(vitalsRegions[0]).getByText('21')).toBeInTheDocument();
-    expect(within(vitalsRegions[0]).getByText('Senegalese')).toBeInTheDocument();
+    expect(
+      within(vitalsRegions[0]).getByText('Senegalese'),
+    ).toBeInTheDocument();
     expect(within(vitalsRegions[1]).getByText('25')).toBeInTheDocument();
     expect(within(vitalsRegions[1]).getByText('Nigerian')).toBeInTheDocument();
   });
@@ -213,13 +265,18 @@ describe('PlayerCompareView', () => {
     const player = makePlayer({ milestones, progressLevel: 2 });
     render(<PlayerCompareView players={[player]} />);
 
-    expect(screen.getByRole('region', { name: 'Milestones' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('region', { name: 'Milestones' }),
+    ).toBeInTheDocument();
     expect(screen.getByText('2 milestones')).toBeInTheDocument();
     expect(screen.getByTestId('milestone-timeline')).toBeInTheDocument();
   });
 
   it('uses the singular "milestone" label when a player has exactly 1 milestone', () => {
-    const player = makePlayer({ milestones: [makeMilestone()], progressLevel: 1 });
+    const player = makePlayer({
+      milestones: [makeMilestone()],
+      progressLevel: 1,
+    });
     render(<PlayerCompareView players={[player]} />);
 
     expect(screen.getByText('1 milestone')).toBeInTheDocument();
@@ -237,7 +294,13 @@ describe('PlayerCompareView', () => {
 
   it('renders an avatar image when a player has an ipfsHash', () => {
     const player = makePlayer({
-      vitals: { name: 'With Avatar', age: 22, position: 'ST', region: 'r', nationality: 'n' },
+      vitals: {
+        name: 'With Avatar',
+        age: 22,
+        position: 'ST',
+        region: 'r',
+        nationality: 'n',
+      },
       ipfsHash: 'QmAvatarCid',
     });
     render(<PlayerCompareView players={[player]} />);
@@ -249,11 +312,19 @@ describe('PlayerCompareView', () => {
 
   it('does not render an avatar image when ipfsHash is empty', () => {
     const player = makePlayer({
-      vitals: { name: 'No Avatar', age: 20, position: 'ST', region: 'r', nationality: 'n' },
+      vitals: {
+        name: 'No Avatar',
+        age: 20,
+        position: 'ST',
+        region: 'r',
+        nationality: 'n',
+      },
       ipfsHash: '',
     });
     render(<PlayerCompareView players={[player]} />);
 
-    expect(screen.queryByRole('img', { name: 'No Avatar' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('img', { name: 'No Avatar' }),
+    ).not.toBeInTheDocument();
   });
 });

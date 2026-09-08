@@ -7,7 +7,10 @@ jest.mock('@/lib/api', () => ({
   fetchAcademyForWallet: jest.fn(),
 }));
 
-import { GET, POST } from '@/app/api/milestones/[playerId]/[milestoneId]/endorsements/route';
+import {
+  GET,
+  POST,
+} from '@/app/api/milestones/[playerId]/[milestoneId]/endorsements/route';
 import { NextRequest } from 'next/server';
 import { getPlayer, checkIsValidator } from '@/lib/contract';
 import { fetchAcademyForWallet } from '@/lib/api';
@@ -29,7 +32,15 @@ function makeAcademy(overrides: Partial<Academy> = {}): Academy {
     name: 'FC Sahel',
     ownerWallet: APPROVER,
     createdAt: 1,
-    members: [{ wallet: APPROVER, academyId: 'academy-1', addedAt: 1, addedBy: 'GADMIN' }, { wallet: WALLET, academyId: 'academy-1', addedAt: 1, addedBy: 'GADMIN' }],
+    members: [
+      {
+        wallet: APPROVER,
+        academyId: 'academy-1',
+        addedAt: 1,
+        addedBy: 'GADMIN',
+      },
+      { wallet: WALLET, academyId: 'academy-1', addedAt: 1, addedBy: 'GADMIN' },
+    ],
     quorum: 2,
     ...overrides,
   };
@@ -66,7 +77,13 @@ beforeEach(() => {
   mockCheckIsValidator.mockResolvedValue(true);
   mockGetPlayer.mockResolvedValue({
     milestones: [
-      { id: 'milestone-1', description: 'x', evidenceHash: '', validator: APPROVER, timestamp: 1 },
+      {
+        id: 'milestone-1',
+        description: 'x',
+        evidenceHash: '',
+        validator: APPROVER,
+        timestamp: 1,
+      },
     ],
   });
 });
@@ -85,7 +102,11 @@ describe('GET /api/milestones/:playerId/:milestoneId/endorsements', () => {
   });
 
   it('lists recorded endorsements', async () => {
-    MilestoneEndorsementStore.getInstance().add('player-1', 'milestone-1', APPROVER);
+    MilestoneEndorsementStore.getInstance().add(
+      'player-1',
+      'milestone-1',
+      APPROVER,
+    );
     const res = await GET(makeGetRequest(), params);
     const body = await res.json();
     expect(body.endorsements).toHaveLength(1);
@@ -120,7 +141,10 @@ describe('POST /api/milestones/:playerId/:milestoneId/endorsements', () => {
     const res = await POST(makePostRequest(authedCookie()), params);
     expect(res.status).toBe(403);
     expect(
-      MilestoneEndorsementStore.getInstance().listFor('player-1', 'milestone-1'),
+      MilestoneEndorsementStore.getInstance().listFor(
+        'player-1',
+        'milestone-1',
+      ),
     ).toHaveLength(0);
   });
 
@@ -146,7 +170,10 @@ describe('POST /api/milestones/:playerId/:milestoneId/endorsements', () => {
     await POST(makePostRequest(authedCookie()), params);
 
     expect(
-      MilestoneEndorsementStore.getInstance().listFor('player-1', 'milestone-1'),
+      MilestoneEndorsementStore.getInstance().listFor(
+        'player-1',
+        'milestone-1',
+      ),
     ).toHaveLength(1);
   });
 });

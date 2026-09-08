@@ -382,8 +382,8 @@ describe('useXlmUsdRate — unmount safety', () => {
       await flushPromises();
     });
 
-    const unmountWarnings = consoleError.mock.calls.filter(([msg]) =>
-      typeof msg === 'string' && /unmounted component/i.test(msg),
+    const unmountWarnings = consoleError.mock.calls.filter(
+      ([msg]) => typeof msg === 'string' && /unmounted component/i.test(msg),
     );
     expect(unmountWarnings).toHaveLength(0);
 

@@ -21,7 +21,11 @@ export async function GET(req: NextRequest) {
   const latest = FraudFlagsStore.getInstance().getLatestRun();
 
   if (!latest) {
-    return NextResponse.json({ evaluatedAt: null, highSeverityCount: 0, trigger: null });
+    return NextResponse.json({
+      evaluatedAt: null,
+      highSeverityCount: 0,
+      trigger: null,
+    });
   }
 
   return NextResponse.json({

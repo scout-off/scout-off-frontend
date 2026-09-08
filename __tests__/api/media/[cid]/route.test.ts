@@ -384,32 +384,29 @@ describe('GET /api/media/[cid] — Range with signature/referrer gating', () => 
 });
 
 describe('GET /api/media/[cid] — startup latency (no-regression guard)', () => {
-  it(
-    'delivers the first byte quickly for a representative 20MB clip (full-file, no Range)',
-    async () => {
-      const firstByte = new Uint8Array([0x00]);
-      mockFetchOnce({
-        ok: true,
-        status: 200,
-        body: makeBody([firstByte]),
-        headers: new Headers({
-          'content-type': 'video/mp4',
-          'content-length': '20971520',
-        }),
-      } as unknown as Response);
+  it('delivers the first byte quickly for a representative 20MB clip (full-file, no Range)', async () => {
+    const firstByte = new Uint8Array([0x00]);
+    mockFetchOnce({
+      ok: true,
+      status: 200,
+      body: makeBody([firstByte]),
+      headers: new Headers({
+        'content-type': 'video/mp4',
+        'content-length': '20971520',
+      }),
+    } as unknown as Response);
 
-      const start = performance.now();
-      const req = makeRequest('http://localhost:3000/api/media/QmClip.mp4');
-      const res = await GET(req, { params: { cid: 'QmClip.mp4' } });
-      const reader = res.body!.getReader();
-      await reader.read();
-      const elapsed = performance.now() - start;
+    const start = performance.now();
+    const req = makeRequest('http://localhost:3000/api/media/QmClip.mp4');
+    const res = await GET(req, { params: { cid: 'QmClip.mp4' } });
+    const reader = res.body!.getReader();
+    await reader.read();
+    const elapsed = performance.now() - start;
 
-      // Method: measure wall time from route handler entry to first body chunk
-      // via ReadableStream reader — same path browsers use for first-byte delivery.
-      // Budget: 500ms in unit tests (mocked upstream, no real network).
-      expect(elapsed).toBeLessThan(500);
-      expect(res.status).toBe(200);
-    },
-  );
+    // Method: measure wall time from route handler entry to first body chunk
+    // via ReadableStream reader — same path browsers use for first-byte delivery.
+    // Budget: 500ms in unit tests (mocked upstream, no real network).
+    expect(elapsed).toBeLessThan(500);
+    expect(res.status).toBe(200);
+  });
 });

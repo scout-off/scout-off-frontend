@@ -110,7 +110,11 @@ describe('GET /api/admin/audit-log/reconcile — history persistence & alerting'
 
     // A second, distinct mismatch shows up on top of the still-present pause one.
     mockGetValidators.mockResolvedValue([
-      { address: 'GNEWVALIDATOR000000000000000000000000000000000000000000', addedAt: 1, addedBy: 'x' },
+      {
+        address: 'GNEWVALIDATOR000000000000000000000000000000000000000000',
+        addedAt: 1,
+        addedBy: 'x',
+      },
     ]);
     await GET(makeAdminRequest());
 

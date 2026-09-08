@@ -167,7 +167,10 @@ export class UploadTrackingStore {
    * Excludes rows already marked cleaned so a repeated cleanup run doesn't
    * keep re-surfacing the same ones.
    */
-  getOrphanCandidates(graceMs: number, now: number = Date.now()): TrackedUpload[] {
+  getOrphanCandidates(
+    graceMs: number,
+    now: number = Date.now(),
+  ): TrackedUpload[] {
     const rows = this.db
       .prepare(
         `SELECT * FROM tracked_uploads
@@ -180,14 +183,18 @@ export class UploadTrackingStore {
 
   markCleaned(id: number, cleanedAt: number = Date.now()): void {
     this.db
-      .prepare('UPDATE tracked_uploads SET cleaned_at = @cleaned_at WHERE id = @id')
+      .prepare(
+        'UPDATE tracked_uploads SET cleaned_at = @cleaned_at WHERE id = @id',
+      )
       .run({ cleaned_at: cleanedAt, id });
   }
 
   /** Test/debug helper — every record for a given CID, newest first. */
   getByCid(cid: string): TrackedUpload[] {
     const rows = this.db
-      .prepare('SELECT * FROM tracked_uploads WHERE cid = ? ORDER BY created_at DESC')
+      .prepare(
+        'SELECT * FROM tracked_uploads WHERE cid = ? ORDER BY created_at DESC',
+      )
       .all(cid) as TrackedUploadRow[];
     return rows.map(rowToRecord);
   }

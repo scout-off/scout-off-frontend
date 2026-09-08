@@ -191,9 +191,7 @@ export function useOnboardingSync(wallet: string | null) {
     if (!('serviceWorker' in navigator)) return;
 
     const handleMessage = (event: MessageEvent) => {
-      const data = event.data as
-        | { type?: string; wallet?: string }
-        | undefined;
+      const data = event.data as { type?: string; wallet?: string } | undefined;
       if (
         (data?.type === 'ONBOARDING_SYNC_COMPLETE' ||
           data?.type === 'ONBOARDING_SYNC_FAILED') &&

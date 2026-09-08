@@ -66,9 +66,7 @@ describe('ValidatorActionLog', () => {
       screen.getByText('No validator actions recorded'),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
-        /milestone approvals and revocations will appear here/i,
-      ),
+      screen.getByText(/milestone approvals and revocations will appear here/i),
     ).toBeInTheDocument();
   });
 
@@ -251,7 +249,10 @@ describe('ValidatorActionLog', () => {
   });
 
   it('calls buildValidatorActionLogCsv with the current entries on export', () => {
-    const entries = [makeEntry(), makeEntry({ id: 'milestone_revoked-3', action: 'revoked' })];
+    const entries = [
+      makeEntry(),
+      makeEntry({ id: 'milestone_revoked-3', action: 'revoked' }),
+    ];
     mockUseValidatorActionLog.mockReturnValue(baseState({ entries }));
     render(<ValidatorActionLog />);
 

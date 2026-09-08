@@ -46,7 +46,8 @@ export async function POST(
     }
   }
 
-  const reason = rawReason !== undefined ? sanitizeTextInput(rawReason) : undefined;
+  const reason =
+    rawReason !== undefined ? sanitizeTextInput(rawReason) : undefined;
 
   const log = createRequestLogger(req);
   try {

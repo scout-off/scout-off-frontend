@@ -39,7 +39,7 @@ resulting design:
   an interval. `hooks/useAdminAuditLog.ts` hit the same gap for
   reconciliation and worked around it with a client-side `setInterval`
   while the audit log is open — not applicable here, since the whole point
-  is running *without* an admin's session open.
+  is running _without_ an admin's session open.
 - **This is a Next.js app deployed on Vercel** (see `next.config.js`,
   `next-pwa`, `@vercel/analytics`), which supports **Vercel Cron Jobs** —
   a scheduled HTTP GET against an API route, no extra infrastructure to

@@ -208,8 +208,7 @@ export function useChunkedUpload(): UseChunkedUploadResult {
         setPersistedSession(null);
         return {
           cid: null,
-          error:
-            'The upload session has expired. Please start a new upload.',
+          error: 'The upload session has expired. Please start a new upload.',
         };
       }
 

@@ -1,6 +1,10 @@
 'use client';
 import useSWR from 'swr';
-import { fetchEvents, type IndexedEvent, type IndexedEventType } from '@/lib/indexerClient';
+import {
+  fetchEvents,
+  type IndexedEvent,
+  type IndexedEventType,
+} from '@/lib/indexerClient';
 
 const MAX_PAGES = 10;
 const PAGE_SIZE = 200;
@@ -16,7 +20,10 @@ async function fetchAllEvents(): Promise<IndexedEvent[]> {
   const all: IndexedEvent[] = [];
   let cursor: number | undefined;
   for (let page = 0; page < MAX_PAGES; page++) {
-    const { events, nextCursor } = await fetchEvents({ limit: PAGE_SIZE, before: cursor });
+    const { events, nextCursor } = await fetchEvents({
+      limit: PAGE_SIZE,
+      before: cursor,
+    });
     all.push(...events);
     if (nextCursor === null || events.length === 0) break;
     cursor = nextCursor;

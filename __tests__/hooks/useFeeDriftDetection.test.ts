@@ -7,7 +7,9 @@ jest.mock('@/lib/contract', () => ({
   getContactFee: jest.fn(),
 }));
 
-const mockGetContactFee = getContactFee as jest.MockedFunction<typeof getContactFee>;
+const mockGetContactFee = getContactFee as jest.MockedFunction<
+  typeof getContactFee
+>;
 
 describe('useFeeDriftDetection', () => {
   beforeEach(() => {
@@ -26,7 +28,9 @@ describe('useFeeDriftDetection', () => {
     expect(result.current.hasDrift).toBe(true);
     expect(result.current.liveContactFee).toBe(2);
     expect(result.current.expectedContactFee).toBe(CONTACT_FEE_XLM);
-    expect(result.current.warningMessage).toContain('On-chain fee drift detected');
+    expect(result.current.warningMessage).toContain(
+      'On-chain fee drift detected',
+    );
     expect(result.current.warningMessage).toContain('currently 2 XLM');
     expect(result.current.error).toBeNull();
   });

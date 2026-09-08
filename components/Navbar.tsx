@@ -21,7 +21,8 @@ const SPONSORSHIP_LINK = { href: '/sponsorship', labelKey: 'nav.sponsorship' };
 
 export default function Navbar() {
   const { isPaused } = useContractStatus();
-  const { xlmBalance, isLoadingBalance, isAuthenticated, sessionMismatch } = useWallet();
+  const { xlmBalance, isLoadingBalance, isAuthenticated, sessionMismatch } =
+    useWallet();
   const { currency, setCurrency, supported } = useCurrencyPreference();
   const t = useTranslations();
   const router = useRouter();

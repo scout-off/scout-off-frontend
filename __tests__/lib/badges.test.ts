@@ -55,7 +55,13 @@ describe('getEarnedBadgeIds and getEarnedBadges', () => {
       it('is earned with exactly 1 milestone', () => {
         const player = createPlayer({
           milestones: [
-            { id: 'm1', description: 'Scored first goal', evidenceHash: 'QmEvidence1', validator: 'GVALIDATOR1', timestamp: 1704067200 },
+            {
+              id: 'm1',
+              description: 'Scored first goal',
+              evidenceHash: 'QmEvidence1',
+              validator: 'GVALIDATOR1',
+              timestamp: 1704067200,
+            },
           ],
         });
         expect(getEarnedBadgeIds(player)).toContain('first_milestone');
@@ -64,8 +70,20 @@ describe('getEarnedBadgeIds and getEarnedBadges', () => {
       it('is earned with more than 1 milestone', () => {
         const player = createPlayer({
           milestones: [
-            { id: 'm1', description: 'Milestone 1', evidenceHash: 'QmEvidence1', validator: 'GVALIDATOR1', timestamp: 1704067200 },
-            { id: 'm2', description: 'Milestone 2', evidenceHash: 'QmEvidence2', validator: 'GVALIDATOR1', timestamp: 1704153600 },
+            {
+              id: 'm1',
+              description: 'Milestone 1',
+              evidenceHash: 'QmEvidence1',
+              validator: 'GVALIDATOR1',
+              timestamp: 1704067200,
+            },
+            {
+              id: 'm2',
+              description: 'Milestone 2',
+              evidenceHash: 'QmEvidence2',
+              validator: 'GVALIDATOR1',
+              timestamp: 1704153600,
+            },
           ],
         });
         expect(getEarnedBadgeIds(player)).toContain('first_milestone');

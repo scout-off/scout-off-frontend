@@ -24,7 +24,10 @@ import {
 } from '@/lib/savedSearchClient';
 import { filterPlayers } from '@/lib/contract';
 import { useToast } from '@/components/ui/Toast';
-import { useSavedSearches, useSavedSearchNewCount } from '@/hooks/useSavedSearches';
+import {
+  useSavedSearches,
+  useSavedSearchNewCount,
+} from '@/hooks/useSavedSearches';
 
 const mockFetch = fetchSavedSearches as jest.Mock;
 const mockSave = saveSearch as jest.Mock;

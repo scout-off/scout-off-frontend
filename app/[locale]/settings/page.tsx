@@ -3,7 +3,15 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { ArrowLeft, Trash2, Shield, Bell, Download, LogOut, Laptop } from 'lucide-react';
+import {
+  ArrowLeft,
+  Trash2,
+  Shield,
+  Bell,
+  Download,
+  LogOut,
+  Laptop,
+} from 'lucide-react';
 import DataDeletionModal from '@/components/player/DataDeletionModal';
 import NotificationPreferencesPanel from '@/components/NotificationPreferencesPanel';
 import ActiveSessions from '@/components/ActiveSessions';
@@ -65,7 +73,8 @@ export default function SettingsPage({
       const contentDisposition = res.headers.get('Content-Disposition');
       const filenameMatch = contentDisposition?.match(/filename="?([^"]+)"?/);
       const filename =
-        filenameMatch?.[1] ?? `scoutoff-data-export-${new Date().toISOString().split('T')[0]}.json`;
+        filenameMatch?.[1] ??
+        `scoutoff-data-export-${new Date().toISOString().split('T')[0]}.json`;
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
@@ -74,9 +83,17 @@ export default function SettingsPage({
       anchor.click();
       document.body.removeChild(anchor);
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-      show({ message: t('data_export_success'), variant: 'success', duration: 6000 });
+      show({
+        message: t('data_export_success'),
+        variant: 'success',
+        duration: 6000,
+      });
     } catch {
-      show({ message: t('data_export_error'), variant: 'error', duration: 6000 });
+      show({
+        message: t('data_export_error'),
+        variant: 'error',
+        duration: 6000,
+      });
     } finally {
       setExporting(false);
     }
@@ -248,7 +265,9 @@ export default function SettingsPage({
                 className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-brand-green/40 bg-brand-green/10 px-5 py-2.5 text-sm font-semibold text-brand-green transition hover:bg-brand-green/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Download size={15} />
-                {exporting ? t('data_export_exporting') : t('data_export_button')}
+                {exporting
+                  ? t('data_export_exporting')
+                  : t('data_export_button')}
               </button>
             </div>
           </div>

@@ -79,9 +79,9 @@ Browser                          Next.js app                      Pinata
     stateless serverless deployment with no shared volume at all, this
     would need to move to object storage instead; that's an explicit,
     documented gap, not a silent one.
-  Either way, `GET /api/ipfs/upload/status` and a chunk landing on any
-  instance now answer correctly regardless of which instance received an
-  earlier chunk in the same session.
+    Either way, `GET /api/ipfs/upload/status` and a chunk landing on any
+    instance now answer correctly regardless of which instance received an
+    earlier chunk in the same session.
 - **Rate limiting**: `/init` and `/complete` share the whole-file route's
   scale (20/min); `/chunk` gets a much higher ceiling (600/min) since one
   legitimate upload issues many small chunk requests — sized generously

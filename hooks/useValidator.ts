@@ -69,7 +69,10 @@ export function useValidator(walletAddress?: string | null) {
   );
 
   const revokeMilestone = useCallback(
-    async (playerId: string, milestoneId: string): Promise<{ hash: string; confirmed: boolean }> => {
+    async (
+      playerId: string,
+      milestoneId: string,
+    ): Promise<{ hash: string; confirmed: boolean }> => {
       if (!publicKey) throw new Error('Wallet not connected');
       setLoading(true);
       setError(null);
@@ -90,18 +93,23 @@ export function useValidator(walletAddress?: string | null) {
           });
           return signedXdr;
         };
-        
+
         // For now, we'll fallback to using the regular signAndSubmit pattern
         // but we'll add explicit state tracking in the component
-        const xdr = await buildRevokeMilestone(publicKey, playerId, milestoneId);
+        const xdr = await buildRevokeMilestone(
+          publicKey,
+          playerId,
+          milestoneId,
+        );
         const result = await signAndSubmit(xdr);
-        const hash = typeof result === 'string' ? result : (result as any)?.hash ?? null;
-        
+        const hash =
+          typeof result === 'string' ? result : ((result as any)?.hash ?? null);
+
         // Invalidate the player cache so callers see updated progressLevel.
         await globalMutate(`player:${playerId}`);
         // Invalidate the milestones cache for this player.
         await globalMutate(`milestones:${playerId}`);
-        
+
         return { hash: hash || '', confirmed: true };
       } catch (e: any) {
         const msg = parseContractError(e);

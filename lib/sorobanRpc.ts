@@ -98,7 +98,10 @@ export async function submitSignedTransaction(
     );
   }
   if (!body.result) {
-    throw new SorobanRpcError('Soroban RPC returned an empty result', 'network');
+    throw new SorobanRpcError(
+      'Soroban RPC returned an empty result',
+      'network',
+    );
   }
   if (body.result.status === 'ERROR') {
     throw new SorobanRpcError(

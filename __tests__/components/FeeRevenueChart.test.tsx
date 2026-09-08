@@ -22,7 +22,9 @@ jest.mock('recharts', () => {
   };
 });
 
-const mockUseFeeRevenue = useFeeRevenue as jest.MockedFunction<typeof useFeeRevenue>;
+const mockUseFeeRevenue = useFeeRevenue as jest.MockedFunction<
+  typeof useFeeRevenue
+>;
 const mockUseFeeDriftDetection = useFeeDriftDetection as jest.MockedFunction<
   typeof useFeeDriftDetection
 >;
@@ -63,7 +65,9 @@ describe('FeeRevenueChart component', () => {
 
     render(<FeeRevenueChart />);
     expect(
-      screen.getByText(/Failed to load fee revenue. The indexer may be unavailable./i),
+      screen.getByText(
+        /Failed to load fee revenue. The indexer may be unavailable./i,
+      ),
     ).toBeInTheDocument();
   });
 
@@ -110,6 +114,8 @@ describe('FeeRevenueChart component', () => {
 
     render(<FeeRevenueChart />);
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.getByText(/On-chain fee drift detected/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/On-chain fee drift detected/i),
+    ).toBeInTheDocument();
   });
 });

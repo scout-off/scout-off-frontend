@@ -1,4 +1,11 @@
-import { render, screen, act, renderHook, waitFor, fireEvent } from '@testing-library/react';
+import {
+  render,
+  screen,
+  act,
+  renderHook,
+  waitFor,
+  fireEvent,
+} from '@testing-library/react';
 import { WalletProvider, useWalletContext } from '@/context/WalletContext';
 import { walletAdapters } from '@/lib/walletAdapters';
 import SessionExpiryWarning from '@/components/SessionExpiryWarning';

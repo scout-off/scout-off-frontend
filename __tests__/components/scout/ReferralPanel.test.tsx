@@ -89,7 +89,9 @@ describe('ReferralPanel toast errors', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText('Failed to generate an invite link. Please try again.'),
+        screen.getByText(
+          'Failed to generate an invite link. Please try again.',
+        ),
       ).toBeInTheDocument();
     });
 
@@ -98,16 +100,19 @@ describe('ReferralPanel toast errors', () => {
 
   it('surfaces the server-provided error message when generation is rejected by the API', async () => {
     const axios = require('axios');
-    const apiError = Object.assign(new Error('Request failed with status code 400'), {
-      isAxiosError: true,
-      response: {
-        status: 400,
-        data: {
-          error:
-            'Bot-protection challenge is required. Please complete the challenge and try again.',
+    const apiError = Object.assign(
+      new Error('Request failed with status code 400'),
+      {
+        isAxiosError: true,
+        response: {
+          status: 400,
+          data: {
+            error:
+              'Bot-protection challenge is required. Please complete the challenge and try again.',
+          },
         },
       },
-    });
+    );
     jest.spyOn(axios, 'isAxiosError').mockReturnValue(true);
     mockGenerateReferralCode.mockRejectedValueOnce(apiError);
 

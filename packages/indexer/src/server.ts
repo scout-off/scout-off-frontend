@@ -173,7 +173,11 @@ function readJsonBody(req: http.IncomingMessage): Promise<unknown> {
       try {
         resolve(
           chunks.length
-            ? JSON.parse(Buffer.concat(chunks as unknown as Uint8Array[]).toString('utf8'))
+            ? JSON.parse(
+                Buffer.concat(chunks as unknown as Uint8Array[]).toString(
+                  'utf8',
+                ),
+              )
             : {},
         );
       } catch {
@@ -270,7 +274,10 @@ export const server = http.createServer(
     if (req.method === 'GET' && url.pathname === '/events') {
       return handleEventsQuery(url, res);
     }
-    if (req.method === 'POST' && url.pathname === '/validators/approval-counts') {
+    if (
+      req.method === 'POST' &&
+      url.pathname === '/validators/approval-counts'
+    ) {
       return handleApprovalCountsQuery(req, res);
     }
     const playerMatch = url.pathname.match(PLAYER_EVENTS_PATH);

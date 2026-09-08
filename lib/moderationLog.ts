@@ -22,7 +22,8 @@ export const AUTOMATED_MODERATION_CATEGORIES = [
   'rule_match',
 ] as const;
 
-export type AutomatedModerationCategory = (typeof AUTOMATED_MODERATION_CATEGORIES)[number];
+export type AutomatedModerationCategory =
+  (typeof AUTOMATED_MODERATION_CATEGORIES)[number];
 
 /**
  * Severity of the automated decision.

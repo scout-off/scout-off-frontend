@@ -2,7 +2,10 @@
 
 import { useCallback } from 'react';
 import { mutate } from 'swr';
-import { useIndexerEventCache, INDEXER_CACHE_KEY } from './useIndexerEventCache';
+import {
+  useIndexerEventCache,
+  INDEXER_CACHE_KEY,
+} from './useIndexerEventCache';
 
 import { resolveContactFee, resolveSubscriptionFee } from '@/lib/feeSchedule';
 

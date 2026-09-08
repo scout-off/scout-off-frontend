@@ -6,15 +6,14 @@ import { NotificationReadStore } from '@/lib/notificationReadStore';
 import { createSessionToken } from '@/lib/session';
 import { __resetForTests } from '@/lib/chunkedUploadStore';
 
-const WALLET =
-  'GEXPORT0000000000000000000000000000000000000000000000000000000';
-const OTHER =
-  'GOTHER000000000000000000000000000000000000000000000000000000000';
+const WALLET = 'GEXPORT0000000000000000000000000000000000000000000000000000000';
+const OTHER = 'GOTHER000000000000000000000000000000000000000000000000000000000';
 
 function makeRequest(cookie?: string): NextRequest {
   const headers: Record<string, string> = {};
   if (cookie !== undefined)
-    headers['cookie'] = `session=${createSessionToken(cookie, 'access', 20 * 60)}`;
+    headers['cookie'] =
+      `session=${createSessionToken(cookie, 'access', 20 * 60)}`;
   return new NextRequest('http://localhost/api/data-export', {
     method: 'GET',
     headers,
@@ -53,9 +52,9 @@ describe('GET /api/data-export', () => {
 
     const body = await res.json();
     expect(body.wallet).toBe(WALLET);
-    expect(body.sections.watchlist.map((e: { playerId: string }) => e.playerId)).toEqual([
-      'player-1',
-    ]);
+    expect(
+      body.sections.watchlist.map((e: { playerId: string }) => e.playerId),
+    ).toEqual(['player-1']);
     expect(body.sections.notificationReadIds).toEqual([7]);
     expect(body.onChainExcluded.explorerUrl).toContain(WALLET);
   });
