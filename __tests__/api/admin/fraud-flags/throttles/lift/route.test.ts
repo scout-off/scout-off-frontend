@@ -3,18 +3,29 @@ import { POST } from '@/app/api/admin/fraud-flags/throttles/[id]/lift/route';
 import { NextRequest } from 'next/server';
 import { FraudThrottleStore } from '@/lib/fraudThrottleStore';
 import { createSessionToken } from '@/lib/session';
+import { SessionStore } from '@/lib/sessionStore';
 
 const ADMIN = 'GADMIN0000000000000000000000000000000000000000000000000';
 const SCOUT = 'GSCOUT0000000000000000000000000000000000000000000000000';
+
+let sidCounter = 0;
 
 function makeRequest(
   throttleId: string,
   init: { cookie?: string; body?: unknown } = {},
 ): NextRequest {
   const headers: Record<string, string> = {};
-  if (init.cookie !== undefined)
+  if (init.cookie !== undefined) {
+    // #1179: getSessionWallet also requires an active SessionStore row.
+    const sid = `sid-${sidCounter++}`;
+    SessionStore.getInstance().create(
+      sid,
+      init.cookie,
+      Date.now() + 60 * 60 * 1000,
+    );
     headers['cookie'] =
-      `session=${createSessionToken(init.cookie, 'access', 20 * 60)}`;
+      `session=${createSessionToken(init.cookie, 'access', 20 * 60, { sid })}`;
+  }
   if (init.body !== undefined) headers['content-type'] = 'application/json';
   return new NextRequest(
     `http://localhost/api/admin/fraud-flags/throttles/${throttleId}/lift`,
@@ -27,21 +38,25 @@ function makeRequest(
 }
 
 function createThrottle() {
-  return FraudThrottleStore.getInstance().addThrottle({
+  return FraudThrottleStore.getInstance().placeThrottle({
     wallet: SCOUT,
     heuristic: 'test_heuristic',
+    category: 'velocity',
+    flagId: 'flag-1',
     reason: 'Suspected abuse',
-    flaggedBy: ADMIN,
+    evidence: { score: 0.9 },
   });
 }
 
 beforeEach(() => {
   process.env.NEXT_PUBLIC_ADMIN_ADDRESS = ADMIN;
   FraudThrottleStore.resetInstance();
+  SessionStore.resetInstance();
 });
 
 afterEach(() => {
   FraudThrottleStore.resetInstance();
+  SessionStore.resetInstance();
   delete process.env.NEXT_PUBLIC_ADMIN_ADDRESS;
 });
 

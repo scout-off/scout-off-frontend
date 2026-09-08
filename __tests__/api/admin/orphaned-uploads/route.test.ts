@@ -8,15 +8,21 @@ import { NextRequest } from 'next/server';
 import { UploadTrackingStore } from '@/lib/uploadTrackingStore';
 import { unpinFromPinata } from '@/lib/pinataUnpin';
 import { createSessionToken } from '@/lib/session';
+import { SessionStore } from '@/lib/sessionStore';
 
 const ADMIN = 'GADMIN0000000000000000000000000000000000000000000000000';
 const mockUnpinFromPinata = unpinFromPinata as jest.Mock;
 
+let sidCounter = 0;
+
 function makeRequest(cookie?: string): NextRequest {
   const headers: Record<string, string> = {};
   if (cookie !== undefined) {
+    // #1179: getSessionWallet also requires an active SessionStore row.
+    const sid = `sid-${sidCounter++}`;
+    SessionStore.getInstance().create(sid, cookie, Date.now() + 60 * 60 * 1000);
     headers['cookie'] =
-      `session=${createSessionToken(cookie, 'access', 20 * 60)}`;
+      `session=${createSessionToken(cookie, 'access', 20 * 60, { sid })}`;
   }
   return new NextRequest('http://localhost/api/admin/orphaned-uploads', {
     headers,
@@ -28,6 +34,7 @@ const GRACE_MS = 24 * 60 * 60 * 1000;
 beforeEach(() => {
   process.env.NEXT_PUBLIC_ADMIN_ADDRESS = ADMIN;
   UploadTrackingStore.resetInstance();
+  SessionStore.resetInstance();
   mockUnpinFromPinata.mockReset();
   mockUnpinFromPinata.mockResolvedValue({ ok: true });
 });
@@ -35,6 +42,7 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env.NEXT_PUBLIC_ADMIN_ADDRESS;
   UploadTrackingStore.resetInstance();
+  SessionStore.resetInstance();
 });
 
 describe('GET /api/admin/orphaned-uploads', () => {

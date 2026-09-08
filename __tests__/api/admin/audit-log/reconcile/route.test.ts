@@ -13,6 +13,7 @@ import { AdminAuditStore } from '@/lib/adminAuditStore';
 import { getValidators, getContractPaused } from '@/lib/contract';
 import { fetchEvents } from '@/lib/indexerClient';
 import { createSessionToken } from '@/lib/session';
+import { SessionStore } from '@/lib/sessionStore';
 
 const ADMIN = 'GADMIN0000000000000000000000000000000000000000000000000';
 
@@ -20,11 +21,17 @@ const mockGetValidators = getValidators as jest.Mock;
 const mockGetContractPaused = getContractPaused as jest.Mock;
 const mockFetchEvents = fetchEvents as jest.Mock;
 
+let sidCounter = 0;
+
 function makeRequest(cookie?: string): NextRequest {
   const headers: Record<string, string> = {};
-  if (cookie !== undefined)
+  if (cookie !== undefined) {
+    // #1179: getSessionWallet also requires an active SessionStore row.
+    const sid = `sid-${sidCounter++}`;
+    SessionStore.getInstance().create(sid, cookie, Date.now() + 60 * 60 * 1000);
     headers['cookie'] =
-      `session=${createSessionToken(cookie, 'access', 20 * 60)}`;
+      `session=${createSessionToken(cookie, 'access', 20 * 60, { sid })}`;
+  }
   return new NextRequest('http://localhost/api/admin/audit-log/reconcile', {
     headers,
   });
@@ -34,6 +41,7 @@ beforeEach(() => {
   process.env.NEXT_PUBLIC_ADMIN_ADDRESS = ADMIN;
   AdminAuditStore.resetInstance();
   AdminAuditStore.getInstance(':memory:');
+  SessionStore.resetInstance();
   jest.clearAllMocks();
   mockGetValidators.mockResolvedValue([]);
   mockGetContractPaused.mockResolvedValue(false);
@@ -42,6 +50,7 @@ beforeEach(() => {
 
 afterEach(() => {
   AdminAuditStore.resetInstance();
+  SessionStore.resetInstance();
   delete process.env.NEXT_PUBLIC_ADMIN_ADDRESS;
 });
 
