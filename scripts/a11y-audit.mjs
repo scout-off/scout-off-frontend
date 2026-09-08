@@ -16,10 +16,13 @@ import { spawn } from 'child_process';
 import { createServer } from 'net';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '..');
+// Named `scriptDir` rather than `__dirname` so the file still parses when a
+// CJS transform (Jest/Babel importing this .mjs) already injects a
+// `__dirname` binding of its own.
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(scriptDir, '..');
 const AXE_PATH = path.resolve(ROOT, 'node_modules', 'axe-core', 'axe.min.js');
 
 // ── Routes to scan ──────────────────────────────────────────────────────────
@@ -341,7 +344,16 @@ async function main() {
   process.exit(0);
 }
 
-main().catch((err) => {
-  console.error('\n  Audit failed:', err.message);
-  process.exit(1);
-});
+// Only crawl when run as a CLI (`node scripts/a11y-audit.mjs`). Importing
+// this module — e.g. the unit tests in __tests__/scripts — pulls in the
+// pure helper exports without spawning a dev server.
+const isCliEntry =
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isCliEntry) {
+  main().catch((err) => {
+    console.error('\n  Audit failed:', err.message);
+    process.exit(1);
+  });
+}
