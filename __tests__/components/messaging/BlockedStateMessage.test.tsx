@@ -4,10 +4,10 @@ import BlockedStateMessage from '@/components/messaging/BlockedStateMessage';
 
 // Mock the moderation module
 jest.mock('@/lib/messaging/moderation', () => ({
-  isBlocked: jest.fn(),
+  isUserBlocked: jest.fn(),
 }));
 
-import { isBlocked } from '@/lib/messaging/moderation';
+import { isUserBlocked } from '@/lib/messaging/moderation';
 
 describe('BlockedStateMessage', () => {
   beforeEach(() => {
@@ -15,7 +15,7 @@ describe('BlockedStateMessage', () => {
   });
 
   it('does not render when user is not blocked', () => {
-    (isBlocked as jest.Mock).mockReturnValue(false);
+    (isUserBlocked as jest.Mock).mockReturnValue(false);
     render(
       <BlockedStateMessage
         targetId="player123"
@@ -29,7 +29,7 @@ describe('BlockedStateMessage', () => {
   });
 
   it('renders blocked message when user is blocked', () => {
-    (isBlocked as jest.Mock).mockReturnValue(true);
+    (isUserBlocked as jest.Mock).mockReturnValue(true);
     render(
       <BlockedStateMessage
         targetId="player123"
@@ -46,7 +46,7 @@ describe('BlockedStateMessage', () => {
   });
 
   it('shows support contact link for appeal', () => {
-    (isBlocked as jest.Mock).mockReturnValue(true);
+    (isUserBlocked as jest.Mock).mockReturnValue(true);
     render(
       <BlockedStateMessage
         targetId="player123"
@@ -60,7 +60,7 @@ describe('BlockedStateMessage', () => {
   });
 
   it('displays correct action text for message action', () => {
-    (isBlocked as jest.Mock).mockReturnValue(true);
+    (isUserBlocked as jest.Mock).mockReturnValue(true);
     render(
       <BlockedStateMessage
         targetId="player123"
@@ -72,7 +72,7 @@ describe('BlockedStateMessage', () => {
   });
 
   it('displays correct action text for view action', () => {
-    (isBlocked as jest.Mock).mockReturnValue(true);
+    (isUserBlocked as jest.Mock).mockReturnValue(true);
     render(
       <BlockedStateMessage
         targetId="player123"
@@ -86,7 +86,7 @@ describe('BlockedStateMessage', () => {
   });
 
   it('includes target type in message', () => {
-    (isBlocked as jest.Mock).mockReturnValue(true);
+    (isUserBlocked as jest.Mock).mockReturnValue(true);
     render(
       <BlockedStateMessage
         targetId="scout123"

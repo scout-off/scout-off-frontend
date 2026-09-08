@@ -1,6 +1,5 @@
 'use client';
 
-import { useWallet } from '@/hooks/useWallet';
 import { isUserBlocked } from '@/lib/messaging/moderation';
 
 interface BlockedStateMessageProps {
@@ -14,13 +13,8 @@ export default function BlockedStateMessage({
   targetType,
   action = 'contact',
 }: BlockedStateMessageProps) {
-  const { publicKey } = useWallet();
-
-  if (!publicKey) return null;
-
-  const blocked = isUserBlocked(targetId);
-
-  if (!blocked) return null;
+  // Whether the current user has this target on their own (local) block list.
+  if (!isUserBlocked(targetId)) return null;
 
   const actionText = {
     contact: 'contact this player',

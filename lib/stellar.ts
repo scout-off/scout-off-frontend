@@ -26,15 +26,24 @@ export function isValidStellarAddress(key: string): boolean {
 }
 
 /**
- * Normalizes a Stellar public key to its canonical uppercase format.
- * Uses StrKey.encodeEd25519PublicKey which validates and uppercases the key.
- * Throws if the key is not a valid Ed25519 public key.
+ * Normalizes a Stellar public key for consistent storage and lookup.
+ *
+ * A checksum-valid key is round-tripped through StrKey to its canonical
+ * form. Anything else is case-folded to upper-case rather than rejected:
+ * callers that care about validity gate on {@link isValidStellarAddress}
+ * first (see app/api/watchlist/route.ts), and the stores only need keys
+ * that compare equal to dedupe reliably — throwing here would turn a
+ * malformed value into a 500 instead of letting the caller's own
+ * validation return a clean 4xx.
  */
 export function normalizeStellarAddress(key: string): string {
-  // StrKey.encodeEd25519PublicKey validates the key and returns uppercase
-  // We first decode to verify it's valid, then re-encode to normalize
-  const decoded = StrKey.decodeEd25519PublicKey(key);
-  return StrKey.encodeEd25519PublicKey(decoded);
+  const trimmed = key.trim();
+  if (StrKey.isValidEd25519PublicKey(trimmed)) {
+    return StrKey.encodeEd25519PublicKey(
+      StrKey.decodeEd25519PublicKey(trimmed),
+    );
+  }
+  return trimmed.toUpperCase();
 }
 
 export { NETWORK, BASE_FEE, TransactionBuilder };
