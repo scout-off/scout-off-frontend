@@ -114,7 +114,10 @@
     "tmp": "^0.2.7",
     "uuid": "^11.1.1",
     "axios": "1.13.5",
-    "minimatch": "^9.0.5"
+    "minimatch": "^9.0.5",
+    "test-exclude": {
+      "minimatch": "^3.1.2"
+    }
   },
   "commitlint": {
     "extends": [
