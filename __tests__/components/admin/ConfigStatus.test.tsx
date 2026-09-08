@@ -8,15 +8,18 @@ type ConfigEntry = {
   present: boolean;
 };
 
+const originalFetch = global.fetch;
+
 function mockConfigResponse(config: ConfigEntry[]) {
-  jest.spyOn(global, 'fetch').mockResolvedValue({
+  global.fetch = jest.fn().mockResolvedValue({
     json: async () => config,
-  } as Response);
+  } as Response) as unknown as typeof fetch;
 }
 
 describe('ConfigStatus', () => {
   afterEach(() => {
     jest.restoreAllMocks();
+    global.fetch = originalFetch;
   });
 
   it('renders an all-green state when every configuration value is present', async () => {
@@ -33,7 +36,10 @@ describe('ConfigStatus', () => {
         name: 'Runtime Configuration Status',
       }),
     ).toBeInTheDocument();
-    expect(screen.getAllByText('Present')).toHaveLength(3);
+    // Scope to the status <span>s — "Present" is also a column header.
+    expect(screen.getAllByText('Present', { selector: 'span' })).toHaveLength(
+      3,
+    );
     expect(screen.queryByText('Missing')).not.toBeInTheDocument();
   });
 

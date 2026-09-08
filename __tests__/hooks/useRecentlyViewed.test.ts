@@ -1,6 +1,12 @@
 import { renderHook, act } from '@testing-library/react';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 
+// These tests exercise the anonymous (localStorage-only) path — stub the
+// wallet so the hook doesn't need a WalletProvider and stays on that path.
+jest.mock('@/hooks/useWallet', () => ({
+  useWallet: () => ({ publicKey: null }),
+}));
+
 const STORAGE_KEY = 'scoutoff_recently_viewed';
 
 beforeEach(() => {
