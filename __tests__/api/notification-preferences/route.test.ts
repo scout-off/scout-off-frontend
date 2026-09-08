@@ -3,17 +3,29 @@ import { GET, PUT } from '@/app/api/notification-preferences/route';
 import { NextRequest } from 'next/server';
 import { NotificationPreferencesStore } from '@/lib/notificationPreferencesStore';
 import { createSessionToken } from '@/lib/session';
+import { SessionStore } from '@/lib/sessionStore';
 
 const SCOUT = 'GSCOUT0000000000000000000000000000000000000000000000000';
 
+let sidCounter = 0;
+
+// #1179: getSessionWallet also checks lib/sessionStore.ts — register the
+// sid alongside the signed token so the cookie resolves to an active row.
 function makeRequest(
   url: string,
   init: { method?: string; cookie?: string; body?: unknown } = {},
 ): NextRequest {
   const headers: Record<string, string> = {};
-  if (init.cookie !== undefined)
+  if (init.cookie !== undefined) {
+    const sid = `sid-${sidCounter++}`;
+    SessionStore.getInstance().create(
+      sid,
+      init.cookie,
+      Date.now() + 60 * 60 * 1000,
+    );
     headers['cookie'] =
-      `session=${createSessionToken(init.cookie, 'access', 20 * 60)}`;
+      `session=${createSessionToken(init.cookie, 'access', 20 * 60, { sid })}`;
+  }
   if (init.body !== undefined) headers['content-type'] = 'application/json';
   return new NextRequest(url, {
     method: init.method ?? 'GET',
@@ -24,10 +36,12 @@ function makeRequest(
 
 beforeEach(() => {
   NotificationPreferencesStore.resetInstance();
+  SessionStore.resetInstance();
 });
 
 afterEach(() => {
   NotificationPreferencesStore.resetInstance();
+  SessionStore.resetInstance();
 });
 
 describe('GET /api/notification-preferences', () => {
@@ -100,12 +114,14 @@ describe('PUT /api/notification-preferences', () => {
   });
 
   it('returns 400 for an invalid JSON body', async () => {
+    const sid = `sid-${sidCounter++}`;
+    SessionStore.getInstance().create(sid, SCOUT, Date.now() + 60 * 60 * 1000);
     const req = new NextRequest(
       'http://localhost/api/notification-preferences',
       {
         method: 'PUT',
         headers: {
-          cookie: `session=${createSessionToken(SCOUT, 'access', 20 * 60)}`,
+          cookie: `session=${createSessionToken(SCOUT, 'access', 20 * 60, { sid })}`,
           'content-type': 'application/json',
         },
         body: 'not json',

@@ -11,19 +11,31 @@ import { GET, POST } from '@/app/api/admin/academies/route';
 import { NextRequest } from 'next/server';
 import api from '@/lib/api';
 import { createSessionToken } from '@/lib/session';
+import { SessionStore } from '@/lib/sessionStore';
 
 const ADMIN = 'GADMIN0000000000000000000000000000000000000000000000000';
 const SCOUT = 'GSCOUT0000000000000000000000000000000000000000000000000';
 
 const mockApi = api as jest.Mocked<typeof api>;
 
+let sidCounter = 0;
+
+// #1179: getSessionWallet also checks lib/sessionStore.ts — register the
+// sid alongside the signed token so the cookie resolves to an active row.
 function makeRequest(
   init: { method?: string; cookie?: string; body?: unknown } = {},
 ): NextRequest {
   const headers: Record<string, string> = {};
-  if (init.cookie !== undefined)
+  if (init.cookie !== undefined) {
+    const sid = `sid-${sidCounter++}`;
+    SessionStore.getInstance().create(
+      sid,
+      init.cookie,
+      Date.now() + 60 * 60 * 1000,
+    );
     headers['cookie'] =
-      `session=${createSessionToken(init.cookie, 'access', 20 * 60)}`;
+      `session=${createSessionToken(init.cookie, 'access', 20 * 60, { sid })}`;
+  }
   if (init.body !== undefined) headers['content-type'] = 'application/json';
   return new NextRequest('http://localhost/api/admin/academies', {
     method: init.method ?? 'GET',
@@ -35,10 +47,12 @@ function makeRequest(
 beforeEach(() => {
   process.env.NEXT_PUBLIC_ADMIN_ADDRESS = ADMIN;
   jest.clearAllMocks();
+  SessionStore.resetInstance();
 });
 
 afterEach(() => {
   delete process.env.NEXT_PUBLIC_ADMIN_ADDRESS;
+  SessionStore.resetInstance();
 });
 
 describe('GET /api/admin/academies', () => {

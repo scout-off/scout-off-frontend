@@ -3,17 +3,29 @@ import { PATCH } from '@/app/api/disputes/[id]/decide/route';
 import { NextRequest } from 'next/server';
 import { MilestoneDisputeStore } from '@/lib/milestoneDisputeStore';
 import { createSessionToken } from '@/lib/session';
+import { SessionStore } from '@/lib/sessionStore';
 
 const ADMIN = 'GADMIN0000000000000000000000000000000000000000000000000';
 const SCOUT = 'GSCOUT0000000000000000000000000000000000000000000000000';
 
+let sidCounter = 0;
+
+// #1179: getSessionWallet also checks lib/sessionStore.ts — register the
+// sid alongside the signed token so the cookie resolves to an active row.
 function makeRequest(
   init: { cookie?: string; body?: unknown } = {},
 ): NextRequest {
   const headers: Record<string, string> = {};
-  if (init.cookie !== undefined)
+  if (init.cookie !== undefined) {
+    const sid = `sid-${sidCounter++}`;
+    SessionStore.getInstance().create(
+      sid,
+      init.cookie,
+      Date.now() + 60 * 60 * 1000,
+    );
     headers['cookie'] =
-      `session=${createSessionToken(init.cookie, 'access', 20 * 60)}`;
+      `session=${createSessionToken(init.cookie, 'access', 20 * 60, { sid })}`;
+  }
   if (init.body !== undefined) headers['content-type'] = 'application/json';
   return new NextRequest('http://localhost/api/disputes/1/decide', {
     method: 'PATCH',
@@ -35,10 +47,12 @@ function createPendingDispute() {
 beforeEach(() => {
   process.env.NEXT_PUBLIC_ADMIN_ADDRESS = ADMIN;
   MilestoneDisputeStore.resetInstance();
+  SessionStore.resetInstance();
 });
 
 afterEach(() => {
   MilestoneDisputeStore.resetInstance();
+  SessionStore.resetInstance();
   delete process.env.NEXT_PUBLIC_ADMIN_ADDRESS;
 });
 
@@ -70,10 +84,12 @@ describe('PATCH /api/disputes/:id/decide', () => {
 
   it('returns 400 for an invalid JSON body', async () => {
     const dispute = createPendingDispute();
+    const sid = `sid-${sidCounter++}`;
+    SessionStore.getInstance().create(sid, ADMIN, Date.now() + 60 * 60 * 1000);
     const req = new NextRequest('http://localhost/api/disputes/1/decide', {
       method: 'PATCH',
       headers: {
-        cookie: `session=${createSessionToken(ADMIN, 'access', 20 * 60)}`,
+        cookie: `session=${createSessionToken(ADMIN, 'access', 20 * 60, { sid })}`,
         'content-type': 'application/json',
       },
       body: 'not json',

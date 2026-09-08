@@ -3,17 +3,29 @@ import { GET, POST } from '@/app/api/admin/audit-log/route';
 import { NextRequest } from 'next/server';
 import { AdminAuditStore } from '@/lib/adminAuditStore';
 import { createSessionToken } from '@/lib/session';
+import { SessionStore } from '@/lib/sessionStore';
 
 const ADMIN = 'GADMIN0000000000000000000000000000000000000000000000000';
 
+let sidCounter = 0;
+
+// #1179: getSessionWallet also checks lib/sessionStore.ts — register the
+// sid alongside the signed token so the cookie resolves to an active row.
 function makeRequest(
   url: string,
   init: { method?: string; cookie?: string; body?: unknown } = {},
 ): NextRequest {
   const headers: Record<string, string> = {};
-  if (init.cookie !== undefined)
+  if (init.cookie !== undefined) {
+    const sid = `sid-${sidCounter++}`;
+    SessionStore.getInstance().create(
+      sid,
+      init.cookie,
+      Date.now() + 60 * 60 * 1000,
+    );
     headers['cookie'] =
-      `session=${createSessionToken(init.cookie, 'access', 20 * 60)}`;
+      `session=${createSessionToken(init.cookie, 'access', 20 * 60, { sid })}`;
+  }
   if (init.body !== undefined) headers['content-type'] = 'application/json';
   return new NextRequest(url, {
     method: init.method ?? 'GET',
@@ -26,10 +38,12 @@ beforeEach(() => {
   process.env.NEXT_PUBLIC_ADMIN_ADDRESS = ADMIN;
   AdminAuditStore.resetInstance();
   AdminAuditStore.getInstance(':memory:');
+  SessionStore.resetInstance();
 });
 
 afterEach(() => {
   AdminAuditStore.resetInstance();
+  SessionStore.resetInstance();
   delete process.env.NEXT_PUBLIC_ADMIN_ADDRESS;
 });
 

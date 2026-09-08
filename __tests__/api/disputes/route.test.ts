@@ -3,6 +3,7 @@ import { GET, POST } from '@/app/api/disputes/route';
 import { NextRequest } from 'next/server';
 import { MilestoneDisputeStore } from '@/lib/milestoneDisputeStore';
 import { createSessionToken } from '@/lib/session';
+import { SessionStore } from '@/lib/sessionStore';
 import { getPlayer, getMilestoneHistory } from '@/lib/contract';
 import type { Milestone, Player } from '@/types';
 
@@ -20,14 +21,27 @@ const ADMIN = 'GADMIN0000000000000000000000000000000000000000000000000';
 const SCOUT = 'GSCOUT0000000000000000000000000000000000000000000000000';
 const OTHER = 'GOTHER0000000000000000000000000000000000000000000000000';
 
+let sidCounter = 0;
+
+// getSessionWallet checks lib/sessionStore.ts in addition to the token's
+// signature (see #1179) — a cookie with no matching, active store row is
+// treated as unauthenticated. Register the sid alongside the token so it
+// mirrors what a real SEP-10 login produces.
 function makeRequest(
   url: string,
   init: { method?: string; cookie?: string; body?: unknown } = {},
 ): NextRequest {
   const headers: Record<string, string> = {};
-  if (init.cookie !== undefined)
+  if (init.cookie !== undefined) {
+    const sid = `sid-${sidCounter++}`;
+    SessionStore.getInstance().create(
+      sid,
+      init.cookie,
+      Date.now() + 60 * 60 * 1000,
+    );
     headers['cookie'] =
-      `session=${createSessionToken(init.cookie, 'access', 20 * 60)}`;
+      `session=${createSessionToken(init.cookie, 'access', 20 * 60, { sid })}`;
+  }
   if (init.body !== undefined) headers['content-type'] = 'application/json';
   return new NextRequest(url, {
     method: init.method ?? 'GET',
@@ -65,6 +79,7 @@ const mockMilestones: Milestone[] = [
 beforeEach(() => {
   process.env.NEXT_PUBLIC_ADMIN_ADDRESS = ADMIN;
   MilestoneDisputeStore.resetInstance();
+  SessionStore.resetInstance();
   jest.clearAllMocks();
 
   mockGetPlayer.mockResolvedValue(mockPlayer);
@@ -73,6 +88,7 @@ beforeEach(() => {
 
 afterEach(() => {
   MilestoneDisputeStore.resetInstance();
+  SessionStore.resetInstance();
   delete process.env.NEXT_PUBLIC_ADMIN_ADDRESS;
 });
 
@@ -204,10 +220,12 @@ describe('POST /api/disputes', () => {
   });
 
   it('returns 400 for an invalid JSON body', async () => {
+    const sid = `sid-${sidCounter++}`;
+    SessionStore.getInstance().create(sid, SCOUT, Date.now() + 60 * 60 * 1000);
     const req = new NextRequest('http://localhost/api/disputes', {
       method: 'POST',
       headers: {
-        cookie: `session=${createSessionToken(SCOUT, 'access', 20 * 60)}`,
+        cookie: `session=${createSessionToken(SCOUT, 'access', 20 * 60, { sid })}`,
         'content-type': 'application/json',
       },
       body: 'not json',
