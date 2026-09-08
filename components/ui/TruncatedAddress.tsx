@@ -17,7 +17,12 @@ export default function TruncatedAddress({
 
   if (!address) return null;
 
-  const truncated = `${address.slice(0, 4)}…${address.slice(-4)}`;
+  // Only truncate when there is something to gain — a string of 12 chars or
+  // fewer is shown as-is rather than mangled into `G123….abc`.
+  const truncated =
+    address.length <= 12
+      ? address
+      : `${address.slice(0, 4)}…${address.slice(-4)}`;
 
   const handleCopy = async () => {
     try {

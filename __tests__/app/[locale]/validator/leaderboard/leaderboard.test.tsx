@@ -2,6 +2,23 @@ import { render, screen } from '@testing-library/react';
 import LeaderboardContent from '@/app/[locale]/validator/leaderboard/LeaderboardContent';
 import type { LeaderboardEntry } from '@/app/[locale]/validator/leaderboard/data';
 
+// LeaderboardContent is a client component: it reads the router/search params
+// for the range selector and hydrates via useValidatorLeaderboard (SWR over
+// contract + indexer calls). This suite only exercises the server-provided
+// `entries`, so stub both.
+jest.mock('next/navigation', () => ({
+  useRouter: jest.fn(() => ({ push: jest.fn(), replace: jest.fn() })),
+  usePathname: jest.fn(() => '/en/validator/leaderboard'),
+  useSearchParams: jest.fn(() => new URLSearchParams()),
+}));
+
+jest.mock('@/hooks/useValidatorLeaderboard', () => ({
+  useValidatorLeaderboard: (
+    _range: unknown,
+    initialEntries?: LeaderboardEntry[],
+  ) => ({ entries: initialEntries ?? [], loading: false, error: null }),
+}));
+
 const mockEntries: LeaderboardEntry[] = [
   {
     address: 'G123...abc',
