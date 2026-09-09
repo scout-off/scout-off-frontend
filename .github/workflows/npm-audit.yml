@@ -48,6 +48,13 @@ jobs:
             'puppeteer-core',
             '@puppeteer/browsers',
             'extract-zip', // transitive dependency of @puppeteer/browsers without upstream patch > 2.0.1
+            // The eslint-config-next → @next/eslint-plugin-next → glob chain
+            // only has a fix on eslint-config-next 16.x (a Next 15/16 major
+            // upgrade — same tracking PR as `next` itself). glob's advisory
+            // is a glob-CLI command-injection that this repo never invokes.
+            'eslint-config-next',
+            '@next/eslint-plugin-next',
+            'glob',
           ]);
           const vulns = report.vulnerabilities || {};
           const blockers = Object.entries(vulns).filter(([, v]) => {
