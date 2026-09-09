@@ -25,8 +25,14 @@ jobs:
       - name: Trigger reconciliation
         run: |
           if [ -z "${{ vars.DEPLOYED_APP_URL }}" ] || [ -z "${{ secrets.ADMIN_SESSION_COOKIE }}" ]; then
-            echo "::error::DEPLOYED_APP_URL variable and ADMIN_SESSION_COOKIE secret must both be set for this workflow to do anything. See docs/admin-audit-log.md."
-            exit 1
+            # Not configured yet: this is a scheduled job, so a hard failure
+            # here just posts a red run every 15 minutes for an infra step
+            # that's out of the app's control. Warn and no-op instead until
+            # DEPLOYED_APP_URL / ADMIN_SESSION_COOKIE are set (see
+            # docs/admin-audit-log.md); a manual workflow_dispatch run still
+            # surfaces the warning to whoever's checking.
+            echo "::warning::DEPLOYED_APP_URL variable and ADMIN_SESSION_COOKIE secret are not both set; skipping reconciliation. See docs/admin-audit-log.md."
+            exit 0
           fi
           status=$(curl -s -o /tmp/response.json -w '%{http_code}' \
             --cookie "session=${{ secrets.ADMIN_SESSION_COOKIE }}" \
