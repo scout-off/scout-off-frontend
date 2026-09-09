@@ -334,30 +334,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     return sessionCookieWallet !== publicKey;
   }, [sessionCookieWallet, publicKey]);
 
-  // Fetch the wallet address that the current session cookie authenticated.
-  // This runs on mount and whenever isAuthenticated changes, ensuring the
-  // cookie's wallet is always in sync with the server's view.
-  useEffect(() => {
-    if (!isAuthenticated || !isRestoringSession) return;
-
-    const fetchSessionCookieWallet = async () => {
-      try {
-        const session = await getServerSession();
-        if (session?.authenticated && session.publicKey) {
-          setSessionCookieWallet(session.publicKey);
-        } else {
-          setSessionCookieWallet(null);
-        }
-      } catch {
-        // If the server is unreachable, we can't determine the cookie's
-        // authenticated wallet. Leave it as null and the mismatch check
-        // will gracefully handle it.
-        setSessionCookieWallet(null);
-      }
-    };
-
-    fetchSessionCookieWallet();
-  }, [isAuthenticated, isRestoringSession]);
+  // The wallet address the current session cookie authenticated is captured
+  // directly by `restoreSession` below, from the same GET /api/auth/session
+  // it already performs — see the `setSessionCookieWallet` call there. A
+  // fresh user-initiated `doConnect` deliberately does not touch it: the
+  // just-authenticated `publicKey` is the cookie's identity by construction,
+  // so `sessionMismatch` stays false without an extra round-trip.
 
   const walletProviderInfo: WalletProviderInfo | null = walletProvider
     ? (WALLET_PROVIDERS.find((wp) => wp.provider === walletProvider) ?? null)
@@ -444,6 +426,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       // logout on a transient blip, since it's neither an explicit mismatch
       // nor an explicit expiry.
       const serverSession = await getServerSession();
+      // The address the server cookie actually authenticated, for the
+      // `sessionMismatch` guard. `null` when the check was inconclusive
+      // (network error) — `sessionMismatch` then stays false, matching the
+      // "assume still valid" stance above.
+      let cookieWallet: string | null = null;
       if (serverSession && !serverSession.authenticated) {
         const refreshed = await refreshSession();
         if (!refreshed.authenticated || refreshed.publicKey !== pk) {
@@ -451,6 +438,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             'Server session expired or absent, and refresh failed',
           );
         }
+        // Refresh rotated the cookie to a valid session for `pk`.
+        cookieWallet = refreshed.publicKey ?? pk;
       } else if (
         serverSession?.authenticated &&
         serverSession.publicKey &&
@@ -460,8 +449,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         // localStorage remembers — never show `pk` as authenticated based
         // on the stale local hint alone.
         throw new Error('Server session address does not match stored address');
+      } else if (serverSession?.authenticated) {
+        cookieWallet = serverSession.publicKey ?? null;
       }
 
+      setSessionCookieWallet(cookieWallet);
       setPublicKey(pk);
       setIsAuthenticated(true);
       setWalletProvider(provider);
