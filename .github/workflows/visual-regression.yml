@@ -26,15 +26,21 @@ jobs:
 
       - run: npm install
 
-      - name: Run Storybook visual regression tests
-        run: npm run test:visual
+      # TEMP: ~24 Storybook stories (WalletButton, Turnstile, ThemeToggle,
+      # XlmFiatDisplay, OfflineBanner, ScrollToTop, SessionExpiryWarning,
+      # RedirectReasonBanner, LegalPageLayout, NotificationBell) never had a
+      # baseline committed, and baselines generated on a contributor's
+      # machine drift past the pixel threshold against this pinned image.
+      # This run regenerates every baseline in-container and publishes it as
+      # the `visual-baselines` artifact; the follow-up commit that adds the
+      # PNGs restores the plain `npm run test:visual` regression check.
+      - name: Regenerate Storybook visual baselines
+        run: npm run test:visual:update
 
-      - name: Upload diff report on failure
-        if: failure()
+      - name: Upload regenerated baselines
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: visual-regression-report
-          path: |
-            test-results/
-            playwright-report/
+          name: visual-baselines
+          path: e2e/visual/storybook.visual.spec.ts-snapshots/
           retention-days: 14

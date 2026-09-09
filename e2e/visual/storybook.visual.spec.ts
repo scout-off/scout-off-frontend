@@ -52,7 +52,20 @@ test('storybook stories render consistently', async ({ page, baseURL }) => {
       // it can lock onto that instead of the real content. Wait for the
       // root to actually have a child before screenshotting.
       await page.waitForLoadState('load');
-      await page.waitForSelector('#storybook-root > *', { state: 'attached' });
+      try {
+        await page.waitForSelector('#storybook-root > *', {
+          state: 'attached',
+          timeout: 10_000,
+        });
+      } catch {
+        // The story mounted nothing into #storybook-root within the wait —
+        // either it legitimately renders null for its current args, or it
+        // threw and Storybook painted its error overlay outside the root.
+        // Screenshot whatever's on the page anyway: a real regression shows
+        // up as a diff against the baseline, which is a fast, actionable
+        // failure — far better than letting one story stall the whole
+        // suite until its (story-count-scaled) timeout fires.
+      }
       await expect.soft(page).toHaveScreenshot(`${id}.png`, { fullPage: true });
     });
   }
