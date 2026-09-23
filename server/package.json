@@ -2,11 +2,11 @@
   "name": "scout-off-backend",
   "version": "0.1.0",
   "private": true,
-  "description": "Off-chain data API for scout-off (referrals today; chat history and comments next) — the Node.js API depicted in the root README architecture diagram.",
+  "description": "Off-chain data API for scout-off (referrals today; chat history and comments next) \u2014 the Node.js API depicted in the root README architecture diagram.",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "node --watch src/index.js",
+    "start": "node init && node src/index.js",
+    "dev": "node init && node --watch src/index.js",
     "test": "node --test test/"
   },
   "dependencies": {

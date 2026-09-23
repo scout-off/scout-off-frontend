@@ -5,8 +5,8 @@
   "description": "Off-chain Soroban event indexer for the ScoutOff platform. See README.md.",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js",
+    "build": "node init && tsc",
+    "start": "node init && node dist/index.js",
     "test": "cd ../.. && npx jest packages/indexer"
   },
   "devDependencies": {
