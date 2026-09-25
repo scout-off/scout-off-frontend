@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { BACKEND_WRITE_TIMEOUT_MS } from './httpClient';
 
 /**
  * Best-effort unpin of a CID from Pinata (issue #1005's cleanup path).
@@ -23,6 +24,7 @@ export async function unpinFromPinata(
         pinata_api_key: apiKey,
         pinata_secret_api_key: secret,
       },
+      timeout: BACKEND_WRITE_TIMEOUT_MS,
     });
     return { ok: true };
   } catch (err) {

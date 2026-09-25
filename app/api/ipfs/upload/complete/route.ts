@@ -4,6 +4,7 @@ import { assembleFile, cleanupSession } from '@/lib/chunkedUploadStore';
 import { hasValidMagicBytes, bufToHex } from '@/lib/fileSignature';
 import { getClientIp, createRateLimiter } from '@/lib/uploadRateLimit';
 import { createRequestLogger } from '@/lib/logger';
+import { pinTimeoutMs, upstreamStatus } from '@/lib/httpClient';
 import {
   verifyUploadedContent,
   UploadVerificationError,
@@ -97,6 +98,7 @@ export async function POST(req: NextRequest) {
   }
 
   let cid: string;
+  const pinStartedAt = Date.now();
   try {
     const pinataForm = new FormData();
     // Uint8Array copy sidesteps a @types/node-vs-DOM-lib generic mismatch
@@ -114,9 +116,12 @@ export async function POST(req: NextRequest) {
           pinata_api_key: process.env.PINATA_API_KEY!,
           pinata_secret_api_key: process.env.PINATA_SECRET!,
         },
+        timeout: pinTimeoutMs(buffer.length),
       },
     );
     cid = data.IpfsHash;
+    const pinMs = Date.now() - pinStartedAt;
+    if (pinMs > 10_000) log.warn('Slow Pinata pin', { ip, pinMs });
   } catch (err) {
     // Deliberately don't clean up the session here: the assembled chunks are
     // still valid, so a client retrying /complete after a transient Pinata
@@ -127,7 +132,7 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json(
       { error: 'Failed to upload file to IPFS' },
-      { status: 502 },
+      { status: upstreamStatus(err) === 504 ? 504 : 502 },
     );
   }
 

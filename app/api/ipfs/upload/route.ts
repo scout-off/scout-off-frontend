@@ -4,6 +4,7 @@ import { sanitize } from '@/lib/sanitize';
 import { hasValidMagicBytes, bufToHex } from '@/lib/fileSignature';
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 import { createRequestLogger } from '@/lib/logger';
+import { pinTimeoutMs, upstreamStatus } from '@/lib/httpClient';
 import {
   verifyUploadedContent,
   UploadVerificationError,
@@ -134,6 +135,7 @@ export async function POST(req: NextRequest) {
 
   // ── 5. Forward to Pinata ────────────────────────────────────────────────────
   let cid: string;
+  const pinStartedAt = Date.now();
   try {
     const pinataForm = new FormData();
     pinataForm.append('file', file);
@@ -146,9 +148,12 @@ export async function POST(req: NextRequest) {
           pinata_api_key: process.env.PINATA_API_KEY!,
           pinata_secret_api_key: process.env.PINATA_SECRET!,
         },
+        timeout: pinTimeoutMs(file.size),
       },
     );
     cid = data.IpfsHash;
+    const pinMs = Date.now() - pinStartedAt;
+    if (pinMs > 10_000) log.warn('Slow Pinata pin', { ip, pinMs });
   } catch (err) {
     log.error('Pinata upload failed', {
       ip,
@@ -156,7 +161,7 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json(
       { error: 'Failed to upload file to IPFS' },
-      { status: 502 },
+      { status: upstreamStatus(err) === 504 ? 504 : 502 },
     );
   }
 

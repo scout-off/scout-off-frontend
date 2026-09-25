@@ -1,14 +1,14 @@
-import axios from 'axios';
+import { createClient } from '../httpClient';
 
 /**
  * Client for the Node.js off-chain chat/comments API referenced in
  * CONTRIBUTING.md and the architecture diagram — persists message history
  * for a scout/player thread once pay-to-contact has been unlocked.
  */
-const chatApi = axios.create({
+const chatApi = createClient('chat', {
+  timeoutMs: 5000,
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000',
   headers: { 'Content-Type': 'application/json' },
-  timeout: 5000,
 });
 
 export interface ChatMessage {

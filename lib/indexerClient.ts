@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { createClient } from './httpClient';
 import type { Milestone } from '@/types';
 
 /**
@@ -7,10 +7,10 @@ import type { Milestone } from '@/types';
  * without hitting Horizon/Soroban RPC on every page load (see
  * packages/indexer/README.md, "Querying Indexed Data").
  */
-const indexerApi = axios.create({
+const indexerApi = createClient('indexer', {
+  timeoutMs: 5000,
   baseURL: process.env.NEXT_PUBLIC_INDEXER_API_URL ?? 'http://localhost:3001',
   headers: { 'Content-Type': 'application/json' },
-  timeout: 5000,
 });
 
 export type IndexedEventType =
