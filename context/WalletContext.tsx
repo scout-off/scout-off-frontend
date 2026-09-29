@@ -14,6 +14,15 @@ import { walletAdapters } from '@/lib/walletAdapters';
 import type { WalletProvider as WalletProviderAlias } from '@/lib/walletAdapters';
 import { purgeAllContactDetails } from '@/lib/contactDetailsCache';
 import { getServerSession, refreshSession } from '@/lib/sessionClient';
+import { clearUserCaches } from '@/lib/pwaCacheConfig';
+import {
+  WALLET_SESSION_KEY,
+  REMEMBERED_ADDRESSES_KEY,
+  SESSION_EXPIRY_KEY,
+  SESSION_INVALIDATED_KEY,
+} from '@/lib/storageKeys';
+import { removeWalletScopedKeys, setActiveWallet } from '@/lib/activeWallet';
+import { BLOCKED_USERS_KEY } from '@/lib/messaging/moderation';
 
 // @stellar/stellar-sdk and lib/stellar.ts (which also pulls it in) are
 // dynamically imported inside the functions below that actually need them
@@ -90,17 +99,9 @@ export async function isWalletInstalled(
   }
 }
 
-// ── localStorage keys ─────────────────────────────────────────────────────────
-
-const WALLET_SESSION_KEY = 'wallet_session';
-const REMEMBERED_ADDRESSES_KEY = 'scoutoff:remembered_addresses';
-const SESSION_EXPIRY_KEY = 'scoutoff:session_expiry';
-
-// ── Cross-tab session invalidation key ────────────────────────────────────────
-// Writing a timestamp to this key and then removing it fires the browser's
-// `storage` event in other same-origin tabs, which we listen for below.
-// Using a dedicated key keeps this signal isolated from app data.
-const SESSION_INVALIDATED_KEY = 'scoutoff:session-invalidated';
+// Storage keys (incl. the cross-tab session-invalidation signal key, whose
+// set-then-remove fires `storage` events in other tabs) live in
+// lib/storageKeys.ts.
 
 // ── Periodic session reconciliation cadence ───────────────────────────────────
 // GET /api/auth/session is rate-limited to 30 requests per IP per 10 seconds
@@ -300,6 +301,10 @@ const WalletContext = createContext<WalletContextValue | null>(null);
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [publicKey, setPublicKey] = useState<string | null>(null);
+  // Keep the module-level active wallet in sync during render (not in an
+  // effect) so wallet-scoped localStorage helpers never read the previous
+  // wallet's keys while children render after an account switch (#1343).
+  setActiveWallet(publicKey);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectingProvider, setConnectingProvider] =
@@ -679,6 +684,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         setSessionExpiry(expiresAt);
         setStoredSession(pk, provider, CURRENT_NETWORK_TYPE);
         setShowWalletModal(false);
+        clearUserCaches();
 
         // Remember this address for account switcher
         addRememberedAddress({
@@ -769,12 +775,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     removeStoredSession();
     removeSessionExpiry();
     clearAllRememberedAddresses();
+    // Wallet-scoped caches (#1343). The read-receipt preference is kept per
+    // wallet since it is keyed by address and can't leak to another wallet.
+    removeWalletScopedKeys(BLOCKED_USERS_KEY);
     // Unlocked contact details (and any other cached data) must not survive
     // logout — see lib/contactDetailsCache.ts. The explicit purge below is
     // belt-and-suspenders on top of this blanket wipe: it also cancels any
     // pending auto-purge timers, which the blanket mutate alone wouldn't do.
     mutate(() => true, undefined, { revalidate: false });
     purgeAllContactDetails();
+    clearUserCaches();
 
     // Cross-tab propagation: writing then removing a localStorage key fires
     // the browser's native `storage` event in every other same-origin tab.

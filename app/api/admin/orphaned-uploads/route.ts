@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { requireAdminWallet } from '@/lib/adminAuth';
 import { UploadTrackingStore } from '@/lib/uploadTrackingStore';
 import { unpinFromPinata } from '@/lib/pinataUnpin';
+import { privateJson } from '@/lib/httpResponses';
 
 /**
  * A tracked upload (lib/uploadTrackingStore.ts) unmatched to a completed
@@ -26,12 +27,12 @@ const ORPHAN_GRACE_MS = 24 * 60 * 60 * 1000; // 24 hours
 export async function GET(req: NextRequest) {
   const sessionWallet = requireAdminWallet(req);
   if (!sessionWallet) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return privateJson({ error: 'Forbidden' }, { status: 403 });
   }
 
   const candidates =
     UploadTrackingStore.getInstance().getOrphanCandidates(ORPHAN_GRACE_MS);
-  return NextResponse.json({ candidates, graceMs: ORPHAN_GRACE_MS });
+  return privateJson({ candidates, graceMs: ORPHAN_GRACE_MS });
 }
 
 /**
@@ -47,7 +48,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const sessionWallet = requireAdminWallet(req);
   if (!sessionWallet) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return privateJson({ error: 'Forbidden' }, { status: 403 });
   }
 
   const store = UploadTrackingStore.getInstance();
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest) {
     store.markCleaned(candidate.id);
   }
 
-  return NextResponse.json({
+  return privateJson({
     attempted: candidates.length,
     unpinned,
     unpinFailed,

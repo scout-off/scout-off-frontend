@@ -2,10 +2,16 @@
 import { POST } from '@/app/api/ipfs/upload/chunk/route';
 import { NextRequest } from 'next/server';
 import {
+  writeChunk,
   initSession,
   getSessionStatus,
   __resetForTests,
 } from '@/lib/chunkedUploadStore';
+
+jest.mock('@/lib/chunkedUploadStore', () => {
+  const actual = jest.requireActual('@/lib/chunkedUploadStore');
+  return { ...actual, writeChunk: jest.fn(actual.writeChunk) };
+});
 
 function makeRequest(form: FormData, ip = 'ip-chunk-default'): NextRequest {
   return new NextRequest('http://localhost:3000/api/ipfs/upload/chunk', {
@@ -15,7 +21,10 @@ function makeRequest(form: FormData, ip = 'ip-chunk-default'): NextRequest {
   });
 }
 
-afterEach(() => __resetForTests());
+afterEach(() => {
+  jest.restoreAllMocks();
+  __resetForTests();
+});
 
 describe('POST /api/ipfs/upload/chunk', () => {
   it('writes a chunk and returns the updated received-chunk status', async () => {
@@ -51,7 +60,7 @@ describe('POST /api/ipfs/upload/chunk', () => {
     const { sessionId } = await initSession({
       filename: 'clip.mp4',
       fileType: 'video/mp4',
-      fileSize: 10,
+      fileSize: 1,
       totalChunks: 1,
     });
     const form = new FormData();
@@ -67,7 +76,7 @@ describe('POST /api/ipfs/upload/chunk', () => {
     const { sessionId } = await initSession({
       filename: 'clip.mp4',
       fileType: 'video/mp4',
-      fileSize: 10,
+      fileSize: 1,
       totalChunks: 1,
     });
     const form = new FormData();
@@ -88,11 +97,43 @@ describe('POST /api/ipfs/upload/chunk', () => {
     expect(res.status).toBe(404);
   });
 
-  it('re-uploading the same chunk index (a client retry) succeeds and does not duplicate it', async () => {
+  it('returns 400 for an out-of-range chunk index', async () => {
     const { sessionId } = await initSession({
       filename: 'clip.mp4',
       fileType: 'video/mp4',
       fileSize: 10,
+      totalChunks: 1,
+    });
+    const form = new FormData();
+    form.set('sessionId', sessionId);
+    form.set('chunkIndex', '5');
+    form.set('chunk', new Blob([new Uint8Array(1)]));
+
+    const res = await POST(makeRequest(form, 'ip-outofrange'));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'Chunk index out of range' });
+  });
+
+  it('returns 500 with a generic message for unexpected errors', async () => {
+    (writeChunk as jest.Mock).mockRejectedValueOnce(
+      new Error('disk full at /tmp/secret'),
+    );
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    const form = new FormData();
+    form.set('sessionId', 'any');
+    form.set('chunkIndex', '0');
+    form.set('chunk', new Blob([new Uint8Array(1)]));
+
+    const res = await POST(makeRequest(form, 'ip-unexpected'));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: 'Failed to write chunk' });
+  });
+
+  it('re-uploading the same chunk index (a client retry) succeeds and does not duplicate it', async () => {
+    const { sessionId } = await initSession({
+      filename: 'clip.mp4',
+      fileType: 'video/mp4',
+      fileSize: 20,
       totalChunks: 1,
     });
 

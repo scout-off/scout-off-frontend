@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { requireAdminWallet } from '@/lib/adminAuth';
 import { MilestoneDisputeStore } from '@/lib/milestoneDisputeStore';
 import { createRequestLogger } from '@/lib/logger';
 import { sanitizeTextInput, TEXT_FIELD_LIMITS } from '@/lib/inputValidation';
+import { privateJson } from '@/lib/httpResponses';
 
 export const runtime = 'nodejs';
 
@@ -23,18 +24,18 @@ export async function PATCH(
 ) {
   const adminWallet = requireAdminWallet(req);
   if (!adminWallet) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return privateJson({ error: 'Forbidden' }, { status: 403 });
   }
 
   const id = Number(params.id);
   if (!Number.isInteger(id)) {
-    return NextResponse.json({ error: 'Invalid dispute id' }, { status: 400 });
+    return privateJson({ error: 'Invalid dispute id' }, { status: 400 });
   }
 
   const log = createRequestLogger(req);
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object') {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    return privateJson({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
   const { status, resolutionNote, revokeTxHash } = body as Record<
@@ -42,7 +43,7 @@ export async function PATCH(
     unknown
   >;
   if (status !== 'upheld' && status !== 'reversed') {
-    return NextResponse.json(
+    return privateJson(
       { error: "status must be 'upheld' or 'reversed'" },
       { status: 400 },
     );
@@ -51,7 +52,7 @@ export async function PATCH(
     status === 'reversed' &&
     (typeof revokeTxHash !== 'string' || !revokeTxHash.trim())
   ) {
-    return NextResponse.json(
+    return privateJson(
       { error: 'revokeTxHash is required when reversing a dispute' },
       { status: 400 },
     );
@@ -65,7 +66,7 @@ export async function PATCH(
   if (rawNote !== null) {
     const sanitizedNote = sanitizeTextInput(rawNote);
     if (sanitizedNote.length > TEXT_FIELD_LIMITS.disputeReason.max) {
-      return NextResponse.json(
+      return privateJson(
         {
           error: `resolutionNote must be at most ${TEXT_FIELD_LIMITS.disputeReason.max} characters`,
         },
@@ -77,10 +78,11 @@ export async function PATCH(
   const store = MilestoneDisputeStore.getInstance();
   const existing = store.findById(id);
   if (!existing) {
-    return NextResponse.json({ error: 'Dispute not found' }, { status: 404 });
+    return privateJson({ error: 'Dispute not found' }, { status: 404 });
   }
-  if (existing.status !== 'pending') {
-    return NextResponse.json(
+  const decidableStatuses = ['pending', 'under_review', 'escalated'];
+  if (!decidableStatuses.includes(existing.status)) {
+    return privateJson(
       { error: 'Dispute has already been decided' },
       { status: 409 },
     );
@@ -93,14 +95,11 @@ export async function PATCH(
       resolutionNote: rawNote !== null ? sanitizeTextInput(rawNote) : null,
       revokeTxHash: typeof revokeTxHash === 'string' ? revokeTxHash : null,
     });
-    return NextResponse.json(updated);
+    return privateJson(updated);
   } catch (err) {
     log.error('Failed to decide dispute', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
-      { error: 'Failed to decide dispute' },
-      { status: 500 },
-    );
+    return privateJson({ error: 'Failed to decide dispute' }, { status: 500 });
   }
 }

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { requireAdminWallet } from '@/lib/adminAuth';
 import { AdminAuditStore } from '@/lib/adminAuditStore';
 import { getValidators, getContractPaused } from '@/lib/contract';
@@ -14,6 +14,7 @@ import type {
   ReconciliationMismatch,
   ReconciliationResult,
 } from '@/lib/adminAudit';
+import { privateJson } from '@/lib/httpResponses';
 
 export const runtime = 'nodejs';
 
@@ -234,7 +235,7 @@ async function reconcileFeeWithdrawals(
 export async function GET(req: NextRequest) {
   const admin = requireAdminWallet(req);
   if (!admin) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const log = createRequestLogger(req);
@@ -261,10 +262,7 @@ export async function GET(req: NextRequest) {
     log.error('Reconciliation failed', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
-      { error: 'Reconciliation failed' },
-      { status: 502 },
-    );
+    return privateJson({ error: 'Reconciliation failed' }, { status: 502 });
   }
 
   if (mismatches.length > 0) {
@@ -313,5 +311,5 @@ export async function GET(req: NextRequest) {
     }).catch(() => {});
   }
 
-  return NextResponse.json(result);
+  return privateJson(result);
 }

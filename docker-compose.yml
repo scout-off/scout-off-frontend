@@ -42,6 +42,9 @@ services:
 
   indexer:
     build: ./packages/indexer
+    # Graceful shutdown waits up to 10 s for the in-flight poll batch.
+    stop_signal: SIGTERM
+    stop_grace_period: 15s
     ports:
       - '3001:3001'
     environment:

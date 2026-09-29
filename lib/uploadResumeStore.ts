@@ -1,3 +1,5 @@
+import { UPLOAD_RESUME_KEY } from '@/lib/storageKeys';
+
 /**
  * localStorage-backed persistence for interrupted chunked uploads.
  *
@@ -12,7 +14,7 @@
  */
 
 /** localStorage key used to store the single persisted upload session. */
-export const UPLOAD_RESUME_KEY = 'scout-off:upload-resume';
+export { UPLOAD_RESUME_KEY };
 
 /** Must match the server-side SESSION_TTL_MS in lib/chunkedUploadStore.ts */
 export const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionWallet } from '@/lib/session';
 import { collectUserData } from '@/lib/offChainDataCollection';
 import { createRequestLogger } from '@/lib/logger';
+import { privateJson } from '@/lib/httpResponses';
 
 export const runtime = 'nodejs';
 
@@ -11,7 +12,7 @@ export const runtime = 'nodejs';
  * Returns a compiled, authenticated JSON export of the requesting wallet's
  * off-chain data across every in-scope store. Delivered as a direct
  * authenticated response (the session cookie proves ownership) with
- * `Content-Disposition: attachment` and `Cache-Control: no-store`, so the
+ * `Content-Disposition: attachment` and `Cache-Control: private, no-store`, so the
  * payload is never cached or retrievable by anyone without the session.
  *
  * On-chain data is explicitly excluded and explained in the payload's
@@ -20,7 +21,7 @@ export const runtime = 'nodejs';
 export async function GET(req: NextRequest) {
   const wallet = getSessionWallet(req);
   if (!wallet) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const log = createRequestLogger(req);
@@ -35,14 +36,15 @@ export async function GET(req: NextRequest) {
       headers: {
         'Content-Type': 'application/json',
         'Content-Disposition': `attachment; filename="${filename}"`,
-        'Cache-Control': 'no-store',
+        'Cache-Control': 'private, no-store',
+        Vary: 'Cookie',
       },
     });
   } catch (err) {
     log.error('Failed to build data export', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
+    return privateJson(
       { error: 'Failed to build data export' },
       { status: 500 },
     );

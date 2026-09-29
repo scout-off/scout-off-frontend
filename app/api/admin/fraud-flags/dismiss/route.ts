@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { requireAdminWallet } from '@/lib/adminAuth';
 import { computeFraudFlagDismissalKey } from '@/lib/fraudDetection';
 import { FraudFlagDismissalStore } from '@/lib/fraudFlagDismissalStore';
@@ -6,6 +6,7 @@ import { AdminAuditStore } from '@/lib/adminAuditStore';
 import { createRequestLogger } from '@/lib/logger';
 import { sanitizeTextInput } from '@/lib/inputValidation';
 import type { FraudFlagCategory, FraudFlagSeverity } from '@/types';
+import { privateJson } from '@/lib/httpResponses';
 
 export const runtime = 'nodejs';
 
@@ -60,17 +61,17 @@ function isFlagPayload(value: unknown): value is {
 export async function POST(req: NextRequest) {
   const adminWallet = requireAdminWallet(req);
   if (!adminWallet) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return privateJson({ error: 'Forbidden' }, { status: 403 });
   }
 
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object') {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    return privateJson({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
   const { flag, note: rawNote } = body as Record<string, unknown>;
   if (!isFlagPayload(flag)) {
-    return NextResponse.json(
+    return privateJson(
       {
         error:
           'flag must include category, heuristic, severity, wallets, and reason',
@@ -82,14 +83,11 @@ export async function POST(req: NextRequest) {
   let note: string | undefined;
   if (rawNote !== undefined) {
     if (typeof rawNote !== 'string') {
-      return NextResponse.json(
-        { error: 'note must be a string' },
-        { status: 400 },
-      );
+      return privateJson({ error: 'note must be a string' }, { status: 400 });
     }
     const sanitized = sanitizeTextInput(rawNote);
     if (sanitized.length > NOTE_MAX) {
-      return NextResponse.json(
+      return privateJson(
         { error: `note must be at most ${NOTE_MAX} characters` },
         { status: 400 },
       );
@@ -138,12 +136,12 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    return NextResponse.json(dismissal, { status: 201 });
+    return privateJson(dismissal, { status: 201 });
   } catch (err) {
     log.error('Failed to dismiss fraud flag', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
+    return privateJson(
       { error: 'Failed to dismiss fraud flag' },
       { status: 500 },
     );

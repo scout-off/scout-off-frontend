@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, FormEvent } from 'react';
+import { useTranslations } from 'next-intl';
 import { useWallet } from '@/hooks/useWallet';
 import { useValidator } from '@/hooks/useValidator';
 import useIsPaused from '@/hooks/useIsPaused';
@@ -36,6 +37,7 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
   const { publicKey, signAndSubmit } = useWallet();
   const { revokeMilestone, loading: validatorLoading } = useValidator();
   const paused = useIsPaused();
+  const tContractStatus = useTranslations('contract_status');
 
   // Player-mode state
   const [selected, setSelected] = useState<string | null>(null);
@@ -273,16 +275,31 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
           disabled={
             !selected ||
             validatorLoading ||
-            paused ||
             revokeState.confirmationState === 'confirming'
           }
-          onClick={handleRevokeClick}
-          aria-describedby={txError ? 'revoke-error-summary' : undefined}
+          aria-disabled={paused ? 'true' : undefined}
+          aria-describedby={
+            [
+              txError ? 'revoke-error-summary' : null,
+              paused ? 'paused-hint' : null,
+            ]
+              .filter(Boolean)
+              .join(' ') || undefined
+          }
+          onClick={(e) => {
+            if (paused) e.preventDefault();
+            handleRevokeClick();
+          }}
         >
           {revokeState.confirmationState === 'confirming'
             ? 'Confirming…'
             : 'Revoke Selected Milestone'}
         </button>
+        {paused && (
+          <p id="paused-hint" className="text-xs text-gray-400 mt-1">
+            {tContractStatus('paused_hint')}
+          </p>
+        )}
         <ConfirmDialog
           isOpen={showConfirm}
           onConfirm={handlePlayerConfirm}

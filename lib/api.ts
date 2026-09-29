@@ -7,6 +7,7 @@ import type { Player } from '@/types';
 import { fetchWithRetry } from './fetchWithRetry';
 import { fetchValidatorEvents, type IndexedEvent } from './indexerClient';
 import type { ValidatorLeaderboardRange } from './validatorLeaderboard';
+import type { ScoutContact } from './scoutContactsCsv';
 
 // `API_URL_INTERNAL` (server-only, no NEXT_PUBLIC_ prefix) lets a Server
 // Component's SSR-time fetch reach the backend via a container-internal
@@ -95,7 +96,7 @@ export const claimAccountWithBackupWallet = (
 export const fetchScoutProfile = (scoutId: string) =>
   api.get(`/scouts/${scoutId}`).then((r) => r.data);
 
-export const fetchScoutContacts = (scoutId: string) =>
+export const fetchScoutContacts = (scoutId: string): Promise<ScoutContact[]> =>
   api.get(`/scouts/${scoutId}/contacts`).then((r) => r.data);
 
 export interface ScoutStats {
@@ -106,16 +107,15 @@ export interface ScoutStats {
 export const fetchScoutStats = (scoutId: string): Promise<ScoutStats> =>
   api.get(`/scouts/${scoutId}/stats`).then((r) => r.data);
 
-// Chat
-export const fetchChatHistory = (roomId: string) =>
-  api.get(`/chat/${roomId}`).then((r) => r.data);
+// Web Push (issue #558) — the backend stores the PushSubscription and sends
+// a Web Push message (VAPID-signed) when a validator approves a milestone.
+export const subscribeToPush = (
+  wallet: string,
+  subscription: PushSubscriptionJSON,
+) => api.post('/push/subscriptions', { wallet, subscription });
 
-export const postChatMessage = (
-  roomId: string,
-  message: string,
-  sender: string,
-) => api.post(`/chat/${roomId}`, { message, sender }).then((r) => r.data);
-
+export const unsubscribeFromPush = (wallet: string, endpoint: string) =>
+  api.delete('/push/subscriptions', { data: { wallet, endpoint } });
 // Admin activity feed
 export type ActivityEventType =
   | 'player_registered'
@@ -283,6 +283,8 @@ export const fetchFraudFlags = async (): Promise<{
   flags: FraudFlag[];
   warnings: string[];
   evaluatedAt: number;
+  eventsProcessed?: number;
+  durationMs?: number;
 }> => {
   const res = await fetchWithRetry('/api/admin/fraud-flags');
   if (!res.ok) throw new Error('Failed to fetch fraud flags');
@@ -299,6 +301,9 @@ export const fetchFraudFlagsStatus = async (): Promise<{
   evaluatedAt: number | null;
   highSeverityCount: number;
   trigger: 'manual' | 'cron' | null;
+  eventsProcessed?: number;
+  durationMs?: number;
+  lastLedger?: number;
 }> => {
   const res = await fetchWithRetry('/api/admin/fraud-flags/status');
   if (!res.ok) throw new Error('Failed to fetch fraud flags status');

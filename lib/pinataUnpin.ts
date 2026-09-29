@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { BACKEND_WRITE_TIMEOUT_MS } from './httpClient';
+import { getPinataCredentials } from './pinataConfig';
 
 /**
  * Best-effort unpin of a CID from Pinata (issue #1005's cleanup path).
@@ -12,17 +12,16 @@ import { BACKEND_WRITE_TIMEOUT_MS } from './httpClient';
 export async function unpinFromPinata(
   cid: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const apiKey = process.env.PINATA_API_KEY;
-  const secret = process.env.PINATA_SECRET;
-  if (!apiKey || !secret) {
+  const credentials = getPinataCredentials();
+  if (!credentials) {
     return { ok: false, error: 'Pinata credentials are not configured' };
   }
 
   try {
     await axios.delete(`https://api.pinata.cloud/pinning/unpin/${cid}`, {
       headers: {
-        pinata_api_key: apiKey,
-        pinata_secret_api_key: secret,
+        pinata_api_key: credentials.apiKey,
+        pinata_secret_api_key: credentials.secret,
       },
       timeout: BACKEND_WRITE_TIMEOUT_MS,
     });

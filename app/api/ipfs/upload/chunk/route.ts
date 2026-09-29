@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeChunk } from '@/lib/chunkedUploadStore';
-import { getClientIp, createRateLimiter } from '@/lib/uploadRateLimit';
+import { apiError, ApiErrorCode } from '@/lib/apiErrors';
+import { privateJson } from '@/lib/httpResponses';
+import {
+  writeChunk,
+  CHUNK_SIZE_BYTES,
+  ChunkTooLargeError,
+  TotalSizeExceededError,
+  UploadSessionNotFoundError,
+  ChunkIndexOutOfRangeError,
+  isSessionOwner,
+} from '@/lib/chunkedUploadStore';
+import { createRequestLogger } from '@/lib/logger';
+import { getSessionWallet } from '@/lib/session';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
 export const runtime = 'nodejs';
 
@@ -15,25 +27,67 @@ export const runtime = 'nodejs';
  *
  * A single upload legitimately issues many small requests here, so this
  * route's rate limit is much higher than the whole-file upload route's.
+ *
+ * Issue #1294: enforces per-chunk and total size limits so a client can't
+ * declare 1 MB at /init and stream gigabytes through here:
+ *  - Content-Length is checked *before* `req.formData()` buffers the body,
+ *    so oversized requests are rejected without reading them fully.
+ *  - After parsing, the chunk's byte length is checked against the expected
+ *    size for that index (CHUNK_SIZE_BYTES for non-final chunks with a
+ *    small multipart tolerance; smaller allowed for the final chunk) via
+ *    writeChunk's own per-chunk + running-total checks.
  */
-const checkRateLimit = createRateLimiter(600, 60 * 1000);
+const RATE_LIMIT = { limit: 600, windowMs: 60 * 1000 };
+
+/**
+ * Multipart framing overhead allowance when pre-checking Content-Length
+ * before parsing: boundaries, part headers and field values for
+ * sessionId/chunkIndex. The check is intentionally coarse — the authoritative
+ * per-chunk byte check happens after parsing in writeChunk().
+ */
+const MULTIPART_OVERHEAD_TOLERANCE_BYTES = 64 * 1024;
 
 export async function POST(req: NextRequest) {
+  const wallet = getSessionWallet(req);
   const ip = getClientIp(req);
-  const rl = checkRateLimit(ip);
+  const key = wallet ? `wallet:${wallet}` : ip;
+  const rl = await checkRateLimit(`ipfs-upload-chunk:${key}`, RATE_LIMIT);
   if (rl.limited) {
     const retryAfter = rl.retryAfterSec ?? 60;
-    return NextResponse.json(
-      { error: 'Too many requests' },
-      { status: 429, headers: { 'Retry-After': String(retryAfter) } },
+    return apiError(
+      ApiErrorCode.RATE_LIMITED,
+      429,
+      'Too many requests',
+      undefined,
+      { headers: { 'Retry-After': String(retryAfter) } },
     );
+  }
+
+  // Reject obviously-huge bodies before Next buffers the whole multipart
+  // payload into memory via formData(). A legitimate chunk request carries
+  // at most one CHUNK_SIZE_BYTES chunk plus multipart framing for the
+  // sessionId/chunkIndex fields, so anything beyond that (+ tolerance) is
+  // rejected up front; the authoritative per-index check still happens in
+  // writeChunk() after parsing.
+  const contentLengthRaw = req.headers.get('content-length');
+  if (contentLengthRaw !== null) {
+    const contentLength = Number(contentLengthRaw);
+    if (
+      Number.isFinite(contentLength) &&
+      contentLength > CHUNK_SIZE_BYTES + MULTIPART_OVERHEAD_TOLERANCE_BYTES
+    ) {
+      return privateJson(
+        { error: `Chunk exceeds the ${CHUNK_SIZE_BYTES}-byte limit` },
+        { status: 413 },
+      );
+    }
   }
 
   let form: FormData;
   try {
     form = await req.formData();
   } catch {
-    return NextResponse.json({ error: 'Invalid form data' }, { status: 400 });
+    return apiError(ApiErrorCode.INVALID_REQUEST, 400, 'Invalid form data');
   }
 
   const sessionId = form.get('sessionId');
@@ -41,31 +95,69 @@ export async function POST(req: NextRequest) {
   const chunk = form.get('chunk');
 
   if (typeof sessionId !== 'string' || !sessionId) {
-    return NextResponse.json(
-      { error: 'sessionId is required' },
-      { status: 400 },
-    );
+    return apiError(ApiErrorCode.INVALID_REQUEST, 400, 'sessionId is required');
   }
   if (typeof chunkIndexRaw !== 'string' || !/^\d+$/.test(chunkIndexRaw)) {
-    return NextResponse.json(
-      { error: 'chunkIndex must be a non-negative integer' },
-      { status: 400 },
+    return apiError(
+      ApiErrorCode.INVALID_REQUEST,
+      400,
+      'chunkIndex must be a non-negative integer',
     );
   }
   if (!(chunk instanceof Blob)) {
-    return NextResponse.json({ error: 'chunk is required' }, { status: 400 });
+    return apiError(ApiErrorCode.INVALID_REQUEST, 400, 'chunk is required');
+  }
+
+  if (!(await isSessionOwner(sessionId, getSessionWallet(req)))) {
+    // 404 rather than 403 so a foreign caller can't probe session existence.
+    return apiError(
+      ApiErrorCode.UPLOAD_SESSION_NOT_FOUND,
+      404,
+      'Upload session not found or expired',
+    );
   }
 
   const chunkIndex = Number(chunkIndexRaw);
+  // Cheap pre-check from the Blob's declared size before copying bytes.
+  if (chunk.size > CHUNK_SIZE_BYTES + MULTIPART_OVERHEAD_TOLERANCE_BYTES) {
+    return privateJson(
+      { error: `Chunk exceeds the ${CHUNK_SIZE_BYTES}-byte limit` },
+      { status: 413 },
+    );
+  }
   const buffer = Buffer.from(await chunk.arrayBuffer());
 
   try {
     const status = await writeChunk(sessionId, chunkIndex, buffer);
-    return NextResponse.json(status);
+    return privateJson(status);
   } catch (err) {
+    if (err instanceof ChunkTooLargeError) {
+      return privateJson({ error: err.message }, { status: 413 });
+    }
+    if (err instanceof TotalSizeExceededError) {
+      return privateJson({ error: err.message }, { status: 413 });
+    }
+    // An out-of-range index is a validation error, not a missing session.
+    if (err instanceof ChunkIndexOutOfRangeError) {
+      return apiError(
+        ApiErrorCode.CHUNK_INDEX_OUT_OF_RANGE,
+        400,
+        'Chunk index out of range',
+      );
+    }
+    if (err instanceof UploadSessionNotFoundError) {
+      return apiError(
+        ApiErrorCode.UPLOAD_SESSION_NOT_FOUND,
+        404,
+        'Upload session not found or expired',
+      );
+    }
+    createRequestLogger(req).error('Failed to write upload chunk', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to write chunk' },
-      { status: 404 },
+      { error: 'Failed to write chunk' },
+      { status: 500 },
     );
   }
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Player } from '@/types';
 import { useWallet } from '@/hooks/useWallet';
 import useIsPaused from '@/hooks/useIsPaused';
@@ -22,6 +23,7 @@ export default function UpdateProfileForm({
   const { publicKey, signAndSubmit } = useWallet();
   const { show } = useToast();
   const isPaused = useIsPaused();
+  const tContractStatus = useTranslations('contract_status');
   const [newCid, setNewCid] = useState<string>('');
   const [fileError, setFileError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -160,15 +162,9 @@ export default function UpdateProfileForm({
           )}
           <Button
             type="submit"
-            disabled={!canSubmit}
+            disabled={!canSubmit || isUploadInProgress}
             isLoading={isSubmitting}
-            title={
-              isPaused
-                ? 'Contract is currently paused'
-                : isUploadInProgress
-                  ? 'Please wait for the upload to finish'
-                  : undefined
-            }
+            disabledReason={isPaused ? tContractStatus('paused_hint') : undefined}
             className="w-full"
           >
             Update Profile

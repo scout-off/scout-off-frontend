@@ -24,7 +24,7 @@ jobs:
           node-version: 24
           cache: npm
 
-      - run: npm install
+      - run: npm ci --no-audit --no-fund
 
       # TEMP: ~24 Storybook stories (WalletButton, Turnstile, ThemeToggle,
       # XlmFiatDisplay, OfflineBanner, ScrollToTop, SessionExpiryWarning,

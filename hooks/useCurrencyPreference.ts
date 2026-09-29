@@ -1,28 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { CURRENCY_PREFERENCE_KEY } from '@/lib/storageKeys';
+import { SUPPORTED_CURRENCIES, type CurrencyCode } from '@/lib/currencies';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-/** Hardcoded subset of ISO 4217 codes the platform supports for display. */
-export const SUPPORTED_CURRENCIES = [
-  { code: 'USD', label: 'US Dollar ($)' },
-  { code: 'EUR', label: 'Euro (€)' },
-  { code: 'GBP', label: 'British Pound (£)' },
-  { code: 'NGN', label: 'Nigerian Naira (₦)' },
-  { code: 'KES', label: 'Kenyan Shilling (KSh)' },
-  { code: 'ZAR', label: 'South African Rand (R)' },
-  { code: 'JPY', label: 'Japanese Yen (¥)' },
-  { code: 'CAD', label: 'Canadian Dollar (CA$)' },
-  { code: 'AUD', label: 'Australian Dollar (A$)' },
-  { code: 'BRL', label: 'Brazilian Real (R$)' },
-] as const;
-
-export type CurrencyCode = (typeof SUPPORTED_CURRENCIES)[number]['code'];
+export { SUPPORTED_CURRENCIES, type CurrencyCode };
 
 const DEFAULT_CURRENCY: CurrencyCode = 'USD';
 
-const STORAGE_KEY = 'scoutoff_currency_preference';
+const STORAGE_KEY = CURRENCY_PREFERENCE_KEY;
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 

@@ -2,8 +2,9 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { expect, userEvent, within } from '@storybook/test';
 import { useLayoutEffect, useState } from 'react';
 import CookieConsentBanner from './ui/CookieConsentBanner';
+import { COOKIE_CONSENT_KEY } from '@/lib/storageKeys';
 
-const CONSENT_STORAGE_KEY = 'scoutoff:cookie-consent';
+const CONSENT_STORAGE_KEY = COOKIE_CONSENT_KEY;
 
 const meta: Meta<typeof CookieConsentBanner> = {
   title: 'Components/CookieConsentBanner',

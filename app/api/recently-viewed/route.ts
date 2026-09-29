@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getSessionWallet } from '@/lib/session';
 import { RecentlyViewedStore } from '@/lib/recentlyViewedStore';
 import { createRequestLogger } from '@/lib/logger';
+import { privateJson } from '@/lib/httpResponses';
 
 export const runtime = 'nodejs';
 
@@ -13,18 +14,18 @@ export const runtime = 'nodejs';
 export async function GET(req: NextRequest) {
   const scoutWallet = getSessionWallet(req);
   if (!scoutWallet) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const log = createRequestLogger(req);
   try {
     const entries = RecentlyViewedStore.getInstance().list(scoutWallet);
-    return NextResponse.json(entries);
+    return privateJson(entries);
   } catch (err) {
     log.error('Failed to list recently viewed', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
+    return privateJson(
       { error: 'Failed to load recently viewed' },
       { status: 500 },
     );
@@ -40,18 +41,18 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const scoutWallet = getSessionWallet(req);
   if (!scoutWallet) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const log = createRequestLogger(req);
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object') {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    return privateJson({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
   const { playerId, viewedAt } = body as Record<string, unknown>;
   if (typeof playerId !== 'string' || playerId.length === 0) {
-    return NextResponse.json(
+    return privateJson(
       { error: 'playerId must be a non-empty string' },
       { status: 400 },
     );
@@ -65,15 +66,12 @@ export async function POST(req: NextRequest) {
       playerId,
       timestamp,
     );
-    return NextResponse.json(entry, { status: 201 });
+    return privateJson(entry, { status: 201 });
   } catch (err) {
     log.error('Failed to record view', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
-      { error: 'Failed to record view' },
-      { status: 500 },
-    );
+    return privateJson({ error: 'Failed to record view' }, { status: 500 });
   }
 }
 
@@ -86,18 +84,18 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const scoutWallet = getSessionWallet(req);
   if (!scoutWallet) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const log = createRequestLogger(req);
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object') {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    return privateJson({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
   const { id } = body as Record<string, unknown>;
   if (typeof id !== 'number') {
-    return NextResponse.json({ error: 'id must be a number' }, { status: 400 });
+    return privateJson({ error: 'id must be a number' }, { status: 400 });
   }
 
   try {
@@ -106,19 +104,16 @@ export async function DELETE(req: NextRequest) {
       id as number,
     );
     if (!removed) {
-      return NextResponse.json(
+      return privateJson(
         { error: 'Recently viewed entry not found' },
         { status: 404 },
       );
     }
-    return NextResponse.json({ success: true });
+    return privateJson({ success: true });
   } catch (err) {
     log.error('Failed to remove view', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
-      { error: 'Failed to remove view' },
-      { status: 500 },
-    );
+    return privateJson({ error: 'Failed to remove view' }, { status: 500 });
   }
 }

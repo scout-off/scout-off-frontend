@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getSessionWallet } from '@/lib/session';
 import { WatchlistStore } from '@/lib/watchlistStore';
 import { isValidStellarAddress, normalizeStellarAddress } from '@/lib/stellar';
 import { createRequestLogger } from '@/lib/logger';
+import { privateJson } from '@/lib/httpResponses';
 
 export const runtime = 'nodejs';
 
@@ -14,21 +15,18 @@ export const runtime = 'nodejs';
 export async function GET(req: NextRequest) {
   const scoutWallet = getSessionWallet(req);
   if (!scoutWallet) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const log = createRequestLogger(req);
   try {
     const entries = WatchlistStore.getInstance().list(scoutWallet);
-    return NextResponse.json(entries);
+    return privateJson(entries);
   } catch (err) {
     log.error('Failed to list watchlist', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
-      { error: 'Failed to load watchlist' },
-      { status: 500 },
-    );
+    return privateJson({ error: 'Failed to load watchlist' }, { status: 500 });
   }
 }
 
@@ -40,18 +38,18 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const scoutWallet = getSessionWallet(req);
   if (!scoutWallet) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const log = createRequestLogger(req);
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object') {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    return privateJson({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
   const { playerId } = body as Record<string, unknown>;
   if (typeof playerId !== 'string' || playerId.length === 0) {
-    return NextResponse.json(
+    return privateJson(
       { error: 'playerId must be a non-empty string' },
       { status: 400 },
     );
@@ -62,7 +60,7 @@ export async function POST(req: NextRequest) {
   // gate on real Ed25519 validity.
   const normalizedPlayerId = normalizeStellarAddress(playerId);
   if (!isValidStellarAddress(normalizedPlayerId)) {
-    return NextResponse.json(
+    return privateJson(
       { error: 'playerId must be a valid Stellar public key (G...)' },
       { status: 400 },
     );
@@ -73,12 +71,12 @@ export async function POST(req: NextRequest) {
       scoutWallet,
       normalizedPlayerId,
     );
-    return NextResponse.json(entry, { status: 201 });
+    return privateJson(entry, { status: 201 });
   } catch (err) {
     log.error('Failed to add to watchlist', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
+    return privateJson(
       { error: 'Failed to add to watchlist' },
       { status: 500 },
     );
@@ -93,34 +91,34 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const scoutWallet = getSessionWallet(req);
   if (!scoutWallet) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const log = createRequestLogger(req);
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object') {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    return privateJson({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
   const { id } = body as Record<string, unknown>;
   if (typeof id !== 'number') {
-    return NextResponse.json({ error: 'id must be a number' }, { status: 400 });
+    return privateJson({ error: 'id must be a number' }, { status: 400 });
   }
 
   try {
     const removed = WatchlistStore.getInstance().remove(scoutWallet, id);
     if (!removed) {
-      return NextResponse.json(
+      return privateJson(
         { error: 'Watchlist entry not found' },
         { status: 404 },
       );
     }
-    return NextResponse.json({ success: true });
+    return privateJson({ success: true });
   } catch (err) {
     log.error('Failed to remove from watchlist', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
+    return privateJson(
       { error: 'Failed to remove from watchlist' },
       { status: 500 },
     );

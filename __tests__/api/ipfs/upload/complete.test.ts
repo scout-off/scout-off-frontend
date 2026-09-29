@@ -1,16 +1,17 @@
 /** @jest-environment node */
-import { POST } from '@/app/api/ipfs/upload/complete/route';
+import {
+  POST,
+  collectStreamedFileBytes,
+} from '@/app/api/ipfs/upload/complete/route';
 import { NextRequest } from 'next/server';
-import axios from 'axios';
 import {
   initSession,
   writeChunk,
   getSessionStatus,
+  prepareStreamedAssembly,
   __resetForTests,
 } from '@/lib/chunkedUploadStore';
-
-jest.mock('axios');
-const mockedAxios = axios as jest.Mocked<typeof axios>;
+import { sha256Hex } from '@/lib/uploadVerification';
 
 const JPEG_HEADER = new Uint8Array([
   0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
@@ -32,21 +33,54 @@ async function seedSession(header: Uint8Array, ip: string) {
     fileSize: header.length,
     totalChunks: 1,
   });
-  await writeChunk(sessionId, 0, Buffer.from(header));
+  await writeChunk(sessionId, 0, Buffer.from([...header]));
   return sessionId;
 }
 
 describe('POST /api/ipfs/upload/complete', () => {
+  const g = globalThis as unknown as Record<string, unknown>;
+  let pinnedBytes: Buffer | null;
+
   beforeEach(() => {
-    jest.clearAllMocks();
     process.env.PINATA_API_KEY = 'test-api-key';
     process.env.PINATA_SECRET = 'test-secret';
+    pinnedBytes = null;
+    // Streamed-Pinata override: drain the exact file bytes the route
+    // streamed (proving one complete file) and return a canned CID.
+    // Default gateway: serve back exactly what was pinned (pass).
+    g.__pinStreamedFileToIPFSForTests = async (assembly: {
+      chunks: () => Generator<Buffer, void, void>;
+    }) => {
+      pinnedBytes = await collectStreamedFileBytes(assembly.chunks);
+      return 'QmChunkedCID';
+    };
+    g.__gatewayStreamForTests = async function* () {
+      if (!pinnedBytes) throw new Error('gateway timeout');
+      yield new Uint8Array(pinnedBytes);
+    };
   });
 
   afterEach(() => {
     delete process.env.PINATA_API_KEY;
     delete process.env.PINATA_SECRET;
+    delete g.__pinStreamedFileToIPFSForTests;
+    delete g.__gatewayStreamForTests;
+    jest.restoreAllMocks();
     __resetForTests();
+  });
+
+  it('returns 503 before doing any work when Pinata credentials are missing', async () => {
+    delete process.env.PINATA_SECRET;
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    const pin = jest.fn();
+    g.__pinStreamedFileToIPFSForTests = pin;
+    const sessionId = await seedSession(JPEG_HEADER, 'ip-complete-nocreds');
+    const res = await POST(makeRequest({ sessionId }, 'ip-complete-nocreds'));
+    expect(pin).not.toHaveBeenCalled();
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({
+      error: 'IPFS uploads are not configured',
+    });
   });
 
   it('returns 400 for invalid JSON', async () => {
@@ -70,9 +104,9 @@ describe('POST /api/ipfs/upload/complete', () => {
     expect(res.status).toBe(400);
   });
 
-  it('returns 400 for an unknown session', async () => {
+  it('returns 404 for an unknown session', async () => {
     const res = await POST(makeRequest({ sessionId: 'nope' }, 'ip-unknown'));
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(404);
   });
 
   it('returns 400 for an incomplete upload (missing chunks)', async () => {
@@ -82,11 +116,15 @@ describe('POST /api/ipfs/upload/complete', () => {
       fileSize: 20,
       totalChunks: 2,
     });
+    // 10 bytes against a 20-byte declared size: total check passes (10 ≤ 20)
+    // so the session stays incomplete rather than rejected.
     await writeChunk(sessionId, 0, Buffer.from(new Uint8Array(10)));
 
     const res = await POST(makeRequest({ sessionId }, 'ip-incomplete'));
     expect(res.status).toBe(400);
-    expect((await res.json()).error).toMatch(/incomplete/i);
+    const body = await res.json();
+    expect(body.error.code).toBe('UPLOAD_INCOMPLETE');
+    expect(body.error.message).toMatch(/incomplete/i);
   });
 
   it('returns 400 when the assembled file content does not match its declared MIME type', async () => {
@@ -99,26 +137,20 @@ describe('POST /api/ipfs/upload/complete', () => {
     expect(await getSessionStatus(sessionId)).toBeNull();
   });
 
-  it('assembles the file and uploads it to Pinata, returning the CID', async () => {
+  it('streams the file to Pinata as exactly one complete file', async () => {
     const sessionId = await seedSession(JPEG_HEADER, 'ip-success');
-    mockedAxios.post.mockResolvedValueOnce({
-      data: { IpfsHash: 'QmChunkedCID' },
-    });
-    mockedAxios.get.mockResolvedValueOnce({ data: JPEG_HEADER.buffer });
 
     const res = await POST(makeRequest({ sessionId }, 'ip-success'));
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ cid: 'QmChunkedCID' });
-    expect(mockedAxios.post).toHaveBeenCalledWith(
-      'https://api.pinata.cloud/pinning/pinFileToIPFS',
-      expect.any(FormData),
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          pinata_api_key: 'test-api-key',
-          pinata_secret_api_key: 'test-secret',
-        }),
-      }),
+    // Pinata received exactly the assembled file bytes — one file, whole.
+    expect(pinnedBytes).not.toBeNull();
+    // Compare hex digests rather than Buffer.compare(): under this project's
+    // DOM lib, Buffer's ArrayBufferLike generic doesn't satisfy the
+    // Uint8Array<ArrayBufferLike> parameter, same mismatch sha256Hex() notes.
+    expect(pinnedBytes!.toString('hex')).toBe(
+      Buffer.from([...JPEG_HEADER]).toString('hex'),
     );
     // Successful completion cleans up the session.
     expect(await getSessionStatus(sessionId)).toBeNull();
@@ -126,7 +158,9 @@ describe('POST /api/ipfs/upload/complete', () => {
 
   it('returns 502 and preserves the session when the Pinata upload fails, so a retry can skip re-uploading chunks', async () => {
     const sessionId = await seedSession(JPEG_HEADER, 'ip-pinatafail');
-    mockedAxios.post.mockRejectedValueOnce(new Error('Pinata is down'));
+    g.__pinStreamedFileToIPFSForTests = async () => {
+      throw new Error('Pinata is down');
+    };
 
     const res = await POST(makeRequest({ sessionId }, 'ip-pinatafail'));
 
@@ -134,15 +168,22 @@ describe('POST /api/ipfs/upload/complete', () => {
     expect(await getSessionStatus(sessionId)).not.toBeNull();
   });
 
+  it('prepareStreamedAssembly computes the sha256 without concatenation', async () => {
+    const sessionId = await seedSession(JPEG_HEADER, 'ip-digest');
+    const assembly = await prepareStreamedAssembly(sessionId);
+    expect(assembly.totalBytes).toBe(JPEG_HEADER.length);
+    expect(assembly.sha256).toBe(sha256Hex(Buffer.from([...JPEG_HEADER])));
+    expect(
+      (await collectStreamedFileBytes(assembly.chunks)).toString('hex'),
+    ).toBe(Buffer.from([...JPEG_HEADER]).toString('hex'));
+  });
+
   describe('post-upload integrity verification (issue #699)', () => {
     it('returns 502 and preserves the session when the gateway serves mismatched content', async () => {
       const sessionId = await seedSession(JPEG_HEADER, 'ip-verify-mismatch');
-      mockedAxios.post.mockResolvedValueOnce({
-        data: { IpfsHash: 'QmMismatch' },
-      });
-      mockedAxios.get.mockResolvedValueOnce({
-        data: new Uint8Array([9, 9, 9, 9]).buffer,
-      });
+      g.__gatewayStreamForTests = async function* () {
+        yield new Uint8Array([9, 9, 9, 9]);
+      };
 
       const res = await POST(makeRequest({ sessionId }, 'ip-verify-mismatch'));
 
@@ -154,10 +195,9 @@ describe('POST /api/ipfs/upload/complete', () => {
 
     it('returns 502 with a retryable error when the gateway cannot be reached for verification', async () => {
       const sessionId = await seedSession(JPEG_HEADER, 'ip-verify-unreachable');
-      mockedAxios.post.mockResolvedValueOnce({
-        data: { IpfsHash: 'QmGatewayDown' },
-      });
-      mockedAxios.get.mockRejectedValueOnce(new Error('gateway timeout'));
+      g.__gatewayStreamForTests = async () => {
+        throw new Error('gateway timeout');
+      };
 
       const res = await POST(
         makeRequest({ sessionId }, 'ip-verify-unreachable'),

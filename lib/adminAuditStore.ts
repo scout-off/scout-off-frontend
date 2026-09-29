@@ -149,6 +149,10 @@ export class AdminAuditStore {
       clauses.push('id < @before');
       params.before = filter.before;
     }
+    if (filter.dataUserId !== undefined) {
+      clauses.push("json_extract(data, '$.userId') = @dataUserId");
+      params.dataUserId = filter.dataUserId;
+    }
 
     const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
     const rows = this.db

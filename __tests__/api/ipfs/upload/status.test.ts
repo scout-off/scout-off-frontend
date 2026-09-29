@@ -30,7 +30,7 @@ describe('GET /api/ipfs/upload/status', () => {
     const { sessionId } = await initSession({
       filename: 'clip.mp4',
       fileType: 'video/mp4',
-      fileSize: 30,
+      fileSize: 4,
       totalChunks: 3,
     });
     await writeChunk(sessionId, 0, Buffer.from('aa'));

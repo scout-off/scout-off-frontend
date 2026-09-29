@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import api from '@/lib/api';
 import { requireAdminWallet } from '@/lib/adminAuth';
+import { privateJson } from '@/lib/httpResponses';
 
 /**
  * PATCH /api/admin/academies/:id/quorum
@@ -16,12 +17,12 @@ export async function PATCH(
 ) {
   const admin = requireAdminWallet(req);
   if (!admin) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const { quorum } = await req.json().catch(() => ({}));
   if (quorum !== null && (!Number.isInteger(quorum) || quorum < 1)) {
-    return NextResponse.json(
+    return privateJson(
       { error: 'quorum must be a positive integer, or null to clear it' },
       { status: 400 },
     );
@@ -31,10 +32,10 @@ export async function PATCH(
     const academy = await api
       .patch(`/academies/${encodeURIComponent(params.id)}/quorum`, { quorum })
       .then((r) => r.data);
-    return NextResponse.json(academy);
+    return privateJson(academy);
   } catch (err: any) {
     const status = err?.response?.status ?? 502;
     const message = err?.response?.data?.error ?? 'Failed to set quorum';
-    return NextResponse.json({ error: message }, { status });
+    return privateJson({ error: message }, { status });
   }
 }

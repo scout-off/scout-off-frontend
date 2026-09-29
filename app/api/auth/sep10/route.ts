@@ -1,5 +1,6 @@
-import { WebAuth, Networks, Keypair } from '@stellar/stellar-sdk';
+import { WebAuth, Networks, Keypair, StrKey } from '@stellar/stellar-sdk';
 import { NextRequest, NextResponse } from 'next/server';
+import { apiError, ApiErrorCode } from '@/lib/apiErrors';
 import { randomUUID } from 'crypto';
 import { createRequestLogger, withRequestId } from '@/lib/logger';
 import {
@@ -10,10 +11,30 @@ import {
   REMEMBER_ME_REFRESH_TTL_SEC,
 } from '@/lib/session';
 import { SessionStore } from '@/lib/sessionStore';
+import { withRouteTelemetry } from '@/lib/telemetry';
 
 // better-sqlite3 (via lib/sessionStore.ts) is a native addon and needs the
 // Node.js runtime, not edge.
 export const runtime = 'nodejs';
+
+// Same check as lib/stellar's isValidStellarAddress, without importing that
+// module's RPC client into the auth route. Only G-addresses pass; muxed
+// (M...) accounts aren't supported.
+const isValidStellarAddress = (key: string) =>
+  StrKey.isValidEd25519PublicKey(key);
+
+// Both handlers need the server signing key and home domain. An empty home
+// domain would make every verification fail, so it's a config error too.
+function getSep10Config(): { serverKey: string; homeDomain: string } | null {
+  const serverKey = process.env.SEP10_SERVER_KEY;
+  const homeDomain = process.env.SEP10_HOME_DOMAIN;
+  if (!serverKey || !homeDomain) return null;
+  return { serverKey, homeDomain };
+}
+
+function serverNotConfigured(): NextResponse {
+  return NextResponse.json({ error: 'Server not configured' }, { status: 500 });
+}
 
 // Returns the set of origins this route will accept requests from. This is
 // derived ONLY from server-controlled configuration (env vars) — never from
@@ -50,7 +71,7 @@ function getAllowedOrigins(): string[] {
   return [`http://${domain}`];
 }
 
-export async function POST(req: NextRequest) {
+async function postSep10(req: NextRequest) {
   const log = createRequestLogger(req);
   const origin = req.headers.get('origin');
   const allowedOrigins = getAllowedOrigins();
@@ -81,8 +102,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const serverKey = process.env.SEP10_SERVER_KEY ?? '';
-  const homeDomain = process.env.SEP10_HOME_DOMAIN ?? '';
+  if (typeof publicKey !== 'string' || !isValidStellarAddress(publicKey)) {
+    return NextResponse.json({ error: 'Invalid publicKey' }, { status: 400 });
+  }
+
+  const config = getSep10Config();
+  if (!config) return serverNotConfigured();
+  const { serverKey, homeDomain } = config;
   const network =
     process.env.NEXT_PUBLIC_NETWORK === 'mainnet'
       ? Networks.PUBLIC
@@ -163,18 +189,13 @@ export async function POST(req: NextRequest) {
       reason: error instanceof Error ? error.message : String(error),
     });
     return withRequestId(
-      NextResponse.json(
-        {
-          error: error instanceof Error ? error.message : 'Verification failed',
-        },
-        { status: 401 },
-      ),
+      apiError(ApiErrorCode.INVALID_SIGNATURE, 401, 'Verification failed'),
       log.requestId,
     );
   }
 }
 
-export async function GET(req: NextRequest) {
+async function getSep10(req: NextRequest) {
   const log = createRequestLogger(req);
   const account = req.nextUrl.searchParams.get('account');
   if (!account) {
@@ -184,15 +205,16 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const serverKey = process.env.SEP10_SERVER_KEY;
-  if (!serverKey) {
+  if (!isValidStellarAddress(account)) {
     return NextResponse.json(
-      { error: 'Server not configured' },
-      { status: 500 },
+      { error: 'Invalid account parameter' },
+      { status: 400 },
     );
   }
 
-  const homeDomain = process.env.SEP10_HOME_DOMAIN ?? '';
+  const config = getSep10Config();
+  if (!config) return serverNotConfigured();
+  const { serverKey, homeDomain } = config;
   const network =
     process.env.NEXT_PUBLIC_NETWORK === 'mainnet'
       ? Networks.PUBLIC
@@ -241,7 +263,7 @@ export async function GET(req: NextRequest) {
  * means there's nothing server-side left to revoke, but the cookies are
  * still cleared either way.
  */
-export async function DELETE(req: NextRequest) {
+async function deleteSep10(req: NextRequest) {
   const accessToken = req.cookies.get('session')?.value;
   const refreshToken = req.cookies.get('session_refresh')?.value;
   const sid =
@@ -262,3 +284,7 @@ export async function DELETE(req: NextRequest) {
   response.cookies.delete({ name: 'session_refresh', path: '/api/auth' });
   return response;
 }
+
+export const POST = withRouteTelemetry(postSep10, '/api/auth/sep10');
+export const GET = withRouteTelemetry(getSep10, '/api/auth/sep10');
+export const DELETE = withRouteTelemetry(deleteSep10, '/api/auth/sep10');

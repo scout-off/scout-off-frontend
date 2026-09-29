@@ -1,3 +1,4 @@
+/** @jest-environment node */
 /**
  * Unit tests for middleware.ts locale routing
  *
@@ -10,7 +11,19 @@
  * Issue #530
  */
 
-import { locales, defaultLocale } from '@/lib/locales';
+import { NextRequest } from 'next/server';
+import {
+  locales,
+  defaultLocale,
+  LOCALE_COOKIE,
+  LOCALE_COOKIE_MAX_AGE,
+} from '@/lib/locales';
+import { middleware } from '@/middleware';
+
+jest.mock('@/lib/rateLimit', () => ({
+  checkRateLimit: jest.fn(),
+  getClientIp: jest.fn(),
+}));
 
 describe('middleware.ts locale configuration', () => {
   describe('locale configuration', () => {
@@ -83,5 +96,72 @@ describe('middleware.ts locale configuration', () => {
         expect(locale).toMatch(/^[a-z]{2}$/);
       });
     });
+  });
+});
+
+describe('middleware.ts locale cookie (issue #1367)', () => {
+  it('sets the locale cookie with path, one-year max-age and sameSite=lax', async () => {
+    const response = await middleware(
+      new NextRequest('http://localhost/players'),
+    );
+    const setCookie = response.headers.get('set-cookie') ?? '';
+
+    expect(setCookie).toContain(`${LOCALE_COOKIE}=${defaultLocale}`);
+    expect(setCookie).toMatch(/Path=\//i);
+    expect(setCookie).toContain(`Max-Age=${LOCALE_COOKIE_MAX_AGE}`);
+    expect(setCookie).toMatch(/SameSite=lax/i);
+  });
+});
+
+describe('middleware locale redirect', () => {
+  async function redirectFor(
+    url: string,
+    headers: Record<string, string> = {},
+  ): Promise<string | null> {
+    const res = await middleware(new NextRequest(url, { headers }));
+    return res.headers.get('location');
+  }
+
+  it('keeps a ?ref= referral code (#1324)', async () => {
+    expect(await redirectFor('https://scoutoff.app/scout?ref=TEST')).toBe(
+      'https://scoutoff.app/en/scout?ref=TEST',
+    );
+  });
+
+  it('keeps multiple query params', async () => {
+    expect(
+      await redirectFor(
+        'https://scoutoff.app/compare?ids=1,2&utm_source=x&utm_medium=y',
+      ),
+    ).toBe('https://scoutoff.app/en/compare?ids=1,2&utm_source=x&utm_medium=y');
+  });
+
+  it('keeps encoded values intact', async () => {
+    expect(
+      await redirectFor('https://scoutoff.app/search?q=caf%C3%A9%20%26%20co'),
+    ).toBe('https://scoutoff.app/en/search?q=caf%C3%A9%20%26%20co');
+  });
+
+  it('redirects without a query string unchanged', async () => {
+    expect(await redirectFor('https://scoutoff.app/scout')).toBe(
+      'https://scoutoff.app/en/scout',
+    );
+  });
+
+  it('negotiates the locale from accept-language q-values (#1325)', async () => {
+    expect(
+      await redirectFor('https://scoutoff.app/scout', {
+        'accept-language': 'de-DE,de;q=0.9,fr;q=0.8,en;q=0.7',
+      }),
+    ).toBe('https://scoutoff.app/fr/scout');
+  });
+
+  it('prefers the NEXT_LOCALE cookie over accept-language', async () => {
+    expect(
+      await redirectFor('https://scoutoff.app/scout', {
+        'accept-language': 'fr',
+        cookie: 'NEXT_LOCALE=sw',
+      }),
+    ).toBe('https://scoutoff.app/sw/scout');
   });
 });

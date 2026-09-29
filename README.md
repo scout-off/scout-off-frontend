@@ -215,7 +215,7 @@ scout-off-frontend/
 - `get_milestone_history(player_id)` — ordered on-chain milestone history.
 - `get_validators()` — active validator list.
 - `get_subscription(scout)` — current scout tier and expiry.
-- `filter_players(region, position, min_level)` — discover players by filters.
+- `filter_players(region, position, min_level)` — discover players by filters. Note the **Scout Dashboard does not call this**: an unbounded `filter_players` simulation eventually exceeds Soroban's read-only limits, so the dashboard reads the indexer's paginated `GET /players` (issue #1298) — see `packages/indexer/README.md`. The contract query remains available for on-chain integrations.
 - `health()` — contract health check.
 
 ## Progress model
@@ -431,7 +431,7 @@ Test coverage targets:
 | Scout subscription   | ✅ Complete | Tier selection + XLM payment via `useSubscription`                                                                                                                     |
 | Validator components | ✅ Complete | ApproveForm, RevokeForm, ValidatorPlayerSearch                                                                                                                         |     | Validator dashboard | ✅ Complete | ValidatorPlayerSearch + ApproveForm + RevokeForm + ApprovedPlayersRoster wired with i18n |
 | Admin panel          | ✅ Complete | Add/remove validators, withdraw fees, pause/unpause                                                                                                                    |
-| Hooks                | ✅ Complete | usePlayer, useScout, useValidator, useSubscription, usePayToContact, useMilestoneHistory, useIPFSUpload, useContractHealth, useIsPaused, useDebounce, useRequireWallet |
+| Hooks                | ✅ Complete | usePlayer, useScout, useValidator, useSubscription, usePayToContact, useMilestoneHistory, useContractHealth, useIsPaused, useDebounce, useRequireWallet |
 | Off-chain indexer    | ✅ Complete | IndexerMetrics with tests in `packages/indexer/`                                                                                                                       |
 | Frontend tests       | ✅ Complete | Component, hook, lib, and page-level tests (see `__tests__/`); `scripts/validate-env.js` runs in CI                                                                    |
 | i18n                 | ✅ Complete | English, French, Swahili via next-intl; validator and admin dashboards fully translated                                                                                |
@@ -463,7 +463,7 @@ Test coverage targets:
 
 ## Support
 
-- [GitHub Issues](https://github.com/your-org/scout-off-frontend/issues)
+- [GitHub Issues](https://github.com/scout-off/scout-off-frontend/issues) — the project's task tracker (filter by `easy`, `medium`, `hard`, `good first issue`)
 - [Stellar Discord](https://discord.gg/stellar)
 - [Stellar Developers](https://developers.stellar.org)
 

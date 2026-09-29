@@ -27,7 +27,7 @@
  * ───────────────────────────────────────────────────────────────────────────
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { requireAdminWallet } from '@/lib/adminAuth';
 import {
   getAllRecords,
@@ -35,6 +35,7 @@ import {
   isCidStillReferenced,
   markUnpinned,
 } from '@/lib/supersededMediaStore';
+import { privateJson } from '@/lib/httpResponses';
 
 function pinataunpinUrl(cid: string): string {
   return `https://api.pinata.cloud/pinning/unpin/${encodeURIComponent(cid)}`;
@@ -74,10 +75,10 @@ async function unpinFromPinata(cid: string): Promise<string | null> {
 export async function GET(req: NextRequest) {
   const admin = requireAdminWallet(req);
   if (!admin) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  return NextResponse.json({ records: getAllRecords() });
+  return privateJson({ records: getAllRecords() });
 }
 
 // ─── POST ─────────────────────────────────────────────────────────────────────
@@ -99,7 +100,7 @@ export interface CleanupResponse {
 export async function POST(req: NextRequest) {
   const admin = requireAdminWallet(req);
   if (!admin) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   let body: CleanupRequestBody = {};
@@ -147,5 +148,5 @@ export async function POST(req: NextRequest) {
   );
 
   const response: CleanupResponse = { unpinned, skipped, errors };
-  return NextResponse.json(response);
+  return privateJson(response);
 }

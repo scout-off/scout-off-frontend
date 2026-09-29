@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { runFraudFlagEvaluation } from '@/lib/fraudFlagsRunner';
 import { FraudFlagsStore } from '@/lib/fraudFlagsStore';
+import { privateJson } from '@/lib/httpResponses';
 
 /**
  * Scheduled trigger for fraud-flag evaluation (issue #1007). This
@@ -21,7 +22,7 @@ import { FraudFlagsStore } from '@/lib/fraudFlagsStore';
 export async function GET(req: NextRequest) {
   const configuredSecret = process.env.CRON_SECRET;
   if (!configuredSecret) {
-    return NextResponse.json(
+    return privateJson(
       { error: 'CRON_SECRET is not configured' },
       { status: 500 },
     );
@@ -29,16 +30,24 @@ export async function GET(req: NextRequest) {
 
   const authHeader = req.headers.get('authorization');
   if (authHeader !== `Bearer ${configuredSecret}`) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return privateJson({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const { flags, warnings } = await runFraudFlagEvaluation();
-  const evaluatedAt = Date.now();
+  const result = await runFraudFlagEvaluation({
+    mode: 'incremental',
+    trigger: 'cron',
+    timeBudgetMs: 45_000,
+  });
+  const evaluatedAt = result.evaluatedAt ?? Date.now();
+  const eventsProcessed = result.eventsProcessed ?? 0;
+  const durationMs = result.durationMs ?? 0;
   const run = FraudFlagsStore.getInstance().recordRun(
     'cron',
-    flags,
-    warnings,
+    result.flags,
+    result.warnings,
     evaluatedAt,
+    eventsProcessed,
+    durationMs,
   );
 
   // At minimum-viable "proactive surfacing" absent any existing outbound
@@ -50,10 +59,13 @@ export async function GET(req: NextRequest) {
   // an on-call channel when highSeverityCount crosses a threshold) is a
   // follow-up that requires picking a notification provider — out of scope
   // here; see docs/fraud-detection.md.
-  return NextResponse.json({
+  return privateJson({
     evaluatedAt,
-    flagCount: flags.length,
+    flagCount: result.flags.length,
     highSeverityCount: run.highSeverityCount,
-    warnings,
+    eventsProcessed,
+    durationMs,
+    warnings: result.warnings,
   });
 }
+

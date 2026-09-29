@@ -27,7 +27,24 @@
     "search": "Search",
     "filter": "Filter",
     "sort": "Sort",
-    "clear": "Clear"
+    "clear": "Clear",
+    "skipToContent": "Skip to main content",
+    "close_modal": "Close modal",
+    "close_notification": "Close notification",
+    "notification_label": "{variant} notification: {message}",
+    "dismiss": "Dismiss",
+    "loading_status": "Loading",
+    "copy_address": "Click to copy address",
+    "address_copied": "Address copied",
+    "share_via_qr": "Share via QR",
+    "view_on_stellar_expert": "View transaction on Stellar Expert",
+    "close_tour": "Close tour",
+    "previous_step": "Previous step",
+    "next_step": "Next step",
+    "scroll_to_top": "Scroll to top",
+    "cookie_consent": "Cookie consent",
+    "close_consent_banner": "Close consent banner",
+    "confirm": "Confirm"
   },
   "language": {
     "select_language": "Select Language",
@@ -46,10 +63,31 @@
     "milestones": "Milestones",
     "search_player": "Search player by wallet address",
     "player_not_found": "Player not found",
-    "no_players": "No players found"
+    "no_players": "No players found",
+    "players_found": "{count, plural, one {# player found} other {# players found}}",
+    "results_behind": "Results may be up to {count, plural, one {# ledger} other {# ledgers}} behind",
+    "all_regions": "All regions",
+    "any_position": "Any position",
+    "save_search_placeholder": "e.g. Lagos strikers"
+  },
+  "trial_offer": {
+    "form_label": "Log trial offer",
+    "club_name": "Club Name",
+    "club_name_placeholder": "e.g. FC Barcelona",
+    "club_name_required": "Club name is required",
+    "offer_type": "Offer Type",
+    "offer_type_trial": "Trial",
+    "offer_type_loan": "Loan",
+    "offer_type_transfer": "Transfer",
+    "message": "Message",
+    "optional": "optional",
+    "message_hint": "Additional details about the offer…",
+    "submit": "Submit Trial Offer",
+    "submitting": "Submitting…"
   },
   "player_profile": {
-    "back_to_scout_dashboard": "← Back to Scout Dashboard"
+    "back_to_scout_dashboard": "← Back to Scout Dashboard",
+    "verified_on_chain": "Verified on-chain"
   },
   "player_dashboard": {
     "title": "Player Dashboard",
@@ -108,6 +146,12 @@
     "network_error": "Network error",
     "contract_error": "Contract call failed",
     "wallet_error": "Wallet operation failed"
+  },
+  "contract_status": {
+    "paused_hint": "Temporarily unavailable — the platform is paused for maintenance"
+  },
+  "dispute_modal": {
+    "character_count": "{count} of {max} characters"
   },
   "actions": {
     "refresh": "Refresh",
@@ -305,7 +349,7 @@
     "page_title": "Privacy Policy",
     "page_description": "How ScoutOff collects, uses, and protects your personal data.",
     "eyebrow": "Legal",
-    "last_updated": "Last updated: July 29, 2026",
+    "last_updated": "Last updated: September 24, 2026",
     "section1_title": "1. Introduction",
     "section1_content": "ScoutOff is committed to protecting your privacy. This policy explains how we collect, use, and protect your information. By using ScoutOff, you agree to the collection and use of information in accordance with this policy.",
     "section2_title": "2. Data We Collect",
@@ -317,9 +361,13 @@
     "section5_title": "5. Data Sharing",
     "section5_content": "We do not sell your personal data. We share data only with other users as directed by your actions, with service providers (Vercel, Sentry, Pinata), and as required by law.",
     "section6_title": "6. Retention and Deletion",
-    "section6_content": "On-chain data is permanent and cannot be deleted. Off-chain data is retained for as long as necessary. You can request deletion of your off-chain data through account settings. Use the ‘Request Data Deletion’ action in Account Settings.",
+    "section6_content": "On-chain data is permanent and cannot be deleted. Off-chain data is retained for as long as necessary. You can request deletion of your off-chain data through account settings. Use the ‘Request Data Deletion’ action in Account Settings. Your data export and deletion request cover your watchlist, saved searches, notification settings and read state, milestone disputes and endorsements, recently viewed players, login sessions (including device/browser information), and upload records. Deletion also signs you out of all devices. Upload records are kept with your wallet removed so orphaned media can still be cleaned up, and admin audit log entries are anonymized rather than deleted.",
     "section7_title": "7. Your Rights and Contact",
-    "section7_content": "Depending on your jurisdiction, you may have rights to access, correct, delete, or port your personal data. These rights apply only to off-chain data. For questions, contact us through ScoutOff’s official channels."
+    "section7_content": "Depending on your jurisdiction, you may have rights to access, correct, delete, or port your personal data. These rights apply only to off-chain data. For questions, contact us through ScoutOff’s official channels.",
+    "section8_title": "8. Third-Party Services",
+    "section8_content": "To show approximate fiat values, our servers (not your browser) fetch the XLM exchange rate from CoinGecko and, as a fallback, the Stellar network's public Horizon API; your IP address is not shared with these providers. Uploaded media is pinned to IPFS through Pinata, and error reports are sent to Sentry.",
+    "section9_title": "9. Media reports",
+    "section9_content": "When you report media we store the media identifier (CID), the player it appeared on, the reason and any details you provide, together with a one-way hash of your wallet address or IP address used only to merge duplicate reports and prevent abuse. Moderator decisions are recorded in our admin audit log. We do not share reporter identities with the reported player."
   },
   "terms": {
     "back_to_home": "Back to Home",
@@ -338,7 +386,9 @@
     "section5_title": "5. Intellectual Property",
     "section5_content": "Players retain ownership of their profile content and personal data. By submitting content to ScoutOff, you grant us a license to display that content solely for the purpose of operating the platform. The platform’s code is open source.",
     "section6_title": "6. Disclaimers and Limitations",
-    "section6_content": "ScoutOff is provided “as is” without warranties. We are not responsible for the accuracy of player information, IPFS content, losses from blockchain network issues, or smart contract bugs. Our liability will not exceed the fees you paid us in the 12 months prior to the claim."
+    "section6_content": "ScoutOff is provided “as is” without warranties. We are not responsible for the accuracy of player information, IPFS content, losses from blockchain network issues, or smart contract bugs. Our liability will not exceed the fees you paid us in the 12 months prior to the claim.",
+    "section7_title": "Reporting and removal of media",
+    "section7_content": "Anyone can report a player's photo or video from the profile gallery (reasons: nudity, violence, impersonation, copyright, other). Our moderators review reports and may remove media that breaks these terms or the law. Removed media is no longer shown or served by ScoutOff, and may also be unpinned from our IPFS pinning service after a short grace period. Because IPFS is a public network, removal applies to ScoutOff only: the same content may remain reachable through public IPFS gateways or nodes that pin it independently. Copyright holders and anyone affected may also contact us to request a takedown, and we will act on valid requests promptly."
   },
   "settings": {
     "back_to_home": "Back to Home",
@@ -361,7 +411,33 @@
     "logout_all_button": "Log Out Everywhere",
     "logout_all_in_progress": "Logging out…",
     "logout_all_success": "You've been logged out of all devices.",
-    "logout_all_error": "Failed to log out of all devices. Please try again."
+    "logout_all_error": "Failed to log out of all devices. Please try again.",
+    "contact": {
+      "connect_wallet": "Connect your wallet to manage your contact details.",
+      "delete_button": "Delete saved details",
+      "delete_error": "Failed to delete your contact details. Please try again.",
+      "deleted": "Your saved contact details have been deleted.",
+      "deleting": "Deleting…",
+      "description": "Scouts who pay to contact you can see the details you save here. They are stored encrypted and are never published on-chain or to IPFS.",
+      "email_label": "Email",
+      "encryption_note": "Saved details are encrypted with AES-256-GCM before they touch our database, and released only to a scout with a confirmed on-chain payment for you. We cannot read them back, so re-enter them to change anything.",
+      "loading": "Checking for saved contact details…",
+      "need_one_channel": "Add at least one contact method before saving.",
+      "not_stored": "No contact details saved yet. Scouts who pay will be told you have none.",
+      "paywall_note": "Each scout must pay to contact you before these details are released to them, every time. Saving here replaces what is shared; it does not publish your details publicly.",
+      "phone_label": "Phone",
+      "replace_hint": "Saving replaces all three fields. To remove one channel, clear it before saving.",
+      "save_button": "Save contact details",
+      "save_error": "Failed to save your contact details. Please try again.",
+      "saved": "Your contact details have been saved.",
+      "saving": "Saving…",
+      "section_description": "Choose how scouts reach you after they pay to contact you.",
+      "section_title": "Contact details",
+      "stored": "Contact details saved. Scouts who pay will receive them.",
+      "stored_at": "Contact details saved (last updated {date}).",
+      "telegram_label": "Telegram",
+      "too_long": "Each contact method must be 320 characters or fewer."
+    }
   },
   "dataDeletion": {
     "modal_title": "Request Data Deletion",
@@ -391,5 +467,325 @@
     "accept": "Accept",
     "decline": "Decline",
     "privacy_link": "Privacy Policy"
+  },
+  "meta": {
+    "title": "ScoutOff — Decentralized Football Scouting",
+    "description": "Tamper-proof player profiles, verifiable milestones, and direct scout-to-player connections — powered by Stellar Soroban smart contracts.",
+    "og_image_alt": "ScoutOff — Decentralized Football Scouting on Stellar"
+  },
+  "offline": {
+    "bannerMessage": "You're offline. Some features may be unavailable until your connection returns."
+  },
+  "apiErrors": {
+    "RATE_LIMITED": "Too many requests. Please slow down and try again shortly.",
+    "INVALID_REQUEST": "The request was invalid. Please check your input and try again.",
+    "QUERY_TOO_LONG": "Search text must be at most {max} characters.",
+    "UPSTREAM_FAILED": "The service is temporarily unavailable. Please try again.",
+    "INVALID_SIGNATURE": "Wallet verification failed. Please sign in again.",
+    "UPLOAD_SESSION_NOT_FOUND": "Upload session not found or expired. Please start the upload again.",
+    "CHUNK_INDEX_OUT_OF_RANGE": "Part of the upload was invalid. Please try again.",
+    "UPLOAD_INCOMPLETE": "Upload incomplete: received {received} of {total} parts.",
+    "DISPUTE_ALREADY_PENDING": "This milestone already has a pending dispute.",
+    "MILESTONE_NOT_FOUND": "Milestone not found.",
+    "UNKNOWN": "Something went wrong. Please try again."
+  },
+  "player": {
+    "modals": {
+      "dispute": {
+        "title": "Dispute milestone",
+        "intro": "Flag <highlight>{milestone}</highlight> for admin review. Explain why you believe this decision was made in error.",
+        "reasonLabel": "Reason",
+        "reasonPlaceholder": "e.g. This milestone was rejected without an explanation, but I submitted matching evidence…",
+        "reasonTooShort": "Please describe your dispute in at least {min, plural, one {# character} other {# characters}}.",
+        "submitFailed": "Failed to submit dispute",
+        "cancel": "Cancel",
+        "submit": "Submit dispute"
+      },
+      "archive": {
+        "titleArchive": "Archive Your Profile?",
+        "titleRestore": "Restore Your Profile?",
+        "restoreBody": "Restore your profile to make it visible to scouts again. Scouts will be able to search and view your profile.",
+        "archiveBody": "Archiving your profile will hide it from scout search results and browsing. You can restore it anytime.",
+        "dataPreserved": "Your data and milestones are preserved — nothing is deleted.",
+        "directLinksNote": "Direct links to your profile will show a 'currently private' message.",
+        "cancel": "Cancel",
+        "archiveButton": "Archive Profile",
+        "restoreButton": "Restore Profile",
+        "confirmTitleArchive": "Archive your profile?",
+        "confirmTitleRestore": "Restore your profile?",
+        "confirmArchive": "Confirm that you want to archive your profile. You can restore it anytime.",
+        "confirmRestore": "Confirm that you want to restore your profile and make it visible to scouts.",
+        "goBack": "Go Back",
+        "processing": "Processing...",
+        "yesArchive": "Yes, Archive",
+        "yesRestore": "Yes, Restore"
+      },
+      "backupWallet": {
+        "title": "Account Recovery",
+        "protectsHeading": "What this protects:",
+        "protectsLoss": "Loss of access to your primary wallet",
+        "protectsRegain": "Regaining access to your account and profile",
+        "notProtectsHeading": "What this does NOT protect:",
+        "notProtectsBody": "Backup wallets do not protect against loss of both wallets, stolen backup addresses, or other security compromises. Use a wallet backup phrase as your primary recovery method.",
+        "currentLabel": "Current backup wallet:",
+        "verifiedOn": "Verified on {date}",
+        "close": "Close",
+        "remove": "Remove",
+        "noneConfigured": "No backup wallet configured. Link one to recover your account if you lose access to your primary wallet.",
+        "linkButton": "Link Backup Wallet",
+        "linkBody": "Enter a secondary wallet address to use as a recovery method. You'll need to sign a confirmation with your primary wallet.",
+        "inputLabel": "Backup wallet address",
+        "inputPlaceholder": "G... (56-character Stellar public key)",
+        "errorRequired": "Please enter a wallet address",
+        "errorInvalid": "Invalid Stellar address. Must be 56 characters starting with G.",
+        "errorSameAsPrimary": "Backup wallet cannot be the same as your primary wallet",
+        "back": "Back",
+        "continue": "Continue",
+        "confirmTitle": "Confirm & Sign",
+        "primaryLabel": "Primary wallet:",
+        "backupLabel": "Backup wallet:",
+        "confirmBody": "Click \"Link & Sign\" to confirm with your primary wallet. This proves you own both addresses.",
+        "cancel": "Cancel",
+        "linkAndSign": "Link & Sign",
+        "removeTitle": "Remove Backup Wallet?",
+        "removeBody": "Removing your backup wallet means you won't be able to use it to recover your account if you lose access to your primary wallet.",
+        "keep": "Keep It",
+        "confirmRemovalTitle": "Confirm Removal",
+        "confirmRemovalBody": "Are you sure? This action cannot be undone. You'll have no backup recovery method.",
+        "goBack": "Go Back",
+        "yesRemove": "Yes, Remove"
+      }
+    }
+  },
+  "academy": {
+    "bulkImport": {
+      "title": "Bulk Player Import",
+      "intro": "Upload a CSV or JSON file listing multiple players to register them in one session. Each player is still registered as its own on-chain transaction — you will be asked to sign once per player.",
+      "fileLabel": "Player file (CSV or JSON)",
+      "fileHint": "Required columns/fields: name, age, nationality, region, position. Optional: bio. One row/object per player. No highlight reel upload here — add those later per-player.",
+      "loaded": "Loaded: {fileName}",
+      "previewHeading": "Preview",
+      "progressHeading": "Import Progress",
+      "counts": "{valid} valid · {invalid} invalid · {total} total",
+      "resumeBanner": "Incomplete batch found: <strong>{completed} of {total, plural, one {# row} other {# rows}}</strong> already processed. Rows that previously succeeded will be skipped. Click <strong>Import</strong> to resume.",
+      "tableCaption": "Bulk player import preview and status",
+      "columns": {
+        "row": "Row",
+        "name": "Name",
+        "age": "Age",
+        "nationality": "Nationality",
+        "region": "Region",
+        "position": "Position",
+        "bio": "Bio",
+        "status": "Status"
+      },
+      "status": {
+        "invalid": "Invalid",
+        "skipped": "Skipped",
+        "valid": "Valid",
+        "waiting": "Waiting…",
+        "signing": "Awaiting signature…",
+        "registered": "Registered",
+        "viewTx": "View tx",
+        "failed": "Failed"
+      },
+      "rowErrors": {
+        "REQUIRED": "{field} is required",
+        "NAME_TOO_SHORT": "Name must be at least {min, plural, one {# character} other {# characters}}",
+        "NAME_TOO_LONG": "Name must be {max} characters or fewer",
+        "INVALID_AGE": "Age must be a whole number between {min} and {max}",
+        "NATIONALITY_TOO_LONG": "Nationality must be {max} characters or fewer",
+        "INVALID_REGION": "\"{value}\" is not a recognised region",
+        "INVALID_POSITION": "\"{value}\" is not a recognised position",
+        "BIO_TOO_LONG": "Bio must be {max} characters or fewer"
+      },
+      "fileErrors": {
+        "INVALID_JSON": "File is not valid JSON.",
+        "JSON_NOT_ARRAY": "JSON file must contain an array of player objects.",
+        "EMPTY_JSON": "JSON file contains no player entries.",
+        "EMPTY_CSV": "CSV file contains no data rows (only a header, or the file is empty).",
+        "TOO_MANY_ROWS": "File contains {count} rows, which exceeds the {max}-row limit per import. Please split it into smaller batches.",
+        "PARSE_FAILED": "Failed to parse file.",
+        "READ_FAILED": "Failed to read the file. Please try again."
+      },
+      "walletNotConnected": "Wallet not connected",
+      "transactionsDisabled": "Transactions are currently disabled",
+      "batchCancelled": "Batch cancelled. Re-upload the same file to resume from where you left off.",
+      "done": "Import complete: {succeeded} registered, {failed} failed, {invalid} skipped (invalid).",
+      "pause": "Pause",
+      "resume": "Resume",
+      "cancel": "Cancel",
+      "contractPausedTitle": "Contract is currently paused",
+      "connectWalletTitle": "Connect a wallet to import players",
+      "paused": "Paused",
+      "importing": "Importing {done} of {total, plural, one {# player} other {# players}}…",
+      "importButton": "Import {count, plural, one {# valid player} other {# valid players}}",
+      "importAnother": "Import another batch",
+      "chooseAnother": "Choose another file"
+    },
+    "roster": {
+      "loading": "Loading your academy…",
+      "loadFailed": "Failed to load your academy.",
+      "retry": "Retry",
+      "noAcademy": "This wallet isn’t recorded as the owner of any academy. Contact the platform admin if you believe this is a mistake.",
+      "heading": "Your Academy Roster",
+      "description": "Add or remove signer wallets for the academy/academies you own. Each signer must still be added as a validator by the platform admin for its milestone approvals to be authorized on-chain — this panel only manages the off-chain roster label.",
+      "owner": "Owner:",
+      "signerCount": "{count, plural, one {# signer} other {# signers}}",
+      "notOnChain": "not on-chain",
+      "notOnChainTitle": "Not currently authorized on-chain — ask the platform admin to add this wallet as a validator",
+      "remove": "Remove",
+      "addPlaceholder": "Add signer wallet (G...)",
+      "addInputLabel": "Signer wallet address",
+      "add": "Add",
+      "addDialogTitle": "Add Signer Wallet",
+      "removeDialogTitle": "Remove Signer Wallet",
+      "addDialogMessage": "Add {wallet} as a signer wallet for this academy?",
+      "removeDialogMessage": "Remove {wallet} from this academy?",
+      "addConfirm": "Add Signer",
+      "removeConfirm": "Remove Signer",
+      "addSuccess": "Signer wallet added to academy.",
+      "addFailed": "Failed to add signer wallet.",
+      "removeSuccess": "Signer wallet removed from academy.",
+      "removeFailed": "Failed to remove signer wallet."
+    },
+    "rosterPage": {
+      "title": "Academy Roster",
+      "subtitle": "Manage signer wallets for the academy you own."
+    }
+  },
+  "account": {
+    "sessions": {
+      "connect_prompt": "Connect your wallet to view active sessions.",
+      "loading": "Loading sessions…",
+      "load_error": "Failed to load active sessions.",
+      "empty": "No active sessions found.",
+      "this_device": "This device",
+      "signed_in": "Signed in {time}",
+      "last_active": "Last active {time}",
+      "revoke": "Revoke",
+      "revoking": "Revoking…",
+      "confirm_revoke_current": "This is your current session. Revoking it will log you out immediately. Continue?",
+      "revoked_logged_out": "Session revoked — you have been logged out",
+      "revoked": "Session revoked",
+      "revoke_error": "Failed to revoke session",
+      "device_label": "{browser} on {os}",
+      "unknown_device": "Unknown device",
+      "unknown_browser": "Unknown browser",
+      "unknown_os": "Unknown OS"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "bell_label": "{count, plural, =0 {Notifications} one {Notifications, # unread notification} other {Notifications, # unread notifications}}",
+    "mark_all_read": "Mark all as read",
+    "loading": "Loading…",
+    "empty": "No notifications yet.",
+    "preferences": {
+      "connect_prompt": "Connect your wallet to manage notification preferences.",
+      "loading": "Loading preferences…",
+      "saving": "Saving…",
+      "milestone_approvals_label": "Milestone approvals",
+      "milestone_approvals_description": "Notify me when a validator approves one of my milestones.",
+      "contact_unlocks_label": "Contact unlocks",
+      "contact_unlocks_description": "Notify me when I unlock a player’s contact details."
+    }
+  },
+  "stats": {
+    "title": "Player Stats",
+    "loading": "Loading player stats",
+    "goals": "Goals",
+    "assists": "Assists",
+    "appearances": "Appearances",
+    "clean_sheets": "Clean sheets"
+  },
+  "scout": {
+    "back_to_dashboard": "Back to Dashboard",
+    "watchlist": {
+      "title": "My Watchlist",
+      "empty_title": "Your watchlist is empty",
+      "empty_description": "Star players from search results or their profile to add them here."
+    },
+    "compare": {
+      "title": "Compare Players",
+      "select_prompt": "Select 2 to {max} players to compare.",
+      "load_error": "Failed to load players: {error}",
+      "no_players": "No players found.",
+      "partial_failure": "{count, plural, one {# player could not be loaded.} other {# players could not be loaded.}}",
+      "vitals": "Vitals",
+      "vitals_label": "{name} – Player vitals",
+      "age": "Age",
+      "position": "Position",
+      "region": "Region",
+      "nationality": "Nationality",
+      "stats": "Stats",
+      "stats_label": "{name} – Player stats",
+      "progress": "Progress",
+      "progress_label": "{name} – Progress level",
+      "milestones": "Milestones",
+      "milestones_label": "{name} – Milestones",
+      "milestone_count": "{count, plural, one {# milestone} other {# milestones}}"
+    },
+    "profile": {
+      "title": "Scout Profile",
+      "description": "Browse this scout's subscription details and recent activity.",
+      "not_found_title": "Scout not found",
+      "not_found_description": "The scout profile you are looking for does not exist.",
+      "meta_title": "Scout Profile | ScoutOff",
+      "meta_description": "Browse this scout's subscription details and recent activity on ScoutOff."
+    },
+    "subscribe": {
+      "title": "Scout Subscription",
+      "subtitle": "Upgrade your access and unlock better scouting capabilities.",
+      "status_loading": "Loading your current subscription...",
+      "status_none": "No active subscription found.",
+      "status_expired": "Your {tier} subscription expired on {date}.",
+      "status_active": "Current subscription: {tier} — active until {date}.",
+      "cta_confirming": "Confirming on-chain…",
+      "cta_processing": "Processing…",
+      "cta_renew": "Renew",
+      "cta_upgrade": "Upgrade",
+      "cta_subscribe": "Subscribe",
+      "success": "Subscribed to {tier} successfully",
+      "active_banner_label": "Active subscription",
+      "active_until": "Active until <strong>{date}</strong>",
+      "days_remaining": "{count, plural, one {# day remaining} other {# days remaining}}",
+      "referral_notice": "You were referred by a colleague! Your referral will be credited automatically when you subscribe.",
+      "active_subscription": "Active Subscription",
+      "plan_name": "{tier} Plan",
+      "expires": "Expires <strong>{date}</strong>",
+      "change_title": "Change Subscription Tier",
+      "change_description": "You are about to change your subscription from <strong>{from}</strong> to <strong>{to}</strong>.",
+      "notice_title": "Important notice about your remaining time",
+      "notice_body": "Changing your subscription tier will start a new {to} subscription period immediately. Your remaining {count, plural, one {# day} other {# days}} on the current {from} plan will not be carried over or prorated.",
+      "notice_replace": "The new {to} subscription will be active immediately and will replace your current {from} subscription.",
+      "confirm_change": "Confirm Change",
+      "current_plan": "Current Plan",
+      "recommended": "Recommended",
+      "paused": "Contract is currently paused",
+      "tiers": {
+        "basic": {
+          "title": "Basic",
+          "description": "Get started with essential scout access and basic player contact capabilities.",
+          "features": {
+            "browse": "Browse player profiles",
+            "connect": "Connect with verified prospects",
+            "pay_to_contact": "Pay-to-contact for player details"
+          }
+        },
+        "pro": {
+          "title": "Pro",
+          "description": "Recommended for active scouts who want priority access and advanced scouting tools.",
+          "features": {
+            "all_basic": "All Basic features",
+            "priority_discovery": "Priority player discovery",
+            "faster_contact": "Faster access to contact details"
+          }
+        },
+        "elite": {
+          "title": "Elite"
+        }
+      }
+    }
   }
 }

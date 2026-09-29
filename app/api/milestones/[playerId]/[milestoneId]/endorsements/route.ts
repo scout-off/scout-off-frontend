@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getSessionWallet } from '@/lib/session';
 import { getPlayer, checkIsValidator } from '@/lib/contract';
 import { fetchAcademyForWallet } from '@/lib/api';
 import { MilestoneEndorsementStore } from '@/lib/milestoneEndorsementStore';
 import type { Milestone, Player } from '@/types';
+import { privateJson } from '@/lib/httpResponses';
 
 // better-sqlite3 (via lib/milestoneEndorsementStore.ts) is a native addon
 // and needs the Node.js runtime, not edge.
@@ -27,7 +28,7 @@ export async function GET(
     params.playerId,
     params.milestoneId,
   );
-  return NextResponse.json({ endorsements });
+  return privateJson({ endorsements });
 }
 
 /**
@@ -51,12 +52,12 @@ export async function POST(
 ) {
   const wallet = getSessionWallet(req);
   if (!wallet) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const isValidator = await checkIsValidator(wallet).catch(() => false);
   if (!isValidator) {
-    return NextResponse.json(
+    return privateJson(
       { error: 'Only authorized validators can endorse a milestone' },
       { status: 403 },
     );
@@ -66,14 +67,14 @@ export async function POST(
   try {
     player = (await getPlayer(params.playerId)) as Player;
   } catch {
-    return NextResponse.json({ error: 'Player not found' }, { status: 404 });
+    return privateJson({ error: 'Player not found' }, { status: 404 });
   }
 
   const milestone = player.milestones.find(
     (m: Milestone) => m.id === params.milestoneId,
   );
   if (!milestone) {
-    return NextResponse.json({ error: 'Milestone not found' }, { status: 404 });
+    return privateJson({ error: 'Milestone not found' }, { status: 404 });
   }
 
   const [callerAcademy, approverAcademy] = await Promise.all([
@@ -86,7 +87,7 @@ export async function POST(
     !approverAcademy ||
     callerAcademy.id !== approverAcademy.id
   ) {
-    return NextResponse.json(
+    return privateJson(
       {
         error:
           "Endorsing wallet must be a registered member of the same academy as the milestone's approving validator",
@@ -101,5 +102,5 @@ export async function POST(
     wallet,
   );
 
-  return NextResponse.json({ success: true });
+  return privateJson({ success: true });
 }

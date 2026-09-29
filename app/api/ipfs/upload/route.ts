@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { sanitize } from '@/lib/sanitize';
-import { hasValidMagicBytes, bufToHex } from '@/lib/fileSignature';
+import {
+  detectFileType,
+  isDeclaredTypeCompatible,
+  bufToHex,
+} from '@/lib/fileSignature';
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
+import { getSessionWallet } from '@/lib/session';
 import { createRequestLogger } from '@/lib/logger';
-import { pinTimeoutMs, upstreamStatus } from '@/lib/httpClient';
+import { withOutboundSpan, withRouteTelemetry } from '@/lib/telemetry';
+import {
+  getPinataCredentials,
+  getMissingPinataEnvVars,
+  PINATA_NOT_CONFIGURED_ERROR,
+} from '@/lib/pinataConfig';
 import {
   verifyUploadedContent,
   UploadVerificationError,
@@ -35,12 +45,24 @@ const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024;
 /** Accepted MIME type prefixes */
 const ALLOWED_MIME_PREFIXES = ['image/', 'video/'];
 
-export async function POST(req: NextRequest) {
+async function postIpfsUpload(req: NextRequest) {
   const log = createRequestLogger(req);
+  const pinata = getPinataCredentials();
+  if (!pinata) {
+    log.error('Pinata credentials missing; IPFS uploads disabled', {
+      missing: getMissingPinataEnvVars().join(', '),
+    });
+    return NextResponse.json(
+      { error: PINATA_NOT_CONFIGURED_ERROR },
+      { status: 503 },
+    );
+  }
+  const wallet = getSessionWallet(req);
   const ip = getClientIp(req);
+  const key = wallet ? `ipfs-upload:wallet:${wallet}` : `ipfs-upload:${ip}`;
 
   // Rate limiting check
-  const rl = await checkRateLimit(`ipfs-upload:${ip}`, {
+  const rl = await checkRateLimit(key, {
     limit: RATE_LIMIT,
     windowMs: WINDOW_MS,
   });
@@ -117,9 +139,12 @@ export async function POST(req: NextRequest) {
   const headerSlice = file.slice(0, 12);
   const headerBuffer = new Uint8Array(await headerSlice.arrayBuffer());
 
-  if (!hasValidMagicBytes(headerBuffer)) {
+  // Detected family must match the declared prefix (issue #1329).
+  const detected = detectFileType(headerBuffer);
+  if (!detected || !isDeclaredTypeCompatible(mimeType, detected)) {
     log.warn('Rejected spoofed MIME type', {
       type: file.type,
+      detected: detected?.mime ?? null,
       size: file.size,
       ip,
       header: bufToHex(headerBuffer),
@@ -138,18 +163,26 @@ export async function POST(req: NextRequest) {
   const pinStartedAt = Date.now();
   try {
     const pinataForm = new FormData();
-    pinataForm.append('file', file);
+    // Pin with the detected MIME type, not the client-declared one.
+    pinataForm.append(
+      'file',
+      new File([file], file.name, { type: detected.mime }),
+    );
 
-    const { data } = await axios.post(
-      'https://api.pinata.cloud/pinning/pinFileToIPFS',
-      pinataForm,
-      {
-        headers: {
-          pinata_api_key: process.env.PINATA_API_KEY!,
-          pinata_secret_api_key: process.env.PINATA_SECRET!,
-        },
-        timeout: pinTimeoutMs(file.size),
-      },
+    const { data } = await withOutboundSpan(
+      'pinata.pinFileToIPFS',
+      { dependency: 'pinata', operation: 'pinFileToIPFS' },
+      () =>
+        axios.post(
+          'https://api.pinata.cloud/pinning/pinFileToIPFS',
+          pinataForm,
+          {
+            headers: {
+              pinata_api_key: pinata.apiKey,
+              pinata_secret_api_key: pinata.secret,
+            },
+          },
+        ),
     );
     cid = data.IpfsHash;
     const pinMs = Date.now() - pinStartedAt;
@@ -171,7 +204,14 @@ export async function POST(req: NextRequest) {
   // lib/uploadVerification.ts for why this checks gateway-retrievable bytes
   // rather than recomputing the CID itself.
   try {
-    await verifyUploadedContent(cid, Buffer.from(await file.arrayBuffer()));
+    await withOutboundSpan(
+      'ipfs.upload.verify',
+      { dependency: 'ipfs-gateway', operation: 'verify-upload' },
+      () =>
+        file
+          .arrayBuffer()
+          .then((bytes) => verifyUploadedContent(cid, Buffer.from(bytes))),
+    );
   } catch (err) {
     log.error('Upload verification failed', {
       ip,
@@ -191,3 +231,5 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ cid });
 }
+
+export const POST = withRouteTelemetry(postIpfsUpload, '/api/ipfs/upload');

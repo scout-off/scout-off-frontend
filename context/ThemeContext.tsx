@@ -8,10 +8,11 @@ import {
   useMemo,
   ReactNode,
 } from 'react';
+import { THEME_STORAGE_KEY } from '@/lib/storageKeys';
 
 export type Theme = 'light' | 'dark';
 
-const STORAGE_KEY = 'scoutoff_theme_preference';
+const STORAGE_KEY = THEME_STORAGE_KEY;
 
 function getPreferredTheme(): Theme {
   if (typeof window === 'undefined') return 'dark';

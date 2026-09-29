@@ -3,8 +3,9 @@ import { useEffect } from 'react';
 import ThemeToggle from './ui/ThemeToggle';
 import { ThemeProvider } from '@/context/ThemeContext';
 import type { Theme } from '@/context/ThemeContext';
+import { THEME_STORAGE_KEY } from '@/lib/storageKeys';
 
-const STORAGE_KEY = 'scoutoff_theme_preference';
+const STORAGE_KEY = THEME_STORAGE_KEY;
 
 const meta: Meta<typeof ThemeToggle> = {
   title: 'Components/ThemeToggle',

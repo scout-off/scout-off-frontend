@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { requireAdminWallet } from '@/lib/adminAuth';
 import { AdminAuditStore } from '@/lib/adminAuditStore';
 import { isAdminAuditActionType } from '@/lib/adminAudit';
 import { createRequestLogger } from '@/lib/logger';
+import { privateJson } from '@/lib/httpResponses';
 
 export const runtime = 'nodejs';
 
@@ -18,7 +19,7 @@ export const runtime = 'nodejs';
 export async function GET(req: NextRequest) {
   const admin = requireAdminWallet(req);
   if (!admin) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const log = createRequestLogger(req);
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest) {
 
   const actionTypeParam = params.get('actionType');
   if (actionTypeParam !== null && !isAdminAuditActionType(actionTypeParam)) {
-    return NextResponse.json(
+    return privateJson(
       { error: `Unknown actionType: ${actionTypeParam}` },
       { status: 400 },
     );
@@ -48,15 +49,12 @@ export async function GET(req: NextRequest) {
       before: parseIntParam('before'),
       limit: parseIntParam('limit'),
     });
-    return NextResponse.json(result);
+    return privateJson(result);
   } catch (err) {
     log.error('Failed to query admin audit log', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
-      { error: 'Failed to load audit log' },
-      { status: 500 },
-    );
+    return privateJson({ error: 'Failed to load audit log' }, { status: 500 });
   }
 }
 
@@ -73,26 +71,26 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const admin = requireAdminWallet(req);
   if (!admin) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const log = createRequestLogger(req);
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object') {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    return privateJson({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
   const { actionType, target, amountStroops, txHash, status, data } =
     body as Record<string, unknown>;
 
   if (!isAdminAuditActionType(actionType)) {
-    return NextResponse.json(
+    return privateJson(
       { error: `actionType must be one of the known admin action types` },
       { status: 400 },
     );
   }
   if (status !== 'submitted' && status !== 'confirmed' && status !== 'failed') {
-    return NextResponse.json(
+    return privateJson(
       { error: 'status must be "submitted", "confirmed", or "failed"' },
       { status: 400 },
     );
@@ -113,12 +111,12 @@ export async function POST(req: NextRequest) {
           ? (data as Record<string, unknown>)
           : {},
     });
-    return NextResponse.json(entry, { status: 201 });
+    return privateJson(entry, { status: 201 });
   } catch (err) {
     log.error('Failed to record admin audit log entry', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
+    return privateJson(
       { error: 'Failed to record audit log entry' },
       { status: 500 },
     );

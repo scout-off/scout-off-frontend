@@ -116,6 +116,7 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
               <div className="flex flex-col items-center flex-shrink-0">
                 <div
                   aria-current={isCurrent ? 'step' : undefined}
+                  aria-label={`Step ${step.id} of ${STEPS.length}: ${step.label}`}
                   className={[
                     'w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold motion-safe:transition-colors',
                     isCompleted
@@ -160,6 +161,7 @@ export default function PlayerOnboardingWizard({
   const { player, loading: playerLoading } = usePlayer(publicKey);
   const isPaused = useIsPaused();
   const tErrors = useTranslations('contractErrors');
+  const tContractStatus = useTranslations('contract_status');
 
   // Background sync for the final submit step (issue #1181): if signing
   // succeeds but broadcasting the transaction fails for a network reason,
@@ -184,7 +186,10 @@ export default function PlayerOnboardingWizard({
   const regionRef = useRef<HTMLSelectElement>(null);
   const positionRef = useRef<HTMLSelectElement>(null);
   const step2SummaryRef = useRef<HTMLDivElement>(null);
+  const stepHeadingRef = useRef<HTMLHeadingElement>(null);
+  const previousStepRef = useRef(step);
   const [step2FocusTrigger, setStep2FocusTrigger] = useState(0);
+  const [announcement, setAnnouncement] = useState('');
 
   // Focus the step 2 summary after it mounts (element is conditionally rendered)
   useEffect(() => {
@@ -192,6 +197,15 @@ export default function PlayerOnboardingWizard({
       step2SummaryRef.current?.focus();
     }
   }, [step2FocusTrigger]);
+
+  useEffect(() => {
+    if (previousStepRef.current === step) return;
+    previousStepRef.current = step;
+    stepHeadingRef.current?.focus();
+    setAnnouncement(
+      `Step ${step} of ${STEPS.length}: ${STEPS[step - 1]?.label ?? ''}`,
+    );
+  }, [step]);
 
   const [data, setData] = useState<WizardData>({
     name: '',
@@ -450,6 +464,7 @@ export default function PlayerOnboardingWizard({
     setErrors({});
     setTxStatus('pending');
     setTxHash(null);
+    setAnnouncement('Waiting for signature in your wallet…');
 
     try {
       const vitals: PlayerVitals = {
@@ -468,6 +483,7 @@ export default function PlayerOnboardingWizard({
       // is what makes it possible to queue the *signed* transaction for
       // background sync when broadcasting is what actually drops.
       const signedXdr = await signOnly(xdr);
+      setAnnouncement('Signature received. Submitting your registration…');
 
       let hash: string;
       try {
@@ -493,6 +509,7 @@ export default function PlayerOnboardingWizard({
 
       setTxHash(hash);
       setTxStatus('success');
+      setAnnouncement('Registration submitted successfully.');
 
       matchTrackedUpload({ cid: data.ipfsHash, txHash: hash });
       clearPersistedWizardState(publicKey);
@@ -508,6 +525,14 @@ export default function PlayerOnboardingWizard({
         form: contractKey
           ? tErrors(contractKey)
           : (rawMessage ?? 'Registration failed'),
+      });
+      setAnnouncement(
+        contractKey
+          ? tErrors(contractKey)
+          : (rawMessage ?? 'Registration failed. Please try again.'),
+      );
+      window.requestAnimationFrame(() => {
+        document.getElementById('wizard-register-button')?.focus();
       });
     } finally {
       setIsLoading(false);
@@ -612,13 +637,20 @@ export default function PlayerOnboardingWizard({
 
   return (
     <div className="space-y-8">
+      <div className="sr-only" role="status" aria-live="polite">
+        {announcement}
+      </div>
       <StepIndicator currentStep={step} />
 
       {/* ── Step 1: Personal Info ─────────────────────────────────────────── */}
       {step === 1 && (
         <div className="space-y-6">
           <div>
-            <h2 className="text-lg font-semibold text-white">
+            <h2
+              ref={stepHeadingRef}
+              tabIndex={-1}
+              className="text-lg font-semibold text-white outline-none"
+            >
               Personal Information
             </h2>
             <p className="text-sm text-gray-400 mt-1">
@@ -629,6 +661,7 @@ export default function PlayerOnboardingWizard({
           {validationAttempted && Object.keys(errors).length > 0 && (
             <div
               role="alert"
+              aria-live="assertive"
               aria-label="Form validation summary"
               className="rounded-md border border-red-500 bg-red-950/30 p-3"
             >
@@ -756,7 +789,13 @@ export default function PlayerOnboardingWizard({
       {step === 2 && (
         <div className="space-y-6">
           <div>
-            <h2 className="text-lg font-semibold text-white">Highlight Reel</h2>
+            <h2
+              ref={stepHeadingRef}
+              tabIndex={-1}
+              className="text-lg font-semibold text-white outline-none"
+            >
+              Highlight Reel
+            </h2>
             <p className="text-sm text-gray-400 mt-1">
               Upload a video showcasing your skills. The upload must complete
               before you can continue.
@@ -767,6 +806,7 @@ export default function PlayerOnboardingWizard({
             <div
               ref={step2SummaryRef}
               role="alert"
+              aria-live="assertive"
               aria-label="Form validation summary"
               tabIndex={-1}
               className="rounded-md border border-red-500 bg-red-950/30 p-3 outline-none"
@@ -821,7 +861,11 @@ export default function PlayerOnboardingWizard({
       {step === 3 && (
         <div className="space-y-6">
           <div>
-            <h2 className="text-lg font-semibold text-white">
+            <h2
+              ref={stepHeadingRef}
+              tabIndex={-1}
+              className="text-lg font-semibold text-white outline-none"
+            >
               Review &amp; Confirm
             </h2>
             <p className="text-sm text-gray-400 mt-1">
@@ -868,6 +912,7 @@ export default function PlayerOnboardingWizard({
 
           <div className="flex gap-3">
             <Button
+              id="wizard-register-button"
               type="button"
               variant="secondary"
               onClick={handleBack}
@@ -880,8 +925,8 @@ export default function PlayerOnboardingWizard({
               type="button"
               onClick={handleSubmit}
               isLoading={isLoading}
-              disabled={isLoading || isPaused}
-              title={isPaused ? 'Contract is currently paused' : undefined}
+              disabled={isLoading}
+              disabledReason={isPaused ? tContractStatus('paused_hint') : undefined}
               className="flex-1"
             >
               {isLoading ? 'Registering...' : 'Register as Player'}

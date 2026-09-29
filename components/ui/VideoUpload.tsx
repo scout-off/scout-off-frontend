@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, ChangeEvent } from 'react';
+import { useState, useEffect, useRef, ChangeEvent } from 'react';
 import { useChunkedUpload } from '@/hooks/useChunkedUpload';
+import { getChunkedUploadStatus } from '@/lib/ipfs';
 import Spinner from '@/components/ui/Spinner';
 
 /** Accepted MIME types for client-side validation */
@@ -74,13 +75,57 @@ export default function VideoUpload({
     canResume,
     upload,
     resume,
+    persistedSession,
+    promptResume,
   } = useChunkedUpload();
   const isProcessing = isUploading && phase === 'processing';
+  const lastAnnouncedProgressRef = useRef<number | null>(null);
+  const [progressAnnouncement, setProgressAnnouncement] = useState('');
+
+  // After a reload, an interrupted upload persisted by useChunkedUpload can be
+  // resumed by re-selecting the same file (see #1003). Show how far it got.
+  const [resumedChunks, setResumedChunks] = useState<number | null>(null);
+  const persistedSessionId = persistedSession?.sessionId;
+  useEffect(() => {
+    setResumedChunks(null);
+    if (!persistedSessionId) return;
+    let cancelled = false;
+    getChunkedUploadStatus(persistedSessionId)
+      .then((status) => {
+        if (!cancelled) setResumedChunks(status.receivedChunks.length);
+      })
+      .catch(() => {
+        // Expired or unreachable — promptResume reports it on re-selection.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [persistedSessionId]);
 
   useEffect(() => {
     onUploadingChange?.(isUploading);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isUploading]);
+
+  useEffect(() => {
+    if (!isUploading) {
+      lastAnnouncedProgressRef.current = null;
+      setProgressAnnouncement('');
+      return;
+    }
+    if (isProcessing) {
+      setProgressAnnouncement('Processing upload…');
+      return;
+    }
+    const milestone = progress >= 100 ? 100 : Math.floor(progress / 10) * 10;
+    if (
+      milestone > 0 &&
+      milestone !== lastAnnouncedProgressRef.current
+    ) {
+      lastAnnouncedProgressRef.current = milestone;
+      setProgressAnnouncement(`Upload progress: ${milestone} percent.`);
+    }
+  }, [isUploading, isProcessing, progress]);
 
   const displayError = error ?? localError;
   const errorId = displayError ? 'video-upload-error' : undefined;
@@ -120,7 +165,14 @@ export default function VideoUpload({
     setFileName(file.name);
     onUploadStart?.();
 
-    const outcome = await upload(file);
+    const matchesPersisted =
+      persistedSession &&
+      !canResume &&
+      file.name === persistedSession.filename &&
+      file.size === persistedSession.fileSize;
+    const outcome = matchesPersisted
+      ? await promptResume(file)
+      : await upload(file);
     handleUploadResult(outcome.cid, outcome.error);
   };
 
@@ -144,6 +196,14 @@ export default function VideoUpload({
       >
         Accepted: {ACCEPTED_TYPES_LABEL} · Max {MAX_FILE_SIZE_LABEL}
       </p>
+      {persistedSession && !canResume && !isUploading && (
+        <p role="status" className="text-xs text-yellow-500">
+          Resume upload
+          {resumedChunks !== null &&
+            ` (${resumedChunks} of ${persistedSession.totalChunks} chunks uploaded)`}
+          : select {persistedSession.filename} again to continue.
+        </p>
+      )}
       <div className="relative">
         <input
           id="video-upload-input"
@@ -181,13 +241,16 @@ export default function VideoUpload({
           className="h-1.5 w-full rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden"
         >
           <div
-            className={`h-full bg-brand-green transition-[width] duration-200 ${
+            className={`h-full bg-brand-green motion-safe:transition-[width] motion-safe:duration-200 motion-reduce:transition-none ${
               isProcessing ? 'animate-pulse w-full' : ''
             }`}
             style={isProcessing ? undefined : { width: `${progress}%` }}
           />
         </div>
       )}
+      <div className="sr-only" role="status" aria-live="polite">
+        {progressAnnouncement}
+      </div>
       {displayError && (
         <p id={errorId} role="alert" className="text-sm text-red-500">
           {displayError}

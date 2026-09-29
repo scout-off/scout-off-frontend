@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createRequestLogger, withRequestId } from '@/lib/logger';
 import { getSessionWallet } from '@/lib/session';
 import { SessionStore } from '@/lib/sessionStore';
+import { privateJson } from '@/lib/httpResponses';
 
 // better-sqlite3 (via lib/sessionStore.ts) is a native addon and needs the
 // Node.js runtime, not edge.
@@ -27,14 +28,14 @@ export async function POST(req: NextRequest) {
   const wallet = getSessionWallet(req);
   if (!wallet) {
     return withRequestId(
-      NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
+      privateJson({ error: 'Unauthorized' }, { status: 401 }),
       log.requestId,
     );
   }
 
   const revoked = SessionStore.getInstance().revokeAllForWallet(wallet);
 
-  const response = NextResponse.json({ success: true, revoked });
+  const response = privateJson({ success: true, revoked });
   response.cookies.delete('session');
   response.cookies.delete({ name: 'session_refresh', path: '/api/auth' });
   return withRequestId(response, log.requestId);

@@ -9,6 +9,16 @@ const setRequestLocale = jest.fn();
 
 jest.mock('next-intl/server', () => ({
   setRequestLocale: (...args: unknown[]) => setRequestLocale(...args),
+  getTranslations: async ({
+    locale,
+    namespace,
+  }: {
+    locale: string;
+    namespace: string;
+  }) => {
+    const messages = require(`@/messages/${locale}.json`);
+    return (key: string) => messages[namespace][key];
+  },
 }));
 
 const mockHeaders = new Map<string, string>();
@@ -75,12 +85,40 @@ describe('LocaleLayout', () => {
   });
 
   describe('generateMetadata', () => {
+    it('returns localized title, description, Open Graph and Twitter fields', async () => {
+      mockHeaders.set('x-pathname', '/fr/scout');
+
+      const metadata = await generateMetadata({ params: { locale: 'fr' } });
+
+      const fr = require('@/messages/fr.json').meta;
+      expect(metadata).toMatchObject({
+        title: fr.title,
+        description: fr.description,
+        openGraph: {
+          title: fr.title,
+          description: fr.description,
+          url: 'https://scoutoff.app/fr/scout',
+          siteName: 'ScoutOff',
+          type: 'website',
+          locale: 'fr_FR',
+          alternateLocale: ['en_US', 'sw_KE'],
+        },
+        twitter: {
+          card: 'summary_large_image',
+          title: fr.title,
+          description: fr.description,
+        },
+      });
+      // The raster OG image comes from app/[locale]/opengraph-image.tsx.
+      expect(JSON.stringify(metadata)).not.toMatch(/\.svg/);
+    });
+
     it('returns canonical URL and hreflang alternates from x-pathname header', async () => {
       mockHeaders.set('x-pathname', '/en/scout/abc123');
 
-      const metadata = await generateMetadata();
+      const metadata = await generateMetadata({ params: { locale: 'en' } });
 
-      expect(metadata).toEqual({
+      expect(metadata).toMatchObject({
         alternates: {
           canonical: 'https://scoutoff.app/en/scout/abc123',
           languages: {
@@ -94,9 +132,9 @@ describe('LocaleLayout', () => {
     });
 
     it('falls back to root when x-pathname header is absent', async () => {
-      const metadata = await generateMetadata();
+      const metadata = await generateMetadata({ params: { locale: 'en' } });
 
-      expect(metadata).toEqual({
+      expect(metadata).toMatchObject({
         alternates: {
           canonical: 'https://scoutoff.app/',
           languages: {
@@ -113,9 +151,9 @@ describe('LocaleLayout', () => {
       process.env.NEXT_PUBLIC_APP_URL = 'https://example.com';
       mockHeaders.set('x-pathname', '/fr/player/42');
 
-      const metadata = await generateMetadata();
+      const metadata = await generateMetadata({ params: { locale: 'en' } });
 
-      expect(metadata).toEqual({
+      expect(metadata).toMatchObject({
         alternates: {
           canonical: 'https://example.com/fr/player/42',
           languages: {

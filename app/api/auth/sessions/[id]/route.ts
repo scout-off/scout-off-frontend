@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createRequestLogger, withRequestId } from '@/lib/logger';
 import { getSessionId, getSessionWallet } from '@/lib/session';
 import { SessionStore } from '@/lib/sessionStore';
+import { privateJson } from '@/lib/httpResponses';
 
 // better-sqlite3 (via lib/sessionStore.ts) is a native addon and needs the
 // Node.js runtime, not edge.
@@ -37,7 +38,7 @@ export async function DELETE(
   const wallet = getSessionWallet(req);
   if (!wallet) {
     return withRequestId(
-      NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
+      privateJson({ error: 'Unauthorized' }, { status: 401 }),
       log.requestId,
     );
   }
@@ -46,7 +47,7 @@ export async function DELETE(
   const owned = store.listForWallet(wallet).some((row) => row.id === params.id);
   if (!owned) {
     return withRequestId(
-      NextResponse.json({ error: 'Session not found' }, { status: 404 }),
+      privateJson({ error: 'Session not found' }, { status: 404 }),
       log.requestId,
     );
   }
@@ -60,12 +61,12 @@ export async function DELETE(
   const revoked = store.revoke(params.id);
   if (!revoked) {
     return withRequestId(
-      NextResponse.json({ error: 'Session already revoked' }, { status: 409 }),
+      privateJson({ error: 'Session already revoked' }, { status: 409 }),
       log.requestId,
     );
   }
 
-  const response = NextResponse.json({ success: true });
+  const response = privateJson({ success: true });
   if (params.id === currentSid) {
     response.cookies.delete('session');
     response.cookies.delete({ name: 'session_refresh', path: '/api/auth' });

@@ -55,6 +55,12 @@ export default async function PrivacyPage({ params }: PrivacyPageProps) {
 
       <h2>{t('section7_title')}</h2>
       <p>{t('section7_content')}</p>
+
+      <h2>{t('section8_title')}</h2>
+      <p>{t('section8_content')}</p>
+
+      <h2>{t('section9_title')}</h2>
+      <p>{t('section9_content')}</p>
     </LegalPageLayout>
   );
 }

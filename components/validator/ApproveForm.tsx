@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { sanitize } from '@/lib/sanitize';
 import { useWallet } from '@/hooks/useWallet';
 import useIsPaused from '@/hooks/useIsPaused';
@@ -47,6 +48,7 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
   const { publicKey, signAndSubmit } = useWallet();
   const { isValidator, checking, approveMilestone } = useValidator(publicKey);
   const isPaused = useIsPaused();
+  const tContractStatus = useTranslations('contract_status');
   const [playerId, setPlayerId] = useState('');
   const [description, setDescription] = useState('');
   const [evidenceUrl, setEvidenceUrl] = useState('');
@@ -345,12 +347,21 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
 
       <button
         type="submit"
-        disabled={submitting || !!urlError || isPaused}
-        title={isPaused ? 'Contract is currently paused' : undefined}
+        disabled={submitting || !!urlError}
+        aria-disabled={isPaused ? 'true' : undefined}
+        aria-describedby={isPaused ? 'paused-hint' : undefined}
+        onClick={(e) => {
+          if (isPaused) e.preventDefault();
+        }}
         className="bg-brand-green text-black font-semibold py-2 rounded-lg hover:opacity-90 transition disabled:opacity-50"
       >
         {submitLabel}
       </button>
+      {isPaused && (
+        <p id="paused-hint" className="text-xs text-gray-400 mt-1">
+          {tContractStatus('paused_hint')}
+        </p>
+      )}
     </form>
   );
 }

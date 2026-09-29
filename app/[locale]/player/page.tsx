@@ -1,5 +1,5 @@
 'use client';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import type React from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -22,12 +22,14 @@ import BackupWalletModal from '@/components/player/BackupWalletModal';
 import OfflineQueueBanner from '@/components/player/OfflineQueueBanner';
 import OnboardingTour from '@/components/ui/OnboardingTour';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
-import { playerTourSteps, PLAYER_TOUR_ID } from '@/lib/tourSteps';
+import { getTourSteps, PLAYER_TOUR_ID } from '@/lib/tourSteps';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { getEarnedBadgeIds, BADGE_DEFINITIONS } from '@/lib/badges';
 import type { Milestone, Player, PlayerVitals } from '@/types';
 import PullToRefresh from '@/components/ui/PullToRefresh';
 import Spinner from '@/components/ui/Spinner';
 import { useToast } from '@/components/ui/Toast';
+import { ARCHIVED_ENTRY_MESSAGE } from '@/lib/errors';
 
 const SEEN_BADGES_STORAGE_PREFIX = 'scoutoff_seen_badges_';
 
@@ -40,7 +42,7 @@ const TABS: { id: TabId; labelKey: string }[] = [
 
 function PlayerDashboardContent() {
   const { walletAddress: publicKey } = useRequireWallet();
-  const { player, loading, isValidating, refetch, optimisticUpdate } =
+  const { player, loading, error, isValidating, refetch, optimisticUpdate } =
     usePlayer(publicKey);
   const { milestones } = useMilestoneHistory(player?.id ?? null);
   const { disputes, file: fileDispute } = useMilestoneDisputes(publicKey);
@@ -51,9 +53,14 @@ function PlayerDashboardContent() {
 
   const offlineQueue = useOfflineQueue();
 
+  const isMobile = useIsMobile();
+  const tourSteps = useMemo(
+    () => getTourSteps('player', { isMobile }),
+    [isMobile],
+  );
   const tour = useOnboardingTour(
     PLAYER_TOUR_ID,
-    playerTourSteps,
+    tourSteps,
     publicKey ?? undefined,
   );
 
@@ -72,6 +79,14 @@ function PlayerDashboardContent() {
 
   const isRegistered = !!player;
   const dataExportEnabled = isFeatureEnabled('DATA_EXPORT');
+
+  if (!loading && error === ARCHIVED_ENTRY_MESSAGE) {
+    return (
+      <p className="mx-auto mt-20 max-w-xl px-6 text-center text-yellow-300">
+        {ARCHIVED_ENTRY_MESSAGE}
+      </p>
+    );
+  }
 
   const [activeTab, setActiveTab] = useState<TabId>(
     isRegistered ? 'profile' : 'register',
@@ -97,6 +112,7 @@ function PlayerDashboardContent() {
     try {
       const {
         generatePlayerCvPdf,
+        requestCvVerification,
         downloadPlayerCvPdf,
         CV_EXPORT_LARGE_MILESTONE_WARNING_THRESHOLD,
       } = await import('@/lib/cvExport');
@@ -106,7 +122,12 @@ function PlayerDashboardContent() {
           variant: 'info',
         });
       }
-      const bytes = await generatePlayerCvPdf(player, milestones);
+      const verification = await requestCvVerification(player, milestones);
+      const bytes = await generatePlayerCvPdf(
+        player,
+        milestones,
+        verification,
+      );
       downloadPlayerCvPdf(bytes, player.vitals.name);
       setCvExportStatus('idle');
     } catch {
@@ -289,6 +310,7 @@ function PlayerDashboardContent() {
         onDismiss={tour.dismissTour}
         onSkip={tour.skipTour}
         onComplete={tour.completeTour}
+        onGoToStep={tour.goToStep}
       />
       <div className="max-w-2xl mx-auto flex flex-col gap-8">
         <h1 className="text-3xl font-bold text-white">{t('title')}</h1>

@@ -29,7 +29,10 @@ export default function SessionMismatchWarning() {
   };
 
   return (
-    <div className="bg-red-500 text-white px-4 py-3 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div
+      role="alert"
+      className="bg-red-500 text-white px-4 py-3 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+    >
       <div className="flex items-start gap-3">
         <svg
           className="w-5 h-5 shrink-0 mt-0.5"

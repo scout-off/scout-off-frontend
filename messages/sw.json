@@ -71,7 +71,24 @@
     "search": "Tafuta",
     "filter": "Kuchuja",
     "sort": "Panga",
-    "clear": "Futa"
+    "clear": "Futa",
+    "skipToContent": "Ruka hadi maudhui makuu",
+    "close_modal": "Funga dirisha",
+    "close_notification": "Funga arifa",
+    "notification_label": "Arifa ya {variant}: {message}",
+    "dismiss": "Ondoa",
+    "loading_status": "Inapakia",
+    "copy_address": "Bofya kunakili anwani",
+    "address_copied": "Anwani imenakiliwa",
+    "share_via_qr": "Shiriki kupitia QR",
+    "view_on_stellar_expert": "Tazama muamala kwenye Stellar Expert",
+    "close_tour": "Funga ziara",
+    "previous_step": "Hatua iliyotangulia",
+    "next_step": "Hatua inayofuata",
+    "scroll_to_top": "Rudi juu",
+    "cookie_consent": "Idhini ya vidakuzi",
+    "close_consent_banner": "Funga bango la idhini",
+    "confirm": "Thibitisha"
   },
   "language": {
     "select_language": "Chagua Lugha",
@@ -121,10 +138,31 @@
     "milestones": "Miikukuu",
     "search_player": "TODO: Machine-translated - Tafuta mchezaji kwa anwani ya pochi",
     "player_not_found": "TODO: Machine-translated - Mchezaji hajafikiwa",
-    "no_players": "TODO: Machine-translated - Hakuna wachezaji waliopatikana"
+    "no_players": "TODO: Machine-translated - Hakuna wachezaji waliopatikana",
+    "players_found": "{count, plural, one {mchezaji # amepatikana} other {wachezaji # wamepatikana}}",
+    "results_behind": "Matokeo yanaweza kuwa nyuma ya {count, plural, one {ledger #} other {ledgers #}}",
+    "all_regions": "Maeneo yote",
+    "any_position": "Nafasi yoyote",
+    "save_search_placeholder": "mf. washambuliaji wa Lagos"
+  },
+  "trial_offer": {
+    "form_label": "Rekodi ofa ya majaribio",
+    "club_name": "Jina la Klabu",
+    "club_name_placeholder": "mf. FC Barcelona",
+    "club_name_required": "Jina la klabu linahitajika",
+    "offer_type": "Aina ya Ofa",
+    "offer_type_trial": "Majaribio",
+    "offer_type_loan": "Mkopo",
+    "offer_type_transfer": "Uhamisho",
+    "message": "Ujumbe",
+    "optional": "si lazima",
+    "message_hint": "Maelezo ya ziada kuhusu ofa…",
+    "submit": "Wasilisha Ofa ya Majaribio",
+    "submitting": "Inawasilisha…"
   },
   "player_profile": {
-    "back_to_scout_dashboard": "← Rudi kwenye Dashibodi ya Scout"
+    "back_to_scout_dashboard": "← Rudi kwenye Dashibodi ya Scout",
+    "verified_on_chain": "Imethibitishwa kwenye blockchain"
   },
   "player_dashboard": {
     "title": "Dashibodi ya Mchezaji",
@@ -183,6 +221,12 @@
     "network_error": "TODO: Machine-translated - Kosa la Mtandao",
     "contract_error": "TODO: Machine-translated - Wito wa kontrata umeshindwa",
     "wallet_error": "TODO: Machine-translated - Operesheni ya pochi imeshindwa"
+  },
+  "contract_status": {
+    "paused_hint": "Haipatikani kwa muda — jukwaa limepumzishwa kwa matengenezo"
+  },
+  "dispute_modal": {
+    "character_count": "{count} ya {max} herufi"
   },
   "actions": {
     "refresh": "Refresh",
@@ -305,7 +349,7 @@
     "page_title": "Sera ya Faragha",
     "page_description": "Jinsi ScoutOff inavyokusanya, kutumia, na kulinda data yako binafsi.",
     "eyebrow": "Kisheria",
-    "last_updated": "Ilisasishwa mwisho: Julai 29, 2026",
+    "last_updated": "Ilisasishwa mwisho: Septemba 24, 2026",
     "section1_title": "1. Utangulizi",
     "section1_content": "ScoutOff imejitolea kulinda faragha yako. Sera hii inaeleza jinsi tunavyokusanya, kutumia, na kulinda taarifa zako. Kwa kutumia ScoutOff, unakubali ukusanyaji na matumizi ya taarifa kulingana na sera hii.",
     "section2_title": "2. Data Tunazokusanya",
@@ -317,9 +361,13 @@
     "section5_title": "5. Ushirikishaji wa Data",
     "section5_content": "Hatuuzi data yako binafsi. Tunashirikisha data pekee na watumiaji wengine kulingana na maelekezo yako, na watoa huduma (Vercel, Sentry, Pinata), na inapohitajika kisheria.",
     "section6_title": "6. Uhifadhi na Ufutaji",
-    "section6_content": "Data za on-chain ni za kudumu na haziwezi kufutwa. Data za off-chain zinahifadhiwa kwa muda unaohitajika. Unaweza kuomba ufutaji wa data zako za off-chain kupitia mipangilio ya akaunti. Tumia kitendo cha 'Omba Ufutaji wa Data' katika Mipangilio ya Akaunti.",
+    "section6_content": "Data za on-chain ni za kudumu na haziwezi kufutwa. Data za off-chain zinahifadhiwa kwa muda unaohitajika. Unaweza kuomba ufutaji wa data zako za off-chain kupitia mipangilio ya akaunti. Tumia kitendo cha 'Omba Ufutaji wa Data' katika Mipangilio ya Akaunti. Uhamishaji na ufutaji wa data zako unajumuisha orodha yako ya ufuatiliaji, utafutaji uliohifadhiwa, mipangilio na hali ya kusomwa ya arifa, mizozo na uidhinishaji wa hatua muhimu, wachezaji uliowatazama hivi karibuni, vipindi vya kuingia (ikiwa ni pamoja na taarifa za kifaa na kivinjari), na rekodi za upakiaji. Ufutaji pia unakuondoa kwenye vifaa vyote. Rekodi za upakiaji huhifadhiwa bila pochi yako ili midia iliyoachwa bado iweze kusafishwa, na maingizo ya kumbukumbu ya ukaguzi wa msimamizi hufanywa kuwa bila jina badala ya kufutwa.",
     "section7_title": "7. Haki Zako na Mawasiliano",
-    "section7_content": "Kulingana na eneo lako la kisheria, unaweza kuwa na haki za kufikia, kusahihisha, kufuta, au kuhamisha data yako binafsi. Haki hizi zinatumika tu kwa data za off-chain. Kwa maswali, wasiliana nasi kupitia njia rasmi za ScoutOff."
+    "section7_content": "Kulingana na eneo lako la kisheria, unaweza kuwa na haki za kufikia, kusahihisha, kufuta, au kuhamisha data yako binafsi. Haki hizi zinatumika tu kwa data za off-chain. Kwa maswali, wasiliana nasi kupitia njia rasmi za ScoutOff.",
+    "section8_title": "8. Huduma za Wahusika Wengine",
+    "section8_content": "Ili kuonyesha thamani za takriban kwa sarafu ya kawaida, seva zetu (si kivinjari chako) hupata kiwango cha ubadilishaji cha XLM kutoka CoinGecko na, kama mbadala, API ya umma ya Horizon ya mtandao wa Stellar; anwani yako ya IP haishirikiwi na watoa huduma hawa. Maudhui yaliyopakiwa huhifadhiwa kwenye IPFS kupitia Pinata, na ripoti za hitilafu hutumwa kwa Sentry.",
+    "section9_title": "9. Ripoti za maudhui",
+    "section9_content": "Unaporipoti maudhui tunahifadhi kitambulisho chake (CID), mchezaji husika, sababu na maelezo uliyotoa, pamoja na alama isiyoweza kurudishwa ya anwani ya pochi yako au anwani ya IP, inayotumika tu kuunganisha ripoti zinazojirudia na kuzuia matumizi mabaya. Maamuzi ya wasimamizi hurekodiwa katika kumbukumbu yetu ya ukaguzi wa msimamizi. Hatushiriki utambulisho wa waliyoripoti na mchezaji aliyeripotiwa."
   },
   "terms": {
     "back_to_home": "Rudi Nyumbani",
@@ -338,7 +386,9 @@
     "section5_title": "5. Haki Miliki",
     "section5_content": "Wachezaji wanabaki na umiliki wa maudhui ya wasifu wao na data binafsi. Kwa kuwasilisha maudhui kwa ScoutOff, unatupa leseni ya kuonyesha maudhui hayo kwa madhumuni ya uendeshaji wa jukwaa pekee. Msimbo wa jukwaa ni chanzo huria.",
     "section6_title": "6. Kanusho na Vikwazo",
-    "section6_content": "ScoutOff inatolewa 'kama ilivyo' bila dhamana. Hatuwajibiki kwa usahihi wa taarifa za wachezaji, maudhui ya IPFS, hasara kutokana na matatizo ya mtandao wa blockchain, au hitilafu za mikataba mahiri. Dhima yetu haitazidi ada ulizotulipa katika miezi 12 kabla ya madai."
+    "section6_content": "ScoutOff inatolewa 'kama ilivyo' bila dhamana. Hatuwajibiki kwa usahihi wa taarifa za wachezaji, maudhui ya IPFS, hasara kutokana na matatizo ya mtandao wa blockchain, au hitilafu za mikataba mahiri. Dhima yetu haitazidi ada ulizotulipa katika miezi 12 kabla ya madai.",
+    "section7_title": "Kuripoti na kuondoa maudhui",
+    "section7_content": "Mtu yeyote anaweza kuripoti picha au video ya mchezaji kutoka kwenye galeri ya wasifu (sababu: uchi, vurugu, kujifanya mtu mwingine, hakimiliki, nyingine). Wasimamizi wetu hukagua ripoti na wanaweza kuondoa maudhui yanayokiuka masharti haya au sheria. Maudhui yaliyoondolewa hayaonyeshwi tena wala kutolewa na ScoutOff, na yanaweza pia kuondolewa kwenye huduma yetu ya kuhifadhi IPFS baada ya muda mfupi wa neema. Kwa kuwa IPFS ni mtandao wa umma, uondoaji unatumika kwa ScoutOff pekee: maudhui hayo yanaweza kuendelea kupatikana kupitia lango za umma za IPFS au nodi zinazoyahifadhi kivyao. Wamiliki wa hakimiliki na yeyote aliyeathirika wanaweza pia kuwasiliana nasi kuomba kuondolewa, nasi tutashughulikia maombi halali haraka."
   },
   "settings": {
     "back_to_home": "Rudi Nyumbani",
@@ -361,7 +411,33 @@
     "logout_all_button": "Toka Kila Mahali",
     "logout_all_in_progress": "Inatoka…",
     "logout_all_success": "Umetoka kwenye vifaa vyote.",
-    "logout_all_error": "Imeshindwa kutoka kwenye vifaa vyote. Tafadhali jaribu tena."
+    "logout_all_error": "Imeshindwa kutoka kwenye vifaa vyote. Tafadhali jaribu tena.",
+    "contact": {
+      "connect_wallet": "Unganisha poo yako ili kusimamia taarifa za mawasiliano.",
+      "delete_button": "Futa taarifa zilizohifadhiwa",
+      "delete_error": "Imeshindikana kufuta taarifa zako za mawasiliano. Tafadhali jaribu tena.",
+      "deleted": "Taarifa zako za mawasiliano zilizohifadhiwa zimefutwa.",
+      "deleting": "Inafuta…",
+      "description": "Wanachuzi wanaolipa ili kuwasiliana nawe huona taarifa unazohifadhi hapa. Taarifa hizi huhifadhiwa kwa usimbaji na hazihpublishwi kwenye blockchain wala IPFS.",
+      "email_label": "Barua pepe",
+      "encryption_note": "Taarifa za mawasiliano husimbwa kwa AES-256-GCM kabla ya kuingia kwenye hifadhari yetu, na hutoa kwa mwanachuzi tu aliyethibitisha malipo yake kwenye blockchain. Hatunawezi kuzisoma tena, kwa hivyo ingiza tena ili kuzibadilisha.",
+      "loading": "Inaangalia taarifa zilizohifadhiwa…",
+      "need_one_channel": "Ongeza angalau njia moja ya mawasiliano kabla ya kuhifadhi.",
+      "not_stored": "Hakuna taarifa za mawasiliano zilizohifadhiwa bado. Wanachuzi wanaolipa wataambiwa huna.",
+      "paywall_note": "Kila mwanachuzi lazima alipe iliakuwasiliana nawe kabla ya taarifa hizi kutoa kwake, kila wakati. Kuhifadhi hapa kunabadilisha taarifa zinazoshirikiwa; hazifichui taarifa zako hadha kwa umma.",
+      "phone_label": "Simu",
+      "replace_hint": "Kuhifadhi hutengeneza upya sehemu zote tatu. Kuondoa njia moja, ifuta kabla ya kuhifadhi.",
+      "save_button": "Hifadhi taarifa za mawasiliano",
+      "save_error": "Imeshindikana kuhifadhi taarifa zako za mawasiliano. Tafadhali jaribu tena.",
+      "saved": "Taarifa zako za mawasiliano zimehifadhiwa.",
+      "saving": "Inahifadhi…",
+      "section_description": "Chagua jinsi wanachuzi wanavyokuweka mawasiliano baada ya kulipa.",
+      "section_title": "Maelezo ya mawasiliano",
+      "stored": "Taarifa za mawasiliano zimehifadhiwa. Wanachuzi wanaolipa watapata.",
+      "stored_at": "Taarifa za mawasiliano zimehifadhiwa (mwisho wa mwisho {date}).",
+      "telegram_label": "Telegram",
+      "too_long": "Kila njia ya mawasiliano lazima iwe na herufi 320 au kidogo."
+    }
   },
   "dataDeletion": {
     "modal_title": "Omba Ufutaji wa Data",
@@ -391,5 +467,325 @@
     "accept": "Kubali",
     "decline": "Kataa",
     "privacy_link": "Sera ya Faragha"
+  },
+  "meta": {
+    "title": "ScoutOff — Utafutaji wa Vipaji vya Soka Uliogatuliwa",
+    "description": "Wasifu wa wachezaji usioweza kughushiwa, hatua zinazothibitishwa, na miunganisho ya moja kwa moja kati ya wasaka vipaji na wachezaji — inayoendeshwa na mikataba mahiri ya Stellar Soroban.",
+    "og_image_alt": "ScoutOff — Utafutaji wa Vipaji vya Soka Uliogatuliwa kwenye Stellar"
+  },
+  "offline": {
+    "bannerMessage": "Uko nje ya mtandao. Baadhi ya vipengele huenda visipatikane hadi muunganisho urudi."
+  },
+  "apiErrors": {
+    "RATE_LIMITED": "Maombi ni mengi mno. Tafadhali punguza kasi na ujaribu tena baada ya muda mfupi.",
+    "INVALID_REQUEST": "Ombi si sahihi. Tafadhali kagua maelezo yako na ujaribu tena.",
+    "QUERY_TOO_LONG": "Maandishi ya utafutaji yasizidi herufi {max}.",
+    "UPSTREAM_FAILED": "Huduma haipatikani kwa muda. Tafadhali jaribu tena.",
+    "INVALID_SIGNATURE": "Uthibitishaji wa pochi umeshindwa. Tafadhali ingia tena.",
+    "UPLOAD_SESSION_NOT_FOUND": "Kipindi cha kupakia hakijapatikana au kimeisha muda. Tafadhali anza kupakia upya.",
+    "CHUNK_INDEX_OUT_OF_RANGE": "Sehemu ya upakiaji si sahihi. Tafadhali jaribu tena.",
+    "UPLOAD_INCOMPLETE": "Upakiaji haujakamilika: sehemu {received} kati ya {total} zimepokelewa.",
+    "DISPUTE_ALREADY_PENDING": "Hatua hii tayari ina pingamizi linalosubiri.",
+    "MILESTONE_NOT_FOUND": "Hatua haijapatikana.",
+    "UNKNOWN": "Hitilafu imetokea. Tafadhali jaribu tena."
+  },
+  "player": {
+    "modals": {
+      "dispute": {
+        "title": "TODO: Machine-translated - Pinga hatua",
+        "intro": "TODO: Machine-translated - Ripoti <highlight>{milestone}</highlight> ili ikaguliwe na msimamizi. Eleza kwa nini unaamini uamuzi huu ulifanywa kimakosa.",
+        "reasonLabel": "TODO: Machine-translated - Sababu",
+        "reasonPlaceholder": "TODO: Machine-translated - k.m. Hatua hii ilikataliwa bila maelezo, lakini niliwasilisha ushahidi unaolingana…",
+        "reasonTooShort": "TODO: Machine-translated - Tafadhali eleza malalamiko yako kwa angalau {min, plural, one {herufi #} other {herufi #}}.",
+        "submitFailed": "TODO: Machine-translated - Imeshindwa kuwasilisha malalamiko",
+        "cancel": "TODO: Machine-translated - Ghairi",
+        "submit": "TODO: Machine-translated - Wasilisha malalamiko"
+      },
+      "archive": {
+        "titleArchive": "TODO: Machine-translated - Hifadhi wasifu wako kwenye kumbukumbu?",
+        "titleRestore": "TODO: Machine-translated - Rejesha wasifu wako?",
+        "restoreBody": "TODO: Machine-translated - Rejesha wasifu wako ili uonekane tena kwa maskauti. Maskauti wataweza kutafuta na kuona wasifu wako.",
+        "archiveBody": "TODO: Machine-translated - Kuhifadhi wasifu wako kwenye kumbukumbu kutauficha kwenye matokeo ya utafutaji na uvinjari wa maskauti. Unaweza kuurejesha wakati wowote.",
+        "dataPreserved": "TODO: Machine-translated - Data na hatua zako zimehifadhiwa — hakuna kinachofutwa.",
+        "directLinksNote": "TODO: Machine-translated - Viungo vya moja kwa moja kwenye wasifu wako vitaonyesha ujumbe wa 'kwa sasa ni binafsi'.",
+        "cancel": "TODO: Machine-translated - Ghairi",
+        "archiveButton": "TODO: Machine-translated - Hifadhi wasifu",
+        "restoreButton": "TODO: Machine-translated - Rejesha wasifu",
+        "confirmTitleArchive": "TODO: Machine-translated - Hifadhi wasifu wako kwenye kumbukumbu?",
+        "confirmTitleRestore": "TODO: Machine-translated - Rejesha wasifu wako?",
+        "confirmArchive": "TODO: Machine-translated - Thibitisha kwamba unataka kuhifadhi wasifu wako kwenye kumbukumbu. Unaweza kuurejesha wakati wowote.",
+        "confirmRestore": "TODO: Machine-translated - Thibitisha kwamba unataka kurejesha wasifu wako na uonekane kwa maskauti.",
+        "goBack": "TODO: Machine-translated - Rudi nyuma",
+        "processing": "TODO: Machine-translated - Inachakata...",
+        "yesArchive": "TODO: Machine-translated - Ndiyo, hifadhi",
+        "yesRestore": "TODO: Machine-translated - Ndiyo, rejesha"
+      },
+      "backupWallet": {
+        "title": "TODO: Machine-translated - Urejeshaji wa akaunti",
+        "protectsHeading": "TODO: Machine-translated - Kinacholindwa na hiki:",
+        "protectsLoss": "TODO: Machine-translated - Kupoteza ufikiaji wa pochi yako kuu",
+        "protectsRegain": "TODO: Machine-translated - Kurejesha ufikiaji wa akaunti na wasifu wako",
+        "notProtectsHeading": "TODO: Machine-translated - Kisicholindwa na hiki:",
+        "notProtectsBody": "TODO: Machine-translated - Pochi za akiba hazilindi dhidi ya kupoteza pochi zote mbili, anwani za akiba zilizoibiwa, au uvunjaji mwingine wa usalama. Tumia kifungu cha maneno cha akiba cha pochi kama njia yako kuu ya urejeshaji.",
+        "currentLabel": "TODO: Machine-translated - Pochi ya akiba ya sasa:",
+        "verifiedOn": "TODO: Machine-translated - Ilithibitishwa tarehe {date}",
+        "close": "TODO: Machine-translated - Funga",
+        "remove": "TODO: Machine-translated - Ondoa",
+        "noneConfigured": "TODO: Machine-translated - Hakuna pochi ya akiba iliyowekwa. Unganisha moja ili kurejesha akaunti yako ukipoteza ufikiaji wa pochi yako kuu.",
+        "linkButton": "TODO: Machine-translated - Unganisha pochi ya akiba",
+        "linkBody": "TODO: Machine-translated - Weka anwani ya pochi ya pili itakayotumika kama njia ya urejeshaji. Utahitaji kusaini uthibitisho kwa pochi yako kuu.",
+        "inputLabel": "TODO: Machine-translated - Anwani ya pochi ya akiba",
+        "inputPlaceholder": "TODO: Machine-translated - G... (ufunguo wa umma wa Stellar wenye herufi 56)",
+        "errorRequired": "TODO: Machine-translated - Tafadhali weka anwani ya pochi",
+        "errorInvalid": "TODO: Machine-translated - Anwani ya Stellar si sahihi. Lazima iwe na herufi 56 na ianze na G.",
+        "errorSameAsPrimary": "TODO: Machine-translated - Pochi ya akiba haiwezi kuwa sawa na pochi yako kuu",
+        "back": "TODO: Machine-translated - Rudi",
+        "continue": "TODO: Machine-translated - Endelea",
+        "confirmTitle": "TODO: Machine-translated - Thibitisha na usaini",
+        "primaryLabel": "TODO: Machine-translated - Pochi kuu:",
+        "backupLabel": "TODO: Machine-translated - Pochi ya akiba:",
+        "confirmBody": "TODO: Machine-translated - Bofya \"Unganisha na usaini\" ili kuthibitisha kwa pochi yako kuu. Hii inathibitisha kwamba unamiliki anwani zote mbili.",
+        "cancel": "TODO: Machine-translated - Ghairi",
+        "linkAndSign": "TODO: Machine-translated - Unganisha na usaini",
+        "removeTitle": "TODO: Machine-translated - Ondoa pochi ya akiba?",
+        "removeBody": "TODO: Machine-translated - Kuondoa pochi yako ya akiba kunamaanisha hutaweza kuitumia kurejesha akaunti yako ukipoteza ufikiaji wa pochi yako kuu.",
+        "keep": "TODO: Machine-translated - Iweke",
+        "confirmRemovalTitle": "TODO: Machine-translated - Thibitisha kuondoa",
+        "confirmRemovalBody": "TODO: Machine-translated - Una uhakika? Kitendo hiki hakiwezi kutenduliwa. Hutakuwa na njia ya akiba ya urejeshaji.",
+        "goBack": "TODO: Machine-translated - Rudi nyuma",
+        "yesRemove": "TODO: Machine-translated - Ndiyo, ondoa"
+      }
+    }
+  },
+  "academy": {
+    "bulkImport": {
+      "title": "TODO: Machine-translated - Uingizaji wa wachezaji kwa wingi",
+      "intro": "TODO: Machine-translated - Pakia faili ya CSV au JSON yenye orodha ya wachezaji wengi ili kuwasajili katika kipindi kimoja. Kila mchezaji bado anasajiliwa kwa muamala wake mwenyewe kwenye mnyororo — utaombwa kusaini mara moja kwa kila mchezaji.",
+      "fileLabel": "TODO: Machine-translated - Faili ya wachezaji (CSV au JSON)",
+      "fileHint": "TODO: Machine-translated - Safu/sehemu zinazohitajika (ziache kwa Kiingereza): name, age, nationality, region, position. Hiari: bio. Safu/kitu kimoja kwa kila mchezaji. Hakuna upakiaji wa video za matukio muhimu hapa — ziongeze baadaye kwa kila mchezaji.",
+      "loaded": "TODO: Machine-translated - Imepakiwa: {fileName}",
+      "previewHeading": "TODO: Machine-translated - Hakikisho",
+      "progressHeading": "TODO: Machine-translated - Maendeleo ya uingizaji",
+      "counts": "TODO: Machine-translated - {valid} halali · {invalid} batili · {total} jumla",
+      "resumeBanner": "TODO: Machine-translated - Kundi ambalo halijakamilika limepatikana: <strong>{completed} kati ya {total, plural, one {safu #} other {safu #}}</strong> tayari zimeshughulikiwa. Safu zilizofaulu awali zitarukwa. Bofya <strong>Ingiza</strong> ili kuendelea.",
+      "tableCaption": "TODO: Machine-translated - Hakikisho na hali ya uingizaji wa wachezaji kwa wingi",
+      "columns": {
+        "row": "TODO: Machine-translated - Safu",
+        "name": "TODO: Machine-translated - Jina",
+        "age": "TODO: Machine-translated - Umri",
+        "nationality": "TODO: Machine-translated - Uraia",
+        "region": "TODO: Machine-translated - Eneo",
+        "position": "TODO: Machine-translated - Nafasi",
+        "bio": "TODO: Machine-translated - Wasifu",
+        "status": "TODO: Machine-translated - Hali"
+      },
+      "status": {
+        "invalid": "TODO: Machine-translated - Batili",
+        "skipped": "TODO: Machine-translated - Imerukwa",
+        "valid": "TODO: Machine-translated - Halali",
+        "waiting": "TODO: Machine-translated - Inasubiri…",
+        "signing": "TODO: Machine-translated - Inasubiri sahihi…",
+        "registered": "TODO: Machine-translated - Imesajiliwa",
+        "viewTx": "TODO: Machine-translated - Tazama muamala",
+        "failed": "TODO: Machine-translated - Imeshindwa"
+      },
+      "rowErrors": {
+        "REQUIRED": "TODO: Machine-translated - {field} inahitajika",
+        "NAME_TOO_SHORT": "TODO: Machine-translated - Jina lazima liwe na angalau {min, plural, one {herufi #} other {herufi #}}",
+        "NAME_TOO_LONG": "TODO: Machine-translated - Jina lazima liwe na herufi {max} au chache zaidi",
+        "INVALID_AGE": "TODO: Machine-translated - Umri lazima uwe namba kamili kati ya {min} na {max}",
+        "NATIONALITY_TOO_LONG": "TODO: Machine-translated - Uraia lazima uwe na herufi {max} au chache zaidi",
+        "INVALID_REGION": "TODO: Machine-translated - \"{value}\" si eneo linalotambulika",
+        "INVALID_POSITION": "TODO: Machine-translated - \"{value}\" si nafasi inayotambulika",
+        "BIO_TOO_LONG": "TODO: Machine-translated - Wasifu lazima uwe na herufi {max} au chache zaidi"
+      },
+      "fileErrors": {
+        "INVALID_JSON": "TODO: Machine-translated - Faili si JSON halali.",
+        "JSON_NOT_ARRAY": "TODO: Machine-translated - Faili ya JSON lazima iwe na orodha ya vitu vya wachezaji.",
+        "EMPTY_JSON": "TODO: Machine-translated - Faili ya JSON haina wachezaji wowote.",
+        "EMPTY_CSV": "TODO: Machine-translated - Faili ya CSV haina safu za data (kichwa pekee, au faili ni tupu).",
+        "TOO_MANY_ROWS": "TODO: Machine-translated - Faili ina safu {count}, ambazo zinazidi kikomo cha safu {max} kwa kila uingizaji. Tafadhali igawanye katika makundi madogo.",
+        "PARSE_FAILED": "TODO: Machine-translated - Imeshindwa kuchanganua faili.",
+        "READ_FAILED": "TODO: Machine-translated - Imeshindwa kusoma faili. Tafadhali jaribu tena."
+      },
+      "walletNotConnected": "TODO: Machine-translated - Pochi haijaunganishwa",
+      "transactionsDisabled": "TODO: Machine-translated - Miamala imezimwa kwa sasa",
+      "batchCancelled": "TODO: Machine-translated - Kundi limeghairiwa. Pakia faili hiyo hiyo tena ili kuendelea ulipoishia.",
+      "done": "TODO: Machine-translated - Uingizaji umekamilika: {succeeded} wamesajiliwa, {failed} wameshindwa, {invalid} wamerukwa (batili).",
+      "pause": "TODO: Machine-translated - Sitisha",
+      "resume": "TODO: Machine-translated - Endelea",
+      "cancel": "TODO: Machine-translated - Ghairi",
+      "contractPausedTitle": "TODO: Machine-translated - Mkataba umesitishwa kwa sasa",
+      "connectWalletTitle": "TODO: Machine-translated - Unganisha pochi ili kuingiza wachezaji",
+      "paused": "TODO: Machine-translated - Imesitishwa",
+      "importing": "TODO: Machine-translated - Inaingiza {done} kati ya {total, plural, one {mchezaji #} other {wachezaji #}}…",
+      "importButton": "TODO: Machine-translated - Ingiza {count, plural, one {mchezaji # halali} other {wachezaji # halali}}",
+      "importAnother": "TODO: Machine-translated - Ingiza kundi lingine",
+      "chooseAnother": "TODO: Machine-translated - Chagua faili nyingine"
+    },
+    "roster": {
+      "loading": "TODO: Machine-translated - Inapakia akademia yako…",
+      "loadFailed": "TODO: Machine-translated - Imeshindwa kupakia akademia yako.",
+      "retry": "TODO: Machine-translated - Jaribu tena",
+      "noAcademy": "TODO: Machine-translated - Pochi hii haijasajiliwa kama mmiliki wa akademia yoyote. Wasiliana na msimamizi wa jukwaa ikiwa unaamini hili ni kosa.",
+      "heading": "TODO: Machine-translated - Orodha ya akademia yako",
+      "description": "TODO: Machine-translated - Ongeza au ondoa pochi za wasaini kwa akademia unazomiliki. Kila msaini bado lazima aongezwe kama mthibitishaji na msimamizi wa jukwaa ili idhini zake za hatua ziruhusiwe kwenye mnyororo — paneli hii inasimamia tu lebo ya orodha nje ya mnyororo.",
+      "owner": "TODO: Machine-translated - Mmiliki:",
+      "signerCount": "TODO: Machine-translated - {count, plural, one {msaini #} other {wasaini #}}",
+      "notOnChain": "TODO: Machine-translated - haiko kwenye mnyororo",
+      "notOnChainTitle": "TODO: Machine-translated - Haijaidhinishwa kwenye mnyororo kwa sasa — muombe msimamizi wa jukwaa aongeze pochi hii kama mthibitishaji",
+      "remove": "TODO: Machine-translated - Ondoa",
+      "addPlaceholder": "TODO: Machine-translated - Ongeza pochi ya msaini (G...)",
+      "addInputLabel": "TODO: Machine-translated - Anwani ya pochi ya msaini",
+      "add": "TODO: Machine-translated - Ongeza",
+      "addDialogTitle": "TODO: Machine-translated - Ongeza pochi ya msaini",
+      "removeDialogTitle": "TODO: Machine-translated - Ondoa pochi ya msaini",
+      "addDialogMessage": "TODO: Machine-translated - Ongeza {wallet} kama pochi ya msaini kwa akademia hii?",
+      "removeDialogMessage": "TODO: Machine-translated - Ondoa {wallet} kwenye akademia hii?",
+      "addConfirm": "TODO: Machine-translated - Ongeza msaini",
+      "removeConfirm": "TODO: Machine-translated - Ondoa msaini",
+      "addSuccess": "TODO: Machine-translated - Pochi ya msaini imeongezwa kwenye akademia.",
+      "addFailed": "TODO: Machine-translated - Imeshindwa kuongeza pochi ya msaini.",
+      "removeSuccess": "TODO: Machine-translated - Pochi ya msaini imeondolewa kwenye akademia.",
+      "removeFailed": "TODO: Machine-translated - Imeshindwa kuondoa pochi ya msaini."
+    },
+    "rosterPage": {
+      "title": "TODO: Machine-translated - Orodha ya akademia",
+      "subtitle": "TODO: Machine-translated - Simamia pochi za wasaini kwa akademia unayomiliki."
+    }
+  },
+  "account": {
+    "sessions": {
+      "connect_prompt": "Unganisha pochi yako ili kuona vipindi vinavyotumika.",
+      "loading": "Inapakia vipindi…",
+      "load_error": "Imeshindwa kupakia vipindi vinavyotumika.",
+      "empty": "Hakuna vipindi vinavyotumika.",
+      "this_device": "Kifaa hiki",
+      "signed_in": "Iliingia {time}",
+      "last_active": "Mara ya mwisho kutumika {time}",
+      "revoke": "Batilisha",
+      "revoking": "Inabatilisha…",
+      "confirm_revoke_current": "Hiki ni kipindi chako cha sasa. Kukibatilisha kutakutoa mara moja. Endelea?",
+      "revoked_logged_out": "Kipindi kimebatilishwa — umetolewa",
+      "revoked": "Kipindi kimebatilishwa",
+      "revoke_error": "Imeshindwa kubatilisha kipindi",
+      "device_label": "{browser} kwenye {os}",
+      "unknown_device": "Kifaa kisichojulikana",
+      "unknown_browser": "Kivinjari kisichojulikana",
+      "unknown_os": "Mfumo usiojulikana"
+    }
+  },
+  "notifications": {
+    "title": "Arifa",
+    "bell_label": "{count, plural, =0 {Arifa} one {Arifa, arifa # haijasomwa} other {Arifa, arifa # hazijasomwa}}",
+    "mark_all_read": "Weka zote kama zimesomwa",
+    "loading": "Inapakia…",
+    "empty": "Bado hakuna arifa.",
+    "preferences": {
+      "connect_prompt": "Unganisha pochi yako ili kudhibiti mapendeleo ya arifa.",
+      "loading": "Inapakia mapendeleo…",
+      "saving": "Inahifadhi…",
+      "milestone_approvals_label": "Idhini za hatua",
+      "milestone_approvals_description": "Nijulishe mthibitishaji anapoidhinisha mojawapo ya hatua zangu.",
+      "contact_unlocks_label": "Kufungua mawasiliano",
+      "contact_unlocks_description": "Nijulishe ninapofungua maelezo ya mawasiliano ya mchezaji."
+    }
+  },
+  "stats": {
+    "title": "Takwimu za mchezaji",
+    "loading": "Inapakia takwimu za mchezaji",
+    "goals": "Mabao",
+    "assists": "Pasi za mabao",
+    "appearances": "Mechi alizocheza",
+    "clean_sheets": "Mechi bila kufungwa"
+  },
+  "scout": {
+    "back_to_dashboard": "Rudi kwenye dashibodi",
+    "watchlist": {
+      "title": "Orodha yangu ya ufuatiliaji",
+      "empty_title": "Orodha yako ya ufuatiliaji haina kitu",
+      "empty_description": "Weka nyota kwa wachezaji kwenye matokeo ya utafutaji au wasifu wao ili kuwaongeza hapa."
+    },
+    "compare": {
+      "title": "Linganisha wachezaji",
+      "select_prompt": "Chagua wachezaji 2 hadi {max} wa kulinganisha.",
+      "load_error": "Imeshindwa kupakia wachezaji: {error}",
+      "no_players": "Hakuna wachezaji waliopatikana.",
+      "partial_failure": "{count, plural, one {Mchezaji # hakuweza kupakiwa.} other {Wachezaji # hawakuweza kupakiwa.}}",
+      "vitals": "Taarifa za msingi",
+      "vitals_label": "{name} – Taarifa za mchezaji",
+      "age": "Umri",
+      "position": "Nafasi",
+      "region": "Eneo",
+      "nationality": "Uraia",
+      "stats": "Takwimu",
+      "stats_label": "{name} – Takwimu za mchezaji",
+      "progress": "Maendeleo",
+      "progress_label": "{name} – Kiwango cha maendeleo",
+      "milestones": "Hatua",
+      "milestones_label": "{name} – Hatua",
+      "milestone_count": "{count, plural, one {hatua #} other {hatua #}}"
+    },
+    "profile": {
+      "title": "Wasifu wa skauti",
+      "description": "Tazama maelezo ya usajili na shughuli za hivi karibuni za skauti huyu.",
+      "not_found_title": "Skauti hakupatikana",
+      "not_found_description": "Wasifu wa skauti unaoutafuta haupo.",
+      "meta_title": "Wasifu wa skauti | ScoutOff",
+      "meta_description": "Tazama maelezo ya usajili na shughuli za hivi karibuni za skauti huyu kwenye ScoutOff."
+    },
+    "subscribe": {
+      "title": "Usajili wa skauti",
+      "subtitle": "Boresha ufikiaji wako na ufungue uwezo bora wa kusaka vipaji.",
+      "status_loading": "Inapakia usajili wako wa sasa...",
+      "status_none": "Hakuna usajili unaotumika.",
+      "status_expired": "Usajili wako wa {tier} uliisha tarehe {date}.",
+      "status_active": "Usajili wa sasa: {tier} — unatumika hadi {date}.",
+      "cta_confirming": "Inathibitisha kwenye mnyororo…",
+      "cta_processing": "Inachakata…",
+      "cta_renew": "Fanya upya",
+      "cta_upgrade": "Pandisha daraja",
+      "cta_subscribe": "Jisajili",
+      "success": "Umejisajili kwa {tier} kwa mafanikio",
+      "active_banner_label": "Usajili unaotumika",
+      "active_until": "Unatumika hadi <strong>{date}</strong>",
+      "days_remaining": "{count, plural, one {Siku # imebaki} other {Siku # zimebaki}}",
+      "referral_notice": "Umealikwa na mwenzako! Rufaa yako itawekwa kiotomatiki utakapojisajili.",
+      "active_subscription": "Usajili unaotumika",
+      "plan_name": "Mpango wa {tier}",
+      "expires": "Unaisha <strong>{date}</strong>",
+      "change_title": "Badilisha daraja la usajili",
+      "change_description": "Unakaribia kubadilisha usajili wako kutoka <strong>{from}</strong> kwenda <strong>{to}</strong>.",
+      "notice_title": "Taarifa muhimu kuhusu muda wako uliobaki",
+      "notice_body": "Kubadilisha daraja la usajili kutaanzisha kipindi kipya cha usajili wa {to} mara moja. {count, plural, one {Siku # iliyobaki} other {Siku # zilizobaki}} kwenye mpango wa sasa wa {from} hazitahamishwa wala kugawanywa.",
+      "notice_replace": "Usajili mpya wa {to} utaanza kutumika mara moja na utachukua nafasi ya usajili wako wa sasa wa {from}.",
+      "confirm_change": "Thibitisha mabadiliko",
+      "current_plan": "Mpango wa sasa",
+      "recommended": "Unapendekezwa",
+      "paused": "Mkataba umesimamishwa kwa sasa",
+      "tiers": {
+        "basic": {
+          "title": "Msingi",
+          "description": "Anza na ufikiaji muhimu wa skauti na uwezo wa msingi wa kuwasiliana na wachezaji.",
+          "features": {
+            "browse": "Vinjari wasifu wa wachezaji",
+            "connect": "Ungana na vipaji vilivyothibitishwa",
+            "pay_to_contact": "Lipa ili kupata maelezo ya mawasiliano ya mchezaji"
+          }
+        },
+        "pro": {
+          "title": "Pro",
+          "description": "Unapendekezwa kwa skauti hai wanaotaka ufikiaji wa kipaumbele na zana za hali ya juu.",
+          "features": {
+            "all_basic": "Vipengele vyote vya Msingi",
+            "priority_discovery": "Ugunduzi wa wachezaji kwa kipaumbele",
+            "faster_contact": "Ufikiaji wa haraka wa maelezo ya mawasiliano"
+          }
+        },
+        "elite": {
+          "title": "Elite"
+        }
+      }
+    }
   }
 }

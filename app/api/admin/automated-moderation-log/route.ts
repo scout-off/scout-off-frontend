@@ -1,6 +1,8 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { AdminAuditStore } from '@/lib/adminAuditStore';
 import type { AdminAuditActionType } from '@/lib/adminAudit';
+import { createRequestLogger, withRequestId } from '@/lib/logger';
+import { privateJson } from '@/lib/httpResponses';
 
 // Automated moderation entries are persisted in the shared admin audit log
 // but aren't part of its closed `AdminAuditActionType` union (they're an
@@ -24,6 +26,7 @@ const AUTOMATED_MODERATION_ACTION_TYPE =
  * metadata (user IDs, thread ID, rule that triggered, timestamp).
  */
 export async function POST(request: NextRequest): Promise<Response> {
+  const log = createRequestLogger(request);
   try {
     const body = await request.json();
     const {
@@ -39,7 +42,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     // Validate required fields
     if (!id || !category || !rule || !severity || !userId || !timestamp) {
-      return new Response('Missing required fields', { status: 400 });
+      return privateJson({ error: 'Missing required fields' }, { status: 400 });
     }
 
     const adminStore = AdminAuditStore.getInstance();
@@ -63,56 +66,82 @@ export async function POST(request: NextRequest): Promise<Response> {
       },
     });
 
-    return new Response(JSON.stringify({ success: true }), {
-      status: 201,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return privateJson({ success: true }, { status: 201 });
   } catch (error) {
-    console.error('Failed to record automated moderation entry:', error);
-    return new Response('Internal server error', { status: 500 });
+    log.error('Failed to record automated moderation entry', {
+      reason: error instanceof Error ? error.message : String(error),
+    });
+    return withRequestId(
+      privateJson({ error: 'Internal server error' }, { status: 500 }),
+      log.requestId,
+    );
   }
 }
 
+const DEFAULT_LIMIT = 50;
+const MAX_LIMIT = 200;
+
+function badRequest(error: string): Response {
+  return privateJson({ error }, { status: 400 });
+}
+
 /**
- * GET /api/admin/automated-moderation-log
+ * GET /api/admin/automated-moderation-log?userId=&from=&to=&before=&limit=
  *
- * Returns automated moderation decisions for admin review.
- * Supports filtering by user, date range, and category prefix.
+ * Returns automated moderation decisions for admin review, newest first.
+ * The userId filter runs in the store query (not after LIMIT), and
+ * `nextCursor` is passed back as `before` to fetch the next page.
  */
 export async function GET(request: NextRequest): Promise<Response> {
-  const url = new URL(request.url);
-  const userId = url.searchParams.get('userId');
-  const from = url.searchParams.get('from');
-  const to = url.searchParams.get('to');
-  const limitParam = url.searchParams.get('limit');
-  const limit = limitParam ? parseInt(limitParam, 10) : 50;
+  const log = createRequestLogger(request);
+  const params = new URL(request.url).searchParams;
+  const userId = params.get('userId') || undefined;
+
+  const parseNumberParam = (name: string): number | undefined | null => {
+    const raw = params.get(name);
+    if (raw === null || raw === '') return undefined;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const from = parseNumberParam('from');
+  if (from === null) return badRequest('from must be a number');
+  const to = parseNumberParam('to');
+  if (to === null) return badRequest('to must be a number');
+  const before = parseNumberParam('before');
+  if (before === null || (before !== undefined && !Number.isInteger(before))) {
+    return badRequest('before must be an integer');
+  }
+  const limitParam = parseNumberParam('limit');
+  const limit = limitParam === undefined ? DEFAULT_LIMIT : limitParam;
+  if (
+    limit === null ||
+    !Number.isInteger(limit) ||
+    limit < 1 ||
+    limit > MAX_LIMIT
+  ) {
+    return badRequest(`limit must be an integer between 1 and ${MAX_LIMIT}`);
+  }
 
   try {
     const adminStore = AdminAuditStore.getInstance();
-
-    // Query entries recorded under the automated-moderation action type
-    const { entries } = adminStore.getEntries({
+    const { entries, nextCursor } = adminStore.getEntries({
       actionType: AUTOMATED_MODERATION_ACTION_TYPE,
-      from: from ? parseInt(from, 10) : undefined,
-      to: to ? parseInt(to, 10) : undefined,
+      dataUserId: userId,
+      from,
+      to,
+      before,
       limit,
     });
 
-    // Filter by userId if specified
-    let filtered = entries;
-    if (userId) {
-      filtered = entries.filter((entry) => {
-        const entryUserId = entry.data?.userId as string | undefined;
-        return entryUserId === userId;
-      });
-    }
-
-    return new Response(JSON.stringify({ entries: filtered }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return privateJson({ entries, nextCursor }, { status: 200 });
   } catch (error) {
-    console.error('Failed to fetch automated moderation entries:', error);
-    return new Response('Internal server error', { status: 500 });
+    log.error('Failed to fetch automated moderation entries', {
+      reason: error instanceof Error ? error.message : String(error),
+    });
+    return withRequestId(
+      privateJson({ error: 'Internal server error' }, { status: 500 }),
+      log.requestId,
+    );
   }
 }

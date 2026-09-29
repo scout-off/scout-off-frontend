@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { apiError, ApiErrorCode } from '@/lib/apiErrors';
 import { getSessionWallet } from '@/lib/session';
 import { requireAdminWallet } from '@/lib/adminAuth';
 import {
@@ -10,6 +11,7 @@ import { getPlayer, getMilestoneHistory } from '@/lib/contract';
 import { createRequestLogger } from '@/lib/logger';
 import { validateTextField } from '@/lib/inputValidation';
 import type { Milestone, MilestoneDisputeStatus, Player } from '@/types';
+import { privateJson } from '@/lib/httpResponses';
 
 export const runtime = 'nodejs';
 
@@ -29,7 +31,7 @@ const VALID_STATUSES: MilestoneDisputeStatus[] = [
 export async function GET(req: NextRequest) {
   const wallet = getSessionWallet(req);
   if (!wallet) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const log = createRequestLogger(req);
@@ -40,10 +42,7 @@ export async function GET(req: NextRequest) {
     statusParam &&
     !VALID_STATUSES.includes(statusParam as MilestoneDisputeStatus)
   ) {
-    return NextResponse.json(
-      { error: 'Invalid status filter' },
-      { status: 400 },
-    );
+    return privateJson({ error: 'Invalid status filter' }, { status: 400 });
   }
 
   try {
@@ -51,15 +50,12 @@ export async function GET(req: NextRequest) {
     const disputes = isAdmin
       ? store.listAll(statusParam as MilestoneDisputeStatus | undefined)
       : store.listForWallet(wallet);
-    return NextResponse.json(disputes);
+    return privateJson(disputes);
   } catch (err) {
     log.error('Failed to list disputes', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
-      { error: 'Failed to load disputes' },
-      { status: 500 },
-    );
+    return privateJson({ error: 'Failed to load disputes' }, { status: 500 });
   }
 }
 
@@ -76,13 +72,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const wallet = getSessionWallet(req);
   if (!wallet) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const log = createRequestLogger(req);
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object') {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    return privateJson({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
   const { playerId, milestoneId, milestoneDescription, reason } =
@@ -96,19 +92,19 @@ export async function POST(req: NextRequest) {
     (milestoneDescription !== undefined &&
       typeof milestoneDescription !== 'string')
   ) {
-    return NextResponse.json(
+    return privateJson(
       { error: 'playerId and milestoneId are required' },
       { status: 400 },
     );
   }
 
   if (typeof reason !== 'string') {
-    return NextResponse.json({ error: 'reason is required' }, { status: 400 });
+    return privateJson({ error: 'reason is required' }, { status: 400 });
   }
 
   const reasonValidation = validateTextField('disputeReason', reason);
   if (!reasonValidation.valid) {
-    return NextResponse.json(
+    return privateJson(
       { error: `reason: ${reasonValidation.error}` },
       { status: 400 },
     );
@@ -127,20 +123,17 @@ export async function POST(req: NextRequest) {
         errMsg.toLowerCase().includes('not found') ||
         errMsg.includes('PlayerNotFound')
       ) {
-        return NextResponse.json(
-          { error: 'Player not found' },
-          { status: 404 },
-        );
+        return privateJson({ error: 'Player not found' }, { status: 404 });
       }
       throw err;
     }
 
     if (!player) {
-      return NextResponse.json({ error: 'Player not found' }, { status: 404 });
+      return privateJson({ error: 'Player not found' }, { status: 404 });
     }
 
     if (player.wallet !== wallet) {
-      return NextResponse.json(
+      return privateJson(
         {
           error:
             'Forbidden: player does not belong to the authenticated wallet',
@@ -158,10 +151,7 @@ export async function POST(req: NextRequest) {
         errMsg.toLowerCase().includes('not found') ||
         errMsg.includes('PlayerNotFound')
       ) {
-        return NextResponse.json(
-          { error: 'Player not found' },
-          { status: 404 },
-        );
+        return privateJson({ error: 'Player not found' }, { status: 404 });
       }
       throw err;
     }
@@ -169,7 +159,7 @@ export async function POST(req: NextRequest) {
     const milestone = history?.find((m) => String(m.id) === trimmedMilestoneId);
 
     if (!milestone) {
-      return NextResponse.json(
+      return privateJson(
         {
           error: `Milestone ${trimmedMilestoneId} not found for this player`,
         },
@@ -180,24 +170,33 @@ export async function POST(req: NextRequest) {
     const dispute = MilestoneDisputeStore.getInstance().create({
       playerId: trimmedPlayerId,
       playerWallet: wallet,
+      validatorWallet:
+        typeof milestone.validator === 'string' ? milestone.validator : '',
       milestoneId: trimmedMilestoneId,
       milestoneDescription: milestone.description,
       reason: reason.trim(),
     });
-    return NextResponse.json(dispute, { status: 201 });
+    return privateJson(dispute, { status: 201 });
   } catch (err) {
     if (err instanceof DuplicateDisputeError) {
-      return NextResponse.json({ error: err.message }, { status: 409 });
+      return apiError(
+        ApiErrorCode.DISPUTE_ALREADY_PENDING,
+        409,
+        `Milestone ${trimmedMilestoneId} already has a pending dispute`,
+        { milestoneId: trimmedMilestoneId },
+      );
     }
     if (err instanceof MilestoneNotFoundError) {
-      return NextResponse.json({ error: err.message }, { status: 404 });
+      return apiError(
+        ApiErrorCode.MILESTONE_NOT_FOUND,
+        404,
+        `Milestone ${trimmedMilestoneId} not found`,
+        { milestoneId: trimmedMilestoneId },
+      );
     }
     log.error('Failed to create dispute', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
-      { error: 'Failed to create dispute' },
-      { status: 500 },
-    );
+    return privateJson({ error: 'Failed to create dispute' }, { status: 500 });
   }
 }

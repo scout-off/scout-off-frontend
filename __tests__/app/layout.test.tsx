@@ -45,6 +45,11 @@ jest.mock('@/components/ConfigWarningBanner', () => ({
     warnings.length > 0 ? <div data-testid="config-warning-banner" /> : null,
 }));
 
+jest.mock('@/components/OfflineBanner', () => ({
+  __esModule: true,
+  default: () => <div data-testid="offline-banner" />,
+}));
+
 jest.mock('@/components/ServiceWorkerUpdateBanner', () => ({
   __esModule: true,
   default: () => <div data-testid="service-worker-update-banner" />,
@@ -122,10 +127,17 @@ describe('RootLayout', () => {
     expect(screen.getByTestId('navbar')).toBeInTheDocument();
     expect(screen.getByTestId('contract-paused-banner')).toBeInTheDocument();
     expect(screen.getByText('Page content')).toBeInTheDocument();
-    expect(screen.getByText('Skip to main content')).toHaveAttribute(
-      'href',
-      '#main-content',
-    );
+    expect(screen.getByTestId('offline-banner')).toBeInTheDocument();
+
+    // Translated skip link (useTranslations is mocked to return the key) is
+    // the first focusable element in the document.
+    const skipLink = screen.getByRole('link', { name: 'skipToContent' });
+    expect(skipLink).toHaveAttribute('href', '#main-content');
+    expect(
+      document.body.querySelector(
+        'a[href], button, input, select, textarea, [tabindex]',
+      ),
+    ).toBe(skipLink);
   });
 
   it('sets html lang to "fr" when x-pathname has /fr/ prefix', async () => {
@@ -218,7 +230,13 @@ describe('RootLayout', () => {
 
   it('exposes SEO metadata for the app', () => {
     expect(metadata.title).toBe('ScoutOff — Decentralized Football Scouting');
-    expect(metadata.openGraph?.url).toBe('https://scoutoff.app');
+    expect(metadata.metadataBase).toBeInstanceOf(URL);
+    expect(metadata.openGraph).toEqual({
+      siteName: 'ScoutOff',
+      type: 'website',
+    });
+    // No hard-coded production origin or SVG OG image in the root metadata.
+    expect(JSON.stringify(metadata)).not.toMatch(/scoutoff\.app|\.svg/);
   });
 
   it('renders ConfigWarningBanner when config is invalid', async () => {
@@ -300,7 +318,6 @@ describe('RootLayout', () => {
     try {
       jest.resetModules();
       jest.doMock('react', () => actualReact);
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
       ProductionRootLayout = require('@/app/layout').default;
 
       const element = await ProductionRootLayout({

@@ -10,6 +10,7 @@ import { useContractStatus } from '@/hooks/useContractStatus';
 import { useWallet } from '@/hooks/useWallet';
 import { useCurrencyPreference } from '@/hooks/useCurrencyPreference';
 import NotificationBell from './NotificationBell';
+import { LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE } from '@/lib/locales';
 import SessionMismatchWarning from './SessionMismatchWarning';
 
 const NAV_LINKS = [
@@ -47,7 +48,7 @@ export default function Navbar() {
       ? newPathname
       : `/${locale}${pathname}`;
     router.push(target);
-    document.cookie = `NEXT_LOCALE=${locale}; path=/; max-age=31536000`;
+    document.cookie = `${LOCALE_COOKIE}=${locale}; path=/; max-age=${LOCALE_COOKIE_MAX_AGE}; samesite=lax`;
     setLocaleOpen(false);
     setMenuOpen(false);
   };
@@ -254,7 +255,9 @@ export default function Navbar() {
 
             <ThemeToggle />
             <AccountSwitcher />
-            <WalletButton />
+            <div data-tour="wallet-button">
+              <WalletButton />
+            </div>
           </div>
 
           {/* ── Hamburger button (mobile only) ── */}

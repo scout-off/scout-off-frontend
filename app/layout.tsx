@@ -9,6 +9,8 @@ import ContractIncompatibleBanner from '@/components/ContractIncompatibleBanner'
 import ContractPausedBanner from '@/components/ContractPausedBanner';
 import ConfigWarningBanner from '@/components/ConfigWarningBanner';
 import ServiceWorkerUpdateBanner from '@/components/ServiceWorkerUpdateBanner';
+import OfflineBanner from '@/components/OfflineBanner';
+import SkipToContent from '@/components/SkipToContent';
 import SessionExpiryWarning from '@/components/SessionExpiryWarning';
 import CookieConsentGate from '@/components/ui/CookieConsentGate';
 import A11yDevAudit from '@/components/A11yDevAudit';
@@ -17,38 +19,31 @@ import { getMessages } from 'next-intl/server';
 import { validateConfig } from '@/lib/config';
 import { locales, defaultLocale } from '@/lib/locales';
 import { getTextDirection } from '@/lib/rtl';
+import { buildThemeBootstrapScript } from '@/lib/themeBootstrap';
 
 // Analytics and Web Vitals reporting are disabled in tests to avoid
 // polluting real analytics data and to keep jsdom-based test runs from
 // touching PerformanceObserver APIs it doesn't fully implement.
 const isTestEnv = process.env.NODE_ENV === 'test';
 
+// Every relative metadata URL (OG images, canonical links) resolves against
+// NEXT_PUBLIC_APP_URL, so previews work on staging and preview deployments.
+// Localized title/description/Open Graph fields live in
+// app/[locale]/layout.tsx; these English values are only the fallback for
+// routes outside the [locale] segment.
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
+  ),
   title: 'ScoutOff — Decentralized Football Scouting',
   description:
     'Tamper-proof player profiles, verifiable milestones, and direct scout-to-player connections — powered by Stellar Soroban smart contracts.',
   openGraph: {
-    title: 'ScoutOff — Decentralized Football Scouting',
-    description:
-      'Tamper-proof player profiles, verifiable milestones, and direct scout-to-player connections — powered by Stellar Soroban smart contracts.',
-    url: 'https://scoutoff.app',
     siteName: 'ScoutOff',
     type: 'website',
-    images: [
-      {
-        url: 'https://scoutoff.app/og-image.svg',
-        width: 1200,
-        height: 630,
-        alt: 'ScoutOff — Decentralized Football Scouting on Stellar',
-      },
-    ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'ScoutOff — Decentralized Football Scouting',
-    description:
-      'Tamper-proof player profiles, verifiable milestones, and direct scout-to-player connections — powered by Stellar Soroban smart contracts.',
-    images: ['https://scoutoff.app/og-image.svg'],
   },
 };
 
@@ -72,6 +67,16 @@ async function getLocale(): Promise<string> {
   return defaultLocale;
 }
 
+/**
+ * Reads the per-request nonce injected by middleware.ts into the x-nonce
+ * request header. The nonce is embedded in the CSP's script-src so this
+ * inline theme script (and Next.js's own inline RSC scripts) are allowed
+ * without 'unsafe-inline'.
+ */
+async function getNonce(): Promise<string> {
+  const headersList = await headers();
+  return headersList.get('x-nonce') ?? '';
+}
 export default async function RootLayout({
   children,
 }: {
@@ -79,6 +84,7 @@ export default async function RootLayout({
   params?: { locale?: string };
 }) {
   const locale = await getLocale();
+  const nonce = await getNonce();
   const messages = await getMessages();
 
   // Runtime configuration check — fires on every request so a deployment
@@ -108,31 +114,32 @@ export default async function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         {/*
           No-flash theme script: resolves stored-preference-or-system-preference
-          and applies the `dark` class to <html> before first paint. Must stay
-          in sync with the STORAGE_KEY and resolution logic in
-          context/ThemeContext.tsx (ThemeProvider re-applies the same result
-          on mount, so this is purely to avoid a flash of the wrong theme).
+          and applies the `dark` class to <html> before first paint. Built in
+          lib/themeBootstrap.ts from the same storage key ThemeContext uses
+          (ThemeProvider re-applies the same result on mount, so this is
+          purely to avoid a flash of the wrong theme).
+
+          The nonce attribute must match the per-request nonce in the CSP
+          (set by middleware.ts) so this inline script is allowed without
+          'unsafe-inline'.
         */}
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var k='scoutoff_theme_preference';var s=localStorage.getItem(k);var d=s==='light'||s==='dark'?s==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;if(d)document.documentElement.classList.add('dark');}catch(e){}})();`,
+            __html: buildThemeBootstrapScript(),
           }}
         />
       </head>
       <body>
         <A11yDevAudit />
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-brand-green focus:text-black focus:px-6 focus:py-3 focus:rounded-lg focus:font-semibold"
-        >
-          Skip to main content
-        </a>
         <ThemeProvider>
           <NextIntlClientProvider locale={locale} messages={messages}>
+            <SkipToContent />
             <WalletProvider>
               <ToastProvider>
                 <ConfigWarningBanner warnings={configWarnings} />
                 <ServiceWorkerUpdateBanner />
+                <OfflineBanner />
                 <Navbar />
                 <ContractIncompatibleBanner />
                 <ContractPausedBanner />
@@ -142,9 +149,10 @@ export default async function RootLayout({
                 </main>
               </ToastProvider>
             </WalletProvider>
+            {/* Inside the intl provider: the banner's labels are translated (#1342). */}
+            {!isTestEnv && <CookieConsentGate />}
           </NextIntlClientProvider>
         </ThemeProvider>
-        {!isTestEnv && <CookieConsentGate />}
       </body>
     </html>
   );

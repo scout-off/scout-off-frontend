@@ -34,23 +34,57 @@ export default function AutomatedModerationLog() {
     'all',
   );
   const [filterUserId, setFilterUserId] = useState('');
+  const [nextCursor, setNextCursor] = useState<number | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     loadEntries();
   }, []);
 
+  // The userId filter is applied server-side so it covers every matching
+  // entry, not just the latest page; `before` fetches the next page.
+  const fetchPage = async (before?: number) => {
+    const params = new URLSearchParams();
+    const userId = filterUserId.trim();
+    if (userId) params.set('userId', userId);
+    if (before !== undefined) params.set('before', String(before));
+    const query = params.toString();
+    const res = await fetch(
+      `/api/admin/automated-moderation-log${query ? `?${query}` : ''}`,
+    );
+    if (!res.ok) throw new Error('Failed to load entries');
+    return (await res.json()) as {
+      entries?: AuditEntry[];
+      nextCursor?: number | null;
+    };
+  };
+
   const loadEntries = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/admin/automated-moderation-log');
-      if (!res.ok) throw new Error('Failed to load entries');
-      const data = await res.json();
+      const data = await fetchPage();
       setEntries(data.entries ?? []);
+      setNextCursor(data.nextCursor ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load entries');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMore = async () => {
+    if (nextCursor === null) return;
+    setLoadingMore(true);
+    setError(null);
+    try {
+      const data = await fetchPage(nextCursor);
+      setEntries((prev) => [...prev, ...(data.entries ?? [])]);
+      setNextCursor(data.nextCursor ?? null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load entries');
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -59,11 +93,6 @@ export default function AutomatedModerationLog() {
       // Extract severity from the data field
       const severity = entry.data?.severity as string | undefined;
       if (severity !== filter) return false;
-    }
-
-    if (filterUserId) {
-      const userId = entry.data?.userId as string | undefined;
-      if (userId !== filterUserId) return false;
     }
 
     return true;
@@ -136,6 +165,9 @@ export default function AutomatedModerationLog() {
             type="text"
             value={filterUserId}
             onChange={(e) => setFilterUserId(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') loadEntries();
+            }}
             placeholder="User ID..."
             className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-green w-48"
           />
@@ -220,6 +252,16 @@ export default function AutomatedModerationLog() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {!loading && nextCursor !== null && (
+        <button
+          onClick={loadMore}
+          disabled={loadingMore}
+          className="self-center px-3 py-1.5 rounded-lg border border-gray-700 text-sm text-white hover:bg-gray-800 transition disabled:opacity-50"
+        >
+          {loadingMore ? 'Loading...' : 'Load more'}
+        </button>
       )}
 
       <div className="flex items-center justify-between text-sm text-gray-400 pt-2 border-t border-gray-700">

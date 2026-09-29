@@ -9,8 +9,9 @@ import {
 } from '@/lib/recentlyViewedClient';
 import { useWallet } from '@/hooks/useWallet';
 import type { RecentlyViewedEntry } from '@/types';
+import { RECENTLY_VIEWED_KEY } from '@/lib/storageKeys';
 
-const STORAGE_KEY = 'scoutoff_recently_viewed';
+const STORAGE_KEY = RECENTLY_VIEWED_KEY;
 const MAX_ENTRIES = 10;
 
 function getStoredEntries(): RecentlyViewedEntry[] {

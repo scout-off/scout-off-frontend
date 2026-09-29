@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { requireAdminWallet } from '@/lib/adminAuth';
 import { FraudThrottleStore } from '@/lib/fraudThrottleStore';
 import { createRequestLogger } from '@/lib/logger';
 import { sanitizeTextInput } from '@/lib/inputValidation';
+import { privateJson } from '@/lib/httpResponses';
 
 // Lift-reason is free-form admin note — cap at 500 characters (same as bio).
 const LIFT_REASON_MAX = 500;
@@ -22,12 +23,12 @@ export async function POST(
 ) {
   const adminWallet = requireAdminWallet(req);
   if (!adminWallet) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return privateJson({ error: 'Forbidden' }, { status: 403 });
   }
 
   const id = Number(params.id);
   if (!Number.isInteger(id)) {
-    return NextResponse.json({ error: 'Invalid throttle id' }, { status: 400 });
+    return privateJson({ error: 'Invalid throttle id' }, { status: 400 });
   }
 
   const body = await req.json().catch(() => ({}));
@@ -39,7 +40,7 @@ export async function POST(
   if (rawReason !== undefined) {
     const sanitizedReason = sanitizeTextInput(rawReason);
     if (sanitizedReason.length > LIFT_REASON_MAX) {
-      return NextResponse.json(
+      return privateJson(
         { error: `reason must be at most ${LIFT_REASON_MAX} characters` },
         { status: 400 },
       );
@@ -57,19 +58,16 @@ export async function POST(
       reason,
     );
     if (!lifted) {
-      return NextResponse.json(
+      return privateJson(
         { error: 'Throttle not found or already lifted' },
         { status: 404 },
       );
     }
-    return NextResponse.json(lifted);
+    return privateJson(lifted);
   } catch (err) {
     log.error('Failed to lift fraud throttle', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
-      { error: 'Failed to lift throttle' },
-      { status: 500 },
-    );
+    return privateJson({ error: 'Failed to lift throttle' }, { status: 500 });
   }
 }

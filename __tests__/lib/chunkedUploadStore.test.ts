@@ -41,7 +41,7 @@ describe('chunkedUploadStore', () => {
     const { sessionId } = await initSession({
       filename: 'clip.mp4',
       fileType: 'video/mp4',
-      fileSize: 30,
+      fileSize: 20,
       totalChunks: 3,
     });
 
@@ -55,7 +55,7 @@ describe('chunkedUploadStore', () => {
     const { sessionId } = await initSession({
       filename: 'clip.mp4',
       fileType: 'video/mp4',
-      fileSize: 10,
+      fileSize: 14,
       totalChunks: 1,
     });
 
@@ -70,7 +70,7 @@ describe('chunkedUploadStore', () => {
     const { sessionId } = await initSession({
       filename: 'clip.mp4',
       fileType: 'video/mp4',
-      fileSize: 10,
+      fileSize: 2,
       totalChunks: 2,
     });
 
@@ -110,7 +110,7 @@ describe('chunkedUploadStore', () => {
     const { sessionId } = await initSession({
       filename: 'clip.mp4',
       fileType: 'video/mp4',
-      fileSize: 20,
+      fileSize: 4,
       totalChunks: 2,
     });
 
@@ -147,7 +147,7 @@ describe('chunkedUploadStore', () => {
     const { sessionId } = await initSession({
       filename: 'clip.mp4',
       fileType: 'video/mp4',
-      fileSize: 10,
+      fileSize: 9,
       totalChunks: 1,
     });
     await writeChunk(sessionId, 0, Buffer.from('abandoned'));
@@ -166,7 +166,7 @@ describe('chunkedUploadStore', () => {
     const expired = await initSession({
       filename: 'old.mp4',
       fileType: 'video/mp4',
-      fileSize: 10,
+      fileSize: 5,
       totalChunks: 1,
     });
     await writeChunk(expired.sessionId, 0, Buffer.from('stale'));
@@ -177,7 +177,7 @@ describe('chunkedUploadStore', () => {
     const fresh = await initSession({
       filename: 'new.mp4',
       fileType: 'video/mp4',
-      fileSize: 10,
+      fileSize: 6,
       totalChunks: 1,
     });
 
@@ -199,14 +199,14 @@ describe('chunkedUploadStore', () => {
     const a = await initSession({
       filename: 'mine.mp4',
       fileType: 'video/mp4',
-      fileSize: 10,
+      fileSize: 1,
       totalChunks: 1,
       ownerWallet: 'GWALLETA',
     });
     await initSession({
       filename: 'theirs.mp4',
       fileType: 'video/mp4',
-      fileSize: 10,
+      fileSize: 1,
       totalChunks: 1,
       ownerWallet: 'GWALLETB',
     });
@@ -226,14 +226,14 @@ describe('chunkedUploadStore', () => {
     await initSession({
       filename: 'mine.mp4',
       fileType: 'video/mp4',
-      fileSize: 10,
+      fileSize: 1,
       totalChunks: 1,
       ownerWallet: 'GWALLETA',
     });
     const other = await initSession({
       filename: 'theirs.mp4',
       fileType: 'video/mp4',
-      fileSize: 10,
+      fileSize: 1,
       totalChunks: 1,
       ownerWallet: 'GWALLETB',
     });
@@ -256,7 +256,7 @@ describe('chunkedUploadStore', () => {
     const { sessionId } = await initSession({
       filename: 'clip.mp4',
       fileType: 'video/mp4',
-      fileSize: 30,
+      fileSize: 6,
       totalChunks: 3,
     });
     await writeChunk(sessionId, 0, Buffer.from('aa'));

@@ -1,8 +1,18 @@
 import { createHash } from 'crypto';
-import { SorobanRpc, Networks, xdr, scValToNative } from '@stellar/stellar-sdk';
+import { SorobanRpc, Networks, xdr } from '@stellar/stellar-sdk';
+import {
+  decodeSorobanEvent,
+  type EventType as SharedEventType,
+} from '@scoutoff/contract-events';
 import { IndexerMetrics, type EventType } from './metrics/IndexerMetrics';
-import { updateLastLedger, updateNetworkLedger } from './ledgerTracker';
-import { EventStore } from './db/eventStore';
+import {
+  setRole,
+  updateLastLedger,
+  updateNetworkLedger,
+} from './ledgerTracker';
+import { EventStore, type IndexerStore } from './db/eventStore';
+import type { LeaderElector } from './leaderElection';
+import { logger } from './logger';
 
 /**
  * Polls Soroban RPC's getEvents for new ScoutOff contract events and feeds
@@ -16,12 +26,14 @@ import { EventStore } from './db/eventStore';
 
 export const EVENT_TYPES: readonly EventType[] = [
   'player_registered',
+  'profile_updated',
   'milestone_approved',
   'milestone_revoked',
   'scout_subscribed',
   'player_contacted',
   'trial_offer_logged',
   'fees_withdrawn',
+  'unknown',
 ];
 
 export function isEventType(name: unknown): name is EventType {
@@ -37,6 +49,7 @@ export interface PollerConfig {
   networkPassphrase: string;
   pollIntervalMs: number;
   startLedger: number;
+  contractVersion: number;
 }
 
 /** Reads and validates poller config from process.env. */
@@ -56,6 +69,9 @@ export function loadConfigFromEnv(): PollerConfig {
     startLedger: process.env.START_LEDGER
       ? parseInt(process.env.START_LEDGER, 10)
       : 0,
+    contractVersion: process.env.CONTRACT_VERSION
+      ? parseInt(process.env.CONTRACT_VERSION, 10)
+      : 1,
   };
 }
 
@@ -92,6 +108,7 @@ export interface RawEvent {
 
 export interface DecodedEvent {
   type: EventType;
+  contractVersion: number;
   ledger: number;
   timestamp: number;
   data: Record<string, unknown>;
@@ -113,46 +130,26 @@ export function createRpcClient(config: PollerConfig): RpcClient {
   }) as unknown as RpcClient;
 }
 
-/**
- * Decodes a raw Soroban contract event into one of the 7 documented event
- * types (README.md's "Indexed Event Schema").
- *
- * ASSUMPTION — no Rust contract source lives in this repository to confirm
- * the wire format against, so this assumes the common Soroban convention:
- * `topic[0]` is a Symbol equal to the event name (e.g. `"player_registered"`),
- * and `value` is a Map/struct ScVal holding the event's other documented
- * fields. `ledger`/`timestamp` come from the RPC envelope rather than the
- * decoded payload, since the README lists identical `ledger`/`timestamp`
- * fields across all 7 event types — those are naturally available from
- * every event's envelope regardless of what the contract encodes.
- *
- * If the actual contract encodes events differently, only this function
- * needs to change: the polling loop, ledger tracking, and metrics below are
- * decode-shape-agnostic.
- */
-export function decodeEvent(raw: RawEvent): DecodedEvent {
-  if (!raw.topic || raw.topic.length === 0) {
-    throw new Error('Event has no topic; cannot determine event type');
-  }
-
-  const name = scValToNative(raw.topic[0]);
-  if (!isEventType(name)) {
-    throw new Error(`Unrecognized event type: ${String(name)}`);
-  }
-
-  const payload = raw.value ? scValToNative(raw.value) : {};
-  if (typeof payload !== 'object' || payload === null) {
-    throw new Error(`Event "${name}" payload did not decode to an object`);
-  }
-
+export function decodeEvent(raw: RawEvent, contractVersion = 1): DecodedEvent {
+  const decoded = decodeSorobanEvent({
+    topic: raw.topic ?? [],
+    value: raw.value,
+    contractVersion,
+  });
   const timestamp = Math.floor(new Date(raw.ledgerClosedAt).getTime() / 1000);
 
   return {
-    type: name,
+    type: decoded.type as SharedEventType,
+    contractVersion: decoded.version,
     ledger: raw.ledger,
     timestamp,
-    data: { ...payload, ledger: raw.ledger, timestamp },
-    eventId: computeEventId(name, raw),
+    data: {
+      ...decoded.data,
+      contractVersion: decoded.version,
+      ledger: raw.ledger,
+      timestamp,
+    },
+    eventId: computeEventId(decoded.type, raw),
   };
 }
 
@@ -221,6 +218,31 @@ export function isRetentionWindowError(err: unknown): boolean {
   );
 }
 
+const MAX_ERROR_LENGTH = 200;
+
+let lastPollError: string | null = null;
+
+/**
+ * Most recent poll-cycle error message, or null once a cycle succeeds.
+ * URLs are redacted (an RPC URL can embed an API key) and the message is
+ * truncated, so it's safe to expose on /health.
+ */
+export function getLastPollError(): string | null {
+  return lastPollError;
+}
+
+function recordPollError(err: unknown): void {
+  const message = err instanceof Error ? err.message : String(err);
+  lastPollError = message
+    .replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, '<url>')
+    .slice(0, MAX_ERROR_LENGTH);
+}
+
+/** Clears the last poll error. Use ONLY in tests. */
+export function resetLastPollError(): void {
+  lastPollError = null;
+}
+
 /**
  * Fetches and processes one batch of events starting at `cursorLedger`
  * (or the current network tip, if `cursorLedger` is 0 — START_LEDGER's
@@ -246,7 +268,7 @@ export async function pollOnce(
   rpc: RpcClient,
   metrics: IndexerMetrics,
   cursorLedger: number,
-  store: EventStore,
+  store: IndexerStore,
 ): Promise<number> {
   const cycleStart = Date.now();
 
@@ -270,34 +292,39 @@ export async function pollOnce(
         // point we know the node has events for (it just reported it).
         // We record the gap so it is observable.
         const skipTo = latest.sequence;
-        console.warn(
-          `[eventPoller] Cursor ${effectiveStart} is outside the node's retention window. ` +
-            `Skipping forward to ledger ${skipTo}. ` +
-            `Events in ledgers ${effectiveStart}–${skipTo - 1} will not be indexed.`,
+        const durationMs = Date.now() - cycleStart;
+        logger.warn(
+          "Cursor is outside the node's retention window, skipping forward",
+          {
+            ledger: effectiveStart,
+            skipTo,
+            durationMs,
+          },
         );
         metrics.recordRetentionWindowGap(effectiveStart, skipTo);
-        metrics.recordFailure(Date.now() - cycleStart);
+        metrics.recordFailure(durationMs);
         metrics.reportCursor(skipTo);
         return skipTo;
       }
       // Ordinary transient RPC failure — retry the same range next cycle.
+      recordPollError(getEventsErr);
       metrics.recordFailure(Date.now() - cycleStart);
       metrics.reportCursor(cursorLedger);
       return cursorLedger;
     }
 
     let nextCursor = cursorLedger > 0 ? cursorLedger : effectiveStart;
+    const decodedBatch: Array<{ event: DecodedEvent; decodeMs: number }> = [];
 
     for (const raw of res.events) {
       const eventStart = Date.now();
       try {
-        const decoded = decodeEvent(raw);
-        store.insertEvent(decoded);
-        metrics.recordSuccess(
-          decoded.type,
-          Date.now() - eventStart,
-          JSON.stringify(decoded.data).length,
-        );
+        const event = decodeEvent(raw, config.contractVersion);
+        // Serialise up front: an event the store can't persist must be
+        // skipped on its own (as before batching), not fail the whole
+        // batch and pin the cursor on this range forever.
+        JSON.stringify(event.data);
+        decodedBatch.push({ event, decodeMs: Date.now() - eventStart });
       } catch {
         // Malformed or unrecognized event from our own contract — a real
         // processing failure, not a transient RPC error, but still must
@@ -314,12 +341,47 @@ export async function pollOnce(
       nextCursor = Math.max(nextCursor, res.latestLedger + 1);
     }
 
+    // Events and checkpoint commit together (issue #1319): if the write
+    // fails, neither lands and the same range is retried next cycle.
+    const writeStart = Date.now();
+    try {
+      await store.insertBatch(
+        decodedBatch.map((d) => d.event),
+        {
+          lastLedger: Math.max(nextCursor - 1, 0),
+          networkLedger: latest.sequence,
+        },
+      );
+    } catch {
+      metrics.recordFailure(Date.now() - cycleStart);
+      metrics.reportCursor(cursorLedger);
+      return cursorLedger;
+    }
+    const writeMs = Date.now() - writeStart;
+    for (const { event, decodeMs } of decodedBatch) {
+      metrics.recordSuccess(
+        event.type,
+        decodeMs + writeMs,
+        JSON.stringify(event.data).length,
+      );
+    }
+
     updateLastLedger(Math.max(nextCursor - 1, 0));
+    lastPollError = null;
     metrics.markHealthy();
     metrics.reportCursor(nextCursor);
+
+    const durationMs = Date.now() - cycleStart;
+    logger.info('Poll completed', {
+      ledger: effectiveStart,
+      eventCount: res.events.length,
+      durationMs,
+    });
+
     return nextCursor;
-  } catch {
+  } catch (err) {
     // RPC-level failure on getLatestLedger — retry the same range next cycle.
+    recordPollError(err);
     metrics.recordFailure(Date.now() - cycleStart);
     metrics.reportCursor(cursorLedger);
     return cursorLedger;
@@ -327,7 +389,10 @@ export async function pollOnce(
 }
 
 export interface EventPollerHandle {
-  stop(): void;
+  /** Cancels the next cycle and resolves once the in-flight one settles. */
+  stop(): Promise<void>;
+  /** False once stop() has been called. */
+  isRunning(): boolean;
 }
 
 /**
@@ -339,25 +404,59 @@ export function startEventPolling(
   config: PollerConfig = loadConfigFromEnv(),
   rpc: RpcClient = createRpcClient(config),
   metrics: IndexerMetrics = IndexerMetrics.getInstance(),
-  store: EventStore = EventStore.getInstance(),
+  store: IndexerStore = EventStore.getInstance(),
+  elector: LeaderElector | null = null,
 ): EventPollerHandle {
   let cursor = config.startLedger;
+  let wasLeader = false;
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
+  let inFlight: Promise<void> = Promise.resolve();
 
-  async function tick(): Promise<void> {
-    cursor = await pollOnce(config, rpc, metrics, cursor, store);
-    if (!stopped) {
-      timer = setTimeout(tick, config.pollIntervalMs);
-    }
+  function tick(): void {
+    inFlight = (async () => {
+      try {
+        // Without an elector (single replica) this process is always leader.
+        const isLeader = elector ? await elector.tick() : true;
+        setRole(isLeader ? 'leader' : 'follower');
+
+        if (isLeader) {
+          if (!wasLeader) {
+            // Fresh start or takeover: resume from the shared checkpoint.
+            const checkpoint = await store.getCheckpoint();
+            if (checkpoint && checkpoint.lastLedger + 1 > cursor) {
+              cursor = checkpoint.lastLedger + 1;
+            }
+          }
+          wasLeader = true;
+          if (!stopped) {
+            cursor = await pollOnce(config, rpc, metrics, cursor, store);
+          }
+        } else {
+          // Lost (or never held) the lock: stop polling immediately.
+          wasLeader = false;
+        }
+      } catch (err) {
+        console.error('[eventPoller] poll cycle failed:', err);
+        metrics.recordFailure(0);
+      }
+      if (!stopped) {
+        timer = setTimeout(tick, config.pollIntervalMs);
+      }
+    })();
   }
 
   tick();
 
   return {
-    stop(): void {
+    async stop(): Promise<void> {
       stopped = true;
       if (timer) clearTimeout(timer);
+      void elector?.release();
+      await inFlight;
+    },
+    isRunning(): boolean {
+      return !stopped;
     },
   };
 }

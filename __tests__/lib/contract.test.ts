@@ -1,13 +1,22 @@
 // Mock stellar-sdk to avoid real SDK/network calls.
 jest.mock('@stellar/stellar-sdk', () => ({
+  SorobanRpc: {
+    Api: {
+      isSimulationRestore: (simulation: { restorePreamble?: unknown }) =>
+        Boolean(simulation.restorePreamble),
+    },
+  },
   Contract: jest.fn().mockImplementation(() => ({
     call: jest.fn().mockReturnValue({}),
   })),
   nativeToScVal: jest.fn().mockReturnValue({}),
   scValToNative: jest.fn().mockReturnValue({}),
-  xdr: {},
+  xdr: {
+    Operation: { restoreFootprint: jest.fn().mockReturnValue({}) },
+  },
   TransactionBuilder: jest.fn().mockImplementation(() => ({
     addOperation: jest.fn().mockReturnThis(),
+    setSorobanData: jest.fn().mockReturnThis(),
     setTimeout: jest.fn().mockReturnThis(),
     build: jest
       .fn()
@@ -69,14 +78,17 @@ import {
   getContactFee,
   getPlatformFees,
   getContractPaused,
-  filterPlayers,
   getContractVersion,
   checkContractCompatibility,
   assertContractCompatible,
   clearContractCompatibilityCache,
   EXPECTED_CONTRACT_VERSION,
 } from '../../lib/contract';
-import { ValidationError, ContractIncompatibleError } from '../../lib/errors';
+import {
+  ArchivedEntryError,
+  ValidationError,
+  ContractIncompatibleError,
+} from '../../lib/errors';
 import { rpc, signAndSubmitTx } from '../../lib/stellar';
 import { scValToNative } from '@stellar/stellar-sdk';
 
@@ -107,6 +119,22 @@ describe('contract configuration', () => {
   });
 });
 
+describe('archived Soroban reads', () => {
+  test('throws ArchivedEntryError when simulation requests restoration', async () => {
+    mockRpc.simulateTransaction.mockResolvedValueOnce({
+      result: { retval: {} },
+      restorePreamble: {
+        minResourceFee: '200',
+        transactionData: { build: jest.fn().mockReturnValue({}) },
+      },
+    } as any);
+
+    await expect(getPlayer('player_1')).rejects.toBeInstanceOf(
+      ArchivedEntryError,
+    );
+  });
+});
+
 // ── buildRegisterPlayer ───────────────────────────────────────────────────────
 
 describe('buildRegisterPlayer', () => {
@@ -117,6 +145,28 @@ describe('buildRegisterPlayer', () => {
     region: 'EU',
     nationality: 'DE',
   };
+
+  test('restores an archived footprint before preparing the original transaction', async () => {
+    mockRpc.simulateTransaction
+      .mockResolvedValueOnce({ result: { retval: {} } })
+      .mockResolvedValueOnce({
+        result: { retval: {} },
+        restorePreamble: {
+          minResourceFee: '200',
+          transactionData: { build: jest.fn().mockReturnValue({}) },
+        },
+      } as any);
+    const restoreSigner = jest.fn().mockResolvedValue('signed-restore-xdr');
+
+    await buildRegisterPlayer(VALID_ADDRESS, vitals, 'QmHash', restoreSigner);
+
+    expect(restoreSigner).toHaveBeenCalledWith('mock-xdr');
+    expect(mockSignAndSubmitTx).toHaveBeenCalledWith(
+      'mock-xdr',
+      restoreSigner,
+    );
+    expect(mockRpc.prepareTransaction).toHaveBeenCalled();
+  });
 
   test('throws ValidationError for invalid wallet', async () => {
     await expect(
@@ -496,15 +546,6 @@ describe('logTrialOffer', () => {
   });
 });
 
-// ── filterPlayers (no address params — must never throw ValidationError) ──────
-
-describe('filterPlayers', () => {
-  test('does not throw for any string arguments', async () => {
-    await expect(filterPlayers('EU', 'MF', 1)).resolves.not.toThrow();
-    expect(mockRpc.simulateTransaction).toHaveBeenCalled();
-  });
-});
-
 // ── ValidationError shape ─────────────────────────────────────────────────────
 
 describe('ValidationError', () => {
@@ -569,12 +610,15 @@ describe('parseContractError', () => {
 // ── simulateTx error surfacing ────────────────────────────────────────────────
 
 describe('simulateTx — human-readable errors', () => {
+  // Uses getValidators as the read-only vehicle — filterPlayers, the
+  // previous one, was removed in issue #1298 (discovery moved to the
+  // indexer's paginated GET /players).
   test('maps contract error code in simulation result to readable message', async () => {
     mockRpc.simulateTransaction.mockResolvedValueOnce({
       error: 'Error(Contract, #3)',
     } as any);
 
-    await expect(filterPlayers('', '', 0)).rejects.toThrow(CONTRACT_ERRORS[3]);
+    await expect(getValidators()).rejects.toThrow(CONTRACT_ERRORS[3]);
   });
 
   test('unknown contract code surfaces the code number, not raw JSON', async () => {
@@ -582,7 +626,7 @@ describe('simulateTx — human-readable errors', () => {
       error: 'Error(Contract, #42)',
     } as any);
 
-    const err = await filterPlayers('', '', 0).catch((e) => e);
+    const err = await getValidators().catch((e) => e);
     expect(err.message).toMatch(/42/);
     expect(err.message).not.toContain('"error"');
   });
@@ -590,7 +634,7 @@ describe('simulateTx — human-readable errors', () => {
   test('no raw JSON in error message when error field is absent', async () => {
     mockRpc.simulateTransaction.mockResolvedValueOnce({ events: [] } as any);
 
-    const err = await filterPlayers('', '', 0).catch((e) => e);
+    const err = await getValidators().catch((e) => e);
     expect(err.message).not.toMatch(/\{/); // no JSON object literals
     expect(err.message).not.toMatch(/"events"/);
   });

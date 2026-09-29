@@ -3,10 +3,10 @@ import { within, userEvent } from '@storybook/test';
 import { SWRConfig } from 'swr';
 import { WalletProvider } from '@/context/WalletContext';
 import NotificationBell from './NotificationBell';
+import { WALLET_SESSION_KEY } from '@/lib/storageKeys';
 
 const DEMO_WALLET =
   'GABCDEFGHIJKLMNOPQRSTUVWX234567890123456789012345678901234';
-const WALLET_SESSION_KEY = 'wallet_session';
 
 // NotificationBell renders `null` until `useWallet()` reports an
 // authenticated session, and `useWallet` throws outright without a

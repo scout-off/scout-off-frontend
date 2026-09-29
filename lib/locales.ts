@@ -40,3 +40,9 @@ export const locales: readonly string[] = SUPPORTED_LOCALES;
  * fallback) should point to.
  */
 export const defaultLocale: Locale = 'en';
+
+/** Name of the cookie that remembers the user's chosen/detected locale. */
+export const LOCALE_COOKIE = 'NEXT_LOCALE';
+
+/** One year, in seconds. Shared by middleware and the Navbar switcher. */
+export const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;

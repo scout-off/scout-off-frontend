@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { requireAdminWallet } from '@/lib/adminAuth';
 import { runFraudFlagEvaluation } from '@/lib/fraudFlagsRunner';
 import { FraudFlagsStore } from '@/lib/fraudFlagsStore';
 import { FraudFlagDismissalStore } from '@/lib/fraudFlagDismissalStore';
 import { computeFraudFlagDismissalKey } from '@/lib/fraudDetection';
 import type { FraudFlag } from '@/types';
+import { privateJson } from '@/lib/httpResponses';
 
 const DEFAULT_FRAUD_FLAGS_MIN_INTERVAL_MS = 30_000;
 
@@ -12,7 +13,7 @@ export async function GET(req: NextRequest) {
   const sessionWallet = requireAdminWallet(req);
 
   if (!sessionWallet) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return privateJson({ error: 'Forbidden' }, { status: 403 });
   }
 
   const dismissedKeys =
@@ -37,17 +38,20 @@ export async function GET(req: NextRequest) {
     latestRun &&
     Date.now() - latestRun.evaluatedAt < minIntervalMs
   ) {
-    return NextResponse.json({
+    return privateJson({
       flags: filterVisibleFlags(latestRun.flags),
       warnings: [
         ...latestRun.warnings,
         `Fraud flag evaluation is rate-limited; showing the last cached result from ${new Date(latestRun.evaluatedAt).toLocaleString()}.`,
       ],
       evaluatedAt: latestRun.evaluatedAt,
+      eventsProcessed: latestRun.eventsProcessed,
+      durationMs: latestRun.durationMs,
     });
   }
 
-  const { flags, warnings } = await runFraudFlagEvaluation();
+  const { flags, warnings, eventsProcessed, durationMs } =
+    await runFraudFlagEvaluation();
   const evaluatedAt = Date.now();
   // Every flag is still computed and persisted in full (docs/fraud-detection.md,
   // issue #1171) — the run history and staleness badge stay accurate to what
@@ -60,11 +64,47 @@ export async function GET(req: NextRequest) {
     flags,
     warnings,
     evaluatedAt,
+    eventsProcessed ?? 0,
+    durationMs ?? 0,
   );
 
-  return NextResponse.json({
+  return privateJson({
     flags: filterVisibleFlags(flags),
     warnings,
     evaluatedAt,
+    eventsProcessed: eventsProcessed ?? 0,
+    durationMs: durationMs ?? 0,
   });
 }
+
+export async function POST(req: NextRequest) {
+  const sessionWallet = requireAdminWallet(req);
+
+  if (!sessionWallet) {
+    return privateJson({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const dismissedKeys =
+    FraudFlagDismissalStore.getInstance().getDismissedKeys();
+  const filterVisibleFlags = (flags: FraudFlag[]) =>
+    dismissedKeys.size === 0
+      ? flags
+      : flags.filter(
+          (flag) => !dismissedKeys.has(computeFraudFlagDismissalKey(flag)),
+        );
+
+  const result = await runFraudFlagEvaluation({
+    mode: 'incremental',
+    trigger: 'manual',
+    timeBudgetMs: 45_000,
+  });
+
+  return privateJson({
+    flags: filterVisibleFlags(result.flags),
+    warnings: result.warnings,
+    evaluatedAt: result.evaluatedAt ?? Date.now(),
+    eventsProcessed: result.eventsProcessed ?? 0,
+    durationMs: result.durationMs ?? 0,
+  });
+}
+

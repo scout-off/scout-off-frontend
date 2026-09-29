@@ -27,7 +27,24 @@
     "search": "Rechercher",
     "filter": "Filtrer",
     "sort": "Trier",
-    "clear": "Effacer"
+    "clear": "Effacer",
+    "skipToContent": "Aller au contenu principal",
+    "close_modal": "Fermer la fenêtre",
+    "close_notification": "Fermer la notification",
+    "notification_label": "Notification {variant} : {message}",
+    "dismiss": "Ignorer",
+    "loading_status": "Chargement",
+    "copy_address": "Cliquer pour copier l'adresse",
+    "address_copied": "Adresse copiée",
+    "share_via_qr": "Partager via QR",
+    "view_on_stellar_expert": "Voir la transaction sur Stellar Expert",
+    "close_tour": "Fermer la visite",
+    "previous_step": "Étape précédente",
+    "next_step": "Étape suivante",
+    "scroll_to_top": "Revenir en haut",
+    "cookie_consent": "Consentement aux cookies",
+    "close_consent_banner": "Fermer la bannière de consentement",
+    "confirm": "Confirmer"
   },
   "language": {
     "select_language": "Sélectionner la langue",
@@ -63,10 +80,31 @@
     "milestones": "Jalons",
     "search_player": "Rechercher un joueur par adresse de portefeuille",
     "player_not_found": "Joueur non trouvé",
-    "no_players": "Aucun joueur trouvé"
+    "no_players": "Aucun joueur trouvé",
+    "players_found": "{count, plural, one {# joueur trouvé} other {# joueurs trouvés}}",
+    "results_behind": "Les résultats peuvent être en retard d'au plus {count, plural, one {# ledger} other {# ledgers}}",
+    "all_regions": "Toutes les régions",
+    "any_position": "Tous les postes",
+    "save_search_placeholder": "ex. attaquants de Lagos"
+  },
+  "trial_offer": {
+    "form_label": "Enregistrer une offre d'essai",
+    "club_name": "Nom du club",
+    "club_name_placeholder": "ex. FC Barcelone",
+    "club_name_required": "Le nom du club est requis",
+    "offer_type": "Type d'offre",
+    "offer_type_trial": "Essai",
+    "offer_type_loan": "Prêt",
+    "offer_type_transfer": "Transfert",
+    "message": "Message",
+    "optional": "facultatif",
+    "message_hint": "Détails supplémentaires sur l'offre…",
+    "submit": "Envoyer l'offre d'essai",
+    "submitting": "Envoi…"
   },
   "player_profile": {
-    "back_to_scout_dashboard": "← Retour au tableau de bord des scouts"
+    "back_to_scout_dashboard": "← Retour au tableau de bord des scouts",
+    "verified_on_chain": "Vérifié sur la chaîne"
   },
   "player_dashboard": {
     "title": "Tableau de bord des joueurs",
@@ -125,6 +163,12 @@
     "network_error": "Erreur réseau",
     "contract_error": "L'appel du contrat a échoué",
     "wallet_error": "L'opération du portefeuille a échoué"
+  },
+  "contract_status": {
+    "paused_hint": "Indisponible temporairement — la plateforme est en pause pour maintenance"
+  },
+  "dispute_modal": {
+    "character_count": "{count} sur {max} caractères"
   },
   "actions": {
     "refresh": "Actualiser",
@@ -305,7 +349,7 @@
     "page_title": "Politique de confidentialité",
     "page_description": "Comment ScoutOff collecte, utilise et protège vos données personnelles.",
     "eyebrow": "Juridique",
-    "last_updated": "Dernière mise à jour : 29 juillet 2026",
+    "last_updated": "Dernière mise à jour : 24 septembre 2026",
     "section1_title": "1. Introduction",
     "section1_content": "ScoutOff s'engage à protéger votre vie privée. Cette politique explique comment nous collectons, utilisons et protégeons vos informations. En utilisant ScoutOff, vous acceptez la collecte et l'utilisation des informations conformément à cette politique.",
     "section2_title": "2. Données que nous collectons",
@@ -317,9 +361,13 @@
     "section5_title": "5. Partage des données",
     "section5_content": "Nous ne vendons pas vos données personnelles. Nous ne partageons des données qu'avec d'autres utilisateurs selon vos instructions, avec des prestataires de services (Vercel, Sentry, Pinata) et lorsque la loi l'exige.",
     "section6_title": "6. Conservation et suppression",
-    "section6_content": "Les données on-chain sont permanentes et ne peuvent pas être supprimées. Les données off-chain sont conservées aussi longtemps que nécessaire. Vous pouvez demander la suppression de vos données off-chain via les paramètres du compte. Utilisez l'action « Demander la suppression des données » dans les paramètres du compte.",
+    "section6_content": "Les données on-chain sont permanentes et ne peuvent pas être supprimées. Les données off-chain sont conservées aussi longtemps que nécessaire. Vous pouvez demander la suppression de vos données off-chain via les paramètres du compte. Utilisez l'action « Demander la suppression des données » dans les paramètres du compte. L'export et la suppression de vos données couvrent votre liste de suivi, vos recherches enregistrées, vos paramètres et l'état de lecture des notifications, vos contestations et approbations de jalons, les joueurs récemment consultés, vos sessions de connexion (y compris les informations sur l'appareil et le navigateur) et vos enregistrements de téléversement. La suppression vous déconnecte également de tous vos appareils. Les enregistrements de téléversement sont conservés sans votre portefeuille afin que les médias orphelins puissent encore être nettoyés, et les entrées du journal d'audit administrateur sont anonymisées plutôt que supprimées.",
     "section7_title": "7. Vos droits et contact",
-    "section7_content": "Selon votre juridiction, vous pouvez disposer de droits d'accès, de rectification, de suppression ou de portabilité de vos données personnelles. Ces droits s'appliquent uniquement aux données off-chain. Pour toute question, contactez-nous via les canaux officiels de ScoutOff."
+    "section7_content": "Selon votre juridiction, vous pouvez disposer de droits d'accès, de rectification, de suppression ou de portabilité de vos données personnelles. Ces droits s'appliquent uniquement aux données off-chain. Pour toute question, contactez-nous via les canaux officiels de ScoutOff.",
+    "section8_title": "8. Services tiers",
+    "section8_content": "Pour afficher des valeurs approximatives en monnaie locale, nos serveurs (et non votre navigateur) récupèrent le taux de change du XLM auprès de CoinGecko et, en secours, de l'API publique Horizon du réseau Stellar ; votre adresse IP n'est pas partagée avec ces fournisseurs. Les médias téléversés sont épinglés sur IPFS via Pinata, et les rapports d'erreurs sont envoyés à Sentry.",
+    "section9_title": "9. Signalements de médias",
+    "section9_content": "Lorsque vous signalez un média, nous conservons son identifiant (CID), le joueur concerné, le motif et les détails fournis, ainsi qu'une empreinte irréversible de votre adresse de portefeuille ou de votre adresse IP, utilisée uniquement pour regrouper les signalements en double et prévenir les abus. Les décisions des modérateurs sont consignées dans notre journal d'audit d'administration. Nous ne communiquons pas l'identité des auteurs de signalements au joueur signalé."
   },
   "terms": {
     "back_to_home": "Retour à l'accueil",
@@ -338,7 +386,9 @@
     "section5_title": "5. Propriété intellectuelle",
     "section5_content": "Les joueurs conservent la propriété du contenu de leur profil et de leurs données personnelles. En soumettant du contenu à ScoutOff, vous nous accordez une licence pour afficher ce contenu uniquement aux fins de l'exploitation de la plateforme. Le code de la plateforme est open source.",
     "section6_title": "6. Avertissements et limitations",
-    "section6_content": "ScoutOff est fourni « en l'état » sans garantie. Nous ne sommes pas responsables de l'exactitude des informations sur les joueurs, du contenu IPFS, des pertes dues à des problèmes de réseau blockchain ou à des bugs de contrats intelligents. Notre responsabilité n'excédera pas les frais que vous nous avez versés au cours des 12 mois précédant la réclamation."
+    "section6_content": "ScoutOff est fourni « en l'état » sans garantie. Nous ne sommes pas responsables de l'exactitude des informations sur les joueurs, du contenu IPFS, des pertes dues à des problèmes de réseau blockchain ou à des bugs de contrats intelligents. Notre responsabilité n'excédera pas les frais que vous nous avez versés au cours des 12 mois précédant la réclamation.",
+    "section7_title": "Signalement et retrait des médias",
+    "section7_content": "Toute personne peut signaler une photo ou une vidéo d'un joueur depuis la galerie du profil (motifs : nudité, violence, usurpation d'identité, droits d'auteur, autre). Nos modérateurs examinent les signalements et peuvent retirer les médias qui enfreignent ces conditions ou la loi. Les médias retirés ne sont plus affichés ni servis par ScoutOff et peuvent également être désépinglés de notre service d'épinglage IPFS après un court délai de grâce. IPFS étant un réseau public, le retrait ne s'applique qu'à ScoutOff : le même contenu peut rester accessible via des passerelles IPFS publiques ou des nœuds qui l'épinglent indépendamment. Les titulaires de droits et toute personne concernée peuvent aussi nous contacter pour demander un retrait ; nous traiterons rapidement les demandes valables."
   },
   "settings": {
     "back_to_home": "Retour à l'accueil",
@@ -361,7 +411,33 @@
     "logout_all_button": "Se déconnecter partout",
     "logout_all_in_progress": "Déconnexion…",
     "logout_all_success": "Vous avez été déconnecté de tous les appareils.",
-    "logout_all_error": "Échec de la déconnexion de tous les appareils. Veuillez réessayer."
+    "logout_all_error": "Échec de la déconnexion de tous les appareils. Veuillez réessayer.",
+    "contact": {
+      "connect_wallet": "Connectez votre portefeuille pour gérer vos coordonnées.",
+      "delete_button": "Supprimer les coordonnées",
+      "delete_error": "Échec de la suppression de vos coordonnées. Veuillez réessayer.",
+      "deleted": "Vos coordonnées enregistrées ont été supprimées.",
+      "deleting": "Suppression…",
+      "description": "Les recruteurs qui paient pour vous contacter voient les coordonnées enregistrées ici. Elles sont stockées chiffrées et ne sont jamais publiées sur la blockchain ni sur IPFS.",
+      "email_label": "E-mail",
+      "encryption_note": "Les coordonnées sont chiffrées en AES-256-GCM avant d'atteindre notre base de données, et ne sont délivrées qu'à un recruteur dont le paiement sur la blockchain est confirmé. Nous ne pouvons pas les relire : saisissez-les à nouveau pour les modifier.",
+      "loading": "Vérification des coordonnées enregistrées…",
+      "need_one_channel": "Ajoutez au moins un moyen de contact avant d'enregistrer.",
+      "not_stored": "Aucune coordonnée enregistrée. Les recruteurs qui paient seront informés que vous n'en avez pas.",
+      "paywall_note": "Chaque recruteur doit payer pour vous contacter avant que ces coordonnées ne lui soient délivrées, à chaque fois. L'enregistrement remplace les informations partagées ; il ne rend pas vos coordonnées publiques.",
+      "phone_label": "Téléphone",
+      "replace_hint": "L'enregistrement remplace les trois champs. Pour supprimer un canal, effacez-le avant d'enregistrer.",
+      "save_button": "Enregistrer mes coordonnées",
+      "save_error": "Échec de l'enregistrement de vos coordonnées. Veuillez réessayer.",
+      "saved": "Vos coordonnées ont été enregistrées.",
+      "saving": "Enregistrement…",
+      "section_description": "Choisissez comment les recruteurs vous contactent après avoir payé pour vous contacter.",
+      "section_title": "Coordonnées",
+      "stored": "Coordonnées enregistrées. Les recruteurs qui paient les recevront.",
+      "stored_at": "Coordonnées enregistrées (dernière mise à jour le {date}).",
+      "telegram_label": "Telegram",
+      "too_long": "Chaque moyen de contact doit faire 320 caractères ou moins."
+    }
   },
   "dataDeletion": {
     "modal_title": "Demander la suppression des données",
@@ -391,5 +467,325 @@
     "accept": "Accepter",
     "decline": "Refuser",
     "privacy_link": "Politique de confidentialité"
+  },
+  "meta": {
+    "title": "ScoutOff — Recrutement footballistique décentralisé",
+    "description": "Profils de joueurs infalsifiables, étapes vérifiables et connexions directes entre recruteurs et joueurs — propulsé par les contrats intelligents Stellar Soroban.",
+    "og_image_alt": "ScoutOff — Recrutement footballistique décentralisé sur Stellar"
+  },
+  "offline": {
+    "bannerMessage": "Vous êtes hors ligne. Certaines fonctionnalités peuvent être indisponibles jusqu'au retour de la connexion."
+  },
+  "apiErrors": {
+    "RATE_LIMITED": "Trop de requêtes. Veuillez ralentir et réessayer dans un instant.",
+    "INVALID_REQUEST": "La requête est invalide. Vérifiez vos informations et réessayez.",
+    "QUERY_TOO_LONG": "Le texte de recherche doit comporter au plus {max} caractères.",
+    "UPSTREAM_FAILED": "Le service est temporairement indisponible. Veuillez réessayer.",
+    "INVALID_SIGNATURE": "La vérification du portefeuille a échoué. Veuillez vous reconnecter.",
+    "UPLOAD_SESSION_NOT_FOUND": "Session de téléversement introuvable ou expirée. Veuillez recommencer le téléversement.",
+    "CHUNK_INDEX_OUT_OF_RANGE": "Une partie du téléversement est invalide. Veuillez réessayer.",
+    "UPLOAD_INCOMPLETE": "Téléversement incomplet : {received} parties reçues sur {total}.",
+    "DISPUTE_ALREADY_PENDING": "Ce jalon fait déjà l'objet d'une contestation en attente.",
+    "MILESTONE_NOT_FOUND": "Jalon introuvable.",
+    "UNKNOWN": "Une erreur s'est produite. Veuillez réessayer."
+  },
+  "player": {
+    "modals": {
+      "dispute": {
+        "title": "Contester l’étape",
+        "intro": "Signalez <highlight>{milestone}</highlight> pour examen par un administrateur. Expliquez pourquoi vous pensez que cette décision est erronée.",
+        "reasonLabel": "Motif",
+        "reasonPlaceholder": "ex. Cette étape a été refusée sans explication, alors que j’ai fourni des preuves correspondantes…",
+        "reasonTooShort": "Veuillez décrire votre contestation en au moins {min, plural, one {# caractère} other {# caractères}}.",
+        "submitFailed": "Échec de l’envoi de la contestation",
+        "cancel": "Annuler",
+        "submit": "Envoyer la contestation"
+      },
+      "archive": {
+        "titleArchive": "Archiver votre profil ?",
+        "titleRestore": "Restaurer votre profil ?",
+        "restoreBody": "Restaurez votre profil pour le rendre de nouveau visible aux recruteurs. Ils pourront rechercher et consulter votre profil.",
+        "archiveBody": "L’archivage masquera votre profil des résultats de recherche et de la navigation des recruteurs. Vous pouvez le restaurer à tout moment.",
+        "dataPreserved": "Vos données et vos étapes sont conservées — rien n’est supprimé.",
+        "directLinksNote": "Les liens directs vers votre profil afficheront un message « actuellement privé ».",
+        "cancel": "Annuler",
+        "archiveButton": "Archiver le profil",
+        "restoreButton": "Restaurer le profil",
+        "confirmTitleArchive": "Archiver votre profil ?",
+        "confirmTitleRestore": "Restaurer votre profil ?",
+        "confirmArchive": "Confirmez que vous souhaitez archiver votre profil. Vous pouvez le restaurer à tout moment.",
+        "confirmRestore": "Confirmez que vous souhaitez restaurer votre profil et le rendre visible aux recruteurs.",
+        "goBack": "Retour",
+        "processing": "Traitement…",
+        "yesArchive": "Oui, archiver",
+        "yesRestore": "Oui, restaurer"
+      },
+      "backupWallet": {
+        "title": "Récupération du compte",
+        "protectsHeading": "Ce que cela protège :",
+        "protectsLoss": "La perte d’accès à votre portefeuille principal",
+        "protectsRegain": "La récupération de l’accès à votre compte et à votre profil",
+        "notProtectsHeading": "Ce que cela ne protège PAS :",
+        "notProtectsBody": "Les portefeuilles de secours ne protègent pas contre la perte des deux portefeuilles, le vol de l’adresse de secours ou d’autres atteintes à la sécurité. Utilisez la phrase de récupération de votre portefeuille comme méthode de récupération principale.",
+        "currentLabel": "Portefeuille de secours actuel :",
+        "verifiedOn": "Vérifié le {date}",
+        "close": "Fermer",
+        "remove": "Supprimer",
+        "noneConfigured": "Aucun portefeuille de secours configuré. Associez-en un pour récupérer votre compte si vous perdez l’accès à votre portefeuille principal.",
+        "linkButton": "Associer un portefeuille de secours",
+        "linkBody": "Saisissez l’adresse d’un portefeuille secondaire à utiliser comme méthode de récupération. Vous devrez signer une confirmation avec votre portefeuille principal.",
+        "inputLabel": "Adresse du portefeuille de secours",
+        "inputPlaceholder": "G... (clé publique Stellar de 56 caractères)",
+        "errorRequired": "Veuillez saisir une adresse de portefeuille",
+        "errorInvalid": "Adresse Stellar invalide. Elle doit comporter 56 caractères et commencer par G.",
+        "errorSameAsPrimary": "Le portefeuille de secours ne peut pas être identique à votre portefeuille principal",
+        "back": "Retour",
+        "continue": "Continuer",
+        "confirmTitle": "Confirmer et signer",
+        "primaryLabel": "Portefeuille principal :",
+        "backupLabel": "Portefeuille de secours :",
+        "confirmBody": "Cliquez sur « Associer et signer » pour confirmer avec votre portefeuille principal. Cela prouve que vous possédez les deux adresses.",
+        "cancel": "Annuler",
+        "linkAndSign": "Associer et signer",
+        "removeTitle": "Supprimer le portefeuille de secours ?",
+        "removeBody": "Si vous supprimez votre portefeuille de secours, vous ne pourrez plus l’utiliser pour récupérer votre compte en cas de perte d’accès à votre portefeuille principal.",
+        "keep": "Le conserver",
+        "confirmRemovalTitle": "Confirmer la suppression",
+        "confirmRemovalBody": "Êtes-vous sûr ? Cette action est irréversible. Vous n’aurez plus de méthode de récupération de secours.",
+        "goBack": "Retour",
+        "yesRemove": "Oui, supprimer"
+      }
+    }
+  },
+  "academy": {
+    "bulkImport": {
+      "title": "Import groupé de joueurs",
+      "intro": "Téléversez un fichier CSV ou JSON listant plusieurs joueurs pour les inscrire en une seule session. Chaque joueur reste inscrit via sa propre transaction on-chain — vous devrez signer une fois par joueur.",
+      "fileLabel": "Fichier des joueurs (CSV ou JSON)",
+      "fileHint": "Colonnes/champs obligatoires (à laisser en anglais) : name, age, nationality, region, position. Facultatif : bio. Une ligne/un objet par joueur. Pas de téléversement de vidéo de temps forts ici — ajoutez-les plus tard, joueur par joueur.",
+      "loaded": "Chargé : {fileName}",
+      "previewHeading": "Aperçu",
+      "progressHeading": "Progression de l’import",
+      "counts": "{valid} valides · {invalid} invalides · {total} au total",
+      "resumeBanner": "Lot incomplet détecté : <strong>{completed} sur {total, plural, one {# ligne} other {# lignes}}</strong> déjà traitées. Les lignes déjà réussies seront ignorées. Cliquez sur <strong>Importer</strong> pour reprendre.",
+      "tableCaption": "Aperçu et statut de l’import groupé de joueurs",
+      "columns": {
+        "row": "Ligne",
+        "name": "Nom",
+        "age": "Âge",
+        "nationality": "Nationalité",
+        "region": "Région",
+        "position": "Poste",
+        "bio": "Bio",
+        "status": "Statut"
+      },
+      "status": {
+        "invalid": "Invalide",
+        "skipped": "Ignoré",
+        "valid": "Valide",
+        "waiting": "En attente…",
+        "signing": "En attente de signature…",
+        "registered": "Inscrit",
+        "viewTx": "Voir la tx",
+        "failed": "Échec"
+      },
+      "rowErrors": {
+        "REQUIRED": "{field} est obligatoire",
+        "NAME_TOO_SHORT": "Le nom doit comporter au moins {min, plural, one {# caractère} other {# caractères}}",
+        "NAME_TOO_LONG": "Le nom doit comporter {max} caractères au maximum",
+        "INVALID_AGE": "L’âge doit être un nombre entier compris entre {min} et {max}",
+        "NATIONALITY_TOO_LONG": "La nationalité doit comporter {max} caractères au maximum",
+        "INVALID_REGION": "« {value} » n’est pas une région reconnue",
+        "INVALID_POSITION": "« {value} » n’est pas un poste reconnu",
+        "BIO_TOO_LONG": "La bio doit comporter {max} caractères au maximum"
+      },
+      "fileErrors": {
+        "INVALID_JSON": "Le fichier n’est pas un JSON valide.",
+        "JSON_NOT_ARRAY": "Le fichier JSON doit contenir un tableau d’objets joueur.",
+        "EMPTY_JSON": "Le fichier JSON ne contient aucun joueur.",
+        "EMPTY_CSV": "Le fichier CSV ne contient aucune ligne de données (seulement un en-tête, ou le fichier est vide).",
+        "TOO_MANY_ROWS": "Le fichier contient {count} lignes, ce qui dépasse la limite de {max} lignes par import. Veuillez le diviser en lots plus petits.",
+        "PARSE_FAILED": "Échec de l’analyse du fichier.",
+        "READ_FAILED": "Impossible de lire le fichier. Veuillez réessayer."
+      },
+      "walletNotConnected": "Portefeuille non connecté",
+      "transactionsDisabled": "Les transactions sont actuellement désactivées",
+      "batchCancelled": "Lot annulé. Téléversez de nouveau le même fichier pour reprendre là où vous vous étiez arrêté.",
+      "done": "Import terminé : {succeeded} inscrits, {failed} en échec, {invalid} ignorés (invalides).",
+      "pause": "Pause",
+      "resume": "Reprendre",
+      "cancel": "Annuler",
+      "contractPausedTitle": "Le contrat est actuellement en pause",
+      "connectWalletTitle": "Connectez un portefeuille pour importer des joueurs",
+      "paused": "En pause",
+      "importing": "Import de {done} sur {total, plural, one {# joueur} other {# joueurs}}…",
+      "importButton": "Importer {count, plural, one {# joueur valide} other {# joueurs valides}}",
+      "importAnother": "Importer un autre lot",
+      "chooseAnother": "Choisir un autre fichier"
+    },
+    "roster": {
+      "loading": "Chargement de votre académie…",
+      "loadFailed": "Impossible de charger votre académie.",
+      "retry": "Réessayer",
+      "noAcademy": "Ce portefeuille n’est enregistré comme propriétaire d’aucune académie. Contactez l’administrateur de la plateforme si vous pensez qu’il s’agit d’une erreur.",
+      "heading": "Effectif de votre académie",
+      "description": "Ajoutez ou retirez des portefeuilles signataires pour la ou les académies dont vous êtes propriétaire. Chaque signataire doit encore être ajouté comme validateur par l’administrateur de la plateforme pour que ses validations d’étapes soient autorisées on-chain — ce panneau ne gère que le libellé hors chaîne de l’effectif.",
+      "owner": "Propriétaire :",
+      "signerCount": "{count, plural, one {# signataire} other {# signataires}}",
+      "notOnChain": "pas on-chain",
+      "notOnChainTitle": "Pas encore autorisé on-chain — demandez à l’administrateur de la plateforme d’ajouter ce portefeuille comme validateur",
+      "remove": "Retirer",
+      "addPlaceholder": "Ajouter un portefeuille signataire (G...)",
+      "addInputLabel": "Adresse du portefeuille signataire",
+      "add": "Ajouter",
+      "addDialogTitle": "Ajouter un portefeuille signataire",
+      "removeDialogTitle": "Retirer le portefeuille signataire",
+      "addDialogMessage": "Ajouter {wallet} comme portefeuille signataire de cette académie ?",
+      "removeDialogMessage": "Retirer {wallet} de cette académie ?",
+      "addConfirm": "Ajouter le signataire",
+      "removeConfirm": "Retirer le signataire",
+      "addSuccess": "Portefeuille signataire ajouté à l’académie.",
+      "addFailed": "Impossible d’ajouter le portefeuille signataire.",
+      "removeSuccess": "Portefeuille signataire retiré de l’académie.",
+      "removeFailed": "Impossible de retirer le portefeuille signataire."
+    },
+    "rosterPage": {
+      "title": "Effectif de l’académie",
+      "subtitle": "Gérez les portefeuilles signataires de l’académie dont vous êtes propriétaire."
+    }
+  },
+  "account": {
+    "sessions": {
+      "connect_prompt": "Connectez votre portefeuille pour voir les sessions actives.",
+      "loading": "Chargement des sessions…",
+      "load_error": "Échec du chargement des sessions actives.",
+      "empty": "Aucune session active trouvée.",
+      "this_device": "Cet appareil",
+      "signed_in": "Connecté {time}",
+      "last_active": "Dernière activité {time}",
+      "revoke": "Révoquer",
+      "revoking": "Révocation…",
+      "confirm_revoke_current": "Ceci est votre session actuelle. La révoquer vous déconnectera immédiatement. Continuer ?",
+      "revoked_logged_out": "Session révoquée — vous avez été déconnecté",
+      "revoked": "Session révoquée",
+      "revoke_error": "Échec de la révocation de la session",
+      "device_label": "{browser} sur {os}",
+      "unknown_device": "Appareil inconnu",
+      "unknown_browser": "Navigateur inconnu",
+      "unknown_os": "Système inconnu"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "bell_label": "{count, plural, =0 {Notifications} one {Notifications, # notification non lue} other {Notifications, # notifications non lues}}",
+    "mark_all_read": "Tout marquer comme lu",
+    "loading": "Chargement…",
+    "empty": "Aucune notification pour le moment.",
+    "preferences": {
+      "connect_prompt": "Connectez votre portefeuille pour gérer vos préférences de notification.",
+      "loading": "Chargement des préférences…",
+      "saving": "Enregistrement…",
+      "milestone_approvals_label": "Validations de jalons",
+      "milestone_approvals_description": "M’avertir lorsqu’un validateur approuve l’un de mes jalons.",
+      "contact_unlocks_label": "Déblocages de contact",
+      "contact_unlocks_description": "M’avertir lorsque je débloque les coordonnées d’un joueur."
+    }
+  },
+  "stats": {
+    "title": "Statistiques du joueur",
+    "loading": "Chargement des statistiques du joueur",
+    "goals": "Buts",
+    "assists": "Passes décisives",
+    "appearances": "Matchs joués",
+    "clean_sheets": "Clean sheets"
+  },
+  "scout": {
+    "back_to_dashboard": "Retour au tableau de bord",
+    "watchlist": {
+      "title": "Ma liste de suivi",
+      "empty_title": "Votre liste de suivi est vide",
+      "empty_description": "Ajoutez des joueurs en les marquant d'une étoile dans les résultats de recherche ou sur leur profil."
+    },
+    "compare": {
+      "title": "Comparer des joueurs",
+      "select_prompt": "Sélectionnez 2 à {max} joueurs à comparer.",
+      "load_error": "Échec du chargement des joueurs : {error}",
+      "no_players": "Aucun joueur trouvé.",
+      "partial_failure": "{count, plural, one {# joueur n'a pas pu être chargé.} other {# joueurs n'ont pas pu être chargés.}}",
+      "vitals": "Profil",
+      "vitals_label": "{name} – Profil du joueur",
+      "age": "Âge",
+      "position": "Poste",
+      "region": "Région",
+      "nationality": "Nationalité",
+      "stats": "Statistiques",
+      "stats_label": "{name} – Statistiques du joueur",
+      "progress": "Progression",
+      "progress_label": "{name} – Niveau de progression",
+      "milestones": "Jalons",
+      "milestones_label": "{name} – Jalons",
+      "milestone_count": "{count, plural, one {# jalon} other {# jalons}}"
+    },
+    "profile": {
+      "title": "Profil du recruteur",
+      "description": "Consultez les détails d'abonnement et l'activité récente de ce recruteur.",
+      "not_found_title": "Recruteur introuvable",
+      "not_found_description": "Le profil de recruteur que vous recherchez n'existe pas.",
+      "meta_title": "Profil du recruteur | ScoutOff",
+      "meta_description": "Consultez les détails d'abonnement et l'activité récente de ce recruteur sur ScoutOff."
+    },
+    "subscribe": {
+      "title": "Abonnement recruteur",
+      "subtitle": "Améliorez votre accès et débloquez de meilleurs outils de recrutement.",
+      "status_loading": "Chargement de votre abonnement actuel...",
+      "status_none": "Aucun abonnement actif trouvé.",
+      "status_expired": "Votre abonnement {tier} a expiré le {date}.",
+      "status_active": "Abonnement actuel : {tier} — actif jusqu'au {date}.",
+      "cta_confirming": "Confirmation sur la chaîne…",
+      "cta_processing": "Traitement…",
+      "cta_renew": "Renouveler",
+      "cta_upgrade": "Passer au niveau supérieur",
+      "cta_subscribe": "S'abonner",
+      "success": "Abonnement {tier} souscrit avec succès",
+      "active_banner_label": "Abonnement actif",
+      "active_until": "Actif jusqu'au <strong>{date}</strong>",
+      "days_remaining": "{count, plural, one {# jour restant} other {# jours restants}}",
+      "referral_notice": "Vous avez été parrainé par un collègue ! Votre parrainage sera crédité automatiquement lors de votre abonnement.",
+      "active_subscription": "Abonnement actif",
+      "plan_name": "Formule {tier}",
+      "expires": "Expire le <strong>{date}</strong>",
+      "change_title": "Changer de formule",
+      "change_description": "Vous êtes sur le point de passer de la formule <strong>{from}</strong> à la formule <strong>{to}</strong>.",
+      "notice_title": "Avis important concernant votre temps restant",
+      "notice_body": "Changer de formule démarre immédiatement une nouvelle période d'abonnement {to}. {count, plural, one {Le # jour restant} other {Les # jours restants}} de la formule {from} actuelle ne seront ni reportés ni calculés au prorata.",
+      "notice_replace": "Le nouvel abonnement {to} sera actif immédiatement et remplacera votre abonnement {from} actuel.",
+      "confirm_change": "Confirmer le changement",
+      "current_plan": "Formule actuelle",
+      "recommended": "Recommandé",
+      "paused": "Le contrat est actuellement en pause",
+      "tiers": {
+        "basic": {
+          "title": "Basique",
+          "description": "Commencez avec l'accès essentiel de recruteur et les fonctions de contact de base.",
+          "features": {
+            "browse": "Parcourir les profils de joueurs",
+            "connect": "Entrer en contact avec des talents vérifiés",
+            "pay_to_contact": "Paiement pour obtenir les coordonnées des joueurs"
+          }
+        },
+        "pro": {
+          "title": "Pro",
+          "description": "Recommandé pour les recruteurs actifs qui veulent un accès prioritaire et des outils avancés.",
+          "features": {
+            "all_basic": "Toutes les fonctions Basique",
+            "priority_discovery": "Découverte prioritaire des joueurs",
+            "faster_contact": "Accès plus rapide aux coordonnées"
+          }
+        },
+        "elite": {
+          "title": "Élite"
+        }
+      }
+    }
   }
 }

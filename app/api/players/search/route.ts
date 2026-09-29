@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  createClient,
-  SEARCH_TIMEOUT_MS,
-  upstreamStatus,
-} from '@/lib/httpClient';
+import { apiError, ApiErrorCode } from '@/lib/apiErrors';
+import axios from 'axios';
 import { createRequestLogger } from '@/lib/logger';
 import { getClientIp, checkRateLimit } from '@/lib/rateLimit';
+import { withOutboundSpan, withRouteTelemetry } from '@/lib/telemetry';
 
 // Search names longer than this are likely abuse or mistake; never forward them.
 const PLAYER_SEARCH_NAME_MAX = 100;
@@ -37,7 +35,7 @@ const backend = createClient('players-search', {
   headers: { 'Content-Type': 'application/json' },
 });
 
-export async function GET(req: NextRequest) {
+async function getPlayerSearch(req: NextRequest) {
   const log = createRequestLogger(req);
   const ip = getClientIp(req);
 
@@ -48,23 +46,32 @@ export async function GET(req: NextRequest) {
   if (rl.limited) {
     log.warn('Rate limit exceeded', { ip });
     const retryAfter = rl.retryAfterSec ?? Math.ceil(WINDOW_MS / 1000);
-    return NextResponse.json(
-      { error: 'Too many search requests. Please slow down.' },
-      { status: 429, headers: { 'Retry-After': String(retryAfter) } },
+    return apiError(
+      ApiErrorCode.RATE_LIMITED,
+      429,
+      'Too many search requests. Please slow down.',
+      undefined,
+      { headers: { 'Retry-After': String(retryAfter) } },
     );
   }
 
   const name = req.nextUrl.searchParams.get('name') ?? '';
 
   if (name.length > PLAYER_SEARCH_NAME_MAX) {
-    return NextResponse.json(
-      { error: `name must be at most ${PLAYER_SEARCH_NAME_MAX} characters` },
-      { status: 400 },
+    return apiError(
+      ApiErrorCode.QUERY_TOO_LONG,
+      400,
+      `name must be at most ${PLAYER_SEARCH_NAME_MAX} characters`,
+      { max: PLAYER_SEARCH_NAME_MAX },
     );
   }
 
   try {
-    const res = await backend.get('/players/search', { params: { name } });
+    const res = await withOutboundSpan(
+      'backend.players.search',
+      { dependency: 'backend', operation: 'players.search' },
+      () => backend.get('/players/search', { params: { name } }),
+    );
     return NextResponse.json(res.data);
   } catch (e: any) {
     const status = upstreamStatus(e);
@@ -72,6 +79,12 @@ export async function GET(req: NextRequest) {
       status,
       reason: e instanceof Error ? e.message : String(e),
     });
-    return NextResponse.json({ error: 'Failed to search players' }, { status });
+    return apiError(
+      ApiErrorCode.UPSTREAM_FAILED,
+      status,
+      'Failed to search players',
+    );
   }
 }
+
+export const GET = withRouteTelemetry(getPlayerSearch, '/api/players/search');

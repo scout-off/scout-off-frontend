@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import api from '@/lib/api';
 import { fetchApprovalCountsByWallets } from '@/lib/indexerClient';
 import { requireAdminWallet } from '@/lib/adminAuth';
 import type { Academy, AcademyMilestoneRollup } from '@/types';
+import { privateJson } from '@/lib/httpResponses';
 
 /**
  * GET /api/admin/academies/rollup — academy-scoped milestone-approval
@@ -37,12 +38,12 @@ function parseRange(searchParams: URLSearchParams): {
 export async function GET(req: NextRequest) {
   const admin = requireAdminWallet(req);
   if (!admin) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const range = parseRange(req.nextUrl.searchParams);
   if (!range) {
-    return NextResponse.json(
+    return privateJson(
       { error: 'rangeDays must be one of 7, 30, 90, 365, or "all"' },
       { status: 400 },
     );
@@ -83,5 +84,5 @@ export async function GET(req: NextRequest) {
     })),
   };
 
-  return NextResponse.json(rollup);
+  return privateJson(rollup);
 }

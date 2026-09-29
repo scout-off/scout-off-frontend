@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createRequestLogger, withRequestId } from '@/lib/logger';
 import { getSessionId, getSessionWallet } from '@/lib/session';
 import { SessionStore } from '@/lib/sessionStore';
-import { labelUserAgent } from '@/lib/userAgentLabel';
+import { labelUserAgent, parseUserAgent } from '@/lib/userAgentLabel';
+import { privateJson } from '@/lib/httpResponses';
 
 // better-sqlite3 (via lib/sessionStore.ts) is a native addon and needs the
 // Node.js runtime, not edge.
@@ -10,7 +11,10 @@ export const runtime = 'nodejs';
 
 export interface ActiveSessionSummary {
   id: string;
+  /** English "browser on OS" label; kept for non-UI consumers. */
   deviceLabel: string;
+  /** Parsed parts so the UI can translate the label; null if unknown. */
+  device?: { browser: string | null; os: string | null } | null;
   createdAt: number;
   lastSeenAt: number;
   expiresAt: number;
@@ -35,7 +39,7 @@ export async function GET(req: NextRequest) {
   const wallet = getSessionWallet(req);
   if (!wallet) {
     return withRequestId(
-      NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
+      privateJson({ error: 'Unauthorized' }, { status: 401 }),
       log.requestId,
     );
   }
@@ -48,11 +52,12 @@ export async function GET(req: NextRequest) {
     .map((row) => ({
       id: row.id,
       deviceLabel: labelUserAgent(row.userAgent),
+      device: parseUserAgent(row.userAgent),
       createdAt: row.createdAt,
       lastSeenAt: row.lastSeenAt,
       expiresAt: row.expiresAt,
       isCurrent: row.id === currentSid,
     }));
 
-  return withRequestId(NextResponse.json({ sessions }), log.requestId);
+  return withRequestId(privateJson({ sessions }), log.requestId);
 }

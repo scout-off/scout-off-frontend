@@ -65,4 +65,61 @@ describe('Button', () => {
     const { container } = render(<Button variant="danger">Danger</Button>);
     expect(container.firstChild).toMatchSnapshot();
   });
+
+  describe('pause-gated accessibility (disabledReason)', () => {
+    it('uses aria-disabled instead of native disabled when disabledReason is provided', () => {
+      const onClick = jest.fn();
+      render(
+        <Button disabledReason="Temporarily unavailable — the platform is paused for maintenance" onClick={onClick}>
+          Submit
+        </Button>,
+      );
+      const btn = screen.getByRole('button');
+      expect(btn).not.toBeDisabled();
+      expect(btn).toHaveAttribute('aria-disabled', 'true');
+    });
+
+    it('renders helper text linked via aria-describedby when disabledReason is provided', () => {
+      render(
+        <Button disabledReason="Temporarily unavailable — the platform is paused for maintenance">
+          Submit
+        </Button>,
+      );
+      const btn = screen.getByRole('button');
+      const hintId = btn.getAttribute('aria-describedby');
+      expect(hintId).toBeTruthy();
+      const hint = screen.getByText('Temporarily unavailable — the platform is paused for maintenance');
+      expect(hint).toHaveAttribute('id', hintId);
+    });
+
+    it('prevents click when disabledReason is provided', () => {
+      const onClick = jest.fn();
+      render(
+        <Button disabledReason="Temporarily unavailable — the platform is paused for maintenance" onClick={onClick}>
+          Submit
+        </Button>,
+      );
+      fireEvent.click(screen.getByRole('button'));
+      expect(onClick).not.toHaveBeenCalled();
+    });
+
+    it('does not render helper text when disabledReason is not provided', () => {
+      render(<Button>Submit</Button>);
+      const btn = screen.getByRole('button');
+      expect(btn).not.toHaveAttribute('aria-describedby');
+      expect(screen.queryByText(/temporarily unavailable/i)).not.toBeInTheDocument();
+    });
+
+    it('button remains focusable when disabledReason is provided', () => {
+      render(
+        <Button disabledReason="Temporarily unavailable — the platform is paused for maintenance">
+          Submit
+        </Button>,
+      );
+      const btn = screen.getByRole('button');
+      expect(btn).not.toBeDisabled();
+      btn.focus();
+      expect(btn).toHaveFocus();
+    });
+  });
 });

@@ -135,7 +135,7 @@ describe('chunkedUploadStore with Upstash Redis configured (issue #1175)', () =>
     const { sessionId } = await initSession({
       filename: 'clip.mp4',
       fileType: 'video/mp4',
-      fileSize: 30,
+      fileSize: 6,
       totalChunks: 3,
     });
     await writeChunk(sessionId, 0, Buffer.from('aa'));
@@ -171,7 +171,7 @@ describe('chunkedUploadStore with Upstash Redis configured (issue #1175)', () =>
     const { sessionId } = await initSession({
       filename: 'a.jpg',
       fileType: 'image/jpeg',
-      fileSize: 10,
+      fileSize: 1,
       totalChunks: 1,
       ownerWallet: 'GWALLET',
     });

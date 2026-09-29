@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { resolveAcademyRole } from '@/lib/academyAuth';
+import { privateJson } from '@/lib/httpResponses';
 
 // GET /api/admin/academies/mine
 //
@@ -17,12 +18,12 @@ import { resolveAcademyRole } from '@/lib/academyAuth';
 export async function GET(req: NextRequest) {
   const role = await resolveAcademyRole(req);
   if (!role) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   if (role.role === 'super-admin') {
-    return NextResponse.json([]);
+    return privateJson([]);
   }
 
-  return NextResponse.json(role.academies);
+  return privateJson(role.academies);
 }

@@ -120,7 +120,6 @@ Open `.env.local` and fill in the required values. At minimum you need these for
 | `NEXT_PUBLIC_ADMIN_ADDRESS` | Your testnet wallet public key              |
 | `PINATA_API_KEY`            | _Optional for local dev (IPFS uploads)_     |
 | `PINATA_SECRET`             | _Optional for local dev (IPFS uploads)_     |
-| `STELLAR_SECRET_KEY`        | Your testnet wallet secret key              |
 | `NEXT_PUBLIC_APP_URL`       | `http://localhost:3000`                     |
 
 Validate that all expected variables are declared:
@@ -130,6 +129,26 @@ node scripts/validate-env.js
 ```
 
 Expected output: `✓ All N env vars declared in .env.example`
+
+#### Required secrets for local auth
+
+SEP-10 wallet login needs three server-side secrets in `.env.local`. Without them `lib/session.ts` throws `SESSION_SECRET is not configured` and wallet sign-in fails with an opaque `401`/`500`.
+
+| Variable            | Purpose                                                                                                 |
+| ------------------- | ------------------------------------------------------------------------------------------------------- |
+| `SESSION_SECRET`    | Signs the session cookie issued after a successful SEP-10 login (32+ random bytes).                     |
+| `SEP10_SERVER_KEY`  | Stellar secret key used to sign SEP-10 challenge transactions. Use a throwaway testnet keypair locally. |
+| `SEP10_HOME_DOMAIN` | Home domain embedded in the SEP-10 challenge (`localhost:3000` for local dev).                          |
+
+```bash
+# 32+ random bytes
+echo "SESSION_SECRET=$(openssl rand -base64 48)" >> .env.local
+# A throwaway testnet keypair for signing SEP-10 challenges
+node -e "const {Keypair}=require('@stellar/stellar-sdk');const k=Keypair.random();console.log('SEP10_SERVER_KEY='+k.secret())" >> .env.local
+echo "SEP10_HOME_DOMAIN=localhost:3000" >> .env.local
+```
+
+> `scripts/validate-env.js` only checks that variables are declared in `.env.example`; it does not currently verify these secrets have values, so double-check them manually.
 
 **SEP-10 origin allow-list:** `SEP10_ALLOWED_ORIGINS` can be left blank for local dev — `app/api/auth/sep10/route.ts` falls back to `http://<NEXT_PUBLIC_DOMAIN>` (default `http://localhost:3000`) when `NODE_ENV !== 'production'`. It **must** be set before deploying to any non-local environment: a comma-separated list of full origins allowed to call the SEP-10 POST endpoint, e.g. `SEP10_ALLOWED_ORIGINS=https://scoutoff.app,https://www.scoutoff.app`. In production, if this (and `NEXT_PUBLIC_BASE_URL`, honored as a convenience single-origin entry) are both unset, the route fails closed with `403` rather than trusting the request's own `Host` header.
 
@@ -241,7 +260,7 @@ Open **http://localhost:3000** in your browser.
 ## Common Errors
 
 A reference for the errors new contributors hit most often — the
-pages in this section also map to the ISSUES.md backlog. Run `npm test`,
+pages in this section also map to the archived `docs/archive/ISSUES-2026.md` backlog. Run `npm test`,
 `npm run lint`, and `npm run type-check` after any of the resolutions
 below; the broader regression tests are the cheapest way to confirm
 nothing else broke while fixing the local symptom.
@@ -303,6 +322,37 @@ This happens when one component of the stack is on the wrong network.
 # Ctrl+C to stop, then:
 npm run dev
 ```
+
+### Soroban state archival and player TTLs
+
+Soroban persistent ledger entries are protected by a time-to-live (TTL). When
+the TTL expires, the entry is archived and ordinary contract simulations can
+no longer read it. `lib/contract.ts` detects the RPC `restorePreamble` response
+and maps read attempts to `ArchivedEntryError`, so player pages explain that
+the owner must sign in to restore the profile instead of showing a misleading
+"Player not found" state.
+
+Write helpers simulate before preparing. If the simulation requests a restore,
+the helper builds a separate `RestoreFootprint` transaction using the returned
+Soroban transaction data and minimum resource fee. The connected wallet signs
+that transaction first; after confirmation, the original write is prepared and
+submitted normally. This costs a network fee and the restoration fee, so the
+frontend only performs it when Soroban says it is necessary.
+
+The operational TTL strategy is deliberately two-tiered:
+
+- The indexer should periodically identify active player records and submit a
+   low-frequency `extendFootprintTtl` transaction for those footprints using a
+   funded maintenance wallet. Extend only records that have recent profile or
+   milestone activity; extending every historical record indefinitely creates a
+   recurring XLM cost with no product value.
+- The wallet restoration path remains the fallback for long-inactive players.
+   It is user-authorized, pays only when a player is actually accessed or
+   updated, and does not require the platform to hold player-wallet keys.
+
+The indexer maintenance job must monitor its last successful ledger and XLM
+balance. If it is unavailable, archival is expected behavior rather than a
+silent data-loss condition: the next owner write can restore the footprint.
 
 ---
 
@@ -405,6 +455,12 @@ required `## Summary` / `## Validation` sections intact — the CI guard
    in the PR description and bypass via `[skip-docs-validation]` in
    the PR title so the maintainer can drop the guard once.
 
+### Error 7: Wallet connects but I'm never logged in
+
+**Symptom:** Freighter connects and signs the SEP-10 challenge, but the app stays logged out, or `/api/auth/sep10` returns `401`/`500`. The server log shows `SESSION_SECRET is not configured`.
+
+**Fix:** Set `SESSION_SECRET` (and `SEP10_SERVER_KEY` / `SEP10_HOME_DOMAIN`) in `.env.local` as described in [Required secrets for local auth](#required-secrets-for-local-auth), then restart `npm run dev`.
+
 ## Verification Checklist
 
 After following all steps, verify the full stack is working:
@@ -492,6 +548,32 @@ Public player profiles (`app/[locale]/player/[id]`) previously rendered `<img>`/
 
 ---
 
+## Versioned contract event schemas
+
+Contract events are decoded through the shared `@scoutoff/contract-events`
+workspace package. `schema/v1.ts` owns the v1 topic symbols and payload
+decoders; both `packages/indexer` and `hooks/useContractEvents.ts` call that
+package instead of maintaining independent topic heuristics. Indexed rows
+store `contract_version` so historical events remain interpretable after a
+contract upgrade.
+
+When the contract event ABI changes:
+
+1. Add `schema/v2.ts` with the new topic and `ScVal` payload definitions.
+2. Extend the package dispatcher and select v2 using the emission contract
+   version or ledger-range configuration. Do not change v1 decoders in place.
+3. Capture real testnet topic/value XDR under
+   `packages/contract-events/src/__fixtures__` and add golden tests for every
+   event type in the new schema.
+4. Deploy the indexer with the matching `CONTRACT_VERSION`, then verify the
+   `contract_version` column and unknown-event metric before switching the
+   frontend's expected version.
+
+Unknown topics and unsupported versions are stored as `type="unknown"` with
+their raw XDR payload and counted by `indexer_unknown_events_total`; they must
+never stop polling or disappear silently. This preserves evidence for adding a
+future decoder and makes schema drift observable.
+
 ## Indexer HTTP API (Issue #29)
 
 `packages/indexer/` runs an HTTP server alongside the event poller. Two endpoints are exposed on the port configured by `PORT` (default `3001`):
@@ -528,3 +610,89 @@ curl -s http://localhost:3001/metrics | head -40
 - [DEPLOYMENT.md](DEPLOYMENT.md) — production deployment notes (Vercel, analytics)
 - [e2e/README.md](e2e/README.md) — Playwright E2E suite and wallet-mocking harness
 - [docs/fraud-detection.md](docs/fraud-detection.md) — referral/pay-to-contact abuse heuristics and admin flag review
+
+---
+
+## Contract Integration Tests
+
+The unit tests under `__tests__/lib/contract.test.ts` mock the RPC layer and only verify that the frontend passes the correct arguments — they cannot catch **ABI drift** (wrong argument order, mismatched ScVal types such as `u32` vs `i128`, or renamed struct fields in `nativeToScVal(vitals)`).
+
+The **contract integration test suite** (`__tests__/integration/contract.int.test.ts`) runs the real `lib/contract.ts` build-helpers and simulate-helpers against a live Soroban quickstart node with the actual contract WASM deployed. ABI mismatches surface immediately as on-chain failures rather than at testnet runtime.
+
+### One-command local run
+
+```bash
+# Prerequisites: Docker, stellar CLI ≥ 22.0, Node 24
+npm run test:integration:local
+```
+
+This single command:
+
+1. Starts `docker-compose.test.yml` (stellar/quickstart local network on port 8000)
+2. Runs `scripts/deploy-test-contract.sh` — fetches the pinned WASM, verifies its SHA-256, deploys it, initializes it with a generated admin keypair, writes `.env.integration`
+3. Runs `npm run test:integration` (Jest with `jest.integration.config.js`)
+
+### Step-by-step (for debugging)
+
+```bash
+# Step 1: Start the local Soroban node
+docker compose -f docker-compose.test.yml up -d
+
+# Step 2: Deploy the contract (writes .env.integration)
+./scripts/deploy-test-contract.sh
+
+# Step 3: Run just the integration suite
+npm run test:integration
+```
+
+### What is tested
+
+| Suite                                                     | What it catches                                                                    |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `get_contract_version`                                    | Pinned WASM version matches `EXPECTED_CONTRACT_VERSION` in `lib/contract.ts`       |
+| `register_player → getPlayer`                             | Full `PlayerVitals` struct encoding/decoding (field names, types, order)           |
+| `add_validator → approve_milestone → getMilestoneHistory` | Validator lifecycle and `Milestone` struct shape                                   |
+| `subscribe → payToContact`                                | Fee flow; subscription record shape                                                |
+| `pause_contract → write fails with error 9`               | `parseContractError` correctly maps error code 9 → "Contract is paused"            |
+| ABI mismatch (deliberate)                                 | Swapped argument order is rejected on-chain (shows the harness catches real drift) |
+
+### File layout
+
+| Path                                         | Purpose                                                                   |
+| -------------------------------------------- | ------------------------------------------------------------------------- |
+| `docker-compose.test.yml`                    | stellar/quickstart local network (Soroban RPC on `:8000`)                 |
+| `scripts/deploy-test-contract.sh`            | Fetch + verify WASM, deploy, init, write `.env.integration`               |
+| `__tests__/integration/contract.int.test.ts` | Integration test suite                                                    |
+| `__tests__/integration/helpers.ts`           | Keypair generation, funding, signing, polling utilities                   |
+| `__tests__/integration/globalSetup.ts`       | Loads `.env.integration` before tests run                                 |
+| `jest.integration.config.js`                 | Separate Jest project (excluded from `npm test`)                          |
+| `.env.integration`                           | **Generated, gitignored** — contains ephemeral contract ID + admin secret |
+| `.wasm-cache/`                               | **Gitignored** — cached WASM download, keyed by SHA-256 in CI             |
+
+### Updating the pinned WASM
+
+When a new contract release ships:
+
+1. Update `WASM_URL` and `WASM_SHA256` in `scripts/deploy-test-contract.sh` **and** the matching `env:` block in `.github/workflows/contract-integration.yml`.
+2. If the contract's ABI changed, update the affected `build*` / `simulateTx` call shapes in `lib/contract.ts`.
+3. If `get_contract_version` returns a new value, bump `EXPECTED_CONTRACT_VERSION` in `lib/contract.ts` to match.
+4. Run `npm run test:integration:local` locally — the suite must be green before you open the PR.
+5. The CI job (`contract-integration`) re-runs on the PR and provides the final gate.
+
+> **Never commit `.env.integration`** — it contains an ephemeral Ed25519 secret key. It is gitignored and regenerated on every deploy.
+
+### CI job
+
+The `contract-integration` workflow (`.github/workflows/contract-integration.yml`) runs automatically on PRs that touch:
+
+- `lib/contract.ts`
+- `lib/stellar.ts`
+- `types/**`
+- `scripts/deploy-test-contract.sh`
+- `__tests__/integration/**`
+- `docker-compose.test.yml`
+- `jest.integration.config.js`
+
+It also runs on direct pushes to `main` that touch the same paths, and can be triggered manually from the GitHub Actions UI.
+
+The WASM download is cached by its SHA-256 so subsequent CI runs skip the download as long as the pin hasn't changed.

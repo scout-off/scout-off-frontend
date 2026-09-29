@@ -20,6 +20,7 @@ const SEVERITY_STYLES: Record<FraudFlagSeverity, string> = {
 const CATEGORY_LABELS: Record<FraudFlag['category'], string> = {
   referral: 'Referral',
   pay_to_contact: 'Pay-to-Contact',
+  validator: 'Validator',
 };
 
 function SeverityBadge({ severity }: { severity: FraudFlagSeverity }) {
@@ -36,10 +37,12 @@ function FlagCard({
   flag,
   onDismiss,
   dismissing,
+  onRemoveValidator,
 }: {
   flag: FraudFlag;
   onDismiss: (flag: FraudFlag, note: string) => void;
   dismissing: boolean;
+  onRemoveValidator?: (address: string) => void;
 }) {
   const [showDismissForm, setShowDismissForm] = useState(false);
   const [note, setNote] = useState('');
@@ -57,14 +60,25 @@ function FlagCard({
           </span>
         </div>
         {!showDismissForm && (
-          <button
-            type="button"
-            disabled={dismissing}
-            onClick={() => setShowDismissForm(true)}
-            className="text-xs font-medium rounded-md border border-gray-700 px-3 py-1 text-gray-200 hover:bg-gray-800 disabled:opacity-50"
-          >
-            Dismiss
-          </button>
+          <div className="flex items-center gap-2">
+            {flag.category === 'validator' && onRemoveValidator && (
+              <button
+                type="button"
+                onClick={() => onRemoveValidator(flag.wallets[0])}
+                className="text-xs font-medium rounded-md border border-red-700 px-3 py-1 text-red-400 hover:bg-red-950/40"
+              >
+                Remove validator
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={dismissing}
+              onClick={() => setShowDismissForm(true)}
+              className="text-xs font-medium rounded-md border border-gray-700 px-3 py-1 text-gray-200 hover:bg-gray-800 disabled:opacity-50"
+            >
+              Dismiss
+            </button>
+          </div>
         )}
       </div>
 
@@ -207,10 +221,19 @@ function ThrottleCard({
  */
 const REFRESH_COOLDOWN_MS = 5_000;
 
-export default function FraudFlagsPanel() {
+export default function FraudFlagsPanel({
+  onRemoveValidator,
+}: {
+  /** Opens the admin's existing confirm-and-sign remove-validator flow. */
+  onRemoveValidator?: (address: string) => void;
+} = {}) {
   const [flags, setFlags] = useState<FraudFlag[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [evaluatedAt, setEvaluatedAt] = useState<number | null>(null);
+  const [runStats, setRunStats] = useState<{
+    eventsProcessed?: number;
+    durationMs?: number;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [refreshCooldownMs, setRefreshCooldownMs] = useState(0);
@@ -239,12 +262,17 @@ export default function FraudFlagsPanel() {
     setLoading(true);
     setError(false);
     fetchFraudFlags()
-      .then(({ flags, warnings, evaluatedAt }) => {
-        if (cancelled) return;
-        setFlags(flags);
-        setWarnings(warnings);
-        setEvaluatedAt(evaluatedAt);
-      })
+      .then(
+        ({ flags, warnings, evaluatedAt, eventsProcessed, durationMs }) => {
+          if (cancelled) return;
+          setFlags(flags);
+          setWarnings(warnings);
+          setEvaluatedAt(evaluatedAt);
+          if (eventsProcessed !== undefined || durationMs !== undefined) {
+            setRunStats({ eventsProcessed, durationMs });
+          }
+        },
+      )
       .catch(() => {
         if (!cancelled) setError(true);
       })
@@ -329,6 +357,16 @@ export default function FraudFlagsPanel() {
             {evaluatedAt !== null && (
               <p className="text-xs text-gray-500 mt-2">
                 As of {new Date(evaluatedAt).toLocaleString()}
+                {runStats && (
+                  <>
+                    {runStats.eventsProcessed !== undefined &&
+                      runStats.eventsProcessed > 0 &&
+                      ` · ${runStats.eventsProcessed} events processed`}
+                    {runStats.durationMs !== undefined &&
+                      runStats.durationMs > 0 &&
+                      ` in ${(runStats.durationMs / 1000).toFixed(1)}s`}
+                  </>
+                )}
               </p>
             )}
           </div>
@@ -364,10 +402,22 @@ export default function FraudFlagsPanel() {
               </p>
             ))}
 
+            {flags.some(
+              (f) => f.category === 'validator' && f.severity === 'high',
+            ) && (
+              <p
+                role="alert"
+                className="text-xs text-red-400 bg-red-950/30 border border-red-800 rounded-md px-3 py-2"
+              >
+                High-severity validator activity detected — a validator key may
+                be compromised. Review the validator flags below.
+              </p>
+            )}
+
             {flags.length === 0 ? (
               <EmptyState
                 title="No flags"
-                description="No suspicious referral or pay-to-contact patterns detected."
+                description="No suspicious referral, pay-to-contact or validator patterns detected."
               />
             ) : (
               <ul className="flex flex-col gap-3">
@@ -377,6 +427,7 @@ export default function FraudFlagsPanel() {
                     flag={flag}
                     onDismiss={handleDismiss}
                     dismissing={dismissingId === flag.id}
+                    onRemoveValidator={onRemoveValidator}
                   />
                 ))}
               </ul>

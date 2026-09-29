@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getSessionWallet } from '@/lib/session';
 import {
   NotificationPreferencesStore,
   PreferencesConflictError,
 } from '@/lib/notificationPreferencesStore';
 import { createRequestLogger } from '@/lib/logger';
+import { privateJson } from '@/lib/httpResponses';
 
 export const runtime = 'nodejs';
 
@@ -20,21 +21,21 @@ export const runtime = 'nodejs';
 export async function GET(req: NextRequest) {
   const wallet = getSessionWallet(req);
   if (!wallet) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const log = createRequestLogger(req);
   try {
     const { preferences, updatedAt } =
       NotificationPreferencesStore.getInstance().getWithVersion(wallet);
-    return NextResponse.json(preferences, {
+    return privateJson(preferences, {
       headers: { ETag: String(updatedAt) },
     });
   } catch (err) {
     log.error('Failed to load notification preferences', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
+    return privateJson(
       { error: 'Failed to load notification preferences' },
       { status: 500 },
     );
@@ -61,13 +62,13 @@ export async function GET(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   const wallet = getSessionWallet(req);
   if (!wallet) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const log = createRequestLogger(req);
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object') {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    return privateJson({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
   const { milestoneApprovals, contactUnlocks, baseVersion } = body as Record<
@@ -78,7 +79,7 @@ export async function PUT(req: NextRequest) {
     typeof milestoneApprovals !== 'boolean' ||
     typeof contactUnlocks !== 'boolean'
   ) {
-    return NextResponse.json(
+    return privateJson(
       {
         error: 'milestoneApprovals and contactUnlocks must both be booleans',
       },
@@ -86,7 +87,7 @@ export async function PUT(req: NextRequest) {
     );
   }
   if (baseVersion !== undefined && typeof baseVersion !== 'number') {
-    return NextResponse.json(
+    return privateJson(
       { error: 'baseVersion must be a number when provided' },
       { status: 400 },
     );
@@ -99,12 +100,12 @@ export async function PUT(req: NextRequest) {
         { milestoneApprovals, contactUnlocks },
         baseVersion,
       );
-    return NextResponse.json(preferences, {
+    return privateJson(preferences, {
       headers: { ETag: String(updatedAt) },
     });
   } catch (err) {
     if (err instanceof PreferencesConflictError) {
-      return NextResponse.json(
+      return privateJson(
         {
           error: 'conflict',
           message:
@@ -118,7 +119,7 @@ export async function PUT(req: NextRequest) {
     log.error('Failed to update notification preferences', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
+    return privateJson(
       { error: 'Failed to update notification preferences' },
       { status: 500 },
     );

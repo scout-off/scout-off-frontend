@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import type { ConfigWarning } from '@/lib/config';
 import ConfigWarningBanner from './ConfigWarningBanner';
+import { CONFIG_WARNING_DISMISSED_KEY } from '@/lib/storageKeys';
 
 const meta: Meta<typeof ConfigWarningBanner> = {
   title: 'Components/ConfigWarningBanner',
@@ -9,7 +10,7 @@ const meta: Meta<typeof ConfigWarningBanner> = {
   decorators: [
     (Story) => {
       if (typeof window !== 'undefined') {
-        sessionStorage.removeItem('scoutoff:configWarningDismissed');
+        sessionStorage.removeItem(CONFIG_WARNING_DISMISSED_KEY);
       }
       return <Story />;
     },

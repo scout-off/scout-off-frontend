@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { requireAdminWallet } from '@/lib/adminAuth';
 import { FraudThrottleStore } from '@/lib/fraudThrottleStore';
+import { privateJson } from '@/lib/httpResponses';
 
 /**
  * Admin-auditable trail for wallet throttles placed by lib/fraudFlagsRunner.ts's
@@ -12,9 +13,9 @@ import { FraudThrottleStore } from '@/lib/fraudThrottleStore';
 export async function GET(req: NextRequest) {
   const sessionWallet = requireAdminWallet(req);
   if (!sessionWallet) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return privateJson({ error: 'Forbidden' }, { status: 403 });
   }
 
   const throttles = FraudThrottleStore.getInstance().listAll();
-  return NextResponse.json({ throttles });
+  return privateJson({ throttles });
 }

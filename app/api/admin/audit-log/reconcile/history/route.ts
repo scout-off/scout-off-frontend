@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { requireAdminWallet } from '@/lib/adminAuth';
 import { ReconciliationHistoryStore } from '@/lib/reconciliationHistoryStore';
+import { privateJson } from '@/lib/httpResponses';
 
 // better-sqlite3 (via lib/reconciliationHistoryStore.ts) is a native addon
 // and needs the Node.js runtime, not edge.
@@ -19,7 +20,7 @@ export const runtime = 'nodejs';
 export async function GET(req: NextRequest) {
   const admin = requireAdminWallet(req);
   if (!admin) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const limitParam = req.nextUrl.searchParams.get('limit');
@@ -28,5 +29,5 @@ export async function GET(req: NextRequest) {
   const runs = ReconciliationHistoryStore.getInstance().listRuns(
     limit && Number.isFinite(limit) && limit > 0 ? limit : undefined,
   );
-  return NextResponse.json({ runs });
+  return privateJson({ runs });
 }

@@ -1,5 +1,5 @@
 /** @jest-environment node */
-import { POST, DELETE } from '../../../../app/api/auth/sep10/route';
+import { POST, DELETE, GET } from '../../../../app/api/auth/sep10/route';
 import { GET as SESSION_GET } from '../../../../app/api/auth/session/route';
 import { NextRequest } from 'next/server';
 import { SessionStore } from '@/lib/sessionStore';
@@ -21,10 +21,19 @@ jest.mock('@stellar/stellar-sdk', () => ({
       publicKey: () => secret,
     })),
   },
+  // Treat any G-prefixed key as valid so the fixture keys below pass
+  // without needing real checksummed addresses.
+  StrKey: {
+    isValidEd25519PublicKey: (key: string) => key.startsWith('G'),
+  },
 }));
 
 import { WebAuth } from '@stellar/stellar-sdk';
-import { verifySessionToken } from '@/lib/session';
+import {
+  ACCESS_TOKEN_TTL_SEC,
+  DEFAULT_REFRESH_TTL_SEC,
+  verifySessionToken,
+} from '@/lib/session';
 const mockVerify = WebAuth.verifyChallengeTxSigners as jest.Mock;
 
 const ALLOWED_ORIGIN = 'https://app.scoutoff.com';
@@ -170,8 +179,68 @@ describe('POST /api/auth/sep10 — SEP-10 verification failures', () => {
 
     expect(res.status).toBe(401);
     const body = await res.json();
-    expect(body).toEqual({ error: 'Transaction not signed by client' });
+    // #1323: the raw stellar-sdk message must not reach the client.
+    expect(body).toEqual({
+      error: { code: 'INVALID_SIGNATURE', message: 'Verification failed' },
+    });
   });
+});
+
+describe('POST /api/auth/sep10 — input and config validation', () => {
+  test('returns 400 when publicKey is not a valid G-address', async () => {
+    const res = await POST(
+      makeRequest(ALLOWED_ORIGIN, {
+        signedXdr: SIGNED_XDR,
+        publicKey: 'MBADMUXEDACCOUNT',
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'Invalid publicKey' });
+    expect(mockVerify).not.toHaveBeenCalled();
+  });
+
+  test.each(['SEP10_SERVER_KEY', 'SEP10_HOME_DOMAIN'])(
+    'returns 500 without calling the SDK when %s is missing',
+    async (name) => {
+      delete process.env[name];
+      const res = await POST(makeRequest(ALLOWED_ORIGIN));
+      expect(res.status).toBe(500);
+      expect(await res.json()).toEqual({ error: 'Server not configured' });
+      expect(mockVerify).not.toHaveBeenCalled();
+    },
+  );
+});
+
+describe('GET /api/auth/sep10 — challenge', () => {
+  function makeGet(account?: string): NextRequest {
+    const qs = account === undefined ? '' : `?account=${account}`;
+    return new NextRequest(`http://localhost:3000/api/auth/sep10${qs}`);
+  }
+
+  test('returns 400 when account is missing', async () => {
+    const res = await GET(makeGet());
+    expect(res.status).toBe(400);
+  });
+
+  test('returns 400 for an invalid or muxed account', async () => {
+    for (const account of ['not-an-address', 'MBADMUXEDACCOUNT']) {
+      const res = await GET(makeGet(account));
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({
+        error: 'Invalid account parameter',
+      });
+    }
+  });
+
+  test.each(['SEP10_SERVER_KEY', 'SEP10_HOME_DOMAIN'])(
+    'returns 500 when %s is missing',
+    async (name) => {
+      delete process.env[name];
+      const res = await GET(makeGet(VALID_PUBLIC_KEY));
+      expect(res.status).toBe(500);
+      expect(await res.json()).toEqual({ error: 'Server not configured' });
+    },
+  );
 });
 
 describe('POST /api/auth/sep10 — malformed request body', () => {
@@ -404,5 +473,61 @@ describe('DELETE /api/auth/sep10 — logout', () => {
     );
     expect(afterRes.status).toBe(401);
     expect(await afterRes.json()).toEqual({ authenticated: false });
+  });
+});
+
+// See #660: the session must carry a bounded lifetime that the server
+// enforces, and be revocable server-side independently of the cookie.
+describe('POST /api/auth/sep10 — session expiry and revocation', () => {
+  function sessionRequest(accessToken: string): NextRequest {
+    return new NextRequest('http://localhost:3000/api/auth/session', {
+      headers: { cookie: `session=${accessToken}` },
+    });
+  }
+
+  async function login() {
+    mockVerify.mockReturnValueOnce(undefined);
+    const res = await POST(makeRequest(ALLOWED_ORIGIN));
+    expect(res.status).toBe(200);
+    return res;
+  }
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  test('sets a bounded maxAge on both session cookies', async () => {
+    const res = await login();
+    expect(res.cookies.get('session')?.maxAge).toBe(ACCESS_TOKEN_TTL_SEC);
+    expect(res.cookies.get('session_refresh')?.maxAge).toBe(
+      DEFAULT_REFRESH_TTL_SEC,
+    );
+  });
+
+  test('rejects the access cookie once its lifetime has elapsed, even if the client still sends it', async () => {
+    const start = Date.now();
+    const res = await login();
+    const accessToken = res.cookies.get('session')!.value;
+
+    expect((await SESSION_GET(sessionRequest(accessToken))).status).toBe(200);
+
+    jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(start + (ACCESS_TOKEN_TTL_SEC + 1) * 1000);
+    const expiredRes = await SESSION_GET(sessionRequest(accessToken));
+    expect(expiredRes.status).toBe(401);
+    expect(await expiredRes.json()).toEqual({ authenticated: false });
+  });
+
+  test('rejects a still-unexpired cookie once its session is revoked server-side', async () => {
+    const res = await login();
+    const accessToken = res.cookies.get('session')!.value;
+    const sid = verifySessionToken(accessToken, 'access')!.sid;
+
+    expect(SessionStore.getInstance().revoke(sid)).toBe(true);
+
+    const revokedRes = await SESSION_GET(sessionRequest(accessToken));
+    expect(revokedRes.status).toBe(401);
+    expect(await revokedRes.json()).toEqual({ authenticated: false });
   });
 });

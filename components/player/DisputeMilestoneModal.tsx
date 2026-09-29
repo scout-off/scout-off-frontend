@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { useTranslations } from 'next-intl';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
+import { TEXT_FIELD_LIMITS } from '@/lib/inputValidation';
 
-const MIN_REASON_LENGTH = 10;
+const { min: MIN_REASON_LENGTH, max: MAX_REASON_LENGTH } = TEXT_FIELD_LIMITS.disputeReason;
 
 interface DisputeMilestoneModalProps {
   isOpen: boolean;
@@ -24,9 +26,11 @@ export default function DisputeMilestoneModal({
   milestoneDescription,
   onSubmit,
 }: DisputeMilestoneModalProps) {
+  const t = useTranslations('player.modals.dispute');
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const tCounter = useTranslations('dispute_modal');
 
   function handleClose() {
     setReason('');
@@ -37,8 +41,12 @@ export default function DisputeMilestoneModal({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (reason.trim().length < MIN_REASON_LENGTH) {
+      setError(t('reasonTooShort', { min: MIN_REASON_LENGTH }));
+      return;
+    }
+    if (reason.trim().length > MAX_REASON_LENGTH) {
       setError(
-        `Please describe your dispute in at least ${MIN_REASON_LENGTH} characters.`,
+        `Please describe your dispute in at most ${MAX_REASON_LENGTH} characters.`,
       );
       return;
     }
@@ -48,20 +56,25 @@ export default function DisputeMilestoneModal({
       await onSubmit(reason.trim());
       handleClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit dispute');
+      setError(err instanceof Error ? err.message : t('submitFailed'));
     } finally {
       setSubmitting(false);
     }
   }
 
+  const currentLength = reason.length;
+  const isNearLimit = currentLength >= MAX_REASON_LENGTH * 0.9;
+
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Dispute milestone">
+    <Modal isOpen={isOpen} onClose={handleClose} title={t('title')}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <p className="text-sm text-gray-300">
-          Flag{' '}
-          <span className="font-medium text-white">{milestoneDescription}</span>{' '}
-          for admin review. Explain why you believe this decision was made in
-          error.
+          {t.rich('intro', {
+            milestone: milestoneDescription,
+            highlight: (chunks) => (
+              <span className="font-medium text-white">{chunks}</span>
+            ),
+          })}
         </p>
 
         <div>
@@ -69,7 +82,7 @@ export default function DisputeMilestoneModal({
             htmlFor="dispute-reason"
             className="block text-sm font-medium text-gray-300 mb-1"
           >
-            Reason
+            {t('reasonLabel')}
           </label>
           <textarea
             id="dispute-reason"
@@ -77,10 +90,17 @@ export default function DisputeMilestoneModal({
             onChange={(e) => setReason(e.target.value)}
             rows={4}
             required
+            maxLength={MAX_REASON_LENGTH}
             minLength={MIN_REASON_LENGTH}
             className="w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-brand-green focus:outline-none"
-            placeholder="e.g. This milestone was rejected without an explanation, but I submitted matching evidence…"
+            placeholder={t('reasonPlaceholder')}
           />
+          <p
+            className="text-xs text-gray-400 mt-1 text-right"
+            aria-live={isNearLimit ? 'polite' : undefined}
+          >
+            {tCounter('character_count', { count: currentLength, max: MAX_REASON_LENGTH })}
+          </p>
         </div>
 
         {error && (
@@ -96,10 +116,10 @@ export default function DisputeMilestoneModal({
             onClick={handleClose}
             disabled={submitting}
           >
-            Cancel
+            {t('cancel')}
           </Button>
           <Button type="submit" isLoading={submitting} disabled={submitting}>
-            Submit dispute
+            {t('submit')}
           </Button>
         </div>
       </form>

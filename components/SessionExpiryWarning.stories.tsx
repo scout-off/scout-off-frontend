@@ -3,6 +3,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { ToastProvider } from './ui/Toast';
 import { WalletProvider } from '@/context/WalletContext';
 import SessionExpiryWarning from './SessionExpiryWarning';
+import { SESSION_EXPIRY_KEY } from '@/lib/storageKeys';
 
 const messages = {
   session: {
@@ -28,7 +29,7 @@ const withSession: Decorator = (Story, context) => {
         networkType: 'testnet',
       }),
     );
-    localStorage.setItem('scoutoff:session_expiry', String(sessionExpiresAt));
+    localStorage.setItem(SESSION_EXPIRY_KEY, String(sessionExpiresAt));
   }
 
   return (

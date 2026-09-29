@@ -8,11 +8,12 @@ import {
   removeSavedSearch,
   renameSavedSearch,
   saveSearch,
+  SavedSearchConflictError,
 } from '@/lib/savedSearchClient';
-import { filterPlayers } from '@/lib/contract';
-import { scoutSearchKey } from './useScout';
+import { listPlayers } from '@/lib/indexerClient';
+import { useToast } from '@/components/ui/Toast';
 import { useUndoableRemoval } from './useUndoableRemoval';
-import type { Player, PlayerFilter, SavedSearch } from '@/types';
+import type { PlayerFilter, SavedSearch } from '@/types';
 
 /** SWR key for the current scout's saved-searches cache. */
 export function savedSearchesKey(scoutWallet: string | null): string | null {
@@ -35,6 +36,7 @@ export function useSavedSearches(scoutWallet: string | null) {
     },
   );
 
+  const { show } = useToast();
   const undoableRemove = useUndoableRemoval();
 
   const save = useCallback(
@@ -47,20 +49,53 @@ export function useSavedSearches(scoutWallet: string | null) {
 
   const rename = useCallback(
     async (id: number, newName: string) => {
-      await renameSavedSearch(id, newName);
-      mutate();
+      const currentEntry = (data ?? []).find((e) => e.id === id);
+      try {
+        await renameSavedSearch(id, newName, currentEntry?.version);
+        mutate();
+      } catch (err) {
+        if (
+          err instanceof SavedSearchConflictError ||
+          (err as { name?: string })?.name === 'SavedSearchConflictError'
+        ) {
+          show({
+            message:
+              'Saved search was updated on another device. Reload to view changes.',
+            variant: 'warning',
+            action: {
+              label: 'Reload',
+              onClick: () => {
+                mutate();
+              },
+            },
+          });
+          return;
+        }
+        throw err;
+      }
     },
-    [mutate],
+    [data, mutate, show],
   );
 
   const markViewed = useCallback(
     async (entry: SavedSearch) => {
-      const updated = await markSavedSearchViewed(entry.id);
-      mutate(
-        (current) =>
-          (current ?? []).map((e) => (e.id === updated.id ? updated : e)),
-        false,
-      );
+      try {
+        const updated = await markSavedSearchViewed(entry.id, entry.version);
+        mutate(
+          (current) =>
+            (current ?? []).map((e) => (e.id === updated.id ? updated : e)),
+          false,
+        );
+      } catch (err) {
+        if (
+          err instanceof SavedSearchConflictError ||
+          (err as { name?: string })?.name === 'SavedSearchConflictError'
+        ) {
+          mutate();
+          return;
+        }
+        throw err;
+      }
     },
     [mutate],
   );
@@ -79,14 +114,31 @@ export function useSavedSearches(scoutWallet: string | null) {
           mutate((current) => [entry, ...(current ?? [])], false),
         onCommit: async () => {
           try {
-            await removeSavedSearch(entry.id);
+            await removeSavedSearch(entry.id, entry.version);
+          } catch (err) {
+            if (
+              err instanceof SavedSearchConflictError ||
+              (err as { name?: string })?.name === 'SavedSearchConflictError'
+            ) {
+              show({
+                message:
+                  'Saved search was modified elsewhere. Reload to view current state.',
+                variant: 'warning',
+                action: {
+                  label: 'Reload',
+                  onClick: () => {
+                    mutate();
+                  },
+                },
+              });
+            }
           } finally {
             mutate();
           }
         },
       });
     },
-    [undoableRemove, mutate],
+    [undoableRemove, mutate, show],
   );
 
   return {
@@ -101,25 +153,43 @@ export function useSavedSearches(scoutWallet: string | null) {
 }
 
 /**
+ * SWR key for the saved-search new-count query. `lastViewedAt` is part of
+ * the key so re-marking a search viewed re-fetches its count (mirrors the
+ * old scoutSearchKey sharing, which is no longer possible: discovery is
+ * cursor-paginated now, so the badge needs its own tiny
+ * `limit=1` + `createdAfter` count query instead of the full result list).
+ */
+export function savedSearchNewCountKey(
+  filter: PlayerFilter,
+  lastViewedAt: number,
+): string {
+  return `scout:newcount:${filter.region ?? ''}:${filter.position ?? ''}:${filter.minLevel ?? 0}:${lastViewedAt}`;
+}
+
+/**
  * Counts players matching a saved search's filter that were created after
- * `lastViewedAt` — the "new since last viewed" badge. Keyed identically to
- * useScout's own search cache (scoutSearchKey), so a saved search sharing a
- * filter with the scout's active search reuses that result instead of
- * triggering a second contract call.
+ * `lastViewedAt` — the "new since last viewed" badge. Backed by the
+ * indexer's GET /players `createdAfter` + `total` (issue #1298): one
+ * indexed COUNT instead of materializing the whole result set the way the
+ * old on-chain filterPlayers call did.
  */
 export function useSavedSearchNewCount(
   filter: PlayerFilter,
   lastViewedAt: number,
 ): number {
-  const { data } = useSWR<Player[]>(
-    scoutSearchKey(filter),
+  const { data } = useSWR<number>(
+    savedSearchNewCountKey(filter, lastViewedAt),
     async () => {
-      const results = await filterPlayers(
-        filter.region ?? '',
-        filter.position ?? '',
-        filter.minLevel ?? 0,
-      );
-      return (results as Player[]).filter((p) => !p.archived);
+      const { total } = await listPlayers({
+        region: filter.region || undefined,
+        position: filter.position || undefined,
+        minLevel: filter.minLevel ?? 0,
+        // Same comparison the old client-side filter used:
+        // `p.createdAt > lastViewedAt` (createdAt is unix seconds).
+        createdAfter: lastViewedAt,
+        limit: 1,
+      });
+      return total;
     },
     {
       dedupingInterval: 60_000,
@@ -128,6 +198,5 @@ export function useSavedSearchNewCount(
     },
   );
 
-  if (!data) return 0;
-  return data.filter((p) => p.createdAt > lastViewedAt).length;
+  return data ?? 0;
 }
