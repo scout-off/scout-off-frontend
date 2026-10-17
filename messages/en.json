@@ -140,6 +140,13 @@
     "removeAccountConfirmTitle": "Remove this account?",
     "removeAccountConfirmMessage": "This address will be removed from your remembered accounts on this device."
   },
+  "session_mismatch_warning": {
+    "title": "Session mismatch detected",
+    "body": "The wallet address shown ({address}…) differs from the identity your session is authenticated to. This may happen if you switched accounts in your wallet extension without logging out first.",
+    "reauthenticate": "Re-authenticate",
+    "reauthenticating": "Re-authenticating…",
+    "dismiss_aria": "Dismiss warning"
+  },
   "errors": {
     "not_found": "Not found",
     "unauthorized": "Unauthorized",
@@ -477,6 +484,13 @@
   },
   "offline": {
     "bannerMessage": "You're offline. Some features may be unavailable until your connection returns."
+  },
+  "service_worker_update_banner": {
+    "title": "New version available.",
+    "message": "Reload to get the latest updates.",
+    "reload": "Reload",
+    "dismiss": "Dismiss",
+    "dismiss_aria": "Dismiss update banner"
   },
   "apiErrors": {
     "RATE_LIMITED": "Too many requests. Please slow down and try again shortly.",

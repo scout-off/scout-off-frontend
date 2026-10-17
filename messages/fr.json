@@ -157,6 +157,13 @@
     "removeAccountConfirmTitle": "Supprimer ce compte ?",
     "removeAccountConfirmMessage": "Cette adresse sera supprimée de vos comptes mémorisés sur cet appareil."
   },
+  "session_mismatch_warning": {
+    "title": "Incohérence de session détectée",
+    "body": "L'adresse de portefeuille affichée ({address}…) diffère de l'identité à laquelle votre session est authentifiée. Cela peut arriver si vous avez changé de compte dans l'extension de votre portefeuille sans vous déconnecter au préalable.",
+    "reauthenticate": "Se réauthentifier",
+    "reauthenticating": "Réauthentification…",
+    "dismiss_aria": "Fermer l'avertissement"
+  },
   "errors": {
     "not_found": "Non trouvé",
     "unauthorized": "Non autorisé",
@@ -477,6 +484,13 @@
   },
   "offline": {
     "bannerMessage": "Vous êtes hors ligne. Certaines fonctionnalités peuvent être indisponibles jusqu'au retour de la connexion."
+  },
+  "service_worker_update_banner": {
+    "title": "Nouvelle version disponible.",
+    "message": "Rechargez pour obtenir les dernières mises à jour.",
+    "reload": "Recharger",
+    "dismiss": "Ignorer",
+    "dismiss_aria": "Fermer la bannière de mise à jour"
   },
   "apiErrors": {
     "RATE_LIMITED": "Trop de requêtes. Veuillez ralentir et réessayer dans un instant.",

@@ -215,6 +215,13 @@
     "removeAccountConfirmTitle": "TODO: Machine-translated - Ondoa akaunti hii?",
     "removeAccountConfirmMessage": "TODO: Machine-translated - Anwani hii itaondolewa kutoka kwa akaunti zako zilizokumbukwa kwenye kifaa hiki."
   },
+  "session_mismatch_warning": {
+    "title": "Hitilafu ya kikao imegunduliwa",
+    "body": "Anwani ya pochi inayoonyeshwa ({address}…) ni tofauti na utambulisho ambao kikao chako kimethibitishwa. Hii inaweza kutokea ukibadilisha akaunti kwenye kiendelezi cha pochi yako bila kutoka kwanza.",
+    "reauthenticate": "Thibitisha tena",
+    "reauthenticating": "Inathibitisha tena…",
+    "dismiss_aria": "Funga onyo"
+  },
   "errors": {
     "not_found": "Haijafikiwa",
     "unauthorized": "TODO: Machine-translated - Sio Halali",
@@ -477,6 +484,13 @@
   },
   "offline": {
     "bannerMessage": "Uko nje ya mtandao. Baadhi ya vipengele huenda visipatikane hadi muunganisho urudi."
+  },
+  "service_worker_update_banner": {
+    "title": "Toleo jipya linapatikana.",
+    "message": "Pakia upya ili kupata masasisho mapya zaidi.",
+    "reload": "Pakia upya",
+    "dismiss": "Funga",
+    "dismiss_aria": "Funga bango la sasisho"
   },
   "apiErrors": {
     "RATE_LIMITED": "Maombi ni mengi mno. Tafadhali punguza kasi na ujaribu tena baada ya muda mfupi.",
