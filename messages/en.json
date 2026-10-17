@@ -56,6 +56,15 @@
     "title": "Scout Dashboard",
     "welcome": "Welcome to Scout Dashboard",
     "description": "Manage players and trials",
+    "watchlist_preview": {
+      "title": "My Watchlist",
+      "view_all": "View all",
+      "remove": "Remove",
+      "remove_aria": "Remove {playerId} from watchlist"
+    },
+    "recently_viewed_strip": {
+      "title": "Recently Viewed"
+    },
     "recent_activity": "Recent Activity",
     "players": "Players",
     "trials": "Trials",

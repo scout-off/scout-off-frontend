@@ -73,6 +73,15 @@
     "title": "Tableau de bord des scouts",
     "welcome": "Bienvenue sur le tableau de bord des scouts",
     "description": "Gérer les joueurs et les essais",
+    "watchlist_preview": {
+      "title": "Ma liste de suivi",
+      "view_all": "Tout voir",
+      "remove": "Retirer",
+      "remove_aria": "Retirer {playerId} de la liste de suivi"
+    },
+    "recently_viewed_strip": {
+      "title": "Consultés récemment"
+    },
     "recent_activity": "Activité récente",
     "players": "Joueurs",
     "trials": "Essais",
