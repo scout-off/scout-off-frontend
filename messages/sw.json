@@ -131,6 +131,15 @@
     "title": "Dashibodi ya Scout",
     "welcome": "Karibu kwenye Dashibodi ya Scout",
     "description": "Dhibiti wachezaji na majaribio",
+    "watchlist_preview": {
+      "title": "Orodha Yangu ya Ufuatiliaji",
+      "view_all": "Tazama zote",
+      "remove": "Ondoa",
+      "remove_aria": "Ondoa {playerId} kwenye orodha ya ufuatiliaji"
+    },
+    "recently_viewed_strip": {
+      "title": "Zilizotazamwa Hivi Karibuni"
+    },
     "recent_activity": "TODO: Machine-translated - Shughuli ya Hivi Karibuni",
     "players": "Wachezaji",
     "trials": "Majaribio",
