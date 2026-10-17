@@ -94,9 +94,10 @@ const nextConfig = {
             key: 'X-Frame-Options',
             value: 'DENY',
           },
+          // Legacy XSS auditor disabled on purpose — CSP (lib/csp.ts) is the XSS defence.
           {
             key: 'X-XSS-Protection',
-            value: '1; mode=block',
+            value: '0',
           },
           {
             key: 'Referrer-Policy',

@@ -7,6 +7,11 @@ import {
   DEFAULT_REFRESH_TTL_SEC,
   REMEMBER_ME_REFRESH_TTL_SEC,
 } from '@/lib/session';
+import {
+  clearSessionCookies,
+  REFRESH_COOKIE,
+  setSessionCookies,
+} from '@/lib/sessionCookies';
 import { SessionStore } from '@/lib/sessionStore';
 import { withRouteTelemetry } from '@/lib/telemetry';
 
@@ -32,7 +37,7 @@ export const runtime = 'nodejs';
  */
 async function postRefresh(req: NextRequest) {
   const log = createRequestLogger(req);
-  const refreshCookie = req.cookies.get('session_refresh');
+  const refreshCookie = req.cookies.get(REFRESH_COOKIE);
 
   if (!refreshCookie) {
     return withRequestId(
@@ -51,8 +56,7 @@ async function postRefresh(req: NextRequest) {
       { error: 'Refresh session invalid or expired' },
       { status: 401 },
     );
-    response.cookies.delete('session');
-    response.cookies.delete({ name: 'session_refresh', path: '/api/auth' });
+    clearSessionCookies(response);
     return withRequestId(response, log.requestId);
   }
 
@@ -60,7 +64,6 @@ async function postRefresh(req: NextRequest) {
   const refreshTtl = remember
     ? REMEMBER_ME_REFRESH_TTL_SEC
     : DEFAULT_REFRESH_TTL_SEC;
-  const isProd = process.env.NODE_ENV === 'production';
 
   // The rotated tokens keep the SAME sid as the token being rotated — the
   // underlying session (and its revocation state) is what persists across
@@ -84,19 +87,10 @@ async function postRefresh(req: NextRequest) {
     publicKey: payload.sub,
     maxAge: refreshTtl,
   });
-  response.cookies.set('session', accessToken, {
-    httpOnly: true,
-    secure: isProd,
-    sameSite: 'strict',
-    path: '/',
-    maxAge: ACCESS_TOKEN_TTL_SEC,
-  });
-  response.cookies.set('session_refresh', rotatedRefreshToken, {
-    httpOnly: true,
-    secure: isProd,
-    sameSite: 'strict',
-    path: '/api/auth',
-    maxAge: refreshTtl,
+  setSessionCookies(response, {
+    accessToken,
+    refreshToken: rotatedRefreshToken,
+    refreshMaxAge: refreshTtl,
   });
   return withRequestId(response, log.requestId);
 }

@@ -1,18 +1,15 @@
 import {
   SorobanRpc,
   TransactionBuilder,
-  Networks,
   BASE_FEE,
   StrKey,
 } from '@stellar/stellar-sdk';
+import { getNetworkPassphrase } from '@/lib/network';
 
 const DEFAULT_SOROBAN_RPC_URL = 'https://soroban-testnet.stellar.org';
 
 const RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC ?? DEFAULT_SOROBAN_RPC_URL;
-const NETWORK =
-  process.env.NEXT_PUBLIC_NETWORK === 'mainnet'
-    ? Networks.PUBLIC
-    : Networks.TESTNET;
+const NETWORK = getNetworkPassphrase();
 
 // Real testnet/mainnet RPC endpoints are always https, so this only ever
 // allows http for a local/mocked RPC URL (e.g. Docker Compose's

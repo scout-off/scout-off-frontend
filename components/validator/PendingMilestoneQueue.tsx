@@ -21,6 +21,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
 import type { MilestoneSubmission } from '@/types';
+import { getExplorerTxUrl } from '@/lib/network';
 
 type SortOrder = 'oldest' | 'newest';
 type PlayerFilter = 'all' | 'previously-approved';
@@ -588,7 +589,7 @@ export default function PendingMilestoneQueue({
                           Submitted — confirming on-chain&hellip;
                           {hash && (
                             <a
-                              href={`https://stellar.expert/explorer/${process.env.NEXT_PUBLIC_NETWORK === 'mainnet' ? 'mainnet' : 'testnet'}/tx/${hash}`}
+                              href={getExplorerTxUrl(hash)}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-brand-green underline"

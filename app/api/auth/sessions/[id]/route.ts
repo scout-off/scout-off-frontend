@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { createRequestLogger, withRequestId } from '@/lib/logger';
 import { getSessionId, getSessionWallet } from '@/lib/session';
+import { clearSessionCookies } from '@/lib/sessionCookies';
 import { SessionStore } from '@/lib/sessionStore';
 import { privateJson } from '@/lib/httpResponses';
 
@@ -68,8 +69,7 @@ export async function DELETE(
 
   const response = privateJson({ success: true });
   if (params.id === currentSid) {
-    response.cookies.delete('session');
-    response.cookies.delete({ name: 'session_refresh', path: '/api/auth' });
+    clearSessionCookies(response);
   }
   return withRequestId(response, log.requestId);
 }

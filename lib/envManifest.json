@@ -92,19 +92,7 @@
       "name": "NEXT_PUBLIC_NETWORK",
       "requiredIn": ["production"],
       "secret": false,
-      "usedBy": [
-        "app/[locale]/player/[id]/layout.tsx",
-        "app/api/auth/sep10/route.ts",
-        "components/academy/BulkPlayerImport.tsx",
-        "components/ui/TransactionStatus.tsx",
-        "components/validator/PendingMilestoneQueue.tsx",
-        "components/validator/RevokeForm.tsx",
-        "context/WalletContext.tsx",
-        "jest.setup.ts",
-        "lib/offChainDataCollection.ts",
-        "lib/sep10Validation.ts",
-        "lib/stellar.ts"
-      ],
+      "usedBy": ["jest.setup.ts", "lib/network.ts"],
       "description": "Stellar network to target. Use 'testnet' for development, 'mainnet' for production."
     },
     {

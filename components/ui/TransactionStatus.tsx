@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import Spinner from '@/components/ui/Spinner';
 import { parseContractError } from '@/lib/contractErrorMessage';
+import { getExplorerTxUrl } from '@/lib/network';
 
 /**
  * Transaction lifecycle for validator approvals and other flows.
@@ -32,9 +33,7 @@ export interface TransactionStatusProps {
 }
 
 function explorerUrl(hash: string): string {
-  const network =
-    process.env.NEXT_PUBLIC_NETWORK === 'mainnet' ? 'mainnet' : 'testnet';
-  return `https://stellar.expert/explorer/${network}/tx/${hash}`;
+  return getExplorerTxUrl(hash);
 }
 
 function ExplorerLink({ txHash }: { txHash: string }) {

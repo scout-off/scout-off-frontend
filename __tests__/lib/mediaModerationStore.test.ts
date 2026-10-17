@@ -100,4 +100,19 @@ describe('MediaModerationStore', () => {
       }),
     ).toBe(true);
   });
+
+  it('blocks an upper-case base32 variant of a denylisted CID (#1589)', () => {
+    store.decide(OTHER, 'deny', 'GADMIN', 'explicit');
+    const upper = OTHER.toUpperCase();
+
+    expect(store.isDenylisted(upper)).toBe(true);
+    expect(store.filterDenylisted([upper, CID])).toEqual([upper]);
+  });
+
+  it('stores an upper-case denial under the canonical lower-case CID', () => {
+    store.decide(OTHER.toUpperCase(), 'deny', 'GADMIN', 'explicit');
+
+    expect(store.isDenylisted(OTHER)).toBe(true);
+    expect(store.reinstate(OTHER)).toBe(true);
+  });
 });

@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { createHmac, timingSafeEqual, randomUUID } from 'crypto';
 import { SessionStore } from './sessionStore';
+import { SESSION_COOKIE } from './sessionCookies';
 
 // See #778: the `session` cookie used to hold the caller's own plaintext
 // public key with no signature and no server-side expiry — any HTTP client
@@ -202,7 +203,7 @@ export function verifySessionToken(
  * came from a completed SEP-10 flow (see #778).
  */
 export function getSessionWallet(req: NextRequest): string | null {
-  const token = req.cookies.get('session')?.value;
+  const token = req.cookies.get(SESSION_COOKIE)?.value;
   if (!token) return null;
   const payload = verifySessionToken(token, 'access');
   if (!payload) return null;
@@ -219,7 +220,7 @@ export function getSessionWallet(req: NextRequest): string | null {
  * mark the caller's own row distinctly so it isn't revoked by accident).
  */
 export function getSessionId(req: NextRequest): string | null {
-  const token = req.cookies.get('session')?.value;
+  const token = req.cookies.get(SESSION_COOKIE)?.value;
   if (!token) return null;
   const payload = verifySessionToken(token, 'access');
   if (!payload) return null;

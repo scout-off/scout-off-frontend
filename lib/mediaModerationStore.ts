@@ -13,6 +13,7 @@
  */
 import Database from 'better-sqlite3';
 import { openSqliteDb } from './sqliteDb';
+import { normalizeCid } from './cid';
 import { mediaModerationMigrations } from './migrations/mediaModerationMigrations';
 import type {
   MediaDenylistEntry,
@@ -68,7 +69,7 @@ export class MediaModerationStore {
          VALUES (@cid, @player_id, @reason, @details, @reporter_key, @created_at)`,
       )
       .run({
-        cid: report.cid,
+        cid: normalizeCid(report.cid),
         player_id: report.playerId,
         reason: report.reason,
         details: report.details || null,
@@ -139,6 +140,7 @@ export class MediaModerationStore {
     decidedBy: string,
     reason: string,
   ): number {
+    cid = normalizeCid(cid);
     const now = Date.now();
     const run = this.db.transaction((): number => {
       if (decision === 'deny') {
@@ -163,6 +165,7 @@ export class MediaModerationStore {
 
   /** Removes a CID from the denylist (reinstating it). Returns whether it was listed. */
   reinstate(cid: string): boolean {
+    cid = normalizeCid(cid);
     return (
       this.db.prepare('DELETE FROM media_denylist WHERE cid = ?').run(cid)
         .changes > 0
@@ -170,20 +173,25 @@ export class MediaModerationStore {
   }
 
   isDenylisted(cid: string): boolean {
+    cid = normalizeCid(cid);
     return (
       this.db.prepare('SELECT 1 FROM media_denylist WHERE cid = ?').get(cid) !==
       undefined
     );
   }
 
-  /** Returns the subset of `cids` that are denylisted. */
+  /**
+   * Returns the subset of `cids` that are denylisted, compared in canonical
+   * case (see normalizeCid) but returned as the caller spelled them.
+   */
   filterDenylisted(cids: string[]): string[] {
     if (cids.length === 0) return [];
     const placeholders = cids.map(() => '?').join(', ');
     const rows = this.db
       .prepare(`SELECT cid FROM media_denylist WHERE cid IN (${placeholders})`)
-      .all(...cids) as { cid: string }[];
-    return rows.map((r) => r.cid);
+      .all(...cids.map(normalizeCid)) as { cid: string }[];
+    const denied = new Set(rows.map((r) => r.cid));
+    return cids.filter((cid) => denied.has(normalizeCid(cid)));
   }
 
   getDenylist(): MediaDenylistEntry[] {

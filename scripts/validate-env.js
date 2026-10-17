@@ -132,6 +132,14 @@ function main() {
     }
   }
 
+  // Anything but mainnet/testnet silently targets testnet (lib/network.ts).
+  const network = process.env.NEXT_PUBLIC_NETWORK;
+  if (network && network !== 'mainnet' && network !== 'testnet') {
+    console.error(
+      `\n⚠ NEXT_PUBLIC_NETWORK="${network}" is not 'mainnet' or 'testnet'; testnet will be used.`,
+    );
+  }
+
   // Print empty declared variables in dev so contributors can spot them.
   if (
     process.env.NODE_ENV !== 'production' &&

@@ -26,6 +26,7 @@ import { FOOTBALL_POSITIONS } from '@/lib/positions';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
 import type { PlayerVitals } from '@/types';
+import { getExplorerTxUrl } from '@/lib/network';
 
 // Bulk-imported players are registered without a highlight reel — per-player
 // video upload is out of scope for this flow (see PR description). Players
@@ -62,9 +63,7 @@ function positionLabel(value: string): string {
 }
 
 function explorerUrl(hash: string): string {
-  const network =
-    process.env.NEXT_PUBLIC_NETWORK === 'mainnet' ? 'mainnet' : 'testnet';
-  return `https://stellar.expert/explorer/${network}/tx/${hash}`;
+  return getExplorerTxUrl(hash);
 }
 
 // ── Per-row status badge ─────────────────────────────────────────────────────

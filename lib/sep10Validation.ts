@@ -16,11 +16,11 @@
 
 import {
   FeeBumpTransaction,
-  Networks,
   Transaction,
   TransactionBuilder,
   WebAuth,
 } from '@stellar/stellar-sdk';
+import { getNetworkPassphrase } from '@/lib/network';
 
 /** Shown to the user when validation fails — never leak internal reasons. */
 export const SEP10_VALIDATION_USER_ERROR =
@@ -75,10 +75,7 @@ export function getSep10ClientConfig(): Sep10ClientConfig {
   return {
     serverAccount: process.env.NEXT_PUBLIC_SEP10_SERVER_ACCOUNT ?? '',
     homeDomain: process.env.NEXT_PUBLIC_SEP10_HOME_DOMAIN ?? '',
-    networkPassphrase:
-      process.env.NEXT_PUBLIC_NETWORK === 'mainnet'
-        ? Networks.PUBLIC
-        : Networks.TESTNET,
+    networkPassphrase: getNetworkPassphrase(),
   };
 }
 

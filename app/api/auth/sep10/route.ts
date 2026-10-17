@@ -1,4 +1,4 @@
-import { WebAuth, Networks, Keypair, StrKey } from '@stellar/stellar-sdk';
+import { WebAuth, Keypair, StrKey } from '@stellar/stellar-sdk';
 import { NextRequest, NextResponse } from 'next/server';
 import { apiError, ApiErrorCode } from '@/lib/apiErrors';
 import { randomUUID } from 'crypto';
@@ -10,8 +10,15 @@ import {
   DEFAULT_REFRESH_TTL_SEC,
   REMEMBER_ME_REFRESH_TTL_SEC,
 } from '@/lib/session';
+import {
+  clearSessionCookies,
+  REFRESH_COOKIE,
+  SESSION_COOKIE,
+  setSessionCookies,
+} from '@/lib/sessionCookies';
 import { SessionStore } from '@/lib/sessionStore';
 import { withRouteTelemetry } from '@/lib/telemetry';
+import { getNetworkPassphrase } from '@/lib/network';
 
 // better-sqlite3 (via lib/sessionStore.ts) is a native addon and needs the
 // Node.js runtime, not edge.
@@ -109,10 +116,7 @@ async function postSep10(req: NextRequest) {
   const config = getSep10Config();
   if (!config) return serverNotConfigured();
   const { serverKey, homeDomain } = config;
-  const network =
-    process.env.NEXT_PUBLIC_NETWORK === 'mainnet'
-      ? Networks.PUBLIC
-      : Networks.TESTNET;
+  const network = getNetworkPassphrase();
 
   try {
     // verifyChallengeTxSigners' second argument is the server's *public* key
@@ -139,7 +143,6 @@ async function postSep10(req: NextRequest) {
     const maxAge = rememberMe
       ? REMEMBER_ME_REFRESH_TTL_SEC
       : DEFAULT_REFRESH_TTL_SEC;
-    const isProd = process.env.NODE_ENV === 'production';
 
     // A single session id ties this login's access and refresh tokens
     // together (and is carried forward across every future refresh
@@ -167,21 +170,10 @@ async function postSep10(req: NextRequest) {
     );
 
     const response = NextResponse.json({ success: true, maxAge });
-    response.cookies.set('session', accessToken, {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: 'strict',
-      path: '/',
-      maxAge: ACCESS_TOKEN_TTL_SEC,
-    });
-    // Scoped to /api/auth so it's only ever sent to the refresh/logout
-    // endpoints, not on every request the way `session` is.
-    response.cookies.set('session_refresh', refreshToken, {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: 'strict',
-      path: '/api/auth',
-      maxAge,
+    setSessionCookies(response, {
+      accessToken,
+      refreshToken,
+      refreshMaxAge: maxAge,
     });
     return withRequestId(response, log.requestId);
   } catch (error) {
@@ -215,10 +207,7 @@ async function getSep10(req: NextRequest) {
   const config = getSep10Config();
   if (!config) return serverNotConfigured();
   const { serverKey, homeDomain } = config;
-  const network =
-    process.env.NEXT_PUBLIC_NETWORK === 'mainnet'
-      ? Networks.PUBLIC
-      : Networks.TESTNET;
+  const network = getNetworkPassphrase();
 
   try {
     const { Keypair } = await import('@stellar/stellar-sdk');
@@ -264,8 +253,8 @@ async function getSep10(req: NextRequest) {
  * still cleared either way.
  */
 async function deleteSep10(req: NextRequest) {
-  const accessToken = req.cookies.get('session')?.value;
-  const refreshToken = req.cookies.get('session_refresh')?.value;
+  const accessToken = req.cookies.get(SESSION_COOKIE)?.value;
+  const refreshToken = req.cookies.get(REFRESH_COOKIE)?.value;
   const sid =
     (accessToken && verifySessionToken(accessToken, 'access')?.sid) ||
     (refreshToken && verifySessionToken(refreshToken, 'refresh')?.sid) ||
@@ -280,8 +269,7 @@ async function deleteSep10(req: NextRequest) {
   }
 
   const response = NextResponse.json({ success: true });
-  response.cookies.delete('session');
-  response.cookies.delete({ name: 'session_refresh', path: '/api/auth' });
+  clearSessionCookies(response);
   return response;
 }
 
