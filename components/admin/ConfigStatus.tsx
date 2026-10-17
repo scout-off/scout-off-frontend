@@ -4,6 +4,7 @@ type ConfigEntry = {
   name: string;
   required: boolean;
   present: boolean;
+  turnstile?: { configured: boolean; mismatched: boolean };
 };
 
 export default function ConfigStatus() {
@@ -64,7 +65,21 @@ export default function ConfigStatus() {
                   {c.required ? 'Yes' : 'No'}
                 </td>
                 <td className="py-2">
-                  {c.present ? (
+                  {c.turnstile ? (
+                    c.turnstile.mismatched ? (
+                      <span className="text-red-400 font-medium">
+                        Mismatched (site key / secret)
+                      </span>
+                    ) : c.turnstile.configured ? (
+                      <span className="text-green-400 font-medium">
+                        Configured
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 font-medium">
+                        Unconfigured
+                      </span>
+                    )
+                  ) : c.present ? (
                     <span className="text-green-400 font-medium">Present</span>
                   ) : (
                     <span className="text-red-400 font-medium">Missing</span>
