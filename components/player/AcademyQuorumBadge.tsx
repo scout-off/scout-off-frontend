@@ -27,6 +27,7 @@ import {
   fetchMilestoneEndorsements,
   endorseMilestone,
 } from '@/lib/api';
+import { getErrorMessage } from '@/lib/getErrorMessage';
 import type { Academy, Milestone } from '@/types';
 
 export interface AcademyQuorumBadgeProps {
@@ -87,9 +88,9 @@ export default function AcademyQuorumBadge({
       await endorseMilestone(playerId, milestone.id);
       await load();
       show({ message: 'Milestone endorsed', variant: 'success' });
-    } catch (e: any) {
+    } catch (e: unknown) {
       show({
-        message: e?.message ?? 'Failed to endorse milestone',
+        message: getErrorMessage(e, 'Failed to endorse milestone'),
         variant: 'error',
       });
     } finally {

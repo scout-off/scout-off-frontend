@@ -452,8 +452,8 @@ export function startEventPolling(
     async stop(): Promise<void> {
       stopped = true;
       if (timer) clearTimeout(timer);
-      void elector?.release();
       await inFlight;
+      await elector?.release();
     },
     isRunning(): boolean {
       return !stopped;

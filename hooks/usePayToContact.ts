@@ -231,8 +231,13 @@ export function usePayToContact(
             details,
           );
           return details;
-        } catch (e: any) {
-          if (!e?.handled) {
+        } catch (e: unknown) {
+          const handled =
+            typeof e === 'object' &&
+            e !== null &&
+            'handled' in e &&
+            e.handled === true;
+          if (!handled) {
             fail(
               e instanceof QuoteExpiredError
                 ? e.message

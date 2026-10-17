@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useWallet } from '@/hooks/useWallet';
 import { fetchEvents, type IndexedEvent } from '@/lib/indexerClient';
+import { getErrorMessage } from '@/lib/getErrorMessage';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -124,9 +125,9 @@ export function useSpendingSummary(): {
           setEvents(scoutEvents);
           setLoading(false);
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (!cancelled) {
-          setError(e?.message ?? 'Failed to load spending data');
+          setError(getErrorMessage(e, 'Failed to load spending data'));
           setLoading(false);
         }
       }

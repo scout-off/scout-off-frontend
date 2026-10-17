@@ -21,7 +21,7 @@ export interface ContactAccessCheck {
 /**
  * Returns true when the indexer holds a `player_contacted` event with
  * `scout === scoutWallet` for `playerId`. Paginates (the player may have
- * many events); caps pages so a pathological history can't hang the route.
+ * many events); follows the indexer's cursor until it reports exhaustion.
  */
 export async function hasPaidForContact(
   scoutWallet: string,
@@ -31,8 +31,9 @@ export async function hasPaidForContact(
   const fetchEvents = opts.fetchEvents ?? fetchPlayerEvents;
   const limit = opts.limit ?? 200;
   let cursor: number | undefined;
+  const seenCursors = new Set<number>();
 
-  for (let page = 0; page < 10; page++) {
+  while (true) {
     const { events, nextCursor } = await fetchEvents(playerId, {
       type: 'player_contacted',
       limit,
@@ -47,7 +48,10 @@ export async function hasPaidForContact(
       return true;
     }
     if (nextCursor === null) return false;
+    if (seenCursors.has(nextCursor)) {
+      throw new Error('Indexer repeated a player events cursor');
+    }
+    seenCursors.add(nextCursor);
     cursor = nextCursor;
   }
-  return false;
 }

@@ -192,13 +192,44 @@ describe('shutdown', () => {
     const closeSpy = jest.spyOn(EventStore.getInstance(), 'close');
     const serverClose = jest
       .spyOn(server, 'close')
-      .mockImplementation(() => server);
+      .mockImplementation((callback?: (err?: Error) => void) => {
+        callback?.();
+        return server;
+      });
 
     await shutdown('SIGTERM');
 
     expect(serverClose).toHaveBeenCalled();
     expect(handle.stop).toHaveBeenCalled();
     expect(closeSpy).toHaveBeenCalled();
+    serverClose.mockRestore();
+  });
+
+  test('ends open SSE responses during shutdown', async () => {
+    const responsePromise = new Promise<http.IncomingMessage>(
+      (resolve, reject) => {
+        const req = http.get(
+          `http://127.0.0.1:${(server.address() as { port: number }).port}/stream`,
+          resolve,
+        );
+        req.once('error', reject);
+      },
+    );
+    const response = await responsePromise;
+    expect(response.headers['content-type']).toContain('text/event-stream');
+
+    const serverClose = jest
+      .spyOn(server, 'close')
+      .mockImplementation((callback?: (err?: Error) => void) => {
+        callback?.();
+        return server;
+      });
+    setPollerState(fakePoller());
+
+    const ended = new Promise<void>((resolve) => response.once('end', resolve));
+    response.resume();
+    await shutdown('SIGTERM');
+    await ended;
     serverClose.mockRestore();
   });
 });
