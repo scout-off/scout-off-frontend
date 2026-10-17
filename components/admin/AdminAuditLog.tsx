@@ -9,6 +9,7 @@ import {
 } from '@/lib/adminAudit';
 import TruncatedAddress from '@/components/ui/TruncatedAddress';
 import EmptyState from '@/components/ui/EmptyState';
+import { useLocale } from 'next-intl';
 
 const STROOPS_PER_XLM = 10_000_000;
 
@@ -39,6 +40,7 @@ function downloadCsv(content: string, filename: string) {
  * direct-CLI contract call (outside this admin panel) still gets caught.
  */
 export default function AdminAuditLog() {
+  const locale = useLocale();
   const {
     entries,
     nextCursor = null,
@@ -76,8 +78,8 @@ export default function AdminAuditLog() {
 
   const lastChecked = useMemo(() => {
     if (!reconciliation) return null;
-    return new Date(reconciliation.checkedAt * 1000).toLocaleString();
-  }, [reconciliation]);
+    return new Date(reconciliation.checkedAt * 1000).toLocaleString(locale);
+  }, [reconciliation, locale]);
 
   return (
     <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
@@ -235,7 +237,9 @@ export default function AdminAuditLog() {
                       return (
                         <tr key={run.id}>
                           <td className="py-2 pr-4 text-gray-400 whitespace-nowrap">
-                            {new Date(run.checkedAt * 1000).toLocaleString()}
+                            {new Date(run.checkedAt * 1000).toLocaleString(
+                              locale,
+                            )}
                           </td>
                           <td className="py-2 pr-4">
                             <span
@@ -299,7 +303,7 @@ export default function AdminAuditLog() {
               {entries.map((entry) => (
                 <tr key={entry.id}>
                   <td className="py-2 pr-4 text-gray-400 whitespace-nowrap">
-                    {new Date(entry.timestamp * 1000).toLocaleString()}
+                    {new Date(entry.timestamp * 1000).toLocaleString(locale)}
                   </td>
                   <td className="py-2 pr-4 text-gray-200">
                     {ADMIN_AUDIT_ACTION_LABELS[entry.actionType]}

@@ -49,7 +49,7 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm run format:check
@@ -147,7 +147,7 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci --no-audit --no-fund
       - name: Check new/changed files have a matching test
@@ -162,7 +162,7 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
 
       - run: npm ci --no-audit --no-fund
@@ -209,7 +209,7 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
 
       # Installs both the app's and packages/indexer's dependencies via the
@@ -255,7 +255,7 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
 
       - run: npm ci --no-audit --no-fund
@@ -282,7 +282,7 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
 
       - run: npm ci --no-audit --no-fund
@@ -326,7 +326,7 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm run build-storybook
@@ -343,7 +343,7 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
 
       - run: npm ci --no-audit --no-fund
@@ -374,7 +374,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
 
       - run: npm ci --no-audit --no-fund

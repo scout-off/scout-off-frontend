@@ -7,6 +7,7 @@ import Badge from '@/components/ui/Badge';
 import Tooltip from '@/components/ui/Tooltip';
 import ValidatorChip from '@/components/player/ValidatorChip';
 import AcademyQuorumBadge from '@/components/player/AcademyQuorumBadge';
+import { useLocale } from 'next-intl';
 
 const DISPUTE_STATUS_LABEL: Record<MilestoneDispute['status'], string> = {
   pending: 'Dispute pending review',
@@ -36,8 +37,8 @@ const BADGE_VARIANT = ['level0', 'level1', 'level2', 'level3'] as const;
 
 const LEVELS: ProgressLevel[] = [0, 1, 2, 3];
 
-function formatDate(ts: number): string {
-  return new Date(ts * 1000).toLocaleDateString(undefined, {
+function formatDate(ts: number, locale: string): string {
+  return new Date(ts * 1000).toLocaleDateString(locale, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -49,8 +50,8 @@ function formatDate(ts: number): string {
  * Shows the full validator wallet address and the human-readable block
  * timestamp so the viewer doesn't need to expand the detail panel.
  */
-function buildBadgeTooltip(milestone: Milestone): string {
-  return `Validator: ${milestone.validator} · Approved: ${formatDate(milestone.timestamp)}`;
+function buildBadgeTooltip(milestone: Milestone, locale: string): string {
+  return `Validator: ${milestone.validator} · Approved: ${formatDate(milestone.timestamp, locale)}`;
 }
 
 /** Return the most-recent milestone for a given level (levels 1-3 map to index). */
@@ -88,6 +89,7 @@ export default function MilestoneTimeline({
   onDisputeMilestone,
   playerId,
 }: MilestoneTimelineProps) {
+  const locale = useLocale();
   const [expanded, setExpanded] = useState<ProgressLevel | null>(null);
 
   function toggle(level: ProgressLevel) {
@@ -124,7 +126,7 @@ export default function MilestoneTimeline({
             key={itemKey}
             aria-label={
               isCompleted && milestone
-                ? `${PROGRESS_LABELS[level]}, achieved ${formatDate(milestone.timestamp)}`
+                ? `${PROGRESS_LABELS[level]}, achieved ${formatDate(milestone.timestamp, locale)}`
                 : isCompleted
                   ? PROGRESS_LABELS[level]
                   : `${PROGRESS_LABELS[level]}, not yet reached`
@@ -154,7 +156,7 @@ export default function MilestoneTimeline({
               onClick={() => toggle(level)}
               aria-expanded={isExpanded}
               aria-controls={`timeline-detail-${level}`}
-              aria-label={`${PROGRESS_LABELS[level]}${milestone ? `, achieved ${formatDate(milestone.timestamp)}` : ''}. ${isExpanded ? 'Collapse' : 'Expand'} details`}
+              aria-label={`${PROGRESS_LABELS[level]}${milestone ? `, achieved ${formatDate(milestone.timestamp, locale)}` : ''}. ${isExpanded ? 'Collapse' : 'Expand'} details`}
               className={[
                 'relative z-10 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center motion-safe:transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-green',
                 isCompleted
@@ -200,7 +202,7 @@ export default function MilestoneTimeline({
               className="flex flex-col gap-0.5 sm:items-center sm:text-center mt-0.5 sm:mt-2"
             >
               {isCompleted && milestone ? (
-                <Tooltip content={buildBadgeTooltip(milestone)}>
+                <Tooltip content={buildBadgeTooltip(milestone, locale)}>
                   <Badge
                     variant={BADGE_VARIANT[level]}
                     label={PROGRESS_LABELS[level]}
@@ -219,7 +221,7 @@ export default function MilestoneTimeline({
                   dateTime={new Date(milestone.timestamp * 1000).toISOString()}
                   className="text-xs text-gray-400"
                 >
-                  {formatDate(milestone.timestamp)}
+                  {formatDate(milestone.timestamp, locale)}
                 </time>
               )}
               {isFuture && (
@@ -272,7 +274,7 @@ export default function MilestoneTimeline({
                           milestone.timestamp * 1000,
                         ).toISOString()}
                       >
-                        {formatDate(milestone.timestamp)}
+                        {formatDate(milestone.timestamp, locale)}
                       </time>
                     </p>
                     {disputes && (

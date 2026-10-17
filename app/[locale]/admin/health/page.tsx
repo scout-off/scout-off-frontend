@@ -10,6 +10,7 @@ import type {
   SubsystemHealth,
 } from '@/app/api/admin/health/route';
 import type { DependencyCheck } from '@/lib/healthChecks';
+import { useLocale } from 'next-intl';
 
 const ADMIN_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_ADDRESS;
 
@@ -116,6 +117,7 @@ function HealthSection({
 }
 
 function HealthDashboardContent() {
+  const locale = useLocale();
   const { publicKey } = useWallet();
   const router = useRouter();
   const { show } = useToast();
@@ -216,7 +218,8 @@ function HealthDashboardContent() {
       </div>
 
       <p className="text-sm text-gray-400" data-testid="health-last-checked">
-        Last checked: {lastChecked ? lastChecked.toLocaleTimeString() : 'never'}
+        Last checked:{' '}
+        {lastChecked ? lastChecked.toLocaleTimeString(locale) : 'never'}
       </p>
 
       <HealthSection title="Contract" status={contractStatus}>

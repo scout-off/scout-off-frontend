@@ -12,6 +12,7 @@ import {
   type MediaModerationQueueItem,
   type MediaReportReason,
 } from '@/lib/mediaModeration';
+import { useLocale } from 'next-intl';
 
 const ADMIN_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_ADDRESS;
 
@@ -44,6 +45,7 @@ function BlurredPreview({ cid }: { cid: string }) {
 }
 
 function MediaModerationContent() {
+  const locale = useLocale();
   const { publicKey } = useWallet();
   const router = useRouter();
   const { show } = useToast();
@@ -236,7 +238,8 @@ function MediaModerationContent() {
                 {entry.cid}
               </p>
               <p className="text-gray-300">
-                {entry.reason} — {new Date(entry.decidedAt).toLocaleString()}
+                {entry.reason} —{' '}
+                {new Date(entry.decidedAt).toLocaleString(locale)}
               </p>
             </div>
             <button

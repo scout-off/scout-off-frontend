@@ -17,6 +17,7 @@ import { formatXlm } from '@/lib/formatXlm';
 import EmptyState from '@/components/ui/EmptyState';
 import ChartDataTable from '@/components/admin/ChartDataTable';
 import { summarizeFeeRevenue } from '@/lib/chartSummary';
+import { useLocale } from 'next-intl';
 
 const BRAND_GREEN = '#00C853';
 const BRAND_BLUE = '#3B82F6';
@@ -45,8 +46,8 @@ const TOOLTIP_STYLE = {
 // viewer's locale conventions (month/day order, abbreviation) while pinning
 // `timeZone: 'UTC'` so the calendar day shown never shifts away from the
 // UTC bucket it represents.
-function formatBucketLabel(dateKey: string): string {
-  return new Date(`${dateKey}T00:00:00Z`).toLocaleDateString(undefined, {
+function formatBucketLabel(dateKey: string, locale: string): string {
+  return new Date(`${dateKey}T00:00:00Z`).toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric',
     timeZone: 'UTC',
@@ -54,6 +55,7 @@ function formatBucketLabel(dateKey: string): string {
 }
 
 export default function FeeRevenueChart() {
+  const locale = useLocale();
   const { data, loading, error } = useFeeRevenue();
   const { hasDrift, warningMessage } = useFeeDriftDetection();
   const [period, setPeriod] = useState<PeriodKey>('30');
@@ -208,7 +210,9 @@ export default function FeeRevenueChart() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#1F2937" />
                 <XAxis
                   dataKey="date"
-                  tickFormatter={formatBucketLabel}
+                  tickFormatter={(label) =>
+                    formatBucketLabel(String(label), locale)
+                  }
                   tick={{ fill: '#9CA3AF', fontSize: 11 }}
                   minTickGap={24}
                 />
@@ -216,7 +220,9 @@ export default function FeeRevenueChart() {
                 <Tooltip
                   contentStyle={TOOLTIP_STYLE}
                   labelStyle={{ color: '#E5E7EB' }}
-                  labelFormatter={(label) => formatBucketLabel(String(label))}
+                  labelFormatter={(label) =>
+                    formatBucketLabel(String(label), locale)
+                  }
                 />
                 <Legend wrapperStyle={{ fontSize: 12, color: '#9CA3AF' }} />
                 <Bar
@@ -241,7 +247,10 @@ export default function FeeRevenueChart() {
               rows={filtered}
               rowKey={(d) => d.date}
               columns={[
-                { header: 'Date', render: (d) => formatBucketLabel(d.date) },
+                {
+                  header: 'Date',
+                  render: (d) => formatBucketLabel(d.date, locale),
+                },
                 {
                   header: 'Contact Fees',
                   render: (d) => formatXlm(d.contactFeeXlm),

@@ -37,6 +37,7 @@ jest.mock('@/components/ui/Toast', () => ({
 }));
 
 jest.mock('next-intl', () => ({
+  useLocale: () => 'en',
   useTranslations: () => (key: string) => {
     const t: Record<string, string> = {
       accountSwitched: 'Account switched successfully.',

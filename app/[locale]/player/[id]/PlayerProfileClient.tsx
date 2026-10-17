@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { ShieldCheck, Star } from 'lucide-react';
 import { useWallet } from '@/hooks/useWallet';
 import { usePlayer } from '@/hooks/usePlayer';
@@ -40,6 +40,7 @@ export default function PlayerProfileClient({
 }: {
   initialPlayer?: Player | null;
 }) {
+  const locale = useLocale();
   const { id } = useParams<{ id: string }>();
   const { publicKey } = useWallet();
   const t = useTranslations('player_profile');
@@ -342,7 +343,7 @@ export default function PlayerProfileClient({
                     address={m.validator}
                     className="text-gray-400"
                   />{' '}
-                  · {new Date(m.timestamp * 1000).toLocaleDateString()}
+                  · {new Date(m.timestamp * 1000).toLocaleDateString(locale)}
                 </span>
               </li>
             ))}
