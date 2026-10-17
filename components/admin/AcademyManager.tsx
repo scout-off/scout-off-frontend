@@ -18,6 +18,7 @@ import { useToast } from '@/components/ui/Toast';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import TruncatedAddress from '@/components/ui/TruncatedAddress';
 import { checkIsValidator } from '@/lib/contract';
+import { getErrorMessage } from '@/lib/getErrorMessage';
 import {
   fetchAcademies,
   createAcademy,
@@ -152,9 +153,9 @@ export default function AcademyManager() {
         message: `Academy "${academy.name}" created.`,
         variant: 'success',
       });
-    } catch (e: any) {
+    } catch (e: unknown) {
       show({
-        message: e?.message ?? 'Failed to create academy.',
+        message: getErrorMessage(e, 'Failed to create academy.'),
         variant: 'error',
       });
     } finally {
@@ -173,9 +174,9 @@ export default function AcademyManager() {
       );
       setMemberInputs((s) => ({ ...s, [academyId]: '' }));
       show({ message: 'Signer wallet added to academy.', variant: 'success' });
-    } catch (e: any) {
+    } catch (e: unknown) {
       show({
-        message: e?.message ?? 'Failed to add signer wallet.',
+        message: getErrorMessage(e, 'Failed to add signer wallet.'),
         variant: 'error',
       });
     } finally {
@@ -199,9 +200,9 @@ export default function AcademyManager() {
         message: 'Signer wallet removed from academy.',
         variant: 'success',
       });
-    } catch (e: any) {
+    } catch (e: unknown) {
       show({
-        message: e?.message ?? 'Failed to remove signer wallet.',
+        message: getErrorMessage(e, 'Failed to remove signer wallet.'),
         variant: 'error',
       });
     } finally {
@@ -249,9 +250,9 @@ export default function AcademyManager() {
             : `Quorum set to ${quorum} signer${quorum !== 1 ? 's' : ''}.`,
         variant: 'success',
       });
-    } catch (e: any) {
+    } catch (e: unknown) {
       show({
-        message: e?.message ?? 'Failed to set quorum.',
+        message: getErrorMessage(e, 'Failed to set quorum.'),
         variant: 'error',
       });
     } finally {

@@ -62,7 +62,7 @@ export function useValidator(walletAddress?: string | null) {
           milestone,
           signOnly,
         );
-      } catch (e: any) {
+      } catch (e: unknown) {
         const msg = parseContractError(e);
         setError(msg);
         throw e;
@@ -117,7 +117,7 @@ export function useValidator(walletAddress?: string | null) {
         await globalMutate(`milestones:${playerId}`);
 
         return { hash: hash || '', confirmed: true };
-      } catch (e: any) {
+      } catch (e: unknown) {
         const msg = parseContractError(e);
         setError(msg);
         throw e;

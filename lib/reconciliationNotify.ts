@@ -10,6 +10,9 @@
  * Set RECONCILIATION_WEBHOOK_URL to enable it; unset, this is a no-op.
  */
 import type { ReconciliationMismatch } from './adminAudit';
+import { withTimeoutSignal } from './fetchTimeout';
+
+const WEBHOOK_TIMEOUT_MS = 5_000;
 
 export interface ReconciliationWebhookPayload {
   checkedAt: number;
@@ -31,16 +34,19 @@ export async function notifyNewMismatches(
   if (!url || payload.newMismatches.length === 0) return;
 
   try {
-    await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text: `${payload.newMismatches.length} new admin-audit reconciliation mismatch${payload.newMismatches.length !== 1 ? 'es' : ''} detected (${payload.totalMismatches} total as of this run).`,
-        checkedAt: payload.checkedAt,
-        newMismatches: payload.newMismatches,
-        totalMismatches: payload.totalMismatches,
+    await withTimeoutSignal(WEBHOOK_TIMEOUT_MS, (signal) =>
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: `${payload.newMismatches.length} new admin-audit reconciliation mismatch${payload.newMismatches.length !== 1 ? 'es' : ''} detected (${payload.totalMismatches} total as of this run).`,
+          checkedAt: payload.checkedAt,
+          newMismatches: payload.newMismatches,
+          totalMismatches: payload.totalMismatches,
+        }),
+        signal,
       }),
-    });
+    );
   } catch {
     // Best-effort — see doc comment above.
   }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CONTACT_FEE_XLM } from '@/lib/feeSchedule';
 import { getContactFee } from '@/lib/contract';
+import { getErrorMessage } from '@/lib/getErrorMessage';
 
 export interface FeeDriftState {
   hasDrift: boolean;
@@ -33,8 +34,10 @@ export function useFeeDriftDetection(): FeeDriftState {
     try {
       const fee = await getContactFee();
       setLiveContactFee(fee);
-    } catch (err: any) {
-      setError(err?.message ?? 'Failed to verify on-chain fee parameters');
+    } catch (err: unknown) {
+      setError(
+        getErrorMessage(err, 'Failed to verify on-chain fee parameters'),
+      );
     } finally {
       setLoading(false);
     }

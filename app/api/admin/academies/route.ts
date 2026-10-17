@@ -3,6 +3,8 @@ import api from '@/lib/api';
 import { requireAdminWallet } from '@/lib/adminAuth';
 import { sanitizeTextInput } from '@/lib/inputValidation';
 import { privateJson } from '@/lib/httpResponses';
+import { getErrorMessage } from '@/lib/getErrorMessage';
+import { upstreamStatus } from '@/lib/httpClient';
 
 // Academy name is a short label — cap at 100 characters.
 const ACADEMY_NAME_MAX = 100;
@@ -53,9 +55,9 @@ export async function POST(req: NextRequest) {
       })
       .then((r) => r.data);
     return privateJson(academy, { status: 201 });
-  } catch (err: any) {
-    const status = err?.response?.status ?? 502;
-    const message = err?.response?.data?.error ?? 'Failed to create academy';
+  } catch (err: unknown) {
+    const status = upstreamStatus(err);
+    const message = getErrorMessage(err, 'Failed to create academy');
     return privateJson({ error: message }, { status });
   }
 }

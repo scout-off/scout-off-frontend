@@ -6,6 +6,7 @@ import {
   upstreamStatus,
 } from '@/lib/httpClient';
 import { createRequestLogger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/getErrorMessage';
 import { getClientIp, checkRateLimit } from '@/lib/rateLimit';
 import { withOutboundSpan, withRouteTelemetry } from '@/lib/telemetry';
 
@@ -77,11 +78,11 @@ async function getPlayerSearch(req: NextRequest) {
       () => backend.get('/players/search', { params: { name } }),
     );
     return NextResponse.json(res.data);
-  } catch (e: any) {
+  } catch (e: unknown) {
     const status = upstreamStatus(e);
     log.error('Player search proxy failed', {
       status,
-      reason: e instanceof Error ? e.message : String(e),
+      reason: getErrorMessage(e, 'Unknown error'),
     });
     return apiError(
       ApiErrorCode.UPSTREAM_FAILED,

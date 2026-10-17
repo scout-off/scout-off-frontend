@@ -9,6 +9,7 @@
  */
 
 import { fetchPlayerEvents } from '@/lib/indexerClient';
+import { withTimeoutSignal } from '@/lib/fetchTimeout';
 import {
   pollTransaction,
   TransactionFailedError,
@@ -29,6 +30,7 @@ export const CONFIRM_MAX_ATTEMPTS = 20;
 export const EVENT_RECONCILE_TIMEOUT_MS = 15_000;
 
 export const EVENT_RECONCILE_INTERVAL_MS = 2_000;
+const HORIZON_FETCH_TIMEOUT_MS = 5_000;
 
 const HORIZON_URL =
   process.env.NEXT_PUBLIC_HORIZON_URL ?? 'https://horizon-testnet.stellar.org';
@@ -130,25 +132,29 @@ export async function waitForMilestoneApprovalEvent(args: {
     assertNotAborted(signal);
 
     try {
-      const horizonRes = await fetch(
-        `${HORIZON_URL}/transactions/${encodeURIComponent(txHash)}/operations?limit=10`,
-      );
-      if (horizonRes.ok) {
-        const json = (await horizonRes.json()) as {
-          _embedded?: { records?: Array<{ type?: string }> };
-        };
-        const records = json._embedded?.records ?? [];
-        if (
-          records.some(
+      const horizonVisible = await withTimeoutSignal(
+        HORIZON_FETCH_TIMEOUT_MS,
+        async (requestSignal) => {
+          const horizonRes = await fetch(
+            `${HORIZON_URL}/transactions/${encodeURIComponent(txHash)}/operations?limit=10`,
+            { signal: requestSignal },
+          );
+          if (!horizonRes.ok) return false;
+          const json = (await horizonRes.json()) as {
+            _embedded?: { records?: Array<{ type?: string }> };
+          };
+          const records = json._embedded?.records ?? [];
+          return records.some(
             (r) =>
               r.type === 'invoke_host_function' ||
               r.type === 'invokeHostFunction',
-          )
-        ) {
-          return true;
-        }
-      }
+          );
+        },
+        signal,
+      );
+      if (horizonVisible) return true;
     } catch {
+      assertNotAborted(signal);
       // Horizon blip — fall through to indexer / retry.
     }
 
