@@ -85,9 +85,29 @@
     "submit": "Submit Trial Offer",
     "submitting": "Submitting…"
   },
+  "saved_searches_menu": {
+    "title": "Saved Searches",
+    "new_count": "{count} new",
+    "apply": "Apply",
+    "rename": "Rename",
+    "remove": "Remove",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
   "player_profile": {
     "back_to_scout_dashboard": "← Back to Scout Dashboard",
     "verified_on_chain": "Verified on-chain"
+  },
+  "spending_summary": {
+    "title": "Spending Summary",
+    "load_error": "Could not load spending data. The indexer may be unavailable.",
+    "no_data": "No spending data available yet.",
+    "contact_fees": "Contact Fees",
+    "subscriptions": "Subscriptions",
+    "total": "Total",
+    "monthly_breakdown": "Monthly Breakdown",
+    "month": "Month",
+    "no_payments": "No payments recorded yet. Your spending history will appear here once you start contacting players or subscribing."
   },
   "player_dashboard": {
     "title": "Player Dashboard",
@@ -103,6 +123,12 @@
     "stats": "Statistics",
     "download_data": "Download my data",
     "download_data_success": "Your data has been downloaded."
+  },
+  "subscription_status_banner": {
+    "expired": "Subscription expired",
+    "renew": "Renew",
+    "expires_in": "{tier} — {count, plural, one {expires in # day} other {expires in # days}}",
+    "days_remaining": "{tier} — {count, plural, one {# day remaining} other {# days remaining}}"
   },
   "wallet": {
     "connect": "Connect Wallet",
@@ -150,7 +176,9 @@
     "wallet_error": "Wallet operation failed"
   },
   "contract_status": {
-    "paused_hint": "Temporarily unavailable — the platform is paused for maintenance"
+    "paused_hint": "Temporarily unavailable — the platform is paused for maintenance",
+    "incompatible_title": "Contract update required.",
+    "incompatible_message": "This app version is out of sync with the deployed contract. Please refresh or check for an update."
   },
   "dispute_modal": {
     "character_count": "{count} of {max} characters"

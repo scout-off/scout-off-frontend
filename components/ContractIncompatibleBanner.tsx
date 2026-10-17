@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useContractCompatibility } from '@/hooks/useContractCompatibility';
 
 /**
@@ -9,6 +10,7 @@ import { useContractCompatibility } from '@/hooks/useContractCompatibility';
  * whether the user acknowledges the message.
  */
 export default function ContractIncompatibleBanner() {
+  const t = useTranslations('contract_status');
   const { isIncompatible, message } = useContractCompatibility();
 
   if (!isIncompatible) return null;
@@ -19,10 +21,9 @@ export default function ContractIncompatibleBanner() {
       aria-live="assertive"
       className="w-full bg-red-600 text-white px-4 py-3 sticky top-0 z-50 border-b border-red-800"
     >
-      <strong className="font-semibold">Contract update required.</strong>{' '}
+      <strong className="font-semibold">{t('incompatible_title')}</strong>{' '}
       <span className="text-sm">
-        {message ??
-          'This app version is out of sync with the deployed contract. Please refresh or check for an update.'}
+        {message ?? t('incompatible_message')}
       </span>
     </div>
   );

@@ -102,9 +102,29 @@
     "submit": "Envoyer l'offre d'essai",
     "submitting": "Envoi…"
   },
+  "saved_searches_menu": {
+    "title": "Recherches enregistrées",
+    "new_count": "{count} nouveau(x)",
+    "apply": "Appliquer",
+    "rename": "Renommer",
+    "remove": "Supprimer",
+    "save": "Enregistrer",
+    "cancel": "Annuler"
+  },
   "player_profile": {
     "back_to_scout_dashboard": "← Retour au tableau de bord des scouts",
     "verified_on_chain": "Vérifié sur la chaîne"
+  },
+  "spending_summary": {
+    "title": "Résumé des dépenses",
+    "load_error": "Impossible de charger les données de dépenses. L’indexeur est peut-être indisponible.",
+    "no_data": "Aucune donnée de dépenses disponible pour le moment.",
+    "contact_fees": "Frais de contact",
+    "subscriptions": "Abonnements",
+    "total": "Total",
+    "monthly_breakdown": "Détail mensuel",
+    "month": "Mois",
+    "no_payments": "Aucun paiement enregistré pour le moment. Votre historique de dépenses apparaîtra ici dès que vous contacterez des joueurs ou souscrirez un abonnement."
   },
   "player_dashboard": {
     "title": "Tableau de bord des joueurs",
@@ -120,6 +140,12 @@
     "stats": "Statistiques",
     "download_data": "Télécharger mes données",
     "download_data_success": "Vos données ont été téléchargées."
+  },
+  "subscription_status_banner": {
+    "expired": "Abonnement expiré",
+    "renew": "Renouveler",
+    "expires_in": "{tier} — {count, plural, one {expire dans # jour} other {expire dans # jours}}",
+    "days_remaining": "{tier} — {count, plural, one {# jour restant} other {# jours restants}}"
   },
   "wallet": {
     "connect": "Connecter le portefeuille",
@@ -167,7 +193,9 @@
     "wallet_error": "L'opération du portefeuille a échoué"
   },
   "contract_status": {
-    "paused_hint": "Indisponible temporairement — la plateforme est en pause pour maintenance"
+    "paused_hint": "Indisponible temporairement — la plateforme est en pause pour maintenance",
+    "incompatible_title": "Mise à jour du contrat requise.",
+    "incompatible_message": "Cette version de l’application n’est pas synchronisée avec le contrat déployé. Veuillez actualiser la page ou rechercher une mise à jour."
   },
   "dispute_modal": {
     "character_count": "{count} sur {max} caractères"

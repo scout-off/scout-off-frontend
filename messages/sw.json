@@ -160,9 +160,29 @@
     "submit": "Wasilisha Ofa ya Majaribio",
     "submitting": "Inawasilisha…"
   },
+  "saved_searches_menu": {
+    "title": "Utafutaji Uliohifadhiwa",
+    "new_count": "{count} mpya",
+    "apply": "Tumia",
+    "rename": "Badilisha jina",
+    "remove": "Ondoa",
+    "save": "Hifadhi",
+    "cancel": "Ghairi"
+  },
   "player_profile": {
     "back_to_scout_dashboard": "← Rudi kwenye Dashibodi ya Scout",
     "verified_on_chain": "Imethibitishwa kwenye blockchain"
+  },
+  "spending_summary": {
+    "title": "Muhtasari wa Matumizi",
+    "load_error": "Imeshindwa kupakia data ya matumizi. Kielezo kinaweza kuwa hakipatikani.",
+    "no_data": "Bado hakuna data ya matumizi.",
+    "contact_fees": "Ada za Mawasiliano",
+    "subscriptions": "Usajili",
+    "total": "Jumla",
+    "monthly_breakdown": "Mchanganuo wa Kila Mwezi",
+    "month": "Mwezi",
+    "no_payments": "Bado hakuna malipo yaliyorekodiwa. Historia yako ya matumizi itaonekana hapa mara tu utakapoanza kuwasiliana na wachezaji au kujisajili."
   },
   "player_dashboard": {
     "title": "Dashibodi ya Mchezaji",
@@ -178,6 +198,12 @@
     "stats": "Takwimu",
     "download_data": "Pakua data yangu",
     "download_data_success": "Data yako imepakuliwa."
+  },
+  "subscription_status_banner": {
+    "expired": "Usajili umeisha muda",
+    "renew": "Sasisha",
+    "expires_in": "{tier} — {count, plural, one {unaisha baada ya siku #} other {unaisha baada ya siku #}}",
+    "days_remaining": "{tier} — {count, plural, one {siku # imebaki} other {siku # zimebaki}}"
   },
   "wallet": {
     "connect": "Unganisha Pochi",
@@ -225,7 +251,9 @@
     "wallet_error": "TODO: Machine-translated - Operesheni ya pochi imeshindwa"
   },
   "contract_status": {
-    "paused_hint": "Haipatikani kwa muda — jukwaa limepumzishwa kwa matengenezo"
+    "paused_hint": "Haipatikani kwa muda — jukwaa limepumzishwa kwa matengenezo",
+    "incompatible_title": "Sasisho la mkataba linahitajika.",
+    "incompatible_message": "Toleo hili la programu halilingani na mkataba uliowekwa. Tafadhali onyesha upya ukurasa au angalia sasisho."
   },
   "dispute_modal": {
     "character_count": "{count} ya {max} herufi"
