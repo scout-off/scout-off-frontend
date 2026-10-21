@@ -37,6 +37,10 @@ const config: StorybookConfig = {
     config.resolve.alias = {
       ...config.resolve.alias,
       'next/navigation': path.resolve(dirname, './mocks/next-navigation.tsx'),
+      // Pass-through mocks that let stories stub contract/indexer lookups
+      // (e.g. ValidatorChip). See .storybook/mocks/lib-contract.ts.
+      '@/lib/contract': path.resolve(dirname, './mocks/lib-contract.ts'),
+      '@/lib/api': path.resolve(dirname, './mocks/lib-api.ts'),
     };
     return config;
   },
