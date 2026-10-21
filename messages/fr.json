@@ -788,6 +788,11 @@
           "title": "Élite"
         }
       }
+    },
+    "export_csv": {
+      "label": "Exporter en CSV",
+      "exporting": "Exportation…",
+      "error": "Impossible d'exporter les contacts."
     }
   }
 }

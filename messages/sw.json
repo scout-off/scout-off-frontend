@@ -788,6 +788,11 @@
           "title": "Elite"
         }
       }
+    },
+    "export_csv": {
+      "label": "Hamisha CSV",
+      "exporting": "Inahamisha…",
+      "error": "Imeshindwa kuhamisha anwani."
     }
   }
 }

@@ -37,6 +37,15 @@ const config: StorybookConfig = {
     config.resolve.alias = {
       ...config.resolve.alias,
       'next/navigation': path.resolve(dirname, './mocks/next-navigation.tsx'),
+      // Data hooks behind SpendingSummary — see .storybook/mocks/spending-hooks.ts.
+      '@/hooks/useSpendingSummary': path.resolve(
+        dirname,
+        './mocks/spending-hooks.ts',
+      ),
+      '@/hooks/useFeeDriftDetection': path.resolve(
+        dirname,
+        './mocks/spending-hooks.ts',
+      ),
     };
     return config;
   },
