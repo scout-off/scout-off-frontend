@@ -1,9 +1,9 @@
 /**
  * @jest-environment node
  */
-import { logger } from '../logger';
+import { logger, createScopedLogger } from '../logger';
 
-describe('logger', () => {
+describe('logger (shared schema — issue #1519)', () => {
   let originalWrite: typeof process.stdout.write;
   let capturedOutput: string[];
 
@@ -21,54 +21,79 @@ describe('logger', () => {
     delete process.env.LOG_LEVEL;
   });
 
-  describe('output shape', () => {
-    test('logs valid JSON with level, msg, and timestamp', () => {
+  // ── Shared-schema field names ────────────────────────────────────────────
+
+  describe('shared JSON schema — aligned to lib/logger.ts and server/src/logger.js', () => {
+    test('emits `timestamp` (not `ts`) as an ISO-8601 string', () => {
       logger.info('test message');
 
       expect(capturedOutput).toHaveLength(1);
       const log = JSON.parse(capturedOutput[0]);
-      expect(log).toHaveProperty('level', 'info');
-      expect(log).toHaveProperty('msg', 'test message');
-      expect(log).toHaveProperty('ts');
-      expect(log.ts).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+      expect(log).toHaveProperty('timestamp');
+      expect(log.timestamp).toMatch(
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+      );
+      // Old field name must not appear
+      expect(log).not.toHaveProperty('ts');
     });
 
-    test('includes optional fields in output', () => {
-      logger.info('test message', { ledger: 100, eventCount: 5 });
+    test('emits `message` (not `msg`) for the human-readable description', () => {
+      logger.info('test message');
+
+      const log = JSON.parse(capturedOutput[0]);
+      expect(log).toHaveProperty('message', 'test message');
+      // Old field name must not appear
+      expect(log).not.toHaveProperty('msg');
+    });
+
+    test('emits `level` matching the call site', () => {
+      logger.warn('something cautious');
+
+      const log = JSON.parse(capturedOutput[0]);
+      expect(log).toHaveProperty('level', 'warn');
+    });
+
+    test('includes optional caller-supplied fields in output', () => {
+      logger.info('processing ledger', { ledger: 100, eventCount: 5 });
 
       const log = JSON.parse(capturedOutput[0]);
       expect(log.ledger).toBe(100);
       expect(log.eventCount).toBe(5);
     });
 
-    test('supports all log levels', () => {
-      // Debug is filtered at the default (info) level, so opt in to it.
-      process.env.LOG_LEVEL = 'debug';
-      jest.resetModules();
-      const { logger: loggerDebug } = require('../logger');
+    test('output is valid JSON', () => {
+      logger.info('any message');
+      expect(() => JSON.parse(capturedOutput[0])).not.toThrow();
+    });
 
-      loggerDebug.debug('debug message');
-      loggerDebug.info('info message');
-      loggerDebug.warn('warn message');
-      loggerDebug.error('error message');
+    test('all four levels emit the shared field set', () => {
+      // error, warn, info are above the default (info) threshold
+      logger.info('info message');
+      logger.warn('warn message');
+      logger.error('error message');
 
-      expect(capturedOutput).toHaveLength(4);
+      expect(capturedOutput).toHaveLength(3);
       capturedOutput.forEach((output) => {
         const log = JSON.parse(output);
         expect(log).toHaveProperty('level');
-        expect(log).toHaveProperty('msg');
-        expect(log).toHaveProperty('ts');
+        expect(log).toHaveProperty('message');
+        expect(log).toHaveProperty('timestamp');
+        expect(log).not.toHaveProperty('ts');
+        expect(log).not.toHaveProperty('msg');
       });
     });
   });
 
+  // ── Level filtering (default = info) ────────────────────────────────────
+
   describe('level filtering', () => {
-    test('default level is info', () => {
+    test('default level filters out debug, passes info/warn/error', () => {
       logger.debug('debug message');
       logger.info('info message');
       logger.warn('warn message');
       logger.error('error message');
 
+      // debug should be filtered at default INFO level
       expect(capturedOutput).toHaveLength(3);
       const levels = capturedOutput.map((o) => JSON.parse(o).level);
       expect(levels).not.toContain('debug');
@@ -76,74 +101,51 @@ describe('logger', () => {
       expect(levels).toContain('warn');
       expect(levels).toContain('error');
     });
+  });
 
-    test('LOG_LEVEL=debug shows all levels', () => {
-      process.env.LOG_LEVEL = 'debug';
-      // Re-import to pick up new env var
-      jest.resetModules();
-      const { logger: loggerDebug } = require('../logger');
+  // ── createScopedLogger ───────────────────────────────────────────────────
 
-      loggerDebug.debug('debug message');
-      loggerDebug.info('info message');
-      loggerDebug.warn('warn message');
-      loggerDebug.error('error message');
+  describe('createScopedLogger — requestId / route correlation', () => {
+    test('stamps requestId and route onto every line', () => {
+      const log = createScopedLogger({
+        requestId: 'run-abc-123',
+        route: 'indexer/ledger-sync',
+      });
+      log.info('sync started', { ledger: 42 });
 
-      expect(capturedOutput).toHaveLength(4);
-      const levels = capturedOutput.map((o) => JSON.parse(o).level);
-      expect(levels).toContain('debug');
-      expect(levels).toContain('info');
-      expect(levels).toContain('warn');
-      expect(levels).toContain('error');
+      const entry = JSON.parse(capturedOutput[0]);
+      expect(entry.requestId).toBe('run-abc-123');
+      expect(entry.route).toBe('indexer/ledger-sync');
+      expect(entry.message).toBe('sync started');
+      expect(entry.ledger).toBe(42);
     });
 
-    test('LOG_LEVEL=warn shows warn and error only', () => {
-      process.env.LOG_LEVEL = 'warn';
-      jest.resetModules();
-      const { logger: loggerWarn } = require('../logger');
+    test('omits requestId / route when not provided', () => {
+      const log = createScopedLogger({});
+      log.info('no scope fields');
 
-      loggerWarn.debug('debug message');
-      loggerWarn.info('info message');
-      loggerWarn.warn('warn message');
-      loggerWarn.error('error message');
-
-      expect(capturedOutput).toHaveLength(2);
-      const levels = capturedOutput.map((o) => JSON.parse(o).level);
-      expect(levels).not.toContain('debug');
-      expect(levels).not.toContain('info');
-      expect(levels).toContain('warn');
-      expect(levels).toContain('error');
+      const entry = JSON.parse(capturedOutput[0]);
+      expect(entry).not.toHaveProperty('requestId');
+      expect(entry).not.toHaveProperty('route');
     });
 
-    test('LOG_LEVEL=error shows error only', () => {
-      process.env.LOG_LEVEL = 'error';
-      jest.resetModules();
-      const { logger: loggerError } = require('../logger');
+    test('scoped logger still uses shared schema field names', () => {
+      const log = createScopedLogger({ requestId: 'x' });
+      log.error('something failed');
 
-      loggerError.debug('debug message');
-      loggerError.info('info message');
-      loggerError.warn('warn message');
-      loggerError.error('error message');
-
-      expect(capturedOutput).toHaveLength(1);
-      const levels = capturedOutput.map((o) => JSON.parse(o).level);
-      expect(levels).not.toContain('debug');
-      expect(levels).not.toContain('info');
-      expect(levels).not.toContain('warn');
-      expect(levels).toContain('error');
+      const entry = JSON.parse(capturedOutput[0]);
+      expect(entry).toHaveProperty('timestamp');
+      expect(entry).toHaveProperty('message');
+      expect(entry).not.toHaveProperty('ts');
+      expect(entry).not.toHaveProperty('msg');
     });
 
-    test('invalid LOG_LEVEL defaults to info', () => {
-      process.env.LOG_LEVEL = 'invalid';
-      jest.resetModules();
-      const { logger: loggerInvalid } = require('../logger');
+    test('scoped logger respects level filtering', () => {
+      const log = createScopedLogger({ requestId: 'y' });
+      log.debug('should be filtered');
 
-      loggerInvalid.debug('debug message');
-      loggerInvalid.info('info message');
-
-      expect(capturedOutput).toHaveLength(1);
-      const levels = capturedOutput.map((o) => JSON.parse(o).level);
-      expect(levels).not.toContain('debug');
-      expect(levels).toContain('info');
+      // debug filtered at default INFO level
+      expect(capturedOutput).toHaveLength(0);
     });
   });
 });

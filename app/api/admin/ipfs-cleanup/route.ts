@@ -36,6 +36,9 @@ import {
   markUnpinned,
 } from '@/lib/supersededMediaStore';
 import { privateJson } from '@/lib/httpResponses';
+import { withTimeoutSignal } from '@/lib/fetchTimeout';
+
+const PINATA_UNPIN_TIMEOUT_MS = 10_000;
 
 function pinataunpinUrl(cid: string): string {
   return `https://api.pinata.cloud/pinning/unpin/${encodeURIComponent(cid)}`;
@@ -51,20 +54,23 @@ async function unpinFromPinata(cid: string): Promise<string | null> {
   }
 
   try {
-    const res = await fetch(pinataunpinUrl(cid), {
-      method: 'DELETE',
-      headers: {
-        pinata_api_key: apiKey,
-        pinata_secret_api_key: apiSecret,
-      },
+    return await withTimeoutSignal(PINATA_UNPIN_TIMEOUT_MS, async (signal) => {
+      const res = await fetch(pinataunpinUrl(cid), {
+        method: 'DELETE',
+        headers: {
+          pinata_api_key: apiKey,
+          pinata_secret_api_key: apiSecret,
+        },
+        signal,
+      });
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        return `Pinata responded ${res.status}: ${body}`;
+      }
+
+      return null; // success
     });
-
-    if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      return `Pinata responded ${res.status}: ${body}`;
-    }
-
-    return null; // success
   } catch (err) {
     return err instanceof Error ? err.message : 'Unknown fetch error';
   }

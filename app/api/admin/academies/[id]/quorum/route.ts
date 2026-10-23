@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import api from '@/lib/api';
 import { requireAdminWallet } from '@/lib/adminAuth';
 import { privateJson } from '@/lib/httpResponses';
+import { getErrorMessage } from '@/lib/getErrorMessage';
+import { upstreamStatus } from '@/lib/httpClient';
 
 /**
  * PATCH /api/admin/academies/:id/quorum
@@ -34,9 +36,9 @@ export async function PATCH(
       .patch(`/academies/${encodeURIComponent(params.id)}/quorum`, { quorum })
       .then((r) => r.data);
     return privateJson(academy);
-  } catch (err: any) {
-    const status = err?.response?.status ?? 502;
-    const message = err?.response?.data?.error ?? 'Failed to set quorum';
+  } catch (err: unknown) {
+    const status = upstreamStatus(err);
+    const message = getErrorMessage(err, 'Failed to set quorum');
     return privateJson({ error: message }, { status });
   }
 }

@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import api from '@/lib/api';
 import { requireAcademyManager } from '@/lib/academyAuth';
 import { privateJson } from '@/lib/httpResponses';
+import { getErrorMessage } from '@/lib/getErrorMessage';
+import { upstreamStatus } from '@/lib/httpClient';
 
 // Stellar public key: 'G' followed by 55 uppercase base32 characters (A-Z, 2-7).
 const STELLAR_PUBLIC_KEY_RE = /^G[A-Z2-7]{55}$/;
@@ -39,9 +41,9 @@ export async function POST(
       })
       .then((r) => r.data);
     return privateJson(academy, { status: 201 });
-  } catch (err: any) {
-    const status = err?.response?.status ?? 502;
-    const message = err?.response?.data?.error ?? 'Failed to add signer wallet';
+  } catch (err: unknown) {
+    const status = upstreamStatus(err);
+    const message = getErrorMessage(err, 'Failed to add signer wallet');
     return privateJson({ error: message }, { status });
   }
 }

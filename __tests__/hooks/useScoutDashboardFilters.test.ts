@@ -1,4 +1,10 @@
+jest.unmock('next-intl');
+
+import React from 'react';
 import { act, renderHook } from '@testing-library/react';
+import { NextIntlClientProvider } from 'next-intl';
+import en from '@/messages/en.json';
+import fr from '@/messages/fr.json';
 
 const mockReplace = jest.fn();
 let mockParams = new URLSearchParams();
@@ -23,9 +29,19 @@ import {
   MAX_COMPARE_PLAYERS,
 } from '@/hooks/useScoutDashboardFilters';
 
+const catalogues = { en, fr };
+
 function setup(
   overrides: Partial<Parameters<typeof useScoutDashboardFilters>[0]> = {},
+  locale: keyof typeof catalogues = 'en',
 ) {
+  const wrapper = ({ children }: { children: React.ReactNode }) =>
+    React.createElement(NextIntlClientProvider, {
+      locale,
+      messages: catalogues[locale],
+      timeZone: 'UTC',
+      children,
+    });
   const props = {
     loading: false,
     isRateLimited: false,
@@ -36,7 +52,10 @@ function setup(
   };
   return {
     props,
-    ...renderHook((p) => useScoutDashboardFilters(p), { initialProps: props }),
+    ...renderHook((p) => useScoutDashboardFilters(p), {
+      initialProps: props,
+      wrapper,
+    }),
   };
 }
 
@@ -73,9 +92,30 @@ describe('useScoutDashboardFilters', () => {
     rerender({ ...props, isRateLimited: true, retryAfterSec: 4 });
     expect(result.current.remainingSec).toBe(4);
     expect(mockShow).toHaveBeenCalledWith({
-      message: 'Searching too fast — please wait 4s and try again.',
+      message: 'Searching too fast — please wait 4 seconds and try again.',
       variant: 'warning',
     });
+  });
+
+  it('counts down with a single interval per rate-limit event', () => {
+    jest.useFakeTimers();
+    const intervalSpy = jest.spyOn(global, 'setInterval');
+    try {
+      const { result, rerender, props } = setup();
+      rerender({ ...props, isRateLimited: true, retryAfterSec: 5 });
+      const seen = [result.current.remainingSec];
+      for (let i = 0; i < 5; i++) {
+        act(() => {
+          jest.advanceTimersByTime(1000);
+        });
+        seen.push(result.current.remainingSec);
+      }
+      expect(seen).toEqual([5, 4, 3, 2, 1, null]);
+      expect(intervalSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      intervalSpy.mockRestore();
+      jest.useRealTimers();
+    }
   });
 
   it('syncs the compare selection to ?ids= and caps it', () => {
@@ -101,5 +141,24 @@ describe('useScoutDashboardFilters', () => {
     rerender({ ...props, loading: false });
     expect(result.current.searchHasCompleted).toBe(true);
     expect(result.current.showSkeletons).toBe(false);
+  });
+});
+
+describe('useScoutDashboardFilters rate-limit toast i18n', () => {
+  it.each([
+    [1, 'Searching too fast — please wait 1 second and try again.'],
+    [5, 'Searching too fast — please wait 5 seconds and try again.'],
+  ])('pluralises %ss in en', (retryAfterSec, message) => {
+    setup({ isRateLimited: true, retryAfterSec });
+    expect(mockShow).toHaveBeenCalledWith({ message, variant: 'warning' });
+  });
+
+  it('shows the translated toast in the fr locale', () => {
+    setup({ isRateLimited: true, retryAfterSec: 5 }, 'fr');
+    expect(mockShow).toHaveBeenCalledWith({
+      message:
+        'Recherches trop rapides — veuillez patienter 5 secondes et réessayer.',
+      variant: 'warning',
+    });
   });
 });

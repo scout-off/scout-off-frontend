@@ -78,4 +78,19 @@ export class NotificationReadStore {
       .run(wallet);
     return result.changes;
   }
+
+  /**
+   * Data-retention pruning (issue #1477).
+   *
+   * Deletes read-state rows older than `beforeMs` (absolute epoch-ms
+   * cutoff).  A wallet that hasn't acted on a notification in that window
+   * will simply see those items as unread again — an acceptable tradeoff
+   * for bounded storage. Returns the number of rows deleted.
+   */
+  pruneOlderThan(beforeMs: number): number {
+    const result = this.db
+      .prepare('DELETE FROM notification_reads WHERE read_at < ?')
+      .run(beforeMs);
+    return result.changes;
+  }
 }

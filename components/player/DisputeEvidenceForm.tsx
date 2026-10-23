@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { uploadToIPFS } from '@/lib/ipfs';
 import type { AddEvidenceParams } from '@/lib/disputesClient';
 
@@ -13,7 +14,8 @@ const ALLOWED_TYPES = [
   'video/webm',
   'application/pdf',
 ];
-const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50 MB
+const MAX_FILE_MB = 50;
+const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
 
 interface Props {
   /** Called after the file has been uploaded to IPFS and params are ready. */
@@ -36,10 +38,11 @@ interface Props {
  */
 export default function DisputeEvidenceForm({
   onSubmit,
-  submitLabel = 'Submit evidence',
+  submitLabel,
   isValidatorResponse = false,
   disabled = false,
 }: Props) {
+  const t = useTranslations('dispute_modal.evidence');
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [note, setNote] = useState('');
@@ -57,14 +60,12 @@ export default function DisputeEvidenceForm({
       return;
     }
     if (!ALLOWED_TYPES.includes(chosen.type)) {
-      setFileError(
-        'Unsupported file type. Allowed: JPEG, PNG, WebP, GIF, MP4, WebM, PDF.',
-      );
+      setFileError(t('unsupported_type'));
       setFile(null);
       return;
     }
     if (chosen.size > MAX_FILE_BYTES) {
-      setFileError('File must be under 50 MB.');
+      setFileError(t('too_large', { size: MAX_FILE_MB }));
       setFile(null);
       return;
     }
@@ -88,9 +89,7 @@ export default function DisputeEvidenceForm({
       setSubmitted(true);
       if (inputRef.current) inputRef.current.value = '';
     } catch (err) {
-      setSubmitError(
-        err instanceof Error ? err.message : 'Submission failed. Try again.',
-      );
+      setSubmitError(err instanceof Error ? err.message : t('submit_failed'));
     } finally {
       setUploading(false);
     }
@@ -102,13 +101,13 @@ export default function DisputeEvidenceForm({
         role="status"
         className="rounded-lg border border-green-500/30 bg-green-500/10 p-4 text-sm text-green-400"
       >
-        ✓ Evidence submitted. The admin will review the updated timeline.
+        {t('submitted')}
         <button
           type="button"
           className="ml-3 underline text-green-300 hover:text-green-200"
           onClick={() => setSubmitted(false)}
         >
-          Add more
+          {t('add_more')}
         </button>
       </div>
     );
@@ -120,10 +119,7 @@ export default function DisputeEvidenceForm({
       className="flex flex-col gap-3 rounded-lg border border-gray-700 bg-gray-900/60 p-4"
     >
       {isValidatorResponse && (
-        <p className="text-xs text-amber-400/80">
-          You are responding as the validator who approved this milestone. Your
-          response will be visible to the player and the reviewing admin.
-        </p>
+        <p className="text-xs text-amber-400/80">{t('validator_notice')}</p>
       )}
 
       {/* File picker */}
@@ -132,7 +128,8 @@ export default function DisputeEvidenceForm({
           htmlFor="evidence-file"
           className="mb-1 block text-xs font-medium text-gray-400"
         >
-          Evidence file <span className="text-gray-500">(required)</span>
+          {t('file_label')}{' '}
+          <span className="text-gray-500">{t('required')}</span>
         </label>
         <input
           ref={inputRef}
@@ -153,11 +150,14 @@ export default function DisputeEvidenceForm({
         )}
         {file && !fileError && (
           <p className="mt-1 text-xs text-gray-500">
-            {file.name} ({(file.size / 1024).toFixed(1)} KB)
+            {t('file_size', {
+              name: file.name,
+              size: (file.size / 1024).toFixed(1),
+            })}
           </p>
         )}
         <p className="mt-1 text-xs text-gray-600">
-          JPEG, PNG, WebP, GIF, MP4, WebM, PDF — max 50 MB
+          {t('allowed_formats', { size: MAX_FILE_MB })}
         </p>
       </div>
 
@@ -167,9 +167,11 @@ export default function DisputeEvidenceForm({
           htmlFor="evidence-note"
           className="mb-1 block text-xs font-medium text-gray-400"
         >
-          Note{' '}
+          {t('note_label')}{' '}
           <span className="text-gray-500">
-            (optional, max {isValidatorResponse ? 'your response' : 'context'})
+            {t('note_hint', {
+              kind: isValidatorResponse ? 'response' : 'context',
+            })}
           </span>
         </label>
         <textarea
@@ -180,8 +182,8 @@ export default function DisputeEvidenceForm({
           rows={3}
           placeholder={
             isValidatorResponse
-              ? 'Explain your reasoning for the milestone approval…'
-              : 'Add context about this evidence…'
+              ? t('placeholder_validator')
+              : t('placeholder_player')
           }
           disabled={uploading || disabled}
           className="w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2
@@ -206,7 +208,7 @@ export default function DisputeEvidenceForm({
           text-black transition hover:bg-brand-green/80 disabled:cursor-not-allowed
           disabled:opacity-50"
       >
-        {uploading ? 'Uploading…' : submitLabel}
+        {uploading ? t('uploading') : (submitLabel ?? t('submit'))}
       </button>
     </form>
   );

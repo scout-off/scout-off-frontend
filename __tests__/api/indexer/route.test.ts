@@ -174,3 +174,257 @@ describe('/api/indexer proxy', () => {
     expect(res.status).toBe(502);
   });
 });
+
+describe('/api/indexer ETag / 304 conditional requests (issue #1522)', () => {
+  const body = JSON.stringify({ events: [], nextCursor: null });
+
+  it('attaches an ETag to successful GETs', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(body, {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    const req = new NextRequest('http://localhost/api/indexer/events');
+    const res = await GET(req, ctx('events'));
+
+    expect(res.status).toBe(200);
+    const etag = res.headers.get('etag');
+    expect(etag).toBeTruthy();
+    // Strong ETag must be a quoted string.
+    expect(etag).toMatch(/^"[0-9a-f]+"$/);
+  });
+
+  it('returns the same ETag for identical bodies across two requests', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(body, {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    const res1 = await GET(
+      new NextRequest('http://localhost/api/indexer/events'),
+      ctx('events'),
+    );
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(body, {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const res2 = await GET(
+      new NextRequest('http://localhost/api/indexer/events'),
+      ctx('events'),
+    );
+
+    expect(res1.headers.get('etag')).toBe(res2.headers.get('etag'));
+  });
+
+  it('returns a different ETag when the body changes', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(body, {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const res1 = await GET(
+      new NextRequest('http://localhost/api/indexer/events'),
+      ctx('events'),
+    );
+
+    const newBody = JSON.stringify({ events: [{ id: 1 }], nextCursor: null });
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(newBody, {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const res2 = await GET(
+      new NextRequest('http://localhost/api/indexer/events'),
+      ctx('events'),
+    );
+
+    expect(res1.headers.get('etag')).not.toBe(res2.headers.get('etag'));
+  });
+
+  it('returns 304 and no body when If-None-Match matches the ETag', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(body, {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    // First request to learn the ETag.
+    const first = await GET(
+      new NextRequest('http://localhost/api/indexer/events'),
+      ctx('events'),
+    );
+    const etag = first.headers.get('etag')!;
+
+    // Second request with If-None-Match.
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(body, {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const req = new NextRequest('http://localhost/api/indexer/events', {
+      headers: { 'if-none-match': etag },
+    });
+    const res = await GET(req, ctx('events'));
+
+    expect(res.status).toBe(304);
+    expect(await res.text()).toBe('');
+    // Cache-Control and ETag are preserved on the 304 so caches can update.
+    expect(res.headers.get('cache-control')).toContain('s-maxage');
+    expect(res.headers.get('etag')).toBe(etag);
+  });
+
+  it('returns 304 for a weak If-None-Match (W/ prefix) matching the strong ETag', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(body, {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const first = await GET(
+      new NextRequest('http://localhost/api/indexer/events'),
+      ctx('events'),
+    );
+    const etag = first.headers.get('etag')!;
+
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(body, {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const req = new NextRequest('http://localhost/api/indexer/events', {
+      // Weak variant of the same tag
+      headers: { 'if-none-match': `W/${etag}` },
+    });
+    const res = await GET(req, ctx('events'));
+
+    expect(res.status).toBe(304);
+  });
+
+  it('returns 304 when If-None-Match is "*" and the response is successful', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(body, {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const req = new NextRequest('http://localhost/api/indexer/events', {
+      headers: { 'if-none-match': '*' },
+    });
+    const res = await GET(req, ctx('events'));
+
+    expect(res.status).toBe(304);
+  });
+
+  it('returns 200 when If-None-Match does not match (body has changed)', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(body, {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const req = new NextRequest('http://localhost/api/indexer/events', {
+      headers: { 'if-none-match': '"stale-etag"' },
+    });
+    const res = await GET(req, ctx('events'));
+
+    expect(res.status).toBe(200);
+  });
+
+  it('forwards the upstream ETag when the indexer sends one', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(body, {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+          etag: '"upstream-etag-abc"',
+        },
+      }),
+    );
+
+    const req = new NextRequest('http://localhost/api/indexer/players');
+    const res = await GET(req, ctx('players'));
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('etag')).toBe('"upstream-etag-abc"');
+  });
+
+  it('honours If-None-Match against the upstream ETag when the indexer sends one', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(body, {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+          etag: '"upstream-etag-abc"',
+        },
+      }),
+    );
+
+    const req = new NextRequest('http://localhost/api/indexer/players', {
+      headers: { 'if-none-match': '"upstream-etag-abc"' },
+    });
+    const res = await GET(req, ctx('players'));
+
+    expect(res.status).toBe(304);
+  });
+
+  it('forwards Last-Modified when the indexer sends one', async () => {
+    const lastMod = 'Sat, 01 Jan 2025 00:00:00 GMT';
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(body, {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+          'last-modified': lastMod,
+        },
+      }),
+    );
+
+    const req = new NextRequest('http://localhost/api/indexer/players');
+    const res = await GET(req, ctx('players'));
+
+    expect(res.headers.get('last-modified')).toBe(lastMod);
+  });
+
+  it('does not attach an ETag to non-2xx GET responses', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: 'not found' }), {
+        status: 404,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    const req = new NextRequest('http://localhost/api/indexer/events');
+    const res = await GET(req, ctx('events'));
+
+    expect(res.status).toBe(404);
+    expect(res.headers.get('etag')).toBeNull();
+  });
+
+  it('does not attach an ETag to POST responses', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(JSON.stringify({ counts: {} }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    const req = new NextRequest(
+      'http://localhost/api/indexer/validators/approval-counts',
+      { method: 'POST', body: '{}' },
+    );
+    const res = await POST(req, ctx('validators/approval-counts'));
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('etag')).toBeNull();
+  });
+});

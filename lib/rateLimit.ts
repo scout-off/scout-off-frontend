@@ -50,16 +50,44 @@ interface RateLimitStore {
 
 type RateEntry = { count: number; resetAt: number };
 
+/** Hard cap on tracked keys; the oldest (first-inserted) key is dropped past it. */
+export const IN_MEMORY_MAX_ENTRIES = 10_000;
+/** Expired entries are swept every this many increments (no timers, so nothing is kept alive). */
+export const IN_MEMORY_SWEEP_EVERY = 1_000;
+
 class InMemoryStore implements RateLimitStore {
   private map = new Map<string, RateEntry>();
+  private callsSinceSweep = 0;
+
+  get size() {
+    return this.map.size;
+  }
+
+  private sweep(now: number) {
+    for (const [key, entry] of this.map) {
+      if (now >= entry.resetAt) this.map.delete(key);
+    }
+  }
 
   async increment(key: string, windowMs: number) {
     const now = Date.now();
+
+    if (++this.callsSinceSweep >= IN_MEMORY_SWEEP_EVERY) {
+      this.callsSinceSweep = 0;
+      this.sweep(now);
+    }
+
     const entry = this.map.get(key);
 
     if (!entry || now >= entry.resetAt) {
       const resetAt = now + windowMs;
+      // Delete first so a renewed key moves to the end of insertion order.
+      this.map.delete(key);
       this.map.set(key, { count: 1, resetAt });
+      if (this.map.size > IN_MEMORY_MAX_ENTRIES) {
+        const oldest = this.map.keys().next().value;
+        if (oldest !== undefined) this.map.delete(oldest);
+      }
       return { count: 1, ttlMs: windowMs };
     }
 
@@ -72,6 +100,29 @@ class InMemoryStore implements RateLimitStore {
 
 class RedisStore implements RateLimitStore {
   constructor(private redis: Redis) {}
+
+  /**
+   * Lua script that atomically INCRs the key and sets the EXPIRE TTL on the
+   * first hit in a window (issue #1493). Running INCR + EXPIRE as a single
+   * Redis EVAL means the serverless process can't die between the two
+   * commands and leave a key with no TTL — which would rate-limit that
+   * client forever. Returns `{ count, ttlSec }` so the caller can derive
+   * the remaining window.
+   *
+   * KEYS[1] = rate-limit key
+   * ARGV[1] = window length in seconds
+   */
+  private static readonly INCR_EXPIRE_SCRIPT = `local count = redis.call('INCR', KEYS[1])
+if count == 1 then
+  redis.call('EXPIRE', KEYS[1], ARGV[1])
+  return { count, tonumber(ARGV[1]) }
+end
+local ttl = redis.call('PTTL', KEYS[1])
+if ttl < 0 then
+  redis.call('EXPIRE', KEYS[1], ARGV[1])
+  return { count, tonumber(ARGV[1]) }
+end
+return { count, math.floor(ttl / 1000) }`;
 
   async increment(key: string, windowMs: number) {
     // Fixed-window counter: INCR the key, and on the first hit in a window
@@ -88,18 +139,16 @@ class RedisStore implements RateLimitStore {
     // single INCR/EXPIRE pair — revisit if these limits ever need to be
     // exact rather than "good enough to stop scripted abuse."
     const windowSec = Math.max(1, Math.ceil(windowMs / 1000));
-    const count = await this.redis.incr(key);
-
-    if (count === 1) {
-      await this.redis.expire(key, windowSec);
-      return { count, ttlMs: windowMs };
-    }
-
-    const pttlMs = await this.redis.pttl(key);
-    // pttl returns -1 if the key has no TTL (shouldn't happen — we always
-    // set one on creation) and -2 if the key doesn't exist (a race with
-    // expiry). Fall back to the nominal window length in either case.
-    const ttlMs = pttlMs && pttlMs > 0 ? pttlMs : windowMs;
+    const result = await this.redis.eval(
+      RedisStore.INCR_EXPIRE_SCRIPT,
+      [key],
+      [String(windowSec)],
+    );
+    // eval returns [count, ttlSec] — coerce the JSON values to numbers.
+    const arr = result as unknown[];
+    const count = Number(arr[0]);
+    const ttlSec = Number(arr[1]);
+    const ttlMs = ttlSec > 0 ? ttlSec * 1000 : windowMs;
     return { count, ttlMs };
   }
 }
@@ -164,6 +213,14 @@ export function _resetRateLimitStoreForTests(): void {
   warnedMissingRedisInProd = false;
 }
 
+/**
+ * Test-only: number of keys tracked by the in-memory store, or null when the
+ * active store isn't the in-memory one. Not used by application code.
+ */
+export function _getInMemoryStoreSizeForTests(): number | null {
+  return cachedStore instanceof InMemoryStore ? cachedStore.size : null;
+}
+
 // ── Public API ────────────────────────────────────────────────────────────
 
 /**
@@ -173,13 +230,31 @@ export function _resetRateLimitStoreForTests(): void {
  * client identity (e.g. IP) — callers here use keys like
  * `players-search:<ip>` and `ipfs-upload:<ip>` so the two routes' limits
  * never collide with each other in a shared store.
+ *
+ * Fail-open on store errors (issue #1493): the file's stated policy is that
+ * a limiter outage "shouldn't take down the whole route." If the underlying
+ * store throws (e.g. a Redis/Upstash blip), we log the error and allow the
+ * request through rather than surfacing a 500 — consistent with the
+ * in-memory fallback used when Redis is unconfigured.
  */
 export async function checkRateLimit(
   key: string,
   opts: RateLimitOptions,
 ): Promise<RateLimitResult> {
   const store = getStore();
-  const { count, ttlMs } = await store.increment(key, opts.windowMs);
+
+  let count: number;
+  let ttlMs: number;
+  try {
+    ({ count, ttlMs } = await store.increment(key, opts.windowMs));
+  } catch (err) {
+    // Rate-limiter outage — fail open so the route stays available.
+    console.error(
+      '[rateLimit] store.increment failed; allowing request (fail-open):',
+      err,
+    );
+    return { limited: false };
+  }
 
   if (count > opts.limit) {
     return { limited: true, retryAfterSec: Math.ceil(ttlMs / 1000) };

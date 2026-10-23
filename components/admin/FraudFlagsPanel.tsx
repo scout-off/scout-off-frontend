@@ -10,6 +10,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import TruncatedAddress from '@/components/ui/TruncatedAddress';
 import { useToast } from '@/components/ui/Toast';
 import type { FraudFlag, FraudFlagSeverity, FraudThrottle } from '@/types';
+import { useLocale } from 'next-intl';
 
 const SEVERITY_STYLES: Record<FraudFlagSeverity, string> = {
   high: 'border-red-500 bg-red-950/30 text-red-400',
@@ -162,6 +163,7 @@ function ThrottleCard({
   onLift: (id: number) => void;
   lifting: boolean;
 }) {
+  const locale = useLocale();
   const isActive = throttle.status === 'throttled';
   return (
     <li className="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-3">
@@ -195,11 +197,11 @@ function ThrottleCard({
       <TruncatedAddress address={throttle.wallet} className="text-gray-400" />
       <p className="text-sm text-gray-200">{throttle.reason}</p>
       <p className="text-xs text-gray-500">
-        Throttled {new Date(throttle.throttledAt).toLocaleString()}
+        Throttled {new Date(throttle.throttledAt).toLocaleString(locale)}
         {throttle.liftedAt && (
           <>
             {' · Lifted '}
-            {new Date(throttle.liftedAt).toLocaleString()}
+            {new Date(throttle.liftedAt).toLocaleString(locale)}
             {throttle.liftedBy && ` by ${throttle.liftedBy}`}
             {throttle.liftReason && `: "${throttle.liftReason}"`}
           </>
@@ -227,6 +229,7 @@ export default function FraudFlagsPanel({
   /** Opens the admin's existing confirm-and-sign remove-validator flow. */
   onRemoveValidator?: (address: string) => void;
 } = {}) {
+  const locale = useLocale();
   const [flags, setFlags] = useState<FraudFlag[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [evaluatedAt, setEvaluatedAt] = useState<number | null>(null);
@@ -354,7 +357,7 @@ export default function FraudFlagsPanel({
             </p>
             {evaluatedAt !== null && (
               <p className="text-xs text-gray-500 mt-2">
-                As of {new Date(evaluatedAt).toLocaleString()}
+                As of {new Date(evaluatedAt).toLocaleString(locale)}
                 {runStats && (
                   <>
                     {runStats.eventsProcessed !== undefined &&

@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import type { Subscription } from '@/types';
 
 /** Scout subscription tier and days remaining, with a renew link when expiring. */
@@ -9,6 +10,7 @@ export default function SubscriptionStatusBanner({
 }: {
   subscription: Subscription;
 }) {
+  const t = useTranslations('subscription_status_banner');
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -28,12 +30,12 @@ export default function SubscriptionStatusBanner({
         data-tour="subscription-status"
         className="flex items-center gap-3 rounded-xl border border-red-500 bg-brand-card px-4 py-3 text-sm"
       >
-        <span className="text-red-400">Subscription expired</span>
+        <span className="text-red-400">{t('expired')}</span>
         <Link
           href="/scout/subscribe"
           className="ml-auto text-brand-green underline hover:opacity-80 transition"
         >
-          Renew
+          {t('renew')}
         </Link>
       </div>
     );
@@ -46,14 +48,13 @@ export default function SubscriptionStatusBanner({
         className="flex items-center gap-3 rounded-xl border border-orange-400 bg-brand-card px-4 py-3 text-sm text-gray-200"
       >
         <span>
-          {tierLabel} — expires in {daysRemaining} day
-          {daysRemaining !== 1 ? 's' : ''}
+          {t('expires_in', { tier: tierLabel, count: daysRemaining })}
         </span>
         <Link
           href="/scout/subscribe"
           className="ml-auto text-brand-green underline hover:opacity-80 transition"
         >
-          Renew
+          {t('renew')}
         </Link>
       </div>
     );
@@ -64,7 +65,7 @@ export default function SubscriptionStatusBanner({
       data-tour="subscription-status"
       className="flex items-center gap-3 rounded-xl border border-brand-green bg-brand-card px-4 py-3 text-sm text-gray-200"
     >
-      {tierLabel} — {daysRemaining} days remaining
+      {t('days_remaining', { tier: tierLabel, count: daysRemaining })}
     </div>
   );
 }

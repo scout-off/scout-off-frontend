@@ -11,6 +11,8 @@ import {
 } from './eventPoller';
 import {
   EventStore,
+  MAX_LIMIT,
+  MAX_PLAYERS_LIMIT,
   decodePlayerCursor,
   type PlayerQueryFilter,
   type PlayerRecord,
@@ -18,7 +20,7 @@ import {
   type QueryFilter,
   type WalletApprovalWindow,
 } from './db/eventStore';
-import { createPgPoolFromEnv, getStore, initStore } from './db';
+import { closeStore, createPgPoolFromEnv, getStore, initStore } from './db';
 import { LeaderElector } from './leaderElection';
 import type { EventType } from './metrics/IndexerMetrics';
 import { logger } from './logger';
@@ -181,6 +183,7 @@ function handleMetrics(res: http.ServerResponse): void {
 
 const PLAYER_EVENTS_PATH = /^\/players\/([^/]+)\/events$/;
 const VALIDATOR_EVENTS_PATH = /^\/validators\/([^/]+)\/events$/;
+const activeStreams = new Set<http.ServerResponse>();
 
 /**
  * Max length for a region/position filter value — guards against absurd
@@ -281,11 +284,18 @@ function handleStream(
     res.write(': heartbeat\n\n');
   }, 25_000);
 
-  // Cleanup on client disconnect.
-  req.on('close', () => {
+  activeStreams.add(res);
+  let cleaned = false;
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
     clearInterval(heartbeat);
     unsubscribe();
-  });
+    activeStreams.delete(res);
+  };
+
+  // The response stays open for the lifetime of the SSE connection.
+  res.on('close', cleanup);
 }
 
 function sendJson(
@@ -314,8 +324,8 @@ function parseQueryFilter(
   const limitParam = searchParams.get('limit');
   if (limitParam !== null) {
     const limit = Number(limitParam);
-    if (!Number.isInteger(limit) || limit <= 0) {
-      return { ok: false, error: 'limit must be a positive integer' };
+    if (!Number.isInteger(limit) || limit <= 0 || limit > MAX_LIMIT) {
+      return { ok: false, error: `limit must be between 1 and ${MAX_LIMIT}` };
     }
     filter.limit = limit;
   }
@@ -429,8 +439,11 @@ function parsePlayersQuery(searchParams: URLSearchParams):
   const limitParam = searchParams.get('limit');
   if (limitParam !== null) {
     const limit = Number(limitParam);
-    if (!Number.isInteger(limit) || limit <= 0) {
-      return { ok: false, error: 'limit must be a positive integer' };
+    if (!Number.isInteger(limit) || limit <= 0 || limit > MAX_PLAYERS_LIMIT) {
+      return {
+        ok: false,
+        error: `limit must be between 1 and ${MAX_PLAYERS_LIMIT}`,
+      };
     }
     filter.limit = limit;
   }
@@ -689,22 +702,36 @@ export const server = http.createServer(
 );
 
 /**
- * Graceful shutdown (issue #1333): stop accepting connections, let the
- * in-flight poll batch finish (bounded by SHUTDOWN_TIMEOUT_MS), then flush
- * and close the event store.
+ * Graceful shutdown (issue #1333): stop accepting connections, end SSE
+ * responses, let the in-flight poll batch finish, then close the store.
  */
 export async function shutdown(signal: string): Promise<void> {
   logger.info(`Indexer shutting down (${signal})`);
-  server.close();
-  if (poller) {
-    await Promise.race([
-      poller.stop(),
-      new Promise<void>((resolve) =>
-        setTimeout(resolve, SHUTDOWN_TIMEOUT_MS).unref(),
-      ),
-    ]);
-  }
-  EventStore.getInstance().close();
+  const serverClosed = new Promise<void>((resolve) => {
+    server.close((err) => {
+      if (err) logger.warn('HTTP server close failed', { err });
+      resolve();
+    });
+  });
+  for (const response of activeStreams) response.end();
+
+  const deadline = Date.now() + SHUTDOWN_TIMEOUT_MS;
+  const waitWithinBudget = <T>(task: Promise<T>): Promise<T | void> => {
+    let timer: ReturnType<typeof setTimeout>;
+    return Promise.race([
+      task,
+      new Promise<void>((resolve) => {
+        timer = setTimeout(
+          resolve,
+          Math.max(0, deadline - Date.now()),
+        ).unref();
+      }),
+    ]).finally(() => clearTimeout(timer));
+  };
+  await waitWithinBudget(
+    Promise.all([serverClosed, ...(poller ? [poller.stop()] : [])]),
+  );
+  await waitWithinBudget(closeStore());
 }
 
 export async function startServer(): Promise<void> {

@@ -204,6 +204,31 @@ export class SessionStore {
       .changes;
   }
 
+  /**
+   * Data-retention pruning (issue #1477).
+   *
+   * Hard-deletes rows that are no longer needed:
+   *   - Rows that are past their `expires_at` AND have been expired for at
+   *     least `auditRetentionMs` (so recently-expired rows are kept for a
+   *     short audit/debugging window).
+   *   - Rows that were revoked AND the revocation is older than
+   *     `auditRetentionMs` (same audit window for revoked sessions).
+   *
+   * Active sessions (revoked_at IS NULL, expires_at >= now) are never
+   * touched. Returns the number of rows deleted.
+   */
+  pruneExpiredAndRevoked(nowMs: number, auditRetentionMs: number): number {
+    const cutoff = nowMs - auditRetentionMs;
+    const result = this.db
+      .prepare(
+        `DELETE FROM sessions
+         WHERE (expires_at < @cutoff)
+            OR (revoked_at IS NOT NULL AND revoked_at < @cutoff)`,
+      )
+      .run({ cutoff });
+    return result.changes;
+  }
+
   close(): void {
     this.db.close();
   }

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { requireAdminWallet } from '@/lib/adminAuth';
 import { FraudFlagsStore } from '@/lib/fraudFlagsStore';
 import { privateJson } from '@/lib/httpResponses';
+import { apiError, ApiErrorCode } from '@/lib/apiErrors';
 
 /**
  * Lightweight companion to GET /api/admin/fraud-flags: returns the most
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
   const sessionWallet = requireAdminWallet(req);
 
   if (!sessionWallet) {
-    return privateJson({ error: 'Forbidden' }, { status: 403 });
+    return apiError(ApiErrorCode.FORBIDDEN, 403, 'Admin access required');
   }
 
   const latest = FraudFlagsStore.getInstance().getLatestRun();

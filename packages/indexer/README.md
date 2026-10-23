@@ -377,7 +377,7 @@ Paginated, filterable scout-discovery query over the materialized players table 
 | `position`     | No       | Exact-match position. Empty/omitted = all positions. `400` if longer than 100 chars.                      |
 | `minLevel`     | No       | Minimum progress level, integer 0–3. `400` otherwise.                                                     |
 | `cursor`       | No       | Opaque keyset cursor — pass the previous page's `nextCursor`. `400` if malformed.                         |
-| `limit`        | No       | Page size, default 50, **capped at 50**. `400` if not a positive integer.                                 |
+| `limit`        | No       | Page size, default 50, **max 50**. `400` if not an integer between 1 and 50.                              |
 | `createdAfter` | No       | Only players created strictly after this unix-seconds timestamp (saved-search "new since viewed" counts). |
 
 ```bash
@@ -421,7 +421,7 @@ Query events across all players, optionally filtered.
 | ----------- | -------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `type`      | No       | One of the 8 documented event types. `400` if unrecognized.                                                            |
 | `player_id` | No       | Not applicable here — use `/players/:id/events` instead.                                                               |
-| `limit`     | No       | Page size, default 50, capped at 200. `400` if not a positive integer.                                                 |
+| `limit`     | No       | Page size, default 50, **max 200**. `400` if not an integer between 1 and 200.                                         |
 | `before`    | No       | Keyset cursor: only returns events with `ledger` strictly less than this value. Pass the previous page's `nextCursor`. |
 
 ```bash

@@ -6,6 +6,7 @@ import { PROGRESS_LABELS } from '@/types';
 import type { Player } from '@/types';
 import EmptyState from '@/components/ui/EmptyState';
 import Button from '@/components/ui/Button';
+import { useLocale } from 'next-intl';
 
 interface ValidatorPlayerSearchProps {
   onSelect: (player: Player) => void;
@@ -14,6 +15,7 @@ interface ValidatorPlayerSearchProps {
 export default function ValidatorPlayerSearch({
   onSelect,
 }: ValidatorPlayerSearchProps) {
+  const locale = useLocale();
   const [query, setQuery] = useState('');
   const [player, setPlayer] = useState<Player | null>(null);
   const [loading, setLoading] = useState(false);
@@ -63,7 +65,7 @@ export default function ValidatorPlayerSearch({
   const lastMilestoneDate = player?.milestones.length
     ? new Date(
         Math.max(...player.milestones.map((m) => m.timestamp)) * 1000,
-      ).toLocaleDateString(undefined, {
+      ).toLocaleDateString(locale, {
         year: 'numeric',
         month: 'short',
         day: 'numeric',

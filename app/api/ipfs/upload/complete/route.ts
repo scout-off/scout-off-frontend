@@ -31,6 +31,7 @@ import {
   verifyUploadedDigest,
   UploadVerificationError,
 } from '@/lib/uploadVerification';
+import { withTimeoutSignal } from '@/lib/fetchTimeout';
 
 export const runtime = 'nodejs';
 
@@ -56,6 +57,7 @@ export const runtime = 'nodejs';
  * it so a retry skips re-uploading chunks.
  */
 const RATE_LIMIT = { limit: 20, windowMs: 60 * 1000 };
+const PINATA_UPLOAD_TIMEOUT_MS = 45_000;
 
 const ALLOWED_MIME_PREFIXES = ['image/', 'video/'];
 
@@ -268,25 +270,28 @@ export async function pinStreamedFileToIPFS(assembly: {
     assembly.totalBytes,
     assembly.chunks,
   );
-  const res = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
-    method: 'POST',
-    headers: {
-      'Content-Type': contentType,
-      'Content-Length': String(contentLength),
-      pinata_api_key: process.env.PINATA_API_KEY ?? '',
-      pinata_secret_api_key: process.env.PINATA_SECRET ?? '',
-    },
-    body: stream as unknown as BodyInit,
-    duplex: 'half',
-  } as RequestInit & { duplex: 'half' });
-  if (!res.ok) {
-    throw new Error(`Pinata upload failed with status ${res.status}`);
-  }
-  const data = (await res.json()) as { IpfsHash?: string };
-  if (!data.IpfsHash) {
-    throw new Error('Pinata response missing IpfsHash');
-  }
-  return data.IpfsHash;
+  return withTimeoutSignal(PINATA_UPLOAD_TIMEOUT_MS, async (signal) => {
+    const res = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+      method: 'POST',
+      headers: {
+        'Content-Type': contentType,
+        'Content-Length': String(contentLength),
+        pinata_api_key: process.env.PINATA_API_KEY ?? '',
+        pinata_secret_api_key: process.env.PINATA_SECRET ?? '',
+      },
+      body: stream as unknown as BodyInit,
+      signal,
+      duplex: 'half',
+    } as RequestInit & { duplex: 'half' });
+    if (!res.ok) {
+      throw new Error(`Pinata upload failed with status ${res.status}`);
+    }
+    const data = (await res.json()) as { IpfsHash?: string };
+    if (!data.IpfsHash) {
+      throw new Error('Pinata response missing IpfsHash');
+    }
+    return data.IpfsHash;
+  });
 }
 
 /** Test helper: drains the streamed file bytes (no framing) into memory. */

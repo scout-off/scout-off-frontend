@@ -40,16 +40,26 @@ async function fetchContractStatus(): Promise<ContractStatusData> {
 export function useContractStatus() {
   const [data, setData] = useState<ContractStatusData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
+    // isLoading only covers the first poll; later polls refresh silently and
+    // a failure keeps the last good data.
     async function poll() {
-      setIsLoading(true);
-      const result = await fetchContractStatus();
-      if (!cancelled) {
-        setData(result);
-        setIsLoading(false);
+      try {
+        const result = await fetchContractStatus();
+        if (!cancelled) {
+          setData(result);
+          setError(null);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err : new Error(String(err)));
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
       }
     }
 
@@ -66,5 +76,6 @@ export function useContractStatus() {
     isPaused: data?.isPaused ?? false,
     isHealthy: data?.isHealthy ?? true,
     isLoading,
+    error,
   };
 }

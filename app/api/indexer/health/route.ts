@@ -3,6 +3,10 @@ import { NextResponse } from 'next/server';
 // Public, read-only freshness probe for indexer-backed views (see #1357).
 // Proxies the indexer's own /health server-side (like app/api/admin/health)
 // but exposes only the fields DataFreshnessBadge needs.
+//
+// Uses INDEXER_API_URL_INTERNAL (server-only) so the internal indexer address
+// is not inlined into the client bundle (#1492). Falls back to the deprecated
+// NEXT_PUBLIC_INDEXER_API_URL for deployments that haven't set the new var.
 
 const FETCH_TIMEOUT_MS = 5000;
 
@@ -13,7 +17,9 @@ export interface IndexerFreshness {
 }
 
 export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_INDEXER_API_URL;
+  const baseUrl =
+    process.env.INDEXER_API_URL_INTERNAL ??
+    process.env.NEXT_PUBLIC_INDEXER_API_URL;
   if (!baseUrl) {
     return NextResponse.json(
       { error: 'Indexer not configured' },

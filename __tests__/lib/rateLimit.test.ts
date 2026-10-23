@@ -74,7 +74,12 @@ jest.mock('@upstash/redis', () => {
   return { Redis: MockRedis, __mockBackingStores: backingStores };
 });
 
-import { checkRateLimit, _resetRateLimitStoreForTests } from '@/lib/rateLimit';
+import {
+  checkRateLimit,
+  _resetRateLimitStoreForTests,
+  _getInMemoryStoreSizeForTests,
+  IN_MEMORY_MAX_ENTRIES,
+} from '@/lib/rateLimit';
 
 const { __mockBackingStores } = jest.requireMock('@upstash/redis') as {
   __mockBackingStores: Map<string, Map<string, MockEntry>>;
@@ -274,5 +279,43 @@ describe('rateLimit under multiple "serverless instances" (issue #658)', () => {
       });
       errorSpy.mockRestore();
     }
+  });
+});
+
+describe('in-memory store eviction (issue #1582)', () => {
+  const ORIGINAL_ENV = process.env;
+  const opts = { limit: 5, windowMs: 1_000 };
+
+  beforeEach(() => {
+    process.env = { ...ORIGINAL_ENV };
+    delete process.env.UPSTASH_REDIS_REST_URL;
+    delete process.env.UPSTASH_REDIS_REST_TOKEN;
+    _resetRateLimitStoreForTests();
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    process.env = ORIGINAL_ENV;
+    _resetRateLimitStoreForTests();
+  });
+
+  it('sweeps expired entries during normal operation', async () => {
+    for (let i = 0; i < 2_000; i++) await checkRateLimit(`k:${i}`, opts);
+    expect(_getInMemoryStoreSizeForTests()).toBeLessThanOrEqual(2_000);
+
+    jest.advanceTimersByTime(opts.windowMs + 1);
+    // Enough fresh calls to cross the next sweep boundary.
+    for (let i = 0; i < 1_000; i++) await checkRateLimit('fresh', opts);
+
+    expect(_getInMemoryStoreSizeForTests()).toBe(1);
+  });
+
+  it('caps the number of tracked keys', async () => {
+    const longWindow = { limit: 5, windowMs: 60 * 60_000 };
+    for (let i = 0; i < IN_MEMORY_MAX_ENTRIES + 500; i++) {
+      await checkRateLimit(`k:${i}`, longWindow);
+    }
+    expect(_getInMemoryStoreSizeForTests()).toBe(IN_MEMORY_MAX_ENTRIES);
   });
 });

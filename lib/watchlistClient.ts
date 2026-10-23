@@ -1,5 +1,8 @@
 import type { WatchlistEntry } from '@/types';
-import { fetchWithRetry } from '@/lib/fetchWithRetry';
+import {
+  fetchWithRetry,
+  fetchWithTimeout,
+} from '@/lib/fetchWithRetry';
 
 /** Client for app/api/watchlist — same-origin, cookie-authenticated. */
 
@@ -9,14 +12,15 @@ export async function fetchWatchlist(): Promise<WatchlistEntry[]> {
   return res.json();
 }
 
-// addToWatchlist/removeFromWatchlist deliberately use a bare `fetch`, not
-// `fetchWithRetry`: these are mutations with no idempotency key, so an
-// automatic retry after a lost response risks e.g. a duplicate watchlist
-// entry.
+// addToWatchlist/removeFromWatchlist deliberately use fetchWithTimeout rather
+// than fetchWithRetry: these are mutations with no idempotency key, so an
+// automatic retry after a lost response risks a duplicate watchlist entry.
+// fetchWithTimeout adds a 10 s deadline so the UI never hangs indefinitely
+// on a flaky mobile connection (issue #1508).
 export async function addToWatchlist(
   playerId: string,
 ): Promise<WatchlistEntry> {
-  const res = await fetch('/api/watchlist', {
+  const res = await fetchWithTimeout('/api/watchlist', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ playerId }),
@@ -26,7 +30,7 @@ export async function addToWatchlist(
 }
 
 export async function removeFromWatchlist(id: number): Promise<void> {
-  const res = await fetch('/api/watchlist', {
+  const res = await fetchWithTimeout('/api/watchlist', {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id }),

@@ -16,6 +16,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import Tooltip from '@/components/ui/Tooltip';
 import Badge from '@/components/ui/Badge';
 import { checkIsValidator } from '@/lib/contract';
@@ -57,6 +58,7 @@ export default function ValidatorChip({
   label,
   className,
 }: ValidatorChipProps) {
+  const t = useTranslations('validator.chip');
   const [status, setStatus] = useState<Status>('loading');
   const [milestoneCount, setMilestoneCount] = useState<number | null>(null);
   const [academyName, setAcademyName] = useState<string | null>(null);
@@ -98,12 +100,13 @@ export default function ValidatorChip({
     unknown: 'bg-gray-700/60 text-gray-400 border border-gray-600/60',
   };
 
-  const statusLabel: Record<Status, string> = {
-    loading: 'Checking validator…',
-    active: 'Active validator',
-    former: 'Former validator',
-    unknown: 'Validator status unknown',
+  const statusLabelKey: Record<Status, string> = {
+    loading: 'loading',
+    active: 'active',
+    former: 'former',
+    unknown: 'unknown',
   };
+  const statusLabel = t(statusLabelKey[status]);
 
   const dotClasses: Record<Status, string> = {
     loading: 'bg-gray-500 animate-pulse',
@@ -118,10 +121,13 @@ export default function ValidatorChip({
   // than surfacing only the individual wallet.
   const statusAndCount =
     status === 'loading'
-      ? 'Fetching validator information…'
+      ? t('fetching')
       : milestoneCount !== null
-        ? `${statusLabel[status]} · ${milestoneCount} milestone${milestoneCount !== 1 ? 's' : ''} approved`
-        : `${statusLabel[status]} · ${truncateAddress(address)}`;
+        ? t('milestones_approved', {
+            status: statusLabel,
+            count: milestoneCount,
+          })
+        : `${statusLabel} · ${truncateAddress(address)}`;
   const tooltipContent = academyName
     ? `${academyName} · ${statusAndCount}`
     : statusAndCount;
@@ -169,7 +175,7 @@ export default function ValidatorChip({
       {displayKind === 'academy' && (
         <Badge
           variant="academy"
-          label="Academy-affiliated"
+          label={t('academy_affiliated')}
           size="sm"
           icon={<AcademyIcon />}
           className="!px-1.5 !py-0"
@@ -181,7 +187,7 @@ export default function ValidatorChip({
           <span aria-hidden="true" className="opacity-40">
             ·
           </span>
-          <span>{statusLabel[status]}</span>
+          <span>{statusLabel}</span>
         </>
       )}
     </span>

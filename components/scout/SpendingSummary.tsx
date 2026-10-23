@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useSpendingSummary } from '@/hooks/useSpendingSummary';
 import { useFeeDriftDetection } from '@/hooks/useFeeDriftDetection';
 import { formatXlm } from '@/lib/formatXlm';
@@ -16,13 +17,14 @@ import DataFreshnessBadge from '@/components/ui/DataFreshnessBadge';
  * Sources payment events from the indexer (via useSpendingSummary).
  */
 export default function SpendingSummary() {
+  const t = useTranslations('spending_summary');
   const { data, loading, error } = useSpendingSummary();
   const { hasDrift, warningMessage } = useFeeDriftDetection();
 
   if (loading) {
     return (
       <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
-        <h2 className="text-lg font-semibold text-white">Spending Summary</h2>
+        <h2 className="text-lg font-semibold text-white">{t('title')}</h2>
         <div className="flex justify-center py-8">
           <Spinner size="md" />
         </div>
@@ -33,11 +35,11 @@ export default function SpendingSummary() {
   if (error || !data) {
     return (
       <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
-        <h2 className="text-lg font-semibold text-white">Spending Summary</h2>
+        <h2 className="text-lg font-semibold text-white">{t('title')}</h2>
         <p className="text-sm text-gray-500">
           {error
-            ? 'Could not load spending data. The indexer may be unavailable.'
-            : 'No spending data available yet.'}
+            ? t('load_error')
+            : t('no_data')}
         </p>
       </section>
     );
@@ -47,7 +49,7 @@ export default function SpendingSummary() {
 
   return (
     <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-6">
-      <h2 className="text-lg font-semibold text-white">Spending Summary</h2>
+      <h2 className="text-lg font-semibold text-white">{t('title')}</h2>
       <DataFreshnessBadge className="self-start" />
 
       {hasDrift && warningMessage && (
@@ -64,21 +66,21 @@ export default function SpendingSummary() {
       {/* Totals */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-gray-900 rounded-lg p-4 text-center">
-          <p className="text-xs text-gray-500 mb-1">Contact Fees</p>
+          <p className="text-xs text-gray-500 mb-1">{t('contact_fees')}</p>
           <XlmFiatDisplay
             xlmAmount={data.totalContactFeesXlm}
             className="items-center"
           />
         </div>
         <div className="bg-gray-900 rounded-lg p-4 text-center">
-          <p className="text-xs text-gray-500 mb-1">Subscriptions</p>
+          <p className="text-xs text-gray-500 mb-1">{t('subscriptions')}</p>
           <XlmFiatDisplay
             xlmAmount={data.totalSubscriptionsXlm}
             className="items-center"
           />
         </div>
         <div className="bg-gray-900 rounded-lg p-4 text-center">
-          <p className="text-xs text-gray-500 mb-1">Total</p>
+          <p className="text-xs text-gray-500 mb-1">{t('total')}</p>
           <XlmFiatDisplay xlmAmount={data.totalXlm} className="items-center" />
         </div>
       </div>
@@ -87,16 +89,16 @@ export default function SpendingSummary() {
       {hasSpending && (
         <div>
           <h3 className="text-sm font-medium text-gray-300 mb-3">
-            Monthly Breakdown
+            {t('monthly_breakdown')}
           </h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-gray-500 text-xs uppercase tracking-wider">
-                  <th className="pb-2 font-medium">Month</th>
-                  <th className="pb-2 font-medium text-right">Contact Fees</th>
-                  <th className="pb-2 font-medium text-right">Subscriptions</th>
-                  <th className="pb-2 font-medium text-right">Total</th>
+                  <th className="pb-2 font-medium">{t('month')}</th>
+                  <th className="pb-2 font-medium text-right">{t('contact_fees')}</th>
+                  <th className="pb-2 font-medium text-right">{t('subscriptions')}</th>
+                  <th className="pb-2 font-medium text-right">{t('total')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800">
@@ -124,8 +126,7 @@ export default function SpendingSummary() {
 
       {!hasSpending && (
         <p className="text-sm text-gray-500">
-          No payments recorded yet. Your spending history will appear here once
-          you start contacting players or subscribing.
+          {t('no_payments')}
         </p>
       )}
     </section>

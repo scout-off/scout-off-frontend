@@ -7,6 +7,7 @@ import {
 } from '@/hooks/useXlmUsdRate';
 import { useCurrencyPreference } from '@/hooks/useCurrencyPreference';
 import { formatXlm } from '@/lib/formatXlm';
+import { useLocale } from 'next-intl';
 
 export interface XlmFiatDisplayProps {
   /** Raw XLM amount to display. */
@@ -28,6 +29,7 @@ export default function XlmFiatDisplay({
   xlmAmount,
   className = '',
 }: XlmFiatDisplayProps) {
+  const locale = useLocale();
   const { currency } = useCurrencyPreference();
   const { rate, loading, stale, updatedAt } = useXlmUsdRate(currency);
   const fiatAmount = convertXlmToFiat(xlmAmount, rate);
@@ -42,7 +44,7 @@ export default function XlmFiatDisplay({
           className="text-xs text-gray-500 dark:text-gray-400"
           title={
             stale
-              ? `Exchange rate may be outdated${updatedAt ? ` (last updated ${new Date(updatedAt).toLocaleString()})` : ''}`
+              ? `Exchange rate may be outdated${updatedAt ? ` (last updated ${new Date(updatedAt).toLocaleString(locale)})` : ''}`
               : undefined
           }
         >

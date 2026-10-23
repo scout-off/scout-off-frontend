@@ -7,6 +7,7 @@ import { createRequestLogger } from '@/lib/logger';
 import { sanitizeTextInput } from '@/lib/inputValidation';
 import type { FraudFlagCategory, FraudFlagSeverity } from '@/types';
 import { privateJson } from '@/lib/httpResponses';
+import { apiError, ApiErrorCode } from '@/lib/apiErrors';
 
 export const runtime = 'nodejs';
 
@@ -61,35 +62,35 @@ function isFlagPayload(value: unknown): value is {
 export async function POST(req: NextRequest) {
   const adminWallet = requireAdminWallet(req);
   if (!adminWallet) {
-    return privateJson({ error: 'Forbidden' }, { status: 403 });
+    return apiError(ApiErrorCode.FORBIDDEN, 403, 'Admin access required');
   }
 
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object') {
-    return privateJson({ error: 'Invalid JSON body' }, { status: 400 });
+    return apiError(ApiErrorCode.INVALID_JSON, 400, 'Invalid JSON body');
   }
 
   const { flag, note: rawNote } = body as Record<string, unknown>;
   if (!isFlagPayload(flag)) {
-    return privateJson(
-      {
-        error:
-          'flag must include category, heuristic, severity, wallets, and reason',
-      },
-      { status: 400 },
+    return apiError(
+      ApiErrorCode.MISSING_FIELDS,
+      400,
+      'flag must include category, heuristic, severity, wallets, and reason',
     );
   }
 
   let note: string | undefined;
   if (rawNote !== undefined) {
     if (typeof rawNote !== 'string') {
-      return privateJson({ error: 'note must be a string' }, { status: 400 });
+      return apiError(ApiErrorCode.INVALID_FIELD_VALUE, 400, 'note must be a string', { field: 'note' });
     }
     const sanitized = sanitizeTextInput(rawNote);
     if (sanitized.length > NOTE_MAX) {
-      return privateJson(
-        { error: `note must be at most ${NOTE_MAX} characters` },
-        { status: 400 },
+      return apiError(
+        ApiErrorCode.FIELD_TOO_LONG,
+        400,
+        `note must be at most ${NOTE_MAX} characters`,
+        { field: 'note', max: NOTE_MAX },
       );
     }
     note = sanitized.length > 0 ? sanitized : undefined;
@@ -141,9 +142,6 @@ export async function POST(req: NextRequest) {
     log.error('Failed to dismiss fraud flag', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return privateJson(
-      { error: 'Failed to dismiss fraud flag' },
-      { status: 500 },
-    );
+    return apiError(ApiErrorCode.INTERNAL_ERROR, 500, 'Failed to dismiss fraud flag');
   }
 }

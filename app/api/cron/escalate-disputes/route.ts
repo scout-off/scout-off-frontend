@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MilestoneDisputeStore } from '@/lib/milestoneDisputeStore';
 import { createRequestLogger } from '@/lib/logger';
+import { verifyCronRequest } from '@/lib/cronAuth';
 
 export const runtime = 'nodejs';
 
@@ -11,22 +12,18 @@ export const runtime = 'nodejs';
  * response deadline has elapsed as 'escalated', records a system event on
  * each dispute's timeline, and returns a count.
  *
- * Auth: requires the standard CRON_SECRET header, consistent with the
- * existing cron routes under app/api/cron/. Vercel Cron sends this
- * automatically; local testing can pass it explicitly.
+ * Authorization: see lib/cronAuth.ts — uses CRON_SECRET (fail-closed) with
+ * a constant-time comparison (#1490). Previously this route wrapped its auth
+ * check in `if (cronSecret) { ... }`, so an unconfigured secret meant the
+ * route was fully open to unauthenticated callers.
  *
  * Vercel cron schedule (add to vercel.json):
  *   { "path": "/api/cron/escalate-disputes", "schedule": "0 2 * * *" }
  * (runs at 02:00 UTC daily)
  */
 export async function GET(req: NextRequest) {
-  const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret) {
-    const authHeader = req.headers.get('authorization');
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-  }
+  const authError = verifyCronRequest(req);
+  if (authError) return authError;
 
   const log = createRequestLogger(req);
   try {

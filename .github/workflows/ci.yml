@@ -49,7 +49,7 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm run format:check
@@ -67,10 +67,11 @@ jobs:
         run: npx jest --ci --testPathPattern='a11y'
       - run: node scripts/validate-env.js
       - run: node scripts/check-locale-keys.js
-      # Non-blocking for now (see scripts/check-storybook-coverage.js) —
-      # components/ui/'s story coverage isn't complete yet, so this warns
-      # rather than fails until that gap (issue #1166) is fully closed.
-      - name: Storybook coverage check (components/ui)
+      # Storybook coverage check (issue #1524): components/ui/ is now a BLOCKING
+      # gate — all primitives there must have a story (see
+      # scripts/check-storybook-coverage.js). The other component directories
+      # (scout/, player/, admin/) are warn-only until their gaps are closed.
+      - name: Storybook coverage check
         run: node scripts/check-storybook-coverage.js
       # Issue #16: A broken Next.js build can be merged without CI catching it.
       # The .next build cache is keyed on package-lock + this step so subsequent
@@ -147,7 +148,7 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci --no-audit --no-fund
       - name: Check new/changed files have a matching test
@@ -162,7 +163,7 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
 
       - run: npm ci --no-audit --no-fund
@@ -202,7 +203,13 @@ jobs:
               " 2>/dev/null || echo "Coverage summary not available"
           echo '```' >> $GITHUB_STEP_SUMMARY
 
-  indexer:
+  memory-regression:
+    # Runs the streaming-upload memory regression test (issue #1527) in CI so
+    # that a regression back to full-body buffering (which would OOM serverless
+    # functions on 100 MB+ highlight videos) fails the build immediately.
+    # NODE_OPTIONS=--expose-gc lets the test harness force a GC at each sample
+    # so it measures the *live* set instead of uncollected garbage, enabling
+    # the strict 64 MB budget (vs the 256 MB smoke-bound used without GC).
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -210,6 +217,21 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Streaming-upload memory regression (100 MB, < 64 MB peak)
+        run: npm run test:memory
+
+  indexer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
           cache: npm
 
       # Installs both the app's and packages/indexer's dependencies via the
@@ -255,7 +277,7 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
 
       - run: npm ci --no-audit --no-fund
@@ -270,6 +292,93 @@ jobs:
       # block (see top of file) — no step-level env needed here either.
       - run: npm run build
 
+  # Issue #1520: the repo ships three production Dockerfiles (frontend,
+  # packages/indexer, docker/mock-api, docker/mock-rpc) but ci.yml never
+  # built them, so they drifted (node:20-alpine while .nvmrc is 24 and
+  # package.json requires node >=24). Only contract-integration.yml ran
+  # `docker compose -f docker-compose.test.yml`, and that stack uses a
+  # third-party image rather than building from these Dockerfiles.
+  #
+  # This job builds each Dockerfile so a broken or drifted Dockerfile
+  # fails CI loudly on the PR that broke it, instead of being discovered
+  # at deploy time. We only need a successful `docker build` (not a
+  # runtime smoke test) to catch the drift class of bugs described in the
+  # issue, so the job deliberately stops short of running the images.
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      # No setup-node: the images bring their own Node (node:24-alpine,
+      # pinned to match .nvmrc). Setting up Node here would only mask a
+      # Dockerfile that pulled the wrong base image.
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Frontend Dockerfile. NEXT_PUBLIC_* vars are inlined into the
+      # client bundle at build time, so they're passed as build ARGs —
+      # the same workflow-level placeholder values used by the `lint` and
+      # `build` jobs above (the bundle only needs to compile, not reach
+      # real services). See the top of this file for the canonical list.
+      - name: Build frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: scout-off-frontend:ci
+          build-args: |
+            NEXT_PUBLIC_CONTRACT_ID=${{ env.NEXT_PUBLIC_CONTRACT_ID }}
+            NEXT_PUBLIC_HORIZON_URL=${{ env.NEXT_PUBLIC_HORIZON_URL }}
+            NEXT_PUBLIC_SOROBAN_RPC=${{ env.NEXT_PUBLIC_SOROBAN_RPC }}
+            NEXT_PUBLIC_IPFS_GATEWAY=${{ env.NEXT_PUBLIC_IPFS_GATEWAY }}
+            NEXT_PUBLIC_API_URL=${{ env.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_APP_URL=${{ env.NEXT_PUBLIC_APP_URL }}
+            NEXT_PUBLIC_ADMIN_ADDRESS=${{ env.NEXT_PUBLIC_ADMIN_ADDRESS }}
+            NEXT_PUBLIC_DOMAIN=${{ env.NEXT_PUBLIC_DOMAIN }}
+            NEXT_PUBLIC_BASE_URL=${{ env.NEXT_PUBLIC_BASE_URL }}
+
+      # The indexer Dockerfile's build context is ./packages/indexer, but
+      # the package depends on the sibling workspace package
+      # @scoutoff/contract-events (packages/contract-events), which is
+      # private/unpublished and lives outside that context — so `npm
+      # install` can't resolve it and `prebuild` (`npm run build --prefix
+      # ../contract-events`) can't find its target. That's a pre-existing
+      # workspace-context limitation, not node-version drift, and fixing it
+      # (e.g. widening the build context to the repo root) is out of scope
+      # for #1520. We still build it best-effort so the node:24 bump is
+      # exercised, but a failure here doesn't fail the job — tracked as
+      # follow-up so the three self-contained images keep gating the PR.
+      - name: Build indexer image
+        continue-on-error: true
+        uses: docker/build-push-action@v6
+        with:
+          context: ./packages/indexer
+          file: ./packages/indexer/Dockerfile
+          push: false
+          load: true
+          tags: scout-off-indexer:ci
+
+      - name: Build mock-api image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./docker/mock-api
+          file: ./docker/mock-api/Dockerfile
+          push: false
+          load: true
+          tags: scout-off-mock-api:ci
+
+      - name: Build mock-rpc image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./docker/mock-rpc
+          file: ./docker/mock-rpc/Dockerfile
+          push: false
+          load: true
+          tags: scout-off-mock-rpc:ci
+
   e2e:
     # Playwright suite (e2e/). Boots the Next.js dev server itself through
     # playwright.config.ts's `webServer` block, so it needs no external
@@ -282,7 +391,7 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
 
       - run: npm ci --no-audit --no-fund
@@ -326,7 +435,7 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm run build-storybook
@@ -343,7 +452,7 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
 
       - run: npm ci --no-audit --no-fund
@@ -374,7 +483,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
 
       - run: npm ci --no-audit --no-fund

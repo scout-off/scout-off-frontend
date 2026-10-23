@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Trash2, Mail, Phone, Send } from 'lucide-react';
 import { useWallet } from '@/hooks/useWallet';
 import { useToast } from '@/components/ui/Toast';
@@ -50,6 +50,7 @@ const EMPTY_FORM: FormState = { email: '', phone: '', telegram: '' };
 export default function ContactDetailsPanel({
   client = defaultContactVaultClient,
 }: ContactDetailsPanelProps) {
+  const locale = useLocale();
   const t = useTranslations('settings.contact');
   const { publicKey, isAuthenticated } = useWallet();
   const { show } = useToast();
@@ -160,7 +161,7 @@ export default function ContactDetailsPanel({
         <p className="text-xs text-brand-green" role="status">
           {meta.updatedAt
             ? t('stored_at', {
-                date: new Date(meta.updatedAt).toLocaleDateString(),
+                date: new Date(meta.updatedAt).toLocaleDateString(locale),
               })
             : t('stored')}
         </p>

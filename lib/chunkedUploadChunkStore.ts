@@ -181,6 +181,23 @@ export class ChunkedUploadChunkStore {
       .run(sessionId);
   }
 
+  /**
+   * Data-retention pruning (issue #1477).
+   *
+   * Deletes every chunk row whose `created_at` is older than
+   * `beforeMs` (an absolute epoch-ms cutoff). By the time a chunk reaches
+   * that age the upload-session metadata has already expired and the bytes
+   * are unreachable through normal flows. Returns the number of rows deleted.
+   */
+  pruneOlderThan(beforeMs: number): number {
+    const result = this.db
+      .prepare(
+        `DELETE FROM chunked_upload_chunks WHERE created_at < ?`,
+      )
+      .run(beforeMs);
+    return result.changes;
+  }
+
   close(): void {
     this.db.close();
   }

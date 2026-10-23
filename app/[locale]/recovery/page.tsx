@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useCallback } from 'react';
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import {
   Key,
@@ -26,6 +26,7 @@ type RecoveryStep =
   | 'migrate-complete';
 
 export default function AccountRecoveryPage() {
+  const locale = useLocale();
   const t = useTranslations('recovery');
   const router = useRouter();
   const { publicKey, isConnecting, connect } = useWallet();
@@ -514,7 +515,9 @@ export default function AccountRecoveryPage() {
               <div className="flex justify-between">
                 <span className="text-gray-400">Executable after</span>
                 <span className="text-gray-300">
-                  {new Date(migrationRequest.executeAfter).toLocaleString()}
+                  {new Date(migrationRequest.executeAfter).toLocaleString(
+                    locale,
+                  )}
                 </span>
               </div>
             </div>
@@ -546,7 +549,7 @@ export default function AccountRecoveryPage() {
                 }
                 title={
                   Date.now() < migrationRequest.executeAfter
-                    ? `Available after ${new Date(migrationRequest.executeAfter).toLocaleString()}`
+                    ? `Available after ${new Date(migrationRequest.executeAfter).toLocaleString(locale)}`
                     : undefined
                 }
                 className="flex-1 px-4 py-3 rounded-lg bg-brand-green text-black font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"

@@ -16,6 +16,7 @@ import type {
   DisputeEvent,
   DisputeWithEvents,
 } from '@/types';
+import { useLocale } from 'next-intl';
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 
@@ -145,6 +146,7 @@ function EvidenceThumbnail({
 // ── Timeline ──────────────────────────────────────────────────────────────────
 
 function DisputeTimeline({ events }: { events: DisputeEvent[] }) {
+  const locale = useLocale();
   if (events.length === 0) {
     return <p className="text-xs text-gray-500 italic">No events yet.</p>;
   }
@@ -168,7 +170,7 @@ function DisputeTimeline({ events }: { events: DisputeEvent[] }) {
             />
             <span className="text-gray-500">·</span>
             <time className="text-gray-600">
-              {new Date(ev.createdAt).toLocaleString(undefined, {
+              {new Date(ev.createdAt).toLocaleString(locale, {
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric',
@@ -359,6 +361,7 @@ function DisputeCard({
     },
   ) => Promise<MilestoneDispute>;
 }) {
+  const locale = useLocale();
   const [expanded, setExpanded] = useState(false);
   const {
     dispute,
@@ -390,7 +393,7 @@ function DisputeCard({
             <TruncatedAddress address={summary.playerWallet} />
             <span>·</span>
             <time>
-              {new Date(summary.createdAt).toLocaleDateString(undefined, {
+              {new Date(summary.createdAt).toLocaleDateString(locale, {
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric',
@@ -473,7 +476,7 @@ function DisputeCard({
               <p className="text-gray-400">
                 Decided{' '}
                 <time>
-                  {new Date(summary.decidedAt).toLocaleDateString(undefined, {
+                  {new Date(summary.decidedAt).toLocaleDateString(locale, {
                     year: 'numeric',
                     month: 'short',
                     day: 'numeric',

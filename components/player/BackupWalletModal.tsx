@@ -1,7 +1,7 @@
 'use client';
 import { useState, useCallback } from 'react';
 import { Shield, Trash2, Key, AlertCircle } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import Modal from '@/components/ui/Modal';
 import Spinner from '@/components/ui/Spinner';
 import { useBackupWallet } from '@/hooks/useBackupWallet';
@@ -23,6 +23,7 @@ export default function BackupWalletModal({
   onClose,
   onSuccess,
 }: BackupWalletModalProps) {
+  const locale = useLocale();
   const t = useTranslations('player.modals.backupWallet');
   const { link, remove, loading, error } = useBackupWallet();
   const { signAndSubmit } = useWallet();
@@ -151,7 +152,7 @@ export default function BackupWalletModal({
                       {t('verifiedOn', {
                         date: new Date(
                           player.backupWalletVerifiedAt * 1000,
-                        ).toLocaleDateString(),
+                        ).toLocaleDateString(locale),
                       })}
                     </p>
                   )}

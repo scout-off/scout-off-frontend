@@ -1,7 +1,10 @@
 /** Client for app/api/notification-preferences — same-origin, cookie-authenticated. */
 import type { NotificationPreferences } from '@/types';
 import { registerHandler, OfflineQueueConflictError } from '@/lib/offlineQueue';
-import { fetchWithRetry } from '@/lib/fetchWithRetry';
+import {
+  fetchWithRetry,
+  fetchWithTimeout,
+} from '@/lib/fetchWithRetry';
 
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   milestoneApprovals: true,
@@ -45,7 +48,7 @@ export async function fetchNotificationPreferencesWithVersion(): Promise<{
 export async function updateNotificationPreferences(
   preferences: NotificationPreferences,
 ): Promise<NotificationPreferences> {
-  const res = await fetch('/api/notification-preferences', {
+  const res = await fetchWithTimeout('/api/notification-preferences', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(preferences),
@@ -67,7 +70,7 @@ export async function updateNotificationPreferencesWithVersion(
   preferences: NotificationPreferences,
   baseVersion: number | undefined,
 ): Promise<{ preferences: NotificationPreferences; version?: number }> {
-  const res = await fetch('/api/notification-preferences', {
+  const res = await fetchWithTimeout('/api/notification-preferences', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...preferences, baseVersion }),

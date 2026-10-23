@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useWallet } from '@/hooks/useWallet';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useToast } from '@/components/ui/Toast';
@@ -9,22 +10,14 @@ export default function PushNotificationToggle() {
   const { publicKey } = useWallet();
   const { status, enable, disable } = usePushNotifications(publicKey ?? null);
   const { show } = useToast();
+  const t = useTranslations('notifications.push');
 
   if (status === 'unsupported') {
-    return (
-      <p className="text-sm text-gray-400">
-        Push notifications aren&apos;t supported in this browser.
-      </p>
-    );
+    return <p className="text-sm text-gray-400">{t('unsupported')}</p>;
   }
 
   if (status === 'denied') {
-    return (
-      <p className="text-sm text-gray-400">
-        Notifications are blocked. Allow them in your browser&apos;s site
-        settings to enable milestone alerts.
-      </p>
-    );
+    return <p className="text-sm text-gray-400">{t('denied')}</p>;
   }
 
   const subscribed = status === 'subscribed';
@@ -33,7 +26,7 @@ export default function PushNotificationToggle() {
     try {
       if (subscribed) {
         await disable();
-        show({ message: 'Push notifications turned off.', variant: 'info' });
+        show({ message: t('turned_off'), variant: 'info' });
       } else {
         await enable();
       }
@@ -45,13 +38,8 @@ export default function PushNotificationToggle() {
   return (
     <div className="flex items-center justify-between gap-4">
       <div>
-        <p className="text-sm font-medium text-gray-200">
-          Milestone approval alerts
-        </p>
-        <p className="text-xs text-gray-400">
-          Get a browser notification when a coach or academy approves one of
-          your milestones — even when the app is closed.
-        </p>
+        <p className="text-sm font-medium text-gray-200">{t('title')}</p>
+        <p className="text-xs text-gray-400">{t('description')}</p>
       </div>
       <button
         type="button"
@@ -60,7 +48,7 @@ export default function PushNotificationToggle() {
         aria-pressed={subscribed}
         className="shrink-0 px-4 py-1.5 rounded-lg border border-brand-green text-sm text-brand-green disabled:opacity-40 hover:bg-brand-green hover:text-black transition"
       >
-        {subscribed ? 'Turn off' : 'Enable'}
+        {subscribed ? t('turn_off') : t('enable')}
       </button>
     </div>
   );

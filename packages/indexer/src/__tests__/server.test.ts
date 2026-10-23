@@ -192,13 +192,44 @@ describe('shutdown', () => {
     const closeSpy = jest.spyOn(EventStore.getInstance(), 'close');
     const serverClose = jest
       .spyOn(server, 'close')
-      .mockImplementation(() => server);
+      .mockImplementation((callback?: (err?: Error) => void) => {
+        callback?.();
+        return server;
+      });
 
     await shutdown('SIGTERM');
 
     expect(serverClose).toHaveBeenCalled();
     expect(handle.stop).toHaveBeenCalled();
     expect(closeSpy).toHaveBeenCalled();
+    serverClose.mockRestore();
+  });
+
+  test('ends open SSE responses during shutdown', async () => {
+    const responsePromise = new Promise<http.IncomingMessage>(
+      (resolve, reject) => {
+        const req = http.get(
+          `http://127.0.0.1:${(server.address() as { port: number }).port}/stream`,
+          resolve,
+        );
+        req.once('error', reject);
+      },
+    );
+    const response = await responsePromise;
+    expect(response.headers['content-type']).toContain('text/event-stream');
+
+    const serverClose = jest
+      .spyOn(server, 'close')
+      .mockImplementation((callback?: (err?: Error) => void) => {
+        callback?.();
+        return server;
+      });
+    setPollerState(fakePoller());
+
+    const ended = new Promise<void>((resolve) => response.once('end', resolve));
+    response.resume();
+    await shutdown('SIGTERM');
+    await ended;
     serverClose.mockRestore();
   });
 });
@@ -307,6 +338,13 @@ describe('GET /events', () => {
   test('rejects a non-numeric limit with 400', async () => {
     const { status } = await request('/events?limit=abc');
     expect(status).toBe(400);
+  });
+
+  test('rejects limit above 200 with 400 and accepts 200', async () => {
+    const over = await request('/events?limit=201');
+    expect(over.status).toBe(400);
+    expect(JSON.parse(over.body).error).toBe('limit must be between 1 and 200');
+    expect((await request('/events?limit=200')).status).toBe(200);
   });
 });
 
@@ -519,13 +557,17 @@ describe('GET /players', () => {
     ).toBe(false);
   });
 
-  test('caps limit at 50', async () => {
+  test('accepts limit=50 and rejects limit above 50', async () => {
     for (let i = 1; i <= 55; i++)
       seedRegistration(`cap${i}`, { ledger: i * 10 });
 
-    const json = JSON.parse((await request('/players?limit=1000')).body);
+    const json = JSON.parse((await request('/players?limit=50')).body);
     expect(json.players).toHaveLength(50);
     expect(json.total).toBe(55);
+
+    const over = await request('/players?limit=51');
+    expect(over.status).toBe(400);
+    expect(JSON.parse(over.body).error).toBe('limit must be between 1 and 50');
   });
 
   test('filters by createdAfter', async () => {

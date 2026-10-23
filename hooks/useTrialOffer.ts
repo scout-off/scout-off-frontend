@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useWallet } from '@/hooks/useWallet';
 import { buildLogTrialOffer, getSubscription } from '@/lib/contract';
 import { extractContractErrorKey } from '@/lib/contractErrorMessage';
+import { runSorobanTx } from '@/lib/sorobanTx';
 import { isBlockedByCounterpart } from '@/lib/messaging/moderation';
 import type { TrialOfferDetails } from '@/types';
 
@@ -61,10 +62,14 @@ export function useTrialOffer(): UseTrialOfferReturn {
         const xdr = await buildLogTrialOffer(publicKey, playerId, details);
         if (myCallId !== callIdRef.current) return;
 
-        const result = await signAndSubmit(xdr);
+        const txResult = await runSorobanTx(() => signAndSubmit(xdr));
         if (myCallId !== callIdRef.current) return;
 
-        setTxHash((result as any)?.hash ?? null);
+        if (txResult.success) {
+          setTxHash(txResult.hash);
+        } else {
+          throw new Error(txResult.error);
+        }
       } catch (err) {
         if (myCallId !== callIdRef.current) return;
         const msg = err instanceof Error ? err.message : null;

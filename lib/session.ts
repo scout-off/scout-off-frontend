@@ -2,6 +2,65 @@ import { NextRequest } from 'next/server';
 import { createHmac, timingSafeEqual, randomUUID } from 'crypto';
 import { SessionStore } from './sessionStore';
 
+// ─── Multi-key / key-rotation support (#1489) ────────────────────────────────
+//
+// SESSION_SECRET_KEYS (comma-separated) is the preferred variable for
+// production deployments that want zero-downtime rotation.  The *first* key
+// in the list is the "current" key (used to sign every new token and given
+// the key-id "0"); remaining keys are accepted for verification only, letting
+// tokens that were signed before the rotation remain valid until they naturally
+// expire.  SESSION_SECRET is still accepted as a single-key alias so existing
+// deployments need no immediate migration.
+//
+// Rotation procedure:
+//   1. Prepend the new secret to SESSION_SECRET_KEYS (new key becomes id "0").
+//   2. Keep the old secret as id "1" (or "2", etc.) so live tokens verify.
+//   3. After max(ACCESS_TOKEN_TTL_SEC, REMEMBER_ME_REFRESH_TTL_SEC) has passed,
+//      remove the old key from the list.
+//
+// If neither variable is set the module throws at call time (not at import
+// time) to avoid masking startup errors with a silent boot failure.
+
+interface SigningKey {
+  id: string;
+  secret: string;
+}
+
+/**
+ * Returns all configured signing keys, newest-first.
+ * Index 0 is the active key; the rest are accepted for verification only.
+ */
+function getSigningKeys(): SigningKey[] {
+  const multi = process.env.SESSION_SECRET_KEYS;
+  if (multi) {
+    const keys = multi
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (keys.length === 0) {
+      throw new Error('SESSION_SECRET_KEYS is set but contains no valid keys');
+    }
+    return keys.map((secret, index) => ({ id: String(index), secret }));
+  }
+
+  const single = process.env.SESSION_SECRET;
+  if (single) {
+    return [{ id: '0', secret: single }];
+  }
+
+  throw new Error('SESSION_SECRET (or SESSION_SECRET_KEYS) is not configured');
+}
+
+/** Returns the current (signing) key. */
+function getCurrentKey(): SigningKey {
+  return getSigningKeys()[0];
+}
+
+/** Returns the key with the given id, or undefined when none match. */
+function findKeyById(id: string): SigningKey | undefined {
+  return getSigningKeys().find((k) => k.id === id);
+}
+
 // See #778: the `session` cookie used to hold the caller's own plaintext
 // public key with no signature and no server-side expiry — any HTTP client
 // able to attach a `Cookie: session=<any-G-address>` header was
@@ -83,20 +142,17 @@ interface SessionTokenPayload {
    * state — persists even as the tokens themselves rotate.
    */
   sid: string;
+  /**
+   * Key identifier (see #1489). Indexes into SESSION_SECRET_KEYS so the
+   * verifier can select the correct HMAC secret without trying every key.
+   * Tokens signed before multi-key support was added will have no `kid`; the
+   * verifier falls back to the current key for those.
+   */
+  kid?: string;
 }
 
-function getSessionSecret(): string {
-  const secret = process.env.SESSION_SECRET;
-  if (!secret) {
-    throw new Error('SESSION_SECRET is not configured');
-  }
-  return secret;
-}
-
-function sign(payloadB64: string): string {
-  return createHmac('sha256', getSessionSecret())
-    .update(payloadB64)
-    .digest('base64url');
+function sign(payloadB64: string, secret: string): string {
+  return createHmac('sha256', secret).update(payloadB64).digest('base64url');
 }
 
 /**
@@ -115,6 +171,7 @@ export function createSessionToken(
   opts: { remember?: boolean; sid?: string } = {},
 ): string {
   const now = Math.floor(Date.now() / 1000);
+  const currentKey = getCurrentKey();
   const payload: SessionTokenPayload = {
     sub: publicKey,
     typ: type,
@@ -128,10 +185,13 @@ export function createSessionToken(
     // tests exercising the token format alone) still gets a valid, unique
     // sid rather than an error.
     sid: opts.sid ?? randomUUID(),
+    // Embed the key-id so verifySessionToken can select the right secret
+    // during a grace period after rotation (#1489).
+    kid: currentKey.id,
     ...(type === 'refresh' ? { remember: !!opts.remember } : {}),
   };
   const payloadB64 = Buffer.from(JSON.stringify(payload)).toString('base64url');
-  return `${payloadB64}.${sign(payloadB64)}`;
+  return `${payloadB64}.${sign(payloadB64, currentKey.secret)}`;
 }
 
 /**
@@ -149,32 +209,60 @@ export function verifySessionToken(
   if (parts.length !== 2) return null;
   const [payloadB64, signature] = parts;
 
-  let expectedSignature: string;
+  // Decode the payload first (without trusting it) to read `kid`, so we can
+  // select the right HMAC key and avoid a full key scan (#1489).
+  let rawPayload: SessionTokenPayload;
   try {
-    expectedSignature = sign(payloadB64);
+    rawPayload = JSON.parse(
+      Buffer.from(payloadB64, 'base64url').toString('utf8'),
+    );
   } catch {
     return null;
   }
 
-  // Buffer.from(...).buffer is typed as ArrayBufferLike (it may back onto a
-  // SharedArrayBuffer), which timingSafeEqual's ArrayBufferView parameter
-  // type doesn't accept — Uint8Array.from copies into a plain ArrayBuffer,
-  // satisfying the type without changing the runtime bytes compared.
-  const sigBuf = Uint8Array.from(Buffer.from(signature));
-  const expectedBuf = Uint8Array.from(Buffer.from(expectedSignature));
-  if (
-    sigBuf.length !== expectedBuf.length ||
-    !timingSafeEqual(sigBuf, expectedBuf)
-  ) {
-    return null;
-  }
-
-  let payload: SessionTokenPayload;
+  // Build the ordered list of keys to try: if `kid` is present, put the
+  // matching key first so the common case (known kid) is a single comparison.
+  // Fall back to trying all configured keys so tokens minted before `kid` was
+  // introduced still verify (the payload `kid` field is optional).
+  let keysToTry: SigningKey[];
   try {
-    payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8'));
+    const allKeys = getSigningKeys();
+    if (typeof rawPayload.kid === 'string') {
+      const named = findKeyById(rawPayload.kid);
+      keysToTry = named
+        ? [named, ...allKeys.filter((k) => k.id !== named.id)]
+        : allKeys;
+    } else {
+      keysToTry = allKeys;
+    }
   } catch {
     return null;
   }
+
+  // Try each candidate key with a constant-time comparison so we don't leak
+  // match-length information through response timing.
+  let verified = false;
+  for (const key of keysToTry) {
+    let expectedSignature: string;
+    try {
+      expectedSignature = sign(payloadB64, key.secret);
+    } catch {
+      continue;
+    }
+
+    const sigBuf = Uint8Array.from(Buffer.from(signature));
+    const expectedBuf = Uint8Array.from(Buffer.from(expectedSignature));
+    if (
+      sigBuf.length === expectedBuf.length &&
+      timingSafeEqual(sigBuf, expectedBuf)
+    ) {
+      verified = true;
+      break;
+    }
+  }
+  if (!verified) return null;
+
+  const payload = rawPayload;
 
   if (payload.typ !== expectedType) return null;
   if (typeof payload.sub !== 'string' || !payload.sub) return null;

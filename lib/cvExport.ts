@@ -4,6 +4,7 @@ import QRCode from 'qrcode';
 import { getProgressLabel } from '@/lib/progress';
 import { fetchAcademyForWallet } from '@/lib/api';
 import { buildCvContent, hashCvContent } from '@/lib/cvVerification';
+import { fetchWithTimeout } from '@/lib/fetchWithRetry';
 
 const PAGE_WIDTH = 595.28; // A4, points
 const PAGE_HEIGHT = 841.89;
@@ -41,7 +42,7 @@ export async function requestCvVerification(
   milestones: Milestone[],
 ): Promise<CvVerification> {
   const contentHash = await hashCvContent(buildCvContent(player, milestones));
-  const response = await fetch('/api/cv/sign', {
+  const response = await fetchWithTimeout('/api/cv/sign', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ playerId: player.id, contentHash }),

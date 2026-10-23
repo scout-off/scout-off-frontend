@@ -3,6 +3,16 @@ import ErrorBoundary from '@/components/ui/ErrorBoundary';
 
 const ERROR_MESSAGE = 'Test error';
 
+// Mock @sentry/nextjs so tests don't require a real Sentry DSN and we can
+// assert that captureException / withScope are called correctly (issue #1495).
+const mockCaptureException = jest.fn();
+const mockWithScope = jest.fn((cb: (scope: unknown) => void) => cb({ setContext: jest.fn() }));
+
+jest.mock('@sentry/nextjs', () => ({
+  captureException: (...args: unknown[]) => mockCaptureException(...args),
+  withScope: (cb: (scope: unknown) => void) => mockWithScope(cb),
+}));
+
 function ThrowingComponent(): never {
   throw new Error(ERROR_MESSAGE);
 }
@@ -10,7 +20,8 @@ function ThrowingComponent(): never {
 describe('ErrorBoundary', () => {
   beforeEach(() => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
-    (window as any).Sentry = undefined;
+    mockCaptureException.mockClear();
+    mockWithScope.mockClear();
   });
 
   afterEach(() => {
@@ -51,41 +62,20 @@ describe('ErrorBoundary', () => {
     expect(screen.queryByText('Something went wrong')).not.toBeInTheDocument();
   });
 
-  it('calls Sentry when an error is caught and Sentry is available', () => {
-    const captureException = jest.fn();
-    (window as any).Sentry = { captureException };
-
+  it('calls Sentry.captureException when an error is caught', () => {
     render(
       <ErrorBoundary>
         <ThrowingComponent />
       </ErrorBoundary>,
     );
 
-    expect(captureException).toHaveBeenCalledTimes(1);
-    expect(captureException).toHaveBeenCalledWith(
+    // withScope should have been called once to set the react context
+    expect(mockWithScope).toHaveBeenCalledTimes(1);
+    // captureException should have been called with the thrown error
+    expect(mockCaptureException).toHaveBeenCalledTimes(1);
+    expect(mockCaptureException).toHaveBeenCalledWith(
       expect.objectContaining({ message: ERROR_MESSAGE }),
-      expect.objectContaining({
-        contexts: expect.objectContaining({
-          react: expect.objectContaining({
-            componentStack: expect.any(String),
-          }),
-        }),
-      }),
     );
-  });
-
-  it('does not call Sentry when Sentry is unavailable', () => {
-    const captureException = jest.fn();
-    (window as any).Sentry = undefined;
-
-    render(
-      <ErrorBoundary>
-        <ThrowingComponent />
-      </ErrorBoundary>,
-    );
-
-    // cleanup to ensure nothing calls Sentry from the global scope
-    expect((window as any).Sentry).toBeUndefined();
   });
 
   it('Try Again button resets error state and re-renders children', () => {
@@ -121,6 +111,7 @@ describe('ErrorBoundary', () => {
   // over-aggressive gating regression.
   it('hides error details when NODE_ENV=production', () => {
     const originalNodeEnv = process.env.NODE_ENV;
+    // @ts-expect-error NODE_ENV is readonly in the type system but assignable at runtime
     process.env.NODE_ENV = 'production';
     try {
       render(
@@ -143,6 +134,7 @@ describe('ErrorBoundary', () => {
         screen.queryByText(new RegExp(ERROR_MESSAGE)),
       ).not.toBeInTheDocument();
     } finally {
+      // @ts-expect-error NODE_ENV is readonly in the type system but assignable at runtime
       process.env.NODE_ENV = originalNodeEnv;
     }
   });

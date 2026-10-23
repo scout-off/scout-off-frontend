@@ -23,6 +23,7 @@ import { useToast } from '@/components/ui/Toast';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import TruncatedAddress from '@/components/ui/TruncatedAddress';
 import { checkIsValidator } from '@/lib/contract';
+import { getErrorMessage } from '@/lib/getErrorMessage';
 import {
   fetchMyAcademies,
   addAcademyMember,
@@ -95,9 +96,9 @@ export default function AcademyOwnerRoster() {
       );
       setMemberInputs((s) => ({ ...s, [academyId]: '' }));
       show({ message: t('addSuccess'), variant: 'success' });
-    } catch (e: any) {
+    } catch (e: unknown) {
       show({
-        message: e?.message ?? t('addFailed'),
+        message: getErrorMessage(e, t('addFailed')),
         variant: 'error',
       });
     } finally {
@@ -118,9 +119,9 @@ export default function AcademyOwnerRoster() {
         ),
       );
       show({ message: t('removeSuccess'), variant: 'success' });
-    } catch (e: any) {
+    } catch (e: unknown) {
       show({
-        message: e?.message ?? t('removeFailed'),
+        message: getErrorMessage(e, t('removeFailed')),
         variant: 'error',
       });
     } finally {

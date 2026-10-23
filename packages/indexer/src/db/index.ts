@@ -36,3 +36,15 @@ export async function initStore(): Promise<IndexerStore> {
 export function getStore(): IndexerStore {
   return pgStore ?? EventStore.getInstance();
 }
+
+/** Closes the active store and its Postgres pool, if configured. */
+export async function closeStore(): Promise<void> {
+  if (pgPool || process.env.INDEXER_DATABASE_URL) {
+    const pool = pgPool;
+    pgPool = null;
+    pgStore = null;
+    await pool?.end?.();
+    return;
+  }
+  EventStore.getInstance().close();
+}

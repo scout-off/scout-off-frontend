@@ -5,6 +5,7 @@ import {
   BASE_FEE,
   StrKey,
 } from '@stellar/stellar-sdk';
+import { withTimeoutSignal } from './fetchTimeout';
 
 const DEFAULT_SOROBAN_RPC_URL = 'https://soroban-testnet.stellar.org';
 
@@ -125,20 +126,23 @@ export async function pollTransaction(
  */
 export const HORIZON_URL =
   process.env.NEXT_PUBLIC_HORIZON_URL ?? 'https://horizon-testnet.stellar.org';
+const HORIZON_REQUEST_TIMEOUT_MS = 8_000;
 
 /**
  * Fetches the native XLM balance for a Stellar account via Horizon.
  * Returns 0 for unfunded accounts (404). Returns a number rounded to 7 decimal places.
  */
 export async function getXLMBalance(address: string): Promise<number> {
-  const res = await fetch(`${HORIZON_URL}/accounts/${address}`);
-  if (res.status === 404) return 0;
-  if (!res.ok) throw new Error(`Horizon error: ${res.status}`);
-  const { balances } = (await res.json()) as {
-    balances: Array<{ asset_type: string; balance: string }>;
-  };
-  const native = balances.find((b) => b.asset_type === 'native');
-  return native ? parseFloat(parseFloat(native.balance).toFixed(7)) : 0;
+  return withTimeoutSignal(HORIZON_REQUEST_TIMEOUT_MS, async (signal) => {
+    const res = await fetch(`${HORIZON_URL}/accounts/${address}`, { signal });
+    if (res.status === 404) return 0;
+    if (!res.ok) throw new Error(`Horizon error: ${res.status}`);
+    const { balances } = (await res.json()) as {
+      balances: Array<{ asset_type: string; balance: string }>;
+    };
+    const native = balances.find((b) => b.asset_type === 'native');
+    return native ? parseFloat(parseFloat(native.balance).toFixed(7)) : 0;
+  });
 }
 
 export async function signAndSubmitTx(

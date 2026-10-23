@@ -6,11 +6,21 @@
  * versioned migration runner (see lib/migrations/savedSearchMigrations.ts).
  * `filter` is stored as a JSON column, same pattern as adminAuditStore's
  * `data` field.
+ *
+ * Per-wallet cap: each scout is limited to MAX_SAVED_SEARCHES (50) saved
+ * searches. The route layer enforces the cap before calling add() and
+ * returns 409 when the limit is reached (issue #1507).
  */
 import type Database from 'better-sqlite3';
 import { openSqliteDb } from './sqliteDb';
 import { savedSearchMigrations } from './migrations/savedSearchMigrations';
 import type { PlayerFilter, SavedSearch } from '@/types';
+
+/**
+ * Maximum number of saved searches allowed per scout wallet.
+ * Exported so route handlers and tests can reference the canonical value.
+ */
+export const MAX_SAVED_SEARCHES = 50;
 
 interface SavedSearchRow {
   id: number;
@@ -215,6 +225,16 @@ export class SavedSearchStore {
       )
       .all(scoutWallet) as SavedSearchRow[];
     return rows.map(rowToEntry);
+  }
+
+  /** Returns the number of saved searches owned by scoutWallet. */
+  count(scoutWallet: string): number {
+    const row = this.db
+      .prepare(
+        'SELECT COUNT(*) AS n FROM saved_search WHERE scout_wallet = ?',
+      )
+      .get(scoutWallet) as { n: number };
+    return row.n;
   }
 
   close(): void {

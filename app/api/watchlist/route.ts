@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getSessionWallet } from '@/lib/session';
-import { WatchlistStore } from '@/lib/watchlistStore';
+import { WatchlistStore, MAX_WATCHLIST_ENTRIES } from '@/lib/watchlistStore';
 import { isValidStellarAddress, normalizeStellarAddress } from '@/lib/stellar';
 import { createRequestLogger } from '@/lib/logger';
 import { privateJson } from '@/lib/httpResponses';
@@ -67,10 +67,22 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const entry = WatchlistStore.getInstance().add(
-      scoutWallet,
-      normalizedPlayerId,
-    );
+    const store = WatchlistStore.getInstance();
+
+    // Enforce per-wallet cap before inserting (issue #1507).
+    const current = store.count(scoutWallet);
+    if (current >= MAX_WATCHLIST_ENTRIES) {
+      return privateJson(
+        {
+          error: 'Watchlist limit reached',
+          code: 'WATCHLIST_LIMIT_REACHED',
+          limit: MAX_WATCHLIST_ENTRIES,
+        },
+        { status: 409 },
+      );
+    }
+
+    const entry = store.add(scoutWallet, normalizedPlayerId);
     return privateJson(entry, { status: 201 });
   } catch (err) {
     log.error('Failed to add to watchlist', {

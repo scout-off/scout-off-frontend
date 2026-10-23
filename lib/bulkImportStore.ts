@@ -11,6 +11,8 @@
  * (file hash + row number) and are not re-presented for signing.
  */
 
+import { logger } from './clientLogger';
+
 export type BulkImportRowStatus =
   | 'pending'
   | 'signing'
@@ -255,7 +257,9 @@ export async function cleanupExpiredSessions(
         cursor.continue();
       } else {
         tx.oncomplete = () => {
-          console.log(`Cleaned up ${count} expired bulk import sessions`);
+          if (count > 0) {
+            logger.info('Cleaned up expired bulk import sessions', { count });
+          }
           resolve();
         };
       }

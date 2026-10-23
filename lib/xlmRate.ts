@@ -36,9 +36,19 @@ interface CacheEntry {
 
 const cache = new Map<string, CacheEntry>();
 
-/** Test hook: clear the module-level cache. */
+/**
+ * In-flight fetch deduplication: if a cache miss triggers a fetch, subsequent
+ * concurrent calls for the same currency reuse the same promise instead of
+ * each issuing their own upstream request (single-flight pattern). Once the
+ * promise resolves or rejects, the entry is removed so the next miss starts
+ * a fresh request.
+ */
+const inFlight = new Map<string, Promise<XlmRateResponse>>();
+
+/** Test hook: clear the module-level cache and in-flight map. */
 export function resetXlmRateCache(): void {
   cache.clear();
+  inFlight.clear();
 }
 
 async function fetchJson(url: string, headers?: HeadersInit): Promise<unknown> {
@@ -102,16 +112,38 @@ async function fetchFromStellarDex(): Promise<number> {
  * Returns the XLM rate for `vs` (lowercase ISO code), serving from a 60 s
  * in-memory cache, falling back to the Stellar DEX (USD only) and then to
  * the last known value marked `stale`. Throws only when nothing is known.
+ *
+ * Concurrent cache misses for the same currency are coalesced into a single
+ * upstream fetch (single-flight) to avoid stampeding the rate-limited
+ * CoinGecko API.
  */
-export async function getXlmRate(
+export function getXlmRate(
   vs: string,
   now: number = Date.now(),
 ): Promise<XlmRateResponse> {
   const cached = cache.get(vs);
   if (cached && now - cached.fetchedAt < RATE_CACHE_TTL_MS) {
-    return toResponse(cached, false);
+    return Promise.resolve(toResponse(cached, false));
   }
 
+  // If a fetch for this currency is already in flight, return the same promise
+  // so all concurrent callers share a single upstream request.
+  const existing = inFlight.get(vs);
+  if (existing) return existing;
+
+  const promise = fetchXlmRate(vs, now, cached).finally(() => {
+    inFlight.delete(vs);
+  });
+
+  inFlight.set(vs, promise);
+  return promise;
+}
+
+async function fetchXlmRate(
+  vs: string,
+  now: number,
+  cached: CacheEntry | undefined,
+): Promise<XlmRateResponse> {
   const providers: [RateSource, () => Promise<number>][] = [
     ['coingecko', () => fetchFromCoinGecko(vs)],
   ];

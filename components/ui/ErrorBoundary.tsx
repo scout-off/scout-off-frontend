@@ -1,4 +1,5 @@
 import React, { Component, ReactNode } from 'react';
+import * as Sentry from '@sentry/nextjs';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -26,12 +27,18 @@ export default class ErrorBoundary extends Component<
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
 
-    // Forward to Sentry in production if configured
-    if (typeof window !== 'undefined' && (window as any).Sentry) {
-      (window as any).Sentry.captureException(error, {
-        contexts: { react: { componentStack: errorInfo.componentStack } },
-      });
-    }
+    // Forward to Sentry via the npm package's exported API (issue #1495).
+    // The previous code checked `window.Sentry`, but @sentry/nextjs (v10)
+    // does not install a `window.Sentry` global (only the CDN loader script
+    // does), so every error caught by this boundary was logged to the
+    // console and never reached Sentry. Importing captureException and
+    // withScope directly from '@sentry/nextjs' works regardless of how
+    // Sentry was loaded and is the documented way to report errors from
+    // a React class component.
+    Sentry.withScope((scope) => {
+      scope.setContext('react', { componentStack: errorInfo.componentStack });
+      Sentry.captureException(error);
+    });
   }
 
   handleRetry = () => {

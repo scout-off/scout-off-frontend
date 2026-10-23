@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useServiceWorkerUpdate } from '@/hooks/useServiceWorkerUpdate';
 
 /**
@@ -8,6 +9,7 @@ import { useServiceWorkerUpdate } from '@/hooks/useServiceWorkerUpdate';
  * the new version still takes over on the next full page load.
  */
 export default function ServiceWorkerUpdateBanner() {
+  const t = useTranslations('service_worker_update_banner');
   const { updateAvailable, reload, dismiss } = useServiceWorkerUpdate();
 
   if (!updateAvailable) return null;
@@ -19,8 +21,8 @@ export default function ServiceWorkerUpdateBanner() {
       className="w-full bg-sky-500 text-white px-4 py-3 flex items-center justify-between gap-4 sticky top-0 z-50 border-b border-sky-600"
     >
       <span className="text-sm">
-        <strong className="font-semibold">New version available.</strong> Reload
-        to get the latest updates.
+        <strong className="font-semibold">{t('title')}</strong>{' '}
+        {t('message')}
       </span>
       <div className="flex shrink-0 items-center gap-2">
         <button
@@ -28,15 +30,15 @@ export default function ServiceWorkerUpdateBanner() {
           onClick={reload}
           className="bg-white text-sky-600 px-3 py-1 rounded-md text-sm font-semibold hover:bg-sky-50"
         >
-          Reload
+          {t('reload')}
         </button>
         <button
           type="button"
           onClick={dismiss}
-          aria-label="Dismiss update banner"
+          aria-label={t('dismiss_aria')}
           className="bg-sky-600 text-white px-3 py-1 rounded-md text-sm font-medium hover:bg-sky-700"
         >
-          Dismiss
+          {t('dismiss')}
         </button>
       </div>
     </div>
