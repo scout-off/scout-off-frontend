@@ -14,16 +14,33 @@ export const walletAdapters: Record<
   // Freighter's SDK is dynamically imported on first use — like Albedo below
   // — so the extension-detection code isn't pulled into every page's initial
   // bundle just because WalletProvider is mounted at the root layout.
+  //
+  // freighter-api v3+ (issue #1515): `getPublicKey()` was replaced by
+  // `getAddress()` which returns `{ address, error? }`, and `isConnected()`
+  // now returns `{ isConnected: boolean }` instead of a bare boolean.
   freighter: {
     async getPublicKey() {
-      const { getPublicKey, isConnected } =
+      const { getAddress, isConnected } =
         await import('@stellar/freighter-api');
-      if (!(await isConnected())) throw new Error('Freighter not installed');
-      return getPublicKey();
+      const connected = await isConnected();
+      if (!connected?.isConnected) throw new Error('Freighter not installed');
+      const result = await getAddress();
+      if (result?.error) throw new Error(result.error);
+      if (!result?.address) throw new Error('Freighter did not return an address');
+      return result.address;
     },
     async signTransaction(xdr, networkPassphrase) {
       const { signTransaction } = await import('@stellar/freighter-api');
-      return signTransaction(xdr, { networkPassphrase });
+      const result = await signTransaction(xdr, { networkPassphrase });
+      // freighter-api v3+ returns { signedTransaction, signerAddress, error? }
+      if (result && typeof result === 'object' && 'signedTransaction' in result) {
+        if ((result as { error?: string }).error) {
+          throw new Error((result as { error: string }).error);
+        }
+        return (result as { signedTransaction: string }).signedTransaction;
+      }
+      // v2 compat: returned the XDR string directly
+      return result as unknown as string;
     },
   },
   // Albedo is web-based — there's no extension to inject `window.albedo`,
