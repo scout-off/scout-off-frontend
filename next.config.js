@@ -32,6 +32,8 @@ const withPWA = require('next-pwa')({
   },
 });
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 const nextConfig = {
   typescript: {
     // `next build` runs its own project-wide type check by default, but this
@@ -80,36 +82,54 @@ const nextConfig = {
     ],
   },
   async headers() {
+    const securityHeaders = [
+      // Content-Security-Policy is now generated per-request in
+      // middleware.ts (nonce-based, 'strict-dynamic') so it is NOT set
+      // here. Setting it here would override the per-request nonce with a
+      // static value and break every inline script that relies on the nonce.
+      {
+        key: 'Reporting-Endpoints',
+        value: 'csp-endpoint="/api/csp-report"',
+      },
+      {
+        key: 'X-Content-Type-Options',
+        value: 'nosniff',
+      },
+      {
+        key: 'X-Frame-Options',
+        value: 'DENY',
+      },
+      // Legacy XSS auditor disabled on purpose — CSP (lib/csp.ts) is the XSS defence.
+      {
+        key: 'X-XSS-Protection',
+        value: '0',
+      },
+      {
+        key: 'Referrer-Policy',
+        value: 'strict-origin-when-cross-origin',
+      },
+      {
+        key: 'Cross-Origin-Opener-Policy',
+        value: 'same-origin-allow-popups',
+      },
+      {
+        key: 'Permissions-Policy',
+        value:
+          'accelerometer=(), autoplay=(), camera=(self), display-capture=(), geolocation=(), gyroscope=(), hid=(self), microphone=(), midi=(), payment=(), usb=(self)',
+      },
+    ];
+
+    if (isProduction) {
+      securityHeaders.push({
+        key: 'Strict-Transport-Security',
+        value: 'max-age=31536000; includeSubDomains',
+      });
+    }
+
     return [
       {
         source: '/:path*',
-        headers: [
-          // Content-Security-Policy is now generated per-request in
-          // middleware.ts (nonce-based, 'strict-dynamic') so it is NOT set
-          // here. Setting it here would override the per-request nonce with a
-          // static value and break every inline script that relies on the nonce.
-          {
-            key: 'Reporting-Endpoints',
-            value: 'csp-endpoint="/api/csp-report"',
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          // Legacy XSS auditor disabled on purpose — CSP (lib/csp.ts) is the XSS defence.
-          {
-            key: 'X-XSS-Protection',
-            value: '0',
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'strict-origin-when-cross-origin',
-          },
-        ],
+        headers: securityHeaders,
       },
     ];
   },
