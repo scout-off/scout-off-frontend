@@ -93,6 +93,9 @@ export const tunedRuntimeCaching: RuntimeCachingEntry[] = [
   {
     urlPattern: /\/api\/.*/i,
     handler: 'NetworkOnly',
+    // next-pwa's `fallbacks` (next.config.js) reads `options.precacheFallback`
+    // on every entry and crashes the build when `options` is missing.
+    options: {},
   },
 ];
 
