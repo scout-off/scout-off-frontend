@@ -30,7 +30,7 @@
 
 import {
   Keypair,
-  SorobanRpc,
+  rpc as SorobanRpc,
   TransactionBuilder,
   nativeToScVal,
   scValToNative,

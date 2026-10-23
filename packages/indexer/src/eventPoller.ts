@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
-import { SorobanRpc, Networks, xdr } from '@stellar/stellar-sdk';
+// stellar-sdk 13 removed the deprecated `SorobanRpc` alias; `rpc` is the same namespace.
+import { rpc as SorobanRpc, Networks, xdr } from '@stellar/stellar-sdk';
 import {
   decodeSorobanEvent,
   type EventType as SharedEventType,

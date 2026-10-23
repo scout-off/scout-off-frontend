@@ -1,5 +1,7 @@
 import {
-  SorobanRpc,
+  // stellar-sdk 13 removed the deprecated `SorobanRpc` alias; `rpc` is the
+  // same namespace.
+  rpc as SorobanRpc,
   TransactionBuilder,
   BASE_FEE,
   StrKey,

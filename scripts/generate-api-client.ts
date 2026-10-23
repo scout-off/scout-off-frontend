@@ -1,4 +1,4 @@
-#!/usr/bin/env tsx
+#!/usr/bin/env -S npx --yes tsx@4.19.2
 /**
  * generate-api-client.ts (#1475)
  *
@@ -13,9 +13,12 @@
  *   npm run generate:api -- --dry  # print to stdout without writing
  *
  * Requirements:
- *   openapi-typescript (dev dep) — zero-runtime type generation from OpenAPI 3.x.
+ *   openapi-typescript — zero-runtime type generation from OpenAPI 3.x. It is
+ *   fetched on demand at a pinned version rather than kept as a devDependency:
+ *   it peers on typescript ^5 and the repo is on typescript 6, so listing it
+ *   breaks `npm ci` with ERESOLVE.
  *   The generated types in lib/generated/apiTypes.ts come from:
- *     npx openapi-typescript openapi/scout-off-api.yaml -o lib/generated/apiTypes.ts
+ *     npx --yes openapi-typescript@7.4.4 openapi/scout-off-api.yaml -o lib/generated/apiTypes.ts
  *
  * This script emits the lightweight runtime client on top of those types.
  * See docs below for the migration plan from the hand-written clients.
@@ -37,7 +40,7 @@ const isDry = process.argv.includes('--dry');
 
 console.log('[generate-api-client] Generating types from', path.relative(ROOT, SPEC));
 
-const typegenCmd = `npx openapi-typescript "${SPEC}" --output "${TYPES_OUT}"`;
+const typegenCmd = `npx --yes openapi-typescript@7.4.4 "${SPEC}" --output "${TYPES_OUT}"`;
 if (!isDry) {
   fs.mkdirSync(GEN_DIR, { recursive: true });
   execSync(typegenCmd, { stdio: 'inherit' });
