@@ -25,6 +25,7 @@
     "backtest:fraud": "node --experimental-strip-types scripts/backtest-fraud.mts",
     "a11y:audit": "node scripts/a11y-audit.mjs",
     "generate:icons": "node scripts/generate-icons.js",
+    "generate:api": "tsx scripts/generate-api-client.ts",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test-storybook": "test-storybook",
@@ -65,6 +66,8 @@
     "web-vitals": "^5.3.0"
   },
   "devDependencies": {
+    "openapi-typescript": "7.4.4",
+    "tsx": "4.19.2",
     "@axe-core/react": "4.9.1",
     "@commitlint/cli": "^21.2.1",
     "@commitlint/config-conventional": "^21.2.0",

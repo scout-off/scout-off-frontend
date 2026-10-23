@@ -1,0 +1,1163 @@
+openapi: 3.1.0
+info:
+  title: ScoutOff Frontend API
+  description: |
+    Same-origin Next.js API routes that back the ScoutOff client dashboard.
+    All routes are cookie-authenticated (SEP-10 session cookie) unless noted.
+    This document is the source of truth from which the TypeScript client is
+    generated — see `scripts/generate-api-client.ts` and the `generate:api`
+    npm script.
+  version: 1.0.0
+  contact:
+    name: ScoutOff Engineering
+    url: https://github.com/scout-off/scout-off-frontend
+
+servers:
+  - url: /api
+    description: Same-origin API (relative)
+
+# ── Security ──────────────────────────────────────────────────────────────────
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: HTTP-only session cookie issued by POST /api/auth/sep10.
+
+  # ── Reusable schemas ────────────────────────────────────────────────────────
+  schemas:
+    # Shared primitives
+    StellarPublicKey:
+      type: string
+      pattern: '^G[A-Z2-7]{55}$'
+      example: GDQP2KPQGKIHYJGXNUIYOMHARUARCA7DJT5FO2FFOOKY3B2WSQHG4W37
+
+    ErrorBody:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        retryAfterSec:
+          type: integer
+          description: Only present on 429 responses.
+
+    # Auth
+    ServerSession:
+      type: object
+      required: [authenticated]
+      properties:
+        authenticated:
+          type: boolean
+        publicKey:
+          $ref: '#/components/schemas/StellarPublicKey'
+          nullable: true
+
+    Sep10ChallengeResponse:
+      type: object
+      required: [transaction, networkPassphrase]
+      properties:
+        transaction:
+          type: string
+          description: Base64-encoded XDR challenge transaction.
+        networkPassphrase:
+          type: string
+
+    # Players
+    Player:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        position:
+          type: string
+        nationality:
+          type: string
+        progressLevel:
+          type: integer
+          minimum: 0
+
+    PlayerSearchResult:
+      type: object
+      required: [players]
+      properties:
+        players:
+          type: array
+          items:
+            $ref: '#/components/schemas/Player'
+
+    # Watchlist
+    WatchlistEntry:
+      type: object
+      required: [id, playerId, createdAt]
+      properties:
+        id:
+          type: integer
+        playerId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    WatchlistResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/WatchlistEntry'
+
+    # Saved searches
+    PlayerFilter:
+      type: object
+      additionalProperties: true
+      description: Arbitrary filter criteria for player search.
+
+    SavedSearch:
+      type: object
+      required: [id, name, filter, createdAt, version]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        filter:
+          $ref: '#/components/schemas/PlayerFilter'
+        createdAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+
+    SavedSearchListResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/SavedSearch'
+
+    # Recently viewed
+    RecentlyViewedEntry:
+      type: object
+      required: [playerId, viewedAt]
+      properties:
+        playerId:
+          type: string
+        viewedAt:
+          type: string
+          format: date-time
+
+    # Notifications
+    NotificationIds:
+      type: object
+      required: [ids]
+      properties:
+        ids:
+          type: array
+          items:
+            type: integer
+
+    # Notification preferences
+    NotificationPreferences:
+      type: object
+      description: Map of notification-type keys to boolean enabled flags.
+      additionalProperties:
+        type: boolean
+
+    # CV signing
+    CvSignRequest:
+      type: object
+      required: [playerId, contentHash]
+      properties:
+        playerId:
+          type: string
+        contentHash:
+          type: string
+          description: SHA-256 hash of the canonical CV content.
+
+    CvSignResponse:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          description: Signed JWT CV token.
+
+    # Contact
+    ContactDetails:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          nullable: true
+        social:
+          type: string
+          nullable: true
+
+    ContactVaultUploadRequest:
+      type: object
+      required: [playerId, encryptedPayload]
+      properties:
+        playerId:
+          type: string
+        encryptedPayload:
+          type: string
+          description: Base64-encoded encrypted contact details.
+
+    # Disputes
+    Dispute:
+      type: object
+      required: [id, playerId, reason, status, createdAt]
+      properties:
+        id:
+          type: string
+        playerId:
+          type: string
+        reason:
+          type: string
+        status:
+          type: string
+          enum: [open, resolved, rejected]
+        createdAt:
+          type: string
+          format: date-time
+
+    DisputeCreateRequest:
+      type: object
+      required: [playerId, reason]
+      properties:
+        playerId:
+          type: string
+        reason:
+          type: string
+
+    DisputeEvidenceRequest:
+      type: object
+      required: [cid]
+      properties:
+        cid:
+          type: string
+          description: IPFS CID of the uploaded evidence file.
+
+    # Upload tracking
+    UploadTrackRequest:
+      type: object
+      required: [cid, playerId]
+      properties:
+        cid:
+          type: string
+        playerId:
+          type: string
+        mimeType:
+          type: string
+
+    # Media report
+    MediaReportRequest:
+      type: object
+      required: [cid, reason]
+      properties:
+        cid:
+          type: string
+        reason:
+          type: string
+
+    # Migration
+    MigrationRequestBody:
+      type: object
+      required: [playerId]
+      properties:
+        playerId:
+          type: string
+
+    # Admin audit log
+    AdminAuditActionType:
+      type: string
+      enum:
+        - player_approved
+        - player_rejected
+        - milestone_approved
+        - milestone_revoked
+        - dispute_decided
+        - fraud_flag_dismissed
+        - fraud_throttle_lifted
+        - media_moderation_action
+
+    AuditLogEntry:
+      type: object
+      required: [id, actionType, actorKey, targetId, createdAt]
+      properties:
+        id:
+          type: integer
+        actionType:
+          $ref: '#/components/schemas/AdminAuditActionType'
+        actorKey:
+          $ref: '#/components/schemas/StellarPublicKey'
+        targetId:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    AdminAuditQueryResult:
+      type: object
+      required: [entries]
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLogEntry'
+        nextCursor:
+          type: integer
+          nullable: true
+
+    # Rates
+    XlmRateResponse:
+      type: object
+      required: [usd]
+      properties:
+        usd:
+          type: number
+          description: Current XLM/USD exchange rate.
+        updatedAt:
+          type: string
+          format: date-time
+
+  # ── Reusable responses ────────────────────────────────────────────────────
+  responses:
+    Unauthorized:
+      description: Not authenticated.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+
+    Forbidden:
+      description: Authenticated but not authorized.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+
+    TooManyRequests:
+      description: Rate limit exceeded.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds until the client may retry.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+
+    BadRequest:
+      description: Invalid request body or parameters.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+
+security:
+  - sessionCookie: []
+
+# ── Paths ─────────────────────────────────────────────────────────────────────
+paths:
+  # ── Auth ────────────────────────────────────────────────────────────────────
+  /auth/session:
+    get:
+      operationId: getSession
+      summary: Get current session state
+      security: []
+      tags: [auth]
+      responses:
+        '200':
+          description: Current session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerSession'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/sep10:
+    get:
+      operationId: getSep10Challenge
+      summary: Get a SEP-10 challenge transaction
+      security: []
+      tags: [auth]
+      parameters:
+        - name: publicKey
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/StellarPublicKey'
+      responses:
+        '200':
+          description: Challenge transaction.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sep10ChallengeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+    post:
+      operationId: verifySep10
+      summary: Verify a signed SEP-10 challenge and issue a session cookie
+      security: []
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [transaction]
+              properties:
+                transaction:
+                  type: string
+                  description: Base64-encoded signed XDR transaction.
+      responses:
+        '200':
+          description: Session issued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /auth/refresh:
+    post:
+      operationId: refreshSession
+      summary: Rotate the session refresh token
+      tags: [auth]
+      responses:
+        '200':
+          description: Session refreshed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerSession'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /auth/logout-all:
+    post:
+      operationId: logoutAll
+      summary: Invalidate all active sessions for the current user
+      tags: [auth]
+      responses:
+        '204':
+          description: All sessions invalidated.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /auth/sessions:
+    get:
+      operationId: listSessions
+      summary: List active sessions for the current user
+      tags: [auth]
+      responses:
+        '200':
+          description: Active sessions.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [id, createdAt, lastUsedAt]
+                  properties:
+                    id:
+                      type: string
+                    createdAt:
+                      type: string
+                      format: date-time
+                    lastUsedAt:
+                      type: string
+                      format: date-time
+                    userAgent:
+                      type: string
+                      nullable: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/sessions/{id}:
+    delete:
+      operationId: revokeSession
+      summary: Revoke a specific session
+      tags: [auth]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Session revoked.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ── Players ─────────────────────────────────────────────────────────────────
+  /players/search:
+    get:
+      operationId: searchPlayers
+      summary: Search players by name
+      tags: [players]
+      parameters:
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+      responses:
+        '200':
+          description: Search results.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerSearchResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  # ── Watchlist ────────────────────────────────────────────────────────────────
+  /watchlist:
+    get:
+      operationId: getWatchlist
+      summary: Get the current user's watchlist
+      tags: [watchlist]
+      responses:
+        '200':
+          description: Watchlist entries.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WatchlistResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+    post:
+      operationId: addToWatchlist
+      summary: Add a player to the watchlist
+      tags: [watchlist]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [playerId]
+              properties:
+                playerId:
+                  type: string
+      responses:
+        '201':
+          description: Entry added.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WatchlistEntry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+    delete:
+      operationId: removeFromWatchlist
+      summary: Remove a watchlist entry by id
+      tags: [watchlist]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id:
+                  type: integer
+      responses:
+        '204':
+          description: Removed.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  # ── Saved searches ───────────────────────────────────────────────────────────
+  /saved-searches:
+    get:
+      operationId: listSavedSearches
+      summary: List saved searches for the current user
+      tags: [saved-searches]
+      responses:
+        '200':
+          description: Saved searches.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedSearchListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+    post:
+      operationId: createSavedSearch
+      summary: Save a new search
+      tags: [saved-searches]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, filter]
+              properties:
+                name:
+                  type: string
+                filter:
+                  $ref: '#/components/schemas/PlayerFilter'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedSearch'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+    patch:
+      operationId: renameSavedSearch
+      summary: Rename an existing saved search
+      tags: [saved-searches]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, name]
+              properties:
+                id:
+                  type: integer
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedSearch'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Version conflict.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+
+    delete:
+      operationId: deleteSavedSearch
+      summary: Delete a saved search
+      tags: [saved-searches]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id:
+                  type: integer
+      responses:
+        '204':
+          description: Deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ── Recently viewed ──────────────────────────────────────────────────────────
+  /recently-viewed:
+    get:
+      operationId: getRecentlyViewed
+      summary: Get the current user's recently viewed players
+      tags: [recently-viewed]
+      responses:
+        '200':
+          description: Recently viewed entries.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RecentlyViewedEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+    post:
+      operationId: recordRecentlyViewed
+      summary: Record a player view
+      tags: [recently-viewed]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [playerId]
+              properties:
+                playerId:
+                  type: string
+      responses:
+        '204':
+          description: Recorded.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  # ── Notifications ────────────────────────────────────────────────────────────
+  /notifications/read:
+    get:
+      operationId: getReadNotificationIds
+      summary: Get IDs of notifications the current user has read
+      tags: [notifications]
+      responses:
+        '200':
+          description: Read notification IDs.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationIds'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      operationId: markNotificationsRead
+      summary: Mark a set of notifications as read
+      tags: [notifications]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationIds'
+      responses:
+        '204':
+          description: Marked.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ── Notification preferences ─────────────────────────────────────────────────
+  /notification-preferences:
+    get:
+      operationId: getNotificationPreferences
+      summary: Get the current user's notification preferences
+      tags: [notifications]
+      responses:
+        '200':
+          description: Preferences.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreferences'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      operationId: updateNotificationPreferences
+      summary: Update notification preferences
+      tags: [notifications]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferences'
+      responses:
+        '200':
+          description: Updated preferences.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreferences'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  # ── CV ───────────────────────────────────────────────────────────────────────
+  /cv/sign:
+    post:
+      operationId: signCv
+      summary: Sign and issue a verifiable CV token for a player
+      tags: [cv]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CvSignRequest'
+      responses:
+        '200':
+          description: Signed CV token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CvSignResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  # ── Contact ──────────────────────────────────────────────────────────────────
+  /contact/{playerId}:
+    get:
+      operationId: releaseContactDetails
+      summary: Release decrypted contact details after on-chain payment proof
+      tags: [contact]
+      parameters:
+        - name: playerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Contact details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactDetails'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /contact/vault:
+    post:
+      operationId: uploadContactVault
+      summary: Upload encrypted contact details to the vault
+      tags: [contact]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactVaultUploadRequest'
+      responses:
+        '204':
+          description: Uploaded.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  # ── Disputes ─────────────────────────────────────────────────────────────────
+  /disputes:
+    get:
+      operationId: listDisputes
+      summary: List disputes for the current user
+      tags: [disputes]
+      responses:
+        '200':
+          description: Disputes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Dispute'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      operationId: createDispute
+      summary: Create a new dispute
+      tags: [disputes]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DisputeCreateRequest'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dispute'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /disputes/{id}:
+    get:
+      operationId: getDispute
+      summary: Get a specific dispute
+      tags: [disputes]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Dispute.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dispute'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /disputes/{id}/evidence:
+    post:
+      operationId: addDisputeEvidence
+      summary: Add evidence to a dispute
+      tags: [disputes]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DisputeEvidenceRequest'
+      responses:
+        '204':
+          description: Evidence added.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  # ── Uploads ──────────────────────────────────────────────────────────────────
+  /uploads/track:
+    post:
+      operationId: trackUpload
+      summary: Record that an IPFS upload is associated with a player
+      tags: [uploads]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadTrackRequest'
+      responses:
+        '204':
+          description: Tracked.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  # ── Media ────────────────────────────────────────────────────────────────────
+  /media/report:
+    post:
+      operationId: reportMedia
+      summary: Report a media CID for policy violation
+      tags: [media]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MediaReportRequest'
+      responses:
+        '204':
+          description: Report recorded.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  # ── Migration ────────────────────────────────────────────────────────────────
+  /migration/request:
+    post:
+      operationId: requestMigration
+      summary: Request a legacy data migration for a player
+      tags: [migration]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MigrationRequestBody'
+      responses:
+        '202':
+          description: Migration queued.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  # ── Data export / deletion ───────────────────────────────────────────────────
+  /data-export:
+    post:
+      operationId: requestDataExport
+      summary: Request a GDPR data export
+      tags: [data-privacy]
+      responses:
+        '202':
+          description: Export queued.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /data-deletion/request:
+    post:
+      operationId: requestDataDeletion
+      summary: Request GDPR data deletion
+      tags: [data-privacy]
+      responses:
+        '202':
+          description: Deletion queued.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  # ── Rates ────────────────────────────────────────────────────────────────────
+  /rates/xlm:
+    get:
+      operationId: getXlmRate
+      summary: Get the current XLM/USD exchange rate
+      tags: [rates]
+      security: []
+      responses:
+        '200':
+          description: Exchange rate.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XlmRateResponse'
+
+  # ── Admin audit log ──────────────────────────────────────────────────────────
+  /admin/audit-log:
+    get:
+      operationId: getAuditLog
+      summary: Query the admin audit log
+      tags: [admin]
+      parameters:
+        - name: actionType
+          in: query
+          schema:
+            $ref: '#/components/schemas/AdminAuditActionType'
+        - name: from
+          in: query
+          schema:
+            type: integer
+            description: Unix seconds.
+        - name: to
+          in: query
+          schema:
+            type: integer
+            description: Unix seconds.
+        - name: before
+          in: query
+          schema:
+            type: integer
+            description: Cursor for pagination.
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        '200':
+          description: Audit log entries.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAuditQueryResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'

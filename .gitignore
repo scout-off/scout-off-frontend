@@ -128,3 +128,7 @@ yarn-error.log*
 .wasm-cache/
 # Integration test output reports
 integration-test-results/
+
+# Generated API client and types (issue #1475) — regenerate with: npm run generate:api
+lib/generated/apiTypes.ts
+lib/generated/apiClient.ts
