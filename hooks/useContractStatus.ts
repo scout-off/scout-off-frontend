@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { useVisibilityInterval } from '@/hooks/useVisibilityInterval';
 
 interface ContractStatusData {
   isHealthy: boolean;
@@ -42,35 +43,35 @@ export function useContractStatus() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
+  // Guards against setting state after unmount — a poll can still be in
+  // flight when the component goes away.
+  const mountedRef = useRef(true);
   useEffect(() => {
-    let cancelled = false;
-
-    // isLoading only covers the first poll; later polls refresh silently and
-    // a failure keeps the last good data.
-    async function poll() {
-      try {
-        const result = await fetchContractStatus();
-        if (!cancelled) {
-          setData(result);
-          setError(null);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err : new Error(String(err)));
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    }
-
-    poll();
-    const interval = setInterval(poll, POLL_INTERVAL_MS);
-
+    mountedRef.current = true;
     return () => {
-      cancelled = true;
-      clearInterval(interval);
+      mountedRef.current = false;
     };
   }, []);
+
+  // isLoading only covers the first poll; later polls refresh silently and
+  // a failure keeps the last good data.
+  const poll = useCallback(async () => {
+    try {
+      const result = await fetchContractStatus();
+      if (mountedRef.current) {
+        setData(result);
+        setError(null);
+      }
+    } catch (err) {
+      if (mountedRef.current) {
+        setError(err instanceof Error ? err : new Error(String(err)));
+      }
+    } finally {
+      if (mountedRef.current) setIsLoading(false);
+    }
+  }, []);
+
+  useVisibilityInterval(poll, POLL_INTERVAL_MS, { runOnVisible: true });
 
   return {
     isPaused: data?.isPaused ?? false,

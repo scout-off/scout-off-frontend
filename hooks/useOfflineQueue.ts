@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useVisibilityInterval } from '@/hooks/useVisibilityInterval';
 import {
   enqueueAction,
   processQueue,
@@ -213,20 +214,15 @@ export function useOfflineQueue() {
 
   // Poll for queue updates to keep UI fresh (e.g. when items complete while
   // mounted but before the next manual refreshCounts() call)
-  useEffect(() => {
-    const pollIntervalMs = 2_000; // 2 seconds is reasonable for this UX
-    const poll = async () => {
-      // Only poll when we're in a state that might change
+  useVisibilityInterval(
+    async () => {
       if (status === 'processing' || pendingCount > 0 || failedCount > 0) {
         await refreshCounts();
       }
-    };
-
-    const intervalId = setInterval(poll, pollIntervalMs);
-    poll(); // Initial poll immediately
-
-    return () => clearInterval(intervalId);
-  }, [status, pendingCount, failedCount, refreshCounts]);
+    },
+    2_000,
+    { runOnVisible: true },
+  );
 
   return {
     enqueue,

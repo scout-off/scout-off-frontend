@@ -190,7 +190,11 @@ export function useContractEvents(contractId?: string) {
       }
 
       poll();
-      pollTimer = setInterval(poll, POLL_INTERVAL);
+      // Skip ticks while the tab is hidden (#1511) — no point fetching
+      // events nobody can see; the next visible tick catches up via the cursor.
+      pollTimer = setInterval(() => {
+        if (document.visibilityState !== 'hidden') void poll();
+      }, POLL_INTERVAL);
     }
 
     // ── SSE path, with bounded exponential-backoff reconnect ────────────────

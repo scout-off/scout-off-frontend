@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
+import { useVisibilityInterval } from '@/hooks/useVisibilityInterval';
 import {
   fetchAuditLog,
   fetchReconciliation,
@@ -122,11 +123,9 @@ export function useAdminAuditLog(): UseAdminAuditLogResult {
       .finally(() => setReconciling(false));
   }, [loadReconciliationHistory]);
 
-  useEffect(() => {
-    runReconciliation();
-    const interval = setInterval(runReconciliation, RECONCILE_INTERVAL_MS);
-    return () => clearInterval(interval);
-  }, [runReconciliation]);
+  useVisibilityInterval(runReconciliation, RECONCILE_INTERVAL_MS, {
+    runOnVisible: true,
+  });
 
   return {
     entries,
