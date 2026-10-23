@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import Modal from '@/components/ui/Modal';
 import Turnstile from '@/components/ui/Turnstile';
 import {
   MEDIA_REPORT_REASONS,
-  MEDIA_REPORT_REASON_LABELS,
   type MediaReportReason,
 } from '@/lib/mediaModeration';
 
@@ -21,6 +21,7 @@ export default function MediaReportButton({
   cid,
   playerId,
 }: MediaReportButtonProps) {
+  const t = useTranslations('player_profile.media_report');
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<MediaReportReason>('nudity');
   const [details, setDetails] = useState('');
@@ -50,12 +51,14 @@ export default function MediaReportButton({
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error ?? `Request failed (HTTP ${res.status})`);
+        throw new Error(
+          body.error ?? t('request_failed_status', { status: res.status }),
+        );
       }
       setStatus('sent');
     } catch (err) {
       setStatus('error');
-      setError(err instanceof Error ? err.message : 'Request failed');
+      setError(err instanceof Error ? err.message : t('request_failed'));
       // Turnstile tokens are single-use.
       setToken(null);
       setTurnstileKey((k) => k + 1);
@@ -69,21 +72,17 @@ export default function MediaReportButton({
         onClick={() => setOpen(true)}
         className="absolute top-2 right-2 z-10 rounded-md bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
       >
-        Report
+        {t('report')}
       </button>
-      <Modal
-        isOpen={open}
-        onClose={() => setOpen(false)}
-        title="Report this media"
-      >
+      <Modal isOpen={open} onClose={() => setOpen(false)} title={t('title')}>
         {status === 'sent' ? (
           <p className="text-sm text-gray-300" role="status">
-            Thanks — our moderators will review this media.
+            {t('thanks')}
           </p>
         ) : (
           <form onSubmit={submit} className="flex flex-col gap-3">
             <label className="flex flex-col gap-1 text-sm text-gray-300">
-              Reason
+              {t('reason')}
               <select
                 value={reason}
                 onChange={(e) => setReason(e.target.value as MediaReportReason)}
@@ -91,13 +90,13 @@ export default function MediaReportButton({
               >
                 {MEDIA_REPORT_REASONS.map((r) => (
                   <option key={r} value={r}>
-                    {MEDIA_REPORT_REASON_LABELS[r]}
+                    {t(`reasons.${r}`)}
                   </option>
                 ))}
               </select>
             </label>
             <label className="flex flex-col gap-1 text-sm text-gray-300">
-              Details (optional)
+              {t('details')}
               <textarea
                 value={details}
                 onChange={(e) => setDetails(e.target.value)}
@@ -114,10 +113,7 @@ export default function MediaReportButton({
                 onExpire={() => setToken(null)}
               />
             )}
-            <p className="text-xs text-gray-500">
-              Removal applies to ScoutOff only. Content stored on IPFS may
-              remain reachable through public gateways.
-            </p>
+            <p className="text-xs text-gray-500">{t('ipfs_notice')}</p>
             {error && (
               <p className="text-sm text-red-400" role="alert">
                 {error}
@@ -130,7 +126,7 @@ export default function MediaReportButton({
               }
               className="rounded-lg bg-brand-green px-4 py-2 text-sm font-medium text-black hover:bg-brand-green/90 disabled:opacity-50"
             >
-              {status === 'sending' ? 'Sending…' : 'Submit report'}
+              {status === 'sending' ? t('sending') : t('submit')}
             </button>
           </form>
         )}

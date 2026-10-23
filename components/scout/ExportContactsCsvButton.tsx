@@ -1,19 +1,23 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { fetchScoutContacts } from '@/lib/api';
 import { buildScoutContactsCsv } from '@/lib/scoutContactsCsv';
 import { useToast } from '@/components/ui/Toast';
 
 /**
  * Issue #555: exports the scout's contacted players as a CSV generated
- * entirely client-side — no dedicated export endpoint.
+ * entirely client-side — no dedicated export endpoint. CSV column headers
+ * (lib/scoutContactsCsv.ts) intentionally stay English: they are a data
+ * format, and stable headers keep spreadsheet imports/mappings working.
  */
 export default function ExportContactsCsvButton({
   scoutId,
 }: {
   scoutId: string;
 }) {
+  const t = useTranslations('scout.export_csv');
   const [exporting, setExporting] = useState(false);
   const { show } = useToast();
 
@@ -34,7 +38,7 @@ export default function ExportContactsCsvButton({
       a.remove();
       URL.revokeObjectURL(url);
     } catch {
-      show({ message: 'Could not export contacts.', variant: 'error' });
+      show({ message: t('error'), variant: 'error' });
     } finally {
       setExporting(false);
     }
@@ -47,7 +51,7 @@ export default function ExportContactsCsvButton({
       disabled={exporting}
       className="px-4 py-1.5 rounded-lg border border-brand-green text-sm text-brand-green disabled:opacity-40 hover:bg-brand-green hover:text-black transition"
     >
-      {exporting ? 'Exporting…' : 'Export CSV'}
+      {exporting ? t('exporting') : t('label')}
     </button>
   );
 }

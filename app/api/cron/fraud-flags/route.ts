@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { runFraudFlagEvaluation } from '@/lib/fraudFlagsRunner';
 import { FraudFlagsStore } from '@/lib/fraudFlagsStore';
 import { privateJson } from '@/lib/httpResponses';
+import { verifyCronRequest } from '@/lib/cronAuth';
 
 /**
  * Scheduled trigger for fraud-flag evaluation (issue #1007). This
@@ -11,27 +12,12 @@ import { privateJson } from '@/lib/httpResponses';
  * route on a fixed schedule, independent of any admin opening
  * FraudFlagsPanel.tsx.
  *
- * Authorization is deliberately NOT `requireAdminWallet` — a scheduled
- * invocation has no interactive admin session cookie to present. Vercel
- * Cron signs its requests with the `Authorization: Bearer ${CRON_SECRET}`
- * header (https://vercel.com/docs/cron-jobs/manage-cron-jobs#securing-cron-jobs),
- * so this route checks that header against the CRON_SECRET env var instead.
- * Without CRON_SECRET configured, the route refuses all requests rather
- * than silently allowing unauthenticated evaluation runs.
+ * Authorization: see lib/cronAuth.ts — uses CRON_SECRET (fail-closed) with
+ * a constant-time comparison (#1490).
  */
 export async function GET(req: NextRequest) {
-  const configuredSecret = process.env.CRON_SECRET;
-  if (!configuredSecret) {
-    return privateJson(
-      { error: 'CRON_SECRET is not configured' },
-      { status: 500 },
-    );
-  }
-
-  const authHeader = req.headers.get('authorization');
-  if (authHeader !== `Bearer ${configuredSecret}`) {
-    return privateJson({ error: 'Forbidden' }, { status: 403 });
-  }
+  const authError = verifyCronRequest(req);
+  if (authError) return authError;
 
   const result = await runFraudFlagEvaluation({
     mode: 'incremental',

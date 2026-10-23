@@ -10,10 +10,12 @@ import { parseContractError } from '@/lib/contractErrorMessage';
 import {
   TransactionFailedError,
   TransactionTimeoutError,
-  pollTransaction,
-} from '@/lib/stellar';
+  extractTxHash,
+  classifySorobanError,
+} from '@/lib/sorobanTx';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import type { Player } from '@/types';
+import { getExplorerTxUrl } from '@/lib/network';
 
 interface RevokeFormProps {
   player?: Player;
@@ -101,16 +103,17 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
         }, 1500);
       }
     } catch (err) {
-      if (err instanceof TransactionFailedError) {
+      const txErr = classifySorobanError(err);
+      if (txErr.onChainFailure) {
         setRevokeState({
-          txHash: (err as any).hash || revokeState.txHash,
+          txHash: txErr.hash ?? revokeState.txHash,
           confirmationState: 'failed-on-chain',
           error:
             'Transaction failed on-chain. Please verify the milestone still exists and try again.',
         });
-      } else if (err instanceof TransactionTimeoutError) {
+      } else if (txErr.timeout) {
         setRevokeState({
-          txHash: (err as any).hash || revokeState.txHash,
+          txHash: txErr.hash ?? revokeState.txHash,
           confirmationState: 'timed-out',
           error:
             'Confirmation timed out after 50 seconds. The transaction may still confirm later. Check the transaction hash on the blockchain explorer.',
@@ -135,9 +138,7 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
   const renderConfirmationStatus = () => {
     if (!revokeState.txHash) return null;
 
-    const explorerUrl = `https://stellar.expert/explorer/${
-      process.env.NEXT_PUBLIC_NETWORK === 'mainnet' ? 'mainnet' : 'testnet'
-    }/tx/${revokeState.txHash}`;
+    const explorerUrl = getExplorerTxUrl(revokeState.txHash);
 
     switch (revokeState.confirmationState) {
       case 'confirming':
@@ -346,8 +347,7 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
     try {
       const xdr = await buildRevokeMilestone(publicKey!, playerId, milestoneId);
       const result = await signAndSubmit(xdr);
-      const hash =
-        typeof result === 'string' ? result : ((result as any)?.hash ?? null);
+      const hash = extractTxHash(result);
 
       if (hash) {
         setRevokeState({
@@ -367,16 +367,17 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
         }, 1500);
       }
     } catch (err) {
-      if (err instanceof TransactionFailedError) {
+      const txErr = classifySorobanError(err);
+      if (txErr.onChainFailure) {
         setRevokeState({
-          txHash: (err as any).hash || revokeState.txHash,
+          txHash: txErr.hash ?? revokeState.txHash,
           confirmationState: 'failed-on-chain',
           error:
             'Transaction failed on-chain. Please verify the milestone still exists and try again.',
         });
-      } else if (err instanceof TransactionTimeoutError) {
+      } else if (txErr.timeout) {
         setRevokeState({
-          txHash: (err as any).hash || revokeState.txHash,
+          txHash: txErr.hash ?? revokeState.txHash,
           confirmationState: 'timed-out',
           error:
             'Confirmation timed out after 50 seconds. The transaction may still confirm later. Check the transaction hash on the blockchain explorer.',

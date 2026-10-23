@@ -19,8 +19,10 @@ export function openSqliteDb(
   defaultFilename: string,
   envVar: string,
   migrations?: Migration[],
+  explicitPath?: string,
 ): Database.Database {
   const dbPath =
+    explicitPath ??
     process.env[envVar] ??
     (process.env.NODE_ENV === 'test'
       ? ':memory:'

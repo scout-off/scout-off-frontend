@@ -4,6 +4,7 @@ import Script from 'next/script';
 import { fetchPlayerProfile } from '@/lib/api';
 import { getBaseUrl } from '@/lib/seo';
 import type { Player } from '@/types';
+import { getExplorerAccountUrl } from '@/lib/network';
 
 interface PlayerProfileLayoutProps {
   children: ReactNode;
@@ -46,12 +47,7 @@ export default async function PlayerProfileLayout(
   const sameAs: string[] = [];
 
   // Link to the Stellar account explorer for the player's wallet
-  const network =
-    process.env.NEXT_PUBLIC_NETWORK === 'public' ||
-    process.env.NEXT_PUBLIC_NETWORK === 'mainnet'
-      ? 'public'
-      : 'testnet';
-  const stellarUrl = `https://stellar.expert/explorer/${network}/account/${player.wallet}`;
+  const stellarUrl = getExplorerAccountUrl(player.wallet);
   sameAs.push(stellarUrl);
 
   // The profile page itself (also listed in sameAs for discoverability)

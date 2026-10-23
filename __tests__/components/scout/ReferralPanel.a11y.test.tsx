@@ -1,5 +1,7 @@
+jest.unmock('next-intl');
+
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@/__tests__/setup-providers-intl';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import ReferralPanel from '@/components/scout/ReferralPanel';
 import { ToastProvider } from '@/components/ui/Toast';

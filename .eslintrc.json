@@ -1,6 +1,30 @@
 {
   "extends": "next",
   "rules": {
-    "react/jsx-no-target-blank": ["error", { "enforceDynamicLinks": "always" }]
-  }
+    "react/jsx-no-target-blank": [
+      "error",
+      {
+        "enforceDynamicLinks": "always"
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["lib/**", "app/**", "hooks/**", "context/**", "components/**"],
+      "excludedFiles": [
+        "lib/logger.ts",
+        "scripts/**",
+        "**/__tests__/**",
+        "**/*.stories.*"
+      ],
+      "rules": {
+        "no-console": [
+          "error",
+          {
+            "allow": ["warn", "error"]
+          }
+        ]
+      }
+    }
+  ]
 }

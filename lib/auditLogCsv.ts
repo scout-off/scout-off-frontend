@@ -1,3 +1,4 @@
+import { escapeCsvValue } from '@/lib/csvSafe';
 import {
   ADMIN_AUDIT_ACTION_LABELS,
   type AdminAuditEntry,
@@ -14,13 +15,6 @@ const CSV_HEADERS = [
 ];
 
 const STROOPS_PER_XLM = 10_000_000;
-
-function escapeCsvValue(value: string): string {
-  if (/[",\n\r]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
-}
 
 /** Mirrors lib/referralCsv.ts's build<Thing>Csv(data) => string convention. */
 export function buildAuditLogCsv(entries: AdminAuditEntry[]): string {

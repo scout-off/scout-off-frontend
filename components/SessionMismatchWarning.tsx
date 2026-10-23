@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useWallet } from '@/hooks/useWallet';
 
 /**
@@ -12,6 +13,7 @@ import { useWallet } from '@/hooks/useWallet';
  * When displayed, the user must re-authenticate to continue operations.
  */
 export default function SessionMismatchWarning() {
+  const t = useTranslations('session_mismatch_warning');
   const { publicKey, sessionMismatch, reauthenticate } = useWallet();
   const [isReauthenticating, setIsReauthenticating] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
@@ -48,12 +50,9 @@ export default function SessionMismatchWarning() {
           />
         </svg>
         <div>
-          <p className="font-medium text-sm">Session mismatch detected</p>
+          <p className="font-medium text-sm">{t('title')}</p>
           <p className="text-sm text-red-100 mt-1">
-            The wallet address shown ({publicKey.slice(0, 8)}…) differs from the
-            identity your session is authenticated to. This may happen if you
-            switched accounts in your wallet extension without logging out
-            first.
+            {t('body', { address: publicKey.slice(0, 8) })}
           </p>
         </div>
       </div>
@@ -63,12 +62,12 @@ export default function SessionMismatchWarning() {
           disabled={isReauthenticating}
           className="flex-1 sm:flex-none bg-white text-red-600 hover:bg-red-50 px-4 py-2 rounded text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isReauthenticating ? 'Re-authenticating…' : 'Re-authenticate'}
+          {isReauthenticating ? t('reauthenticating') : t('reauthenticate')}
         </button>
         <button
           onClick={() => setIsDismissed(true)}
           className="text-red-100 hover:text-white transition px-2"
-          aria-label="Dismiss warning"
+          aria-label={t('dismiss_aria')}
         >
           <svg
             className="w-5 h-5"

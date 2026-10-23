@@ -196,7 +196,7 @@ export interface QueryResult {
 }
 
 const DEFAULT_LIMIT = 50;
-const MAX_LIMIT = 200;
+export const MAX_LIMIT = 200;
 
 /**
  * Page size bounds for GET /players (issue #1298): the endpoint's contract
@@ -205,7 +205,7 @@ const MAX_LIMIT = 200;
  * MAX_LIMIT.
  */
 const DEFAULT_PLAYERS_LIMIT = 50;
-const MAX_PLAYERS_LIMIT = 50;
+export const MAX_PLAYERS_LIMIT = 50;
 
 /** Filter + cursor for the materialized players query (GET /players). */
 export interface PlayerQueryFilter {

@@ -6,6 +6,7 @@ import { useWallet } from '@/hooks/useWallet';
 import useIsPaused from '@/hooks/useIsPaused';
 import { buildRegisterPlayer } from '@/lib/contract';
 import { parseContractError } from '@/lib/contractErrorMessage';
+import { extractTxHash } from '@/lib/sorobanTx';
 import {
   parseBulkImportFile,
   detectFormat,
@@ -26,6 +27,7 @@ import { FOOTBALL_POSITIONS } from '@/lib/positions';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
 import type { PlayerVitals } from '@/types';
+import { getExplorerTxUrl } from '@/lib/network';
 
 // Bulk-imported players are registered without a highlight reel — per-player
 // video upload is out of scope for this flow (see PR description). Players
@@ -62,9 +64,7 @@ function positionLabel(value: string): string {
 }
 
 function explorerUrl(hash: string): string {
-  const network =
-    process.env.NEXT_PUBLIC_NETWORK === 'mainnet' ? 'mainnet' : 'testnet';
-  return `https://stellar.expert/explorer/${network}/tx/${hash}`;
+  return getExplorerTxUrl(hash);
 }
 
 // ── Per-row status badge ─────────────────────────────────────────────────────
@@ -361,8 +361,7 @@ export default function BulkPlayerImport() {
         // this row's "signing" state back to pending.
         if (cancelledRef.current) break;
         const result = await signAndSubmit(xdr);
-        const hash =
-          typeof result === 'string' ? result : ((result as any)?.hash ?? null);
+        const hash = extractTxHash(result);
 
         setSubmissions((prev) => ({
           ...prev,

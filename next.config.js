@@ -24,6 +24,12 @@ const withPWA = require('next-pwa')({
   // listener instead, and the banner's "Reload" button triggers it.
   skipWaiting: false,
   runtimeCaching: tunedRuntimeCaching,
+  // Offline fallback document served to the service worker for navigation
+  // requests that fail while the device has no network (issue #1513). The
+  // file must live in public/ and is precached by next-pwa at build time.
+  fallbacks: {
+    document: '/offline.html',
+  },
 });
 
 const nextConfig = {
@@ -94,9 +100,10 @@ const nextConfig = {
             key: 'X-Frame-Options',
             value: 'DENY',
           },
+          // Legacy XSS auditor disabled on purpose — CSP (lib/csp.ts) is the XSS defence.
           {
             key: 'X-XSS-Protection',
-            value: '1; mode=block',
+            value: '0',
           },
           {
             key: 'Referrer-Policy',

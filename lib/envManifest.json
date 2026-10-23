@@ -5,8 +5,12 @@
       "name": "CRON_SECRET",
       "requiredIn": ["production"],
       "secret": true,
-      "usedBy": ["app/api/cron/fraud-flags/route.ts"],
-      "description": "Secret token used by Vercel Cron or scheduled runners to authorize cron API endpoints (e.g. app/api/cron/fraud-flags). Matches Authorization: Bearer <CRON_SECRET> header."
+      "usedBy": [
+        "app/api/cron/fraud-flags/route.ts",
+        "app/api/cron/escalate-disputes/route.ts",
+        "app/api/cron/prune-data/route.ts"
+      ],
+      "description": "Secret token used by Vercel Cron or scheduled runners to authorize cron API endpoints scheduled in vercel.json: app/api/cron/fraud-flags (hourly, 0 * * * *), app/api/cron/escalate-disputes (daily at 02:00 UTC, 0 2 * * *) and app/api/cron/prune-data (daily at 03:00 UTC, 0 3 * * *). Matches Authorization: Bearer <CRON_SECRET> header."
     },
     {
       "name": "MEDIA_URL_SIGNING_SECRET",
@@ -92,19 +96,7 @@
       "name": "NEXT_PUBLIC_NETWORK",
       "requiredIn": ["production"],
       "secret": false,
-      "usedBy": [
-        "app/[locale]/player/[id]/layout.tsx",
-        "app/api/auth/sep10/route.ts",
-        "components/academy/BulkPlayerImport.tsx",
-        "components/ui/TransactionStatus.tsx",
-        "components/validator/PendingMilestoneQueue.tsx",
-        "components/validator/RevokeForm.tsx",
-        "context/WalletContext.tsx",
-        "jest.setup.ts",
-        "lib/offChainDataCollection.ts",
-        "lib/sep10Validation.ts",
-        "lib/stellar.ts"
-      ],
+      "usedBy": ["jest.setup.ts", "lib/network.ts"],
       "description": "Stellar network to target. Use 'testnet' for development, 'mainnet' for production."
     },
     {

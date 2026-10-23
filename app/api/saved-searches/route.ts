@@ -3,6 +3,7 @@ import { getSessionWallet } from '@/lib/session';
 import {
   SavedSearchStore,
   SavedSearchConflictError,
+  MAX_SAVED_SEARCHES,
 } from '@/lib/savedSearchStore';
 import { createRequestLogger } from '@/lib/logger';
 import { sanitizeTextInput } from '@/lib/inputValidation';
@@ -11,6 +12,9 @@ import { privateJson } from '@/lib/httpResponses';
 
 // Saved-search name is a short user-authored label — cap at 100 characters.
 const SAVED_SEARCH_NAME_MAX = 100;
+// Serialized filter JSON size cap — prevents unbounded storage via deeply
+// nested or enormous filter objects (issue #1507).
+const SAVED_SEARCH_FILTER_MAX_BYTES = 4_096;
 
 export const runtime = 'nodejs';
 
@@ -89,6 +93,18 @@ export async function POST(req: NextRequest) {
     return privateJson({ error: 'filter must be an object' }, { status: 400 });
   }
 
+  // Guard against excessively large filter payloads (issue #1507).
+  const serializedFilter = JSON.stringify(filter);
+  if (serializedFilter.length > SAVED_SEARCH_FILTER_MAX_BYTES) {
+    return privateJson(
+      {
+        error: `filter payload must be at most ${SAVED_SEARCH_FILTER_MAX_BYTES} bytes when serialized`,
+        code: 'FILTER_TOO_LARGE',
+      },
+      { status: 422 },
+    );
+  }
+
   const sanitizedName = sanitizeTextInput(name);
   if (sanitizedName.length > SAVED_SEARCH_NAME_MAX) {
     return privateJson(
@@ -98,7 +114,22 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const entry = SavedSearchStore.getInstance().add(
+    const store = SavedSearchStore.getInstance();
+
+    // Enforce per-wallet cap before inserting (issue #1507).
+    const current = store.count(scoutWallet);
+    if (current >= MAX_SAVED_SEARCHES) {
+      return privateJson(
+        {
+          error: 'Saved search limit reached',
+          code: 'SAVED_SEARCH_LIMIT_REACHED',
+          limit: MAX_SAVED_SEARCHES,
+        },
+        { status: 409 },
+      );
+    }
+
+    const entry = store.add(
       scoutWallet,
       sanitizedName,
       filter as PlayerFilter,

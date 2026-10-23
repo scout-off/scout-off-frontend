@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { useVideoPosterFrame } from '@/hooks/useVideoPosterFrame';
 import { getMediaProxyUrl } from '@/lib/mediaUrl';
 import MediaReportButton from './MediaReportButton';
@@ -75,15 +76,14 @@ export default function IPFSMediaGallery({
 }
 
 function RemovedMediaItem() {
+  const t = useTranslations('player_profile.mediaGallery');
   return (
     <div
       className="aspect-square bg-gray-800 rounded-xl flex items-center justify-center p-4 text-center"
       role="img"
-      aria-label="Media removed by moderation"
+      aria-label={t('removedLabel')}
     >
-      <span className="text-sm text-gray-400">
-        This media was removed for violating ScoutOff&apos;s policies.
-      </span>
+      <span className="text-sm text-gray-400">{t('removedText')}</span>
     </div>
   );
 }
@@ -93,6 +93,7 @@ interface IPFSMediaItemProps {
 }
 
 function IPFSMediaItem({ cid }: IPFSMediaItemProps) {
+  const t = useTranslations('player_profile.mediaGallery');
   const [isVisible, setIsVisible] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [sourceKey, setSourceKey] = useState(0);
@@ -249,7 +250,7 @@ function IPFSMediaItem({ cid }: IPFSMediaItemProps) {
               setPlaybackState('loading');
             }}
             className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition"
-            aria-label="Play video"
+            aria-label={t('playVideo')}
           >
             <div className="w-16 h-16 rounded-full bg-brand-green/80 flex items-center justify-center">
               <svg
@@ -270,7 +271,7 @@ function IPFSMediaItem({ cid }: IPFSMediaItemProps) {
             aria-live="polite"
           >
             <span className="text-white text-sm font-medium">
-              Reconnecting…
+              {t('reconnecting')}
             </span>
           </div>
         )}
@@ -284,7 +285,7 @@ function IPFSMediaItem({ cid }: IPFSMediaItemProps) {
               onClick={handleManualRetry}
               className="rounded-lg bg-brand-green px-4 py-2 text-sm font-medium text-black hover:bg-brand-green/90"
             >
-              Unavailable — Retry
+              {t('unavailableRetry')}
             </button>
           </div>
         )}
@@ -309,7 +310,7 @@ function IPFSMediaItem({ cid }: IPFSMediaItemProps) {
        */}
       <Image
         src={getMediaProxyUrl(cid)}
-        alt={`IPFS media ${cid}`}
+        alt={t('imageAlt', { cid })}
         fill
         className="object-cover"
         placeholder="blur"

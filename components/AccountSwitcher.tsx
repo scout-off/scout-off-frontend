@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { useWallet } from '@/hooks/useWallet';
 import { useToast } from '@/components/ui/Toast';
 import {
@@ -15,6 +15,7 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import Spinner from '@/components/ui/Spinner';
 
 export default function AccountSwitcher() {
+  const locale = useLocale();
   const tWallet = useTranslations('wallet');
   const {
     publicKey,
@@ -201,7 +202,7 @@ export default function AccountSwitcher() {
                     </span>
                     <span className="text-xs text-gray-600">
                       <span className="capitalize">{addr.provider}</span> ·{' '}
-                      {new Date(addr.lastUsed).toLocaleDateString()}
+                      {new Date(addr.lastUsed).toLocaleDateString(locale)}
                     </span>
                   </button>
 

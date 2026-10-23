@@ -24,6 +24,8 @@ import {
   pollTransaction,
   rpc,
 } from '@/lib/stellar';
+import { isMainnet } from '@/lib/network';
+import { withTimeoutSignal } from '@/lib/fetchTimeout';
 
 /** How long a Horizon quote stays usable. Also caps the swap tx's time bounds. */
 export const QUOTE_TTL_MS = 60_000;
@@ -31,12 +33,13 @@ export const DEFAULT_SLIPPAGE_BPS = 100; // 1%
 export const MAX_SLIPPAGE_BPS = 500; // 5%
 export const SLIPPAGE_OPTIONS_BPS = [50, 100, 200, 500] as const;
 
+const HORIZON_REQUEST_TIMEOUT_MS = 8_000;
 const STROOPS_PER_UNIT = BigInt(10_000_000);
 
 /** Circle's USDC issuers. Override with NEXT_PUBLIC_USDC_ISSUER. */
 const USDC_ISSUER =
   process.env.NEXT_PUBLIC_USDC_ISSUER ||
-  (process.env.NEXT_PUBLIC_NETWORK === 'mainnet'
+  (isMainnet()
     ? 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN'
     : 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5');
 
@@ -137,26 +140,30 @@ export async function fetchStrictReceiveQuote(
     destination_asset_type: 'native',
     destination_amount: destAmount,
   });
-  const res = await fetch(`${HORIZON_URL}/paths/strict-receive?${params}`);
-  if (!res.ok) throw new Error(`Horizon error: ${res.status}`);
-  const body = (await res.json()) as {
-    _embedded?: {
-      records?: Array<{ source_amount: string; path: HorizonPathAsset[] }>;
+  return withTimeoutSignal(HORIZON_REQUEST_TIMEOUT_MS, async (signal) => {
+    const res = await fetch(`${HORIZON_URL}/paths/strict-receive?${params}`, {
+      signal,
+    });
+    if (!res.ok) throw new Error(`Horizon error: ${res.status}`);
+    const body = (await res.json()) as {
+      _embedded?: {
+        records?: Array<{ source_amount: string; path: HorizonPathAsset[] }>;
+      };
     };
-  };
-  const records = body._embedded?.records ?? [];
-  if (records.length === 0) throw new NoPathError(asset);
+    const records = body._embedded?.records ?? [];
+    if (records.length === 0) throw new NoPathError(asset);
 
-  const best = records.reduce((a, b) =>
-    toStroops(b.source_amount) < toStroops(a.source_amount) ? b : a,
-  );
-  return {
-    sourceAsset: asset,
-    sourceAmount: best.source_amount,
-    destAmount,
-    path: best.path,
-    expiresAt: now + QUOTE_TTL_MS,
-  };
+    const best = records.reduce((a, b) =>
+      toStroops(b.source_amount) < toStroops(a.source_amount) ? b : a,
+    );
+    return {
+      sourceAsset: asset,
+      sourceAmount: best.source_amount,
+      destAmount,
+      path: best.path,
+      expiresAt: now + QUOTE_TTL_MS,
+    };
+  });
 }
 
 function toSdkAsset(a: HorizonPathAsset): Asset {
@@ -225,20 +232,22 @@ export async function getAssetBalance(
   address: string,
   asset: FeeAsset,
 ): Promise<number> {
-  const res = await fetch(`${HORIZON_URL}/accounts/${address}`);
-  if (res.status === 404) return 0;
-  if (!res.ok) throw new Error(`Horizon error: ${res.status}`);
-  const { balances } = (await res.json()) as {
-    balances: Array<{
-      asset_code?: string;
-      asset_issuer?: string;
-      balance: string;
-    }>;
-  };
-  const line = balances.find(
-    (b) => b.asset_code === asset.code && b.asset_issuer === asset.issuer,
-  );
-  return line ? parseFloat(line.balance) : 0;
+  return withTimeoutSignal(HORIZON_REQUEST_TIMEOUT_MS, async (signal) => {
+    const res = await fetch(`${HORIZON_URL}/accounts/${address}`, { signal });
+    if (res.status === 404) return 0;
+    if (!res.ok) throw new Error(`Horizon error: ${res.status}`);
+    const { balances } = (await res.json()) as {
+      balances: Array<{
+        asset_code?: string;
+        asset_issuer?: string;
+        balance: string;
+      }>;
+    };
+    const line = balances.find(
+      (b) => b.asset_code === asset.code && b.asset_issuer === asset.issuer,
+    );
+    return line ? parseFloat(line.balance) : 0;
+  });
 }
 
 // ── Pending-swap recovery ────────────────────────────────────────────────────

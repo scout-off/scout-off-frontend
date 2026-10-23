@@ -11,6 +11,8 @@ import {
 } from './eventPoller';
 import {
   EventStore,
+  MAX_LIMIT,
+  MAX_PLAYERS_LIMIT,
   decodePlayerCursor,
   type PlayerQueryFilter,
   type PlayerRecord,
@@ -18,10 +20,10 @@ import {
   type QueryFilter,
   type WalletApprovalWindow,
 } from './db/eventStore';
-import { createPgPoolFromEnv, getStore, initStore } from './db';
+import { closeStore, createPgPoolFromEnv, getStore, initStore } from './db';
 import { LeaderElector } from './leaderElection';
 import type { EventType } from './metrics/IndexerMetrics';
-import { logger } from './logger';
+import { logger, parseTraceparent, newTraceContext, withTraceContext, makeChildTraceparent, TRACEPARENT_HEADER } from './logger';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 
@@ -181,6 +183,7 @@ function handleMetrics(res: http.ServerResponse): void {
 
 const PLAYER_EVENTS_PATH = /^\/players\/([^/]+)\/events$/;
 const VALIDATOR_EVENTS_PATH = /^\/validators\/([^/]+)\/events$/;
+const activeStreams = new Set<http.ServerResponse>();
 
 /**
  * Max length for a region/position filter value — guards against absurd
@@ -281,11 +284,18 @@ function handleStream(
     res.write(': heartbeat\n\n');
   }, 25_000);
 
-  // Cleanup on client disconnect.
-  req.on('close', () => {
+  activeStreams.add(res);
+  let cleaned = false;
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
     clearInterval(heartbeat);
     unsubscribe();
-  });
+    activeStreams.delete(res);
+  };
+
+  // The response stays open for the lifetime of the SSE connection.
+  res.on('close', cleanup);
 }
 
 function sendJson(
@@ -314,8 +324,8 @@ function parseQueryFilter(
   const limitParam = searchParams.get('limit');
   if (limitParam !== null) {
     const limit = Number(limitParam);
-    if (!Number.isInteger(limit) || limit <= 0) {
-      return { ok: false, error: 'limit must be a positive integer' };
+    if (!Number.isInteger(limit) || limit <= 0 || limit > MAX_LIMIT) {
+      return { ok: false, error: `limit must be between 1 and ${MAX_LIMIT}` };
     }
     filter.limit = limit;
   }
@@ -429,8 +439,11 @@ function parsePlayersQuery(searchParams: URLSearchParams):
   const limitParam = searchParams.get('limit');
   if (limitParam !== null) {
     const limit = Number(limitParam);
-    if (!Number.isInteger(limit) || limit <= 0) {
-      return { ok: false, error: 'limit must be a positive integer' };
+    if (!Number.isInteger(limit) || limit <= 0 || limit > MAX_PLAYERS_LIMIT) {
+      return {
+        ok: false,
+        error: `limit must be between 1 and ${MAX_PLAYERS_LIMIT}`,
+      };
     }
     filter.limit = limit;
   }
@@ -634,50 +647,61 @@ function route(
   req: http.IncomingMessage,
   res: http.ServerResponse,
 ): void | Promise<void> {
-  const url = new URL(req.url ?? '/', 'http://localhost');
+  // Issue #1478: propagate W3C trace context through every request so log
+  // lines carry the same traceId as the upstream Next.js request that
+  // triggered them. Echo a child span back on the response so the caller
+  // can confirm the traceparent was received.
+  const traceCtx =
+    parseTraceparent(req.headers[TRACEPARENT_HEADER] as string | undefined) ??
+    newTraceContext();
+  res.setHeader(TRACEPARENT_HEADER, makeChildTraceparent(traceCtx));
 
-  if (req.method === 'GET' && url.pathname === '/health') {
-    return handleHealth(res);
-  }
-  if (req.method === 'GET' && url.pathname === '/metrics') {
-    return handleMetrics(res);
-  }
-  if (req.method === 'GET' && url.pathname === '/events') {
-    return handleEventsQuery(url, res);
-  }
-  if (req.method === 'GET' && url.pathname === '/stream') {
-    return handleStream(req, res, url);
-  }
-  // Exact match — must precede the /players/:id/events regex below (which
-  // wouldn't match it anyway, but the ordering documents the intent).
-  if (req.method === 'GET' && url.pathname === '/players') {
-    return handlePlayersQuery(url, res);
-  }
-  if (req.method === 'POST' && url.pathname === '/validators/approval-counts') {
-    handleApprovalCountsQuery(req, res).catch((err) =>
-      handleUnexpectedError(res, err),
-    );
-    return;
-  }
-  const playerMatch = url.pathname.match(PLAYER_EVENTS_PATH);
-  if (req.method === 'GET' && playerMatch) {
-    const playerId = safeDecode(playerMatch[1]);
-    if (playerId === null) {
-      return sendJson(res, 400, { error: 'invalid path encoding' });
-    }
-    return handleEventsQuery(url, res, playerId);
-  }
-  const validatorMatch = url.pathname.match(VALIDATOR_EVENTS_PATH);
-  if (req.method === 'GET' && validatorMatch) {
-    const validatorId = safeDecode(validatorMatch[1]);
-    if (validatorId === null) {
-      return sendJson(res, 400, { error: 'invalid path encoding' });
-    }
-    return handleValidatorEventsQuery(url, res, validatorId);
-  }
+  return withTraceContext(traceCtx, () => {
+    const url = new URL(req.url ?? '/', 'http://localhost');
 
-  res.writeHead(404);
-  res.end('Not Found');
+    if (req.method === 'GET' && url.pathname === '/health') {
+      return handleHealth(res);
+    }
+    if (req.method === 'GET' && url.pathname === '/metrics') {
+      return handleMetrics(res);
+    }
+    if (req.method === 'GET' && url.pathname === '/events') {
+      return handleEventsQuery(url, res);
+    }
+    if (req.method === 'GET' && url.pathname === '/stream') {
+      return handleStream(req, res, url);
+    }
+    // Exact match — must precede the /players/:id/events regex below (which
+    // wouldn't match it anyway, but the ordering documents the intent).
+    if (req.method === 'GET' && url.pathname === '/players') {
+      return handlePlayersQuery(url, res);
+    }
+    if (req.method === 'POST' && url.pathname === '/validators/approval-counts') {
+      handleApprovalCountsQuery(req, res).catch((err) =>
+        handleUnexpectedError(res, err),
+      );
+      return;
+    }
+    const playerMatch = url.pathname.match(PLAYER_EVENTS_PATH);
+    if (req.method === 'GET' && playerMatch) {
+      const playerId = safeDecode(playerMatch[1]);
+      if (playerId === null) {
+        return sendJson(res, 400, { error: 'invalid path encoding' });
+      }
+      return handleEventsQuery(url, res, playerId);
+    }
+    const validatorMatch = url.pathname.match(VALIDATOR_EVENTS_PATH);
+    if (req.method === 'GET' && validatorMatch) {
+      const validatorId = safeDecode(validatorMatch[1]);
+      if (validatorId === null) {
+        return sendJson(res, 400, { error: 'invalid path encoding' });
+      }
+      return handleValidatorEventsQuery(url, res, validatorId);
+    }
+
+    res.writeHead(404);
+    res.end('Not Found');
+  });
 }
 
 export const server = http.createServer(
@@ -689,22 +713,36 @@ export const server = http.createServer(
 );
 
 /**
- * Graceful shutdown (issue #1333): stop accepting connections, let the
- * in-flight poll batch finish (bounded by SHUTDOWN_TIMEOUT_MS), then flush
- * and close the event store.
+ * Graceful shutdown (issue #1333): stop accepting connections, end SSE
+ * responses, let the in-flight poll batch finish, then close the store.
  */
 export async function shutdown(signal: string): Promise<void> {
   logger.info(`Indexer shutting down (${signal})`);
-  server.close();
-  if (poller) {
-    await Promise.race([
-      poller.stop(),
-      new Promise<void>((resolve) =>
-        setTimeout(resolve, SHUTDOWN_TIMEOUT_MS).unref(),
-      ),
-    ]);
-  }
-  EventStore.getInstance().close();
+  const serverClosed = new Promise<void>((resolve) => {
+    server.close((err) => {
+      if (err) logger.warn('HTTP server close failed', { err });
+      resolve();
+    });
+  });
+  for (const response of activeStreams) response.end();
+
+  const deadline = Date.now() + SHUTDOWN_TIMEOUT_MS;
+  const waitWithinBudget = <T>(task: Promise<T>): Promise<T | void> => {
+    let timer: ReturnType<typeof setTimeout>;
+    return Promise.race([
+      task,
+      new Promise<void>((resolve) => {
+        timer = setTimeout(
+          resolve,
+          Math.max(0, deadline - Date.now()),
+        ).unref();
+      }),
+    ]).finally(() => clearTimeout(timer));
+  };
+  await waitWithinBudget(
+    Promise.all([serverClosed, ...(poller ? [poller.stop()] : [])]),
+  );
+  await waitWithinBudget(closeStore());
 }
 
 export async function startServer(): Promise<void> {

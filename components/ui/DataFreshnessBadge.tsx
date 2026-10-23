@@ -1,5 +1,5 @@
 'use client';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useIndexerFreshness } from '@/hooks/useIndexerFreshness';
 import { formatRelativeTime } from '@/lib/localeFormat';
 import type { Locale } from '@/lib/locales';
@@ -15,6 +15,7 @@ export default function DataFreshnessBadge({
   className?: string;
 }) {
   const locale = useLocale() as Locale;
+  const t = useTranslations('common.data_freshness');
   const { data, stale, pendingWrite } = useIndexerFreshness();
 
   if (!data?.lastUpdated && !pendingWrite) return null;
@@ -28,17 +29,14 @@ export default function DataFreshnessBadge({
       role="status"
       data-stale={stale ? 'true' : 'false'}
       className={`inline-flex flex-wrap items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${style} ${className}`}
-      title="Indexer data freshness"
+      title={t('title')}
     >
-      {data?.lastUpdated ? (
-        <>
-          Updated {formatRelativeTime(data.lastUpdated, locale)}
-          {stale && ' · data may be out of date'}
-        </>
-      ) : null}
-      {pendingWrite && (
-        <span>Your change may take up to a minute to appear</span>
-      )}
+      {data?.lastUpdated
+        ? t(stale ? 'updated_stale' : 'updated', {
+            time: formatRelativeTime(data.lastUpdated, locale),
+          })
+        : null}
+      {pendingWrite && <span>{t('pending_write')}</span>}
     </span>
   );
 }

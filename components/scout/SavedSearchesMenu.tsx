@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useSavedSearchNewCount } from '@/hooks/useSavedSearches';
 import type { PlayerFilter, SavedSearch } from '@/types';
 
@@ -11,11 +12,12 @@ function SavedSearchNewBadge({
   filter: PlayerFilter;
   lastViewedAt: number;
 }) {
+  const t = useTranslations('saved_searches_menu');
   const newCount = useSavedSearchNewCount(filter, lastViewedAt);
   if (newCount === 0) return null;
   return (
     <span className="shrink-0 rounded-full bg-brand-green/20 px-2 py-0.5 text-xs font-medium text-brand-green">
-      {newCount} new
+      {t('new_count', { count: newCount })}
     </span>
   );
 }
@@ -34,6 +36,7 @@ export default function SavedSearchesMenu({
   onRename,
   onRemove,
 }: SavedSearchesMenuProps) {
+  const t = useTranslations('saved_searches_menu');
   const [renamingId, setRenamingId] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState('');
 
@@ -49,7 +52,7 @@ export default function SavedSearchesMenu({
 
   return (
     <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
-      <h2 className="text-sm font-medium text-gray-300">Saved Searches</h2>
+      <h2 className="text-sm font-medium text-gray-300">{t('title')}</h2>
       <ul className="flex flex-col gap-2">
         {searches.map((s) => (
           <li
@@ -79,14 +82,14 @@ export default function SavedSearchesMenu({
                   disabled={!renameValue.trim()}
                   className="px-3 py-1 rounded-lg border border-brand-green text-xs text-brand-green disabled:opacity-40 hover:bg-brand-green hover:text-black transition"
                 >
-                  Save
+                  {t('save')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setRenamingId(null)}
                   className="px-3 py-1 rounded-lg border border-gray-700 text-xs text-gray-300 hover:border-gray-500 transition"
                 >
-                  Cancel
+                  {t('cancel')}
                 </button>
               </div>
             ) : (
@@ -104,7 +107,7 @@ export default function SavedSearchesMenu({
                     onClick={() => onApply(s)}
                     className="px-3 py-1 rounded-lg border border-brand-green text-xs text-brand-green hover:bg-brand-green hover:text-black transition"
                   >
-                    Apply
+                    {t('apply')}
                   </button>
                   <button
                     type="button"
@@ -114,14 +117,14 @@ export default function SavedSearchesMenu({
                     }}
                     className="px-3 py-1 rounded-lg border border-gray-700 text-xs text-gray-300 hover:border-yellow-500 hover:text-yellow-400 transition"
                   >
-                    Rename
+                    {t('rename')}
                   </button>
                   <button
                     type="button"
                     onClick={() => onRemove(s)}
                     className="px-3 py-1 rounded-lg border border-gray-700 text-xs text-gray-300 hover:border-red-500 hover:text-red-400 transition"
                   >
-                    Remove
+                    {t('remove')}
                   </button>
                 </div>
               </>

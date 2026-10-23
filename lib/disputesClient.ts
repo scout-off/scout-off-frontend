@@ -5,7 +5,10 @@ import type {
   DisputeWithEvents,
   DisputeEvent,
 } from '@/types';
-import { fetchWithRetry } from '@/lib/fetchWithRetry';
+import {
+  fetchWithRetry,
+  fetchWithTimeout,
+} from '@/lib/fetchWithRetry';
 
 export interface CreateDisputeParams {
   playerId: string;
@@ -44,14 +47,16 @@ export async function fetchDispute(id: number): Promise<DisputeWithEvents> {
   return res.json();
 }
 
-// Mutations deliberately use a bare `fetch`, not `fetchWithRetry`:
+// Mutations deliberately use fetchWithTimeout rather than fetchWithRetry:
 // they are non-idempotent operations where automatic retries risk
-// duplicates or double-effects.
+// duplicates or double-effects. fetchWithTimeout adds a 10 s deadline so
+// the UI never hangs indefinitely on a flaky mobile connection
+// (issue #1508).
 
 export async function createDispute(
   params: CreateDisputeParams,
 ): Promise<MilestoneDispute> {
-  const res = await fetch('/api/disputes', {
+  const res = await fetchWithTimeout('/api/disputes', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
@@ -76,7 +81,7 @@ export async function decideDispute(
     revokeTxHash?: string;
   },
 ): Promise<MilestoneDispute> {
-  const res = await fetch(`/api/disputes/${id}/decide`, {
+  const res = await fetchWithTimeout(`/api/disputes/${id}/decide`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(decision),
@@ -93,7 +98,7 @@ export async function addEvidence(
   id: number,
   params: AddEvidenceParams,
 ): Promise<DisputeEvent> {
-  const res = await fetch(`/api/disputes/${id}/evidence`, {
+  const res = await fetchWithTimeout(`/api/disputes/${id}/evidence`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),

@@ -1,10 +1,18 @@
 import { renderHook, act } from '@testing-library/react';
 import { useContractStatus } from '@/hooks/useContractStatus';
 
-jest.mock('@/lib/contract', () => ({
-  getContractHealth: jest.fn(),
-  getContractPaused: jest.fn(),
-}));
+let mockImportFails = false;
+jest.mock('@/lib/contract', () => {
+  const getContractHealth = jest.fn();
+  return {
+    // Throwing on access rejects the whole poll, like a failed chunk load.
+    get getContractHealth() {
+      if (mockImportFails) throw new Error('chunk load failed');
+      return getContractHealth;
+    },
+    getContractPaused: jest.fn(),
+  };
+});
 
 import { getContractHealth, getContractPaused } from '@/lib/contract';
 
@@ -12,6 +20,7 @@ const mockGetContractHealth = getContractHealth as jest.Mock;
 const mockGetContractPaused = getContractPaused as jest.Mock;
 
 beforeEach(() => {
+  mockImportFails = false;
   jest.resetAllMocks();
   jest.useFakeTimers();
 });
@@ -194,6 +203,49 @@ describe('useContractStatus — polling', () => {
     });
 
     expect(mockGetContractHealth).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('useContractStatus — refresh and errors (issue #1583)', () => {
+  test('does not flip back to loading on later polls', async () => {
+    mockGetContractHealth.mockResolvedValue({ paused: false });
+    mockGetContractPaused.mockResolvedValue(false);
+
+    const { result } = renderHook(() => useContractStatus());
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(result.current.isLoading).toBe(false);
+
+    mockGetContractHealth.mockImplementation(() => new Promise(() => {}));
+    await act(async () => {
+      jest.advanceTimersByTime(60_000);
+      await Promise.resolve();
+    });
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  test('a rejected poll sets error, keeps data and clears loading', async () => {
+    mockGetContractHealth.mockResolvedValue({ paused: true });
+    mockGetContractPaused.mockResolvedValue(true);
+
+    const { result } = renderHook(() => useContractStatus());
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(result.current.isPaused).toBe(true);
+    expect(result.current.error).toBeNull();
+
+    mockImportFails = true;
+    await act(async () => {
+      jest.advanceTimersByTime(60_000);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.error).toBeInstanceOf(Error);
+    expect(result.current.isPaused).toBe(true);
+    expect(result.current.isLoading).toBe(false);
   });
 });
 

@@ -54,6 +54,7 @@ const mockTranslatedNamespaces = [
   'common',
   'account',
   'notifications',
+  'player_profile',
   'scout',
   'stats',
 ];

@@ -1,5 +1,8 @@
 import type { RecentlyViewedEntry } from '@/types';
-import { fetchWithRetry } from '@/lib/fetchWithRetry';
+import {
+  fetchWithRetry,
+  fetchWithTimeout,
+} from '@/lib/fetchWithRetry';
 
 /** Client for app/api/recently-viewed — same-origin, cookie-authenticated. */
 
@@ -10,15 +13,17 @@ export async function fetchRecentlyViewed(): Promise<RecentlyViewedEntry[]> {
 }
 
 /**
- * Records a player view. Deliberately uses bare `fetch` (no retry) because
- * this is a best-effort analytics-style operation — a lost response doesn't
- * risk duplicate entries (the server deduplicates on scoutWallet+playerId).
+ * Records a player view. Uses fetchWithTimeout (no retry) because this is a
+ * best-effort analytics-style operation — a lost response doesn't risk
+ * duplicate entries (the server deduplicates on scoutWallet+playerId). A
+ * 10 s deadline is enforced so the UI never hangs indefinitely on a flaky
+ * mobile connection (issue #1508).
  */
 export async function recordView(
   playerId: string,
   viewedAt: number,
 ): Promise<RecentlyViewedEntry> {
-  const res = await fetch('/api/recently-viewed', {
+  const res = await fetchWithTimeout('/api/recently-viewed', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ playerId, viewedAt }),
@@ -31,7 +36,7 @@ export async function recordView(
  * Removes a recently viewed entry. Returns true if removed successfully.
  */
 export async function removeView(id: number): Promise<void> {
-  const res = await fetch('/api/recently-viewed', {
+  const res = await fetchWithTimeout('/api/recently-viewed', {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id }),

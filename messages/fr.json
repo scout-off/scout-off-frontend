@@ -44,7 +44,13 @@
     "scroll_to_top": "Revenir en haut",
     "cookie_consent": "Consentement aux cookies",
     "close_consent_banner": "Fermer la bannière de consentement",
-    "confirm": "Confirmer"
+    "confirm": "Confirmer",
+    "data_freshness": {
+      "title": "Fraîcheur des données de l’indexeur",
+      "updated": "Mis à jour {time}",
+      "updated_stale": "Mis à jour {time} · les données peuvent être obsolètes",
+      "pending_write": "Votre modification peut prendre jusqu’à une minute pour apparaître"
+    }
   },
   "language": {
     "select_language": "Sélectionner la langue",
@@ -73,6 +79,15 @@
     "title": "Tableau de bord des scouts",
     "welcome": "Bienvenue sur le tableau de bord des scouts",
     "description": "Gérer les joueurs et les essais",
+    "watchlist_preview": {
+      "title": "Ma liste de suivi",
+      "view_all": "Tout voir",
+      "remove": "Retirer",
+      "remove_aria": "Retirer {playerId} de la liste de suivi"
+    },
+    "recently_viewed_strip": {
+      "title": "Consultés récemment"
+    },
     "recent_activity": "Activité récente",
     "players": "Joueurs",
     "trials": "Essais",
@@ -85,7 +100,34 @@
     "results_behind": "Les résultats peuvent être en retard d'au plus {count, plural, one {# ledger} other {# ledgers}}",
     "all_regions": "Toutes les régions",
     "any_position": "Tous les postes",
-    "save_search_placeholder": "ex. attaquants de Lagos"
+    "save_search_placeholder": "ex. attaquants de Lagos",
+    "rateLimited": "Recherches trop rapides — veuillez patienter {seconds, plural, one {# seconde} other {# secondes}} et réessayer.",
+    "rateLimitedNoRetry": "Recherches trop rapides — veuillez ralentir et réessayer.",
+    "activityFeed": {
+      "title": "Fil d’activité",
+      "live": "En direct",
+      "empty": "Aucune activité récente.",
+      "fallback": {
+        "player": "Joueur",
+        "scout": "Un recruteur",
+        "aPlayer": "un joueur",
+        "milestone": "étape",
+        "aMilestone": "une étape"
+      },
+      "events": {
+        "player_registered": "{player} s’est inscrit",
+        "profile_updated": "{player} a mis à jour son profil",
+        "milestone_approved": "{scout} a approuvé {milestone}",
+        "milestone_revoked": "{milestone} révoqué pour {player}",
+        "trial_offer_logged": "{player} a reçu une offre d’essai",
+        "scout_subscribed": "{scout} s’est abonné",
+        "scout_subscribed_tier": "{scout} s’est abonné ({tier})",
+        "player_contacted": "{scout} a contacté {player}",
+        "fees_withdrawn": "Frais de plateforme retirés",
+        "fees_withdrawn_amount": "Frais de plateforme retirés ({amount} XLM)",
+        "unknown": "Événement"
+      }
+    }
   },
   "trial_offer": {
     "form_label": "Enregistrer une offre d'essai",
@@ -102,9 +144,104 @@
     "submit": "Envoyer l'offre d'essai",
     "submitting": "Envoi…"
   },
+  "saved_searches_menu": {
+    "title": "Recherches enregistrées",
+    "new_count": "{count} nouveau(x)",
+    "apply": "Appliquer",
+    "rename": "Renommer",
+    "remove": "Supprimer",
+    "save": "Enregistrer",
+    "cancel": "Annuler"
+  },
   "player_profile": {
     "back_to_scout_dashboard": "← Retour au tableau de bord des scouts",
-    "verified_on_chain": "Vérifié sur la chaîne"
+    "verified_on_chain": "Vérifié sur la chaîne",
+    "media_report": {
+      "report": "Signaler",
+      "title": "Signaler ce média",
+      "thanks": "Merci — nos modérateurs vont examiner ce média.",
+      "reason": "Motif",
+      "details": "Détails (facultatif)",
+      "ipfs_notice": "Le retrait s’applique uniquement à ScoutOff. Le contenu stocké sur IPFS peut rester accessible via des passerelles publiques.",
+      "request_failed": "Échec de la requête",
+      "request_failed_status": "Échec de la requête (HTTP {status})",
+      "sending": "Envoi…",
+      "submit": "Envoyer le signalement",
+      "reasons": {
+        "nudity": "Nudité ou contenu sexuel",
+        "violence": "Violence ou contenu choquant",
+        "impersonation": "Usurpation d’identité",
+        "copyright": "Violation du droit d’auteur",
+        "other": "Autre"
+      }
+    },
+    "achievement_badges": {
+      "label": "Badges de réussite",
+      "badges": {
+        "first_milestone": {
+          "label": "Premier jalon",
+          "description": "Vous avez obtenu votre premier jalon vérifié sur la chaîne."
+        },
+        "milestone_collector": {
+          "label": "Collectionneur de jalons",
+          "description": "{count, plural, one {# jalon vérifié atteint} other {# jalons vérifiés atteints}}."
+        },
+        "milestone_master": {
+          "label": "Maître des jalons",
+          "description": "{count, plural, one {# jalon vérifié atteint} other {# jalons vérifiés atteints}}."
+        },
+        "profile_complete": {
+          "label": "Profil complet",
+          "description": "Informations, statistiques et médias de temps forts sont tous renseignés."
+        },
+        "elite_tier": {
+          "label": "Niveau Élite",
+          "description": "Niveau Élite atteint, le plus haut niveau de progression."
+        }
+      }
+    },
+    "milestoneTimeline": {
+      "timelineLabel": "Chronologie de progression des niveaux",
+      "levelAchieved": "{level}, atteint le {date}",
+      "levelNotReached": "{level}, pas encore atteint",
+      "expandAchieved": "{level}, atteint le {date}. Afficher les détails",
+      "collapseAchieved": "{level}, atteint le {date}. Masquer les détails",
+      "expandLevel": "{level}. Afficher les détails",
+      "collapseLevel": "{level}. Masquer les détails",
+      "badgeTooltip": "Validateur : {validator} · Approuvé le : {date}",
+      "notYetReached": "Pas encore atteint",
+      "detailsFor": "Détails pour {level}",
+      "profileCreated": "Profil créé sur la blockchain. Aucun validateur requis.",
+      "approvedBy": "Approuvé par {address}",
+      "verifiedBy": "Vérifié par",
+      "dateLabel": "Date :",
+      "disputePending": "Contestation en attente d’examen",
+      "disputeUnderReview": "Contestation en cours d’examen",
+      "disputeEscalated": "Contestation transmise à l’administrateur",
+      "disputeUpheld": "Contestation examinée — décision maintenue",
+      "disputeReversed": "Contestation examinée — étape annulée",
+      "disputeMilestone": "Contester cette étape",
+      "noMilestoneData": "Aucune donnée d’étape pour le moment."
+    },
+    "mediaGallery": {
+      "removedLabel": "Média supprimé par la modération",
+      "removedText": "Ce média a été supprimé pour violation des règles de ScoutOff.",
+      "playVideo": "Lire la vidéo",
+      "reconnecting": "Reconnexion…",
+      "unavailableRetry": "Indisponible — Réessayer",
+      "imageAlt": "Média IPFS {cid}"
+    }
+  },
+  "spending_summary": {
+    "title": "Résumé des dépenses",
+    "load_error": "Impossible de charger les données de dépenses. L’indexeur est peut-être indisponible.",
+    "no_data": "Aucune donnée de dépenses disponible pour le moment.",
+    "contact_fees": "Frais de contact",
+    "subscriptions": "Abonnements",
+    "total": "Total",
+    "monthly_breakdown": "Détail mensuel",
+    "month": "Mois",
+    "no_payments": "Aucun paiement enregistré pour le moment. Votre historique de dépenses apparaîtra ici dès que vous contacterez des joueurs ou souscrirez un abonnement."
   },
   "player_dashboard": {
     "title": "Tableau de bord des joueurs",
@@ -120,6 +257,12 @@
     "stats": "Statistiques",
     "download_data": "Télécharger mes données",
     "download_data_success": "Vos données ont été téléchargées."
+  },
+  "subscription_status_banner": {
+    "expired": "Abonnement expiré",
+    "renew": "Renouveler",
+    "expires_in": "{tier} — {count, plural, one {expire dans # jour} other {expire dans # jours}}",
+    "days_remaining": "{tier} — {count, plural, one {# jour restant} other {# jours restants}}"
   },
   "wallet": {
     "connect": "Connecter le portefeuille",
@@ -157,6 +300,13 @@
     "removeAccountConfirmTitle": "Supprimer ce compte ?",
     "removeAccountConfirmMessage": "Cette adresse sera supprimée de vos comptes mémorisés sur cet appareil."
   },
+  "session_mismatch_warning": {
+    "title": "Incohérence de session détectée",
+    "body": "L'adresse de portefeuille affichée ({address}…) diffère de l'identité à laquelle votre session est authentifiée. Cela peut arriver si vous avez changé de compte dans l'extension de votre portefeuille sans vous déconnecter au préalable.",
+    "reauthenticate": "Se réauthentifier",
+    "reauthenticating": "Réauthentification…",
+    "dismiss_aria": "Fermer l'avertissement"
+  },
   "errors": {
     "not_found": "Non trouvé",
     "unauthorized": "Non autorisé",
@@ -167,10 +317,30 @@
     "wallet_error": "L'opération du portefeuille a échoué"
   },
   "contract_status": {
-    "paused_hint": "Indisponible temporairement — la plateforme est en pause pour maintenance"
+    "paused_hint": "Indisponible temporairement — la plateforme est en pause pour maintenance",
+    "incompatible_title": "Mise à jour du contrat requise.",
+    "incompatible_message": "Cette version de l’application n’est pas synchronisée avec le contrat déployé. Veuillez actualiser la page ou rechercher une mise à jour."
   },
   "dispute_modal": {
-    "character_count": "{count} sur {max} caractères"
+    "character_count": "{count} sur {max} caractères",
+    "evidence": {
+      "submit": "Soumettre la preuve",
+      "unsupported_type": "Type de fichier non pris en charge. Formats autorisés : JPEG, PNG, WebP, GIF, MP4, WebM, PDF.",
+      "too_large": "Le fichier doit faire moins de {size} Mo.",
+      "submit_failed": "Échec de l’envoi. Réessayez.",
+      "submitted": "✓ Preuve soumise. L’administrateur examinera la chronologie mise à jour.",
+      "add_more": "Ajouter d’autres",
+      "validator_notice": "Vous répondez en tant que validateur ayant approuvé ce jalon. Votre réponse sera visible par le joueur et l’administrateur chargé de l’examen.",
+      "file_label": "Fichier de preuve",
+      "required": "(obligatoire)",
+      "file_size": "{name} ({size} Ko)",
+      "allowed_formats": "JPEG, PNG, WebP, GIF, MP4, WebM, PDF — {size} Mo max.",
+      "note_label": "Note",
+      "note_hint": "(facultatif, max {kind, select, response {votre réponse} other {contexte}})",
+      "placeholder_validator": "Expliquez les raisons de la validation de ce jalon…",
+      "placeholder_player": "Ajoutez du contexte à cette preuve…",
+      "uploading": "Envoi en cours…"
+    }
   },
   "actions": {
     "refresh": "Actualiser",
@@ -243,7 +413,16 @@
     "roster_error": "Impossible de charger les joueurs approuvés. L'indexeur est peut-être temporairement indisponible.",
     "roster_retry": "Réessayer",
     "roster_count_one": "1 joueur",
-    "roster_count_other": "{count} joueurs"
+    "roster_count_other": "{count} joueurs",
+    "chip": {
+      "loading": "Vérification du validateur…",
+      "active": "Validateur actif",
+      "former": "Ancien validateur",
+      "unknown": "Statut du validateur inconnu",
+      "fetching": "Récupération des informations du validateur…",
+      "milestones_approved": "{status} · {count, plural, one {# jalon validé} other {# jalons validés}}",
+      "academy_affiliated": "Affilié à une académie"
+    }
   },
   "admin": {
     "title": "Tableau de bord admin",
@@ -476,7 +655,17 @@
     "og_image_alt": "ScoutOff — Recrutement footballistique décentralisé sur Stellar"
   },
   "offline": {
-    "bannerMessage": "Vous êtes hors ligne. Certaines fonctionnalités peuvent être indisponibles jusqu'au retour de la connexion."
+    "bannerMessage": "Vous êtes hors ligne. Certaines fonctionnalités peuvent être indisponibles jusqu'au retour de la connexion.",
+    "fallback_heading": "Vous êtes hors ligne",
+    "fallback_body": "Cette page n'a pas été mise en cache sur votre appareil. Reconnectez-vous à internet et réessayez, ou accédez à une page que vous avez déjà visitée.",
+    "fallback_retry": "Réessayer"
+  },
+  "service_worker_update_banner": {
+    "title": "Nouvelle version disponible.",
+    "message": "Rechargez pour obtenir les dernières mises à jour.",
+    "reload": "Recharger",
+    "dismiss": "Ignorer",
+    "dismiss_aria": "Fermer la bannière de mise à jour"
   },
   "apiErrors": {
     "RATE_LIMITED": "Trop de requêtes. Veuillez ralentir et réessayer dans un instant.",
@@ -489,7 +678,28 @@
     "UPLOAD_INCOMPLETE": "Téléversement incomplet : {received} parties reçues sur {total}.",
     "DISPUTE_ALREADY_PENDING": "Ce jalon fait déjà l'objet d'une contestation en attente.",
     "MILESTONE_NOT_FOUND": "Jalon introuvable.",
-    "UNKNOWN": "Une erreur s'est produite. Veuillez réessayer."
+    "UNKNOWN": "Une erreur s'est produite. Veuillez réessayer.",
+    "UNAUTHORIZED": "Vous devez être connecté pour effectuer cette action.",
+    "FORBIDDEN": "Vous n'avez pas la permission d'effectuer cette action.",
+    "SESSION_EXPIRED": "Votre session a expiré. Veuillez vous reconnecter.",
+    "INVALID_JSON": "Le corps de la requête n'est pas un JSON valide.",
+    "MISSING_FIELDS": "Un ou plusieurs champs obligatoires sont manquants.",
+    "FIELD_TOO_LONG": "Le champ \"{field}\" est trop long (maximum {max} caractères).",
+    "INVALID_FIELD_VALUE": "La valeur du champ \"{field}\" n'est pas valide.",
+    "NOT_FOUND": "La ressource demandée est introuvable.",
+    "PLAYER_NOT_FOUND": "Joueur introuvable.",
+    "DISPUTE_NOT_FOUND": "Contestation introuvable.",
+    "ACADEMY_NOT_FOUND": "Académie introuvable.",
+    "THROTTLE_NOT_FOUND": "Limitation de fraude introuvable ou déjà levée.",
+    "ALREADY_MEMBER": "Ce portefeuille est déjà membre de l'académie.",
+    "ALREADY_EXISTS": "Cette ressource existe déjà.",
+    "UPLOAD_SIZE_MISMATCH": "La taille téléversée ne correspond pas à la taille déclarée. Veuillez recommencer.",
+    "UPLOAD_TYPE_NOT_ALLOWED": "Le type de fichier \"{type}\" n'est pas autorisé. Seuls les fichiers image et vidéo sont acceptés.",
+    "UPLOAD_CONTENT_MISMATCH": "Le contenu du fichier ne correspond pas à son type déclaré. Téléversement rejeté.",
+    "IPFS_UPLOAD_FAILED": "Échec du téléversement vers IPFS. Veuillez réessayer.",
+    "IPFS_NOT_CONFIGURED": "Les téléversements de fichiers sont actuellement indisponibles.",
+    "UPLOAD_VERIFICATION_FAILED": "La vérification du téléversement a échoué. Veuillez réessayer.",
+    "INTERNAL_ERROR": "Une erreur interne s'est produite. Veuillez réessayer plus tard."
   },
   "player": {
     "modals": {
@@ -691,6 +901,15 @@
       "milestone_approvals_description": "M’avertir lorsqu’un validateur approuve l’un de mes jalons.",
       "contact_unlocks_label": "Déblocages de contact",
       "contact_unlocks_description": "M’avertir lorsque je débloque les coordonnées d’un joueur."
+    },
+    "push": {
+      "unsupported": "Les notifications push ne sont pas prises en charge par ce navigateur.",
+      "denied": "Les notifications sont bloquées. Autorisez-les dans les paramètres du site de votre navigateur pour activer les alertes de jalons.",
+      "turned_off": "Notifications push désactivées.",
+      "title": "Alertes de validation de jalons",
+      "description": "Recevez une notification du navigateur lorsqu’un entraîneur ou une académie valide l’un de vos jalons — même lorsque l’application est fermée.",
+      "turn_off": "Désactiver",
+      "enable": "Activer"
     }
   },
   "stats": {
@@ -788,6 +1007,49 @@
           "title": "Élite"
         }
       }
+    },
+    "contact_modal": {
+      "title": "Coordonnées du joueur",
+      "confirming": "Confirmation de la transaction de paiement pour contact…",
+      "no_details": "Aucune coordonnée débloquée pour ce joueur pour le moment.",
+      "email": "E-mail : {value}",
+      "phone": "Téléphone : {value}",
+      "telegram": "Telegram : {value}",
+      "copy": "Copier",
+      "processing": "Traitement…",
+      "pending_swap": "Une tentative précédente a déjà converti votre paiement en {xlm} XLM. Relancez le paiement du contact sans nouvelle conversion.",
+      "retry_payment": "Relancer le paiement ({fee} XLM)",
+      "usdc_intro": "Pas de XLM ? Payez les frais de contact en USDC. Ils sont d’abord convertis en XLM dans une transaction distincte, puis le paiement du contact est envoyé.",
+      "getting_quote": "Obtention d’un devis…",
+      "quote_summary": "Payer ~{amount} USDC (converti en {fee} XLM)",
+      "quote_limit_valid": "Au maximum {sendMax} USDC avec {slippage} % de glissement. Devis valable {seconds} s.",
+      "quote_limit_expired": "Au maximum {sendMax} USDC avec {slippage} % de glissement. Devis expiré.",
+      "max_slippage": "Glissement maximal",
+      "refresh_quote": "Actualiser le devis",
+      "pay_with_usdc": "Payer en USDC",
+      "quote_error": "Impossible d’obtenir un devis"
+    },
+    "export_csv": {
+      "label": "Exporter en CSV",
+      "exporting": "Exportation…",
+      "error": "Impossible d'exporter les contacts."
+    },
+    "referralPanel": {
+      "title": "Parrainer un collègue",
+      "statsError": "Échec du chargement des statistiques de parrainage.",
+      "generateError": "Échec de la génération du lien d’invitation. Veuillez réessayer.",
+      "loadingStats": "Chargement des statistiques",
+      "referralCount": "{count, plural, one {# parrainage} other {# parrainages}}",
+      "description": "Partagez votre lien d’invitation personnel. Lorsqu’un nouveau recruteur s’inscrit avec votre lien, un parrainage vous est crédité.",
+      "generating": "Génération…",
+      "generate": "Générer un lien d’invitation",
+      "exportCsv": "Exporter en CSV",
+      "loadingCodes": "Chargement de vos liens d’invitation…",
+      "emptyCodes": "Vos liens d’invitation générés apparaîtront ici.",
+      "copyLabel": "Copier le lien d’invitation du code {code}",
+      "copy": "Copier",
+      "copied": "Copié !",
+      "showMore": "Afficher plus ({count} restants)"
     }
   }
 }

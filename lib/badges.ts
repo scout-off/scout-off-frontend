@@ -13,8 +13,8 @@ export interface BadgeDefinition {
   description: string;
 }
 
-const MILESTONE_COLLECTOR_THRESHOLD = 5;
-const MILESTONE_MASTER_THRESHOLD = 10;
+export const MILESTONE_COLLECTOR_THRESHOLD = 5;
+export const MILESTONE_MASTER_THRESHOLD = 10;
 
 export const BADGE_DEFINITIONS: Record<BadgeId, BadgeDefinition> = {
   first_milestone: {

@@ -63,6 +63,24 @@ We will work with you to understand the issue and ensure it is addressed
 promptly. You will be credited in our security acknowledgments (unless you
 prefer to remain anonymous).
 
+## Security Headers
+
+Every response carries these headers (`next.config.js#headers()`):
+
+| Header                    | Value                                                    |
+| ------------------------- | -------------------------------------------------------- |
+| `Content-Security-Policy` | Per-request nonce policy (`middleware.ts`, `lib/csp.ts`) |
+| `Reporting-Endpoints`     | `csp-endpoint="/api/csp-report"`                         |
+| `X-Content-Type-Options`  | `nosniff`                                                |
+| `X-Frame-Options`         | `DENY`                                                   |
+| `X-XSS-Protection`        | `0`                                                      |
+| `Referrer-Policy`         | `strict-origin-when-cross-origin`                        |
+
+`X-XSS-Protection` is deliberately `0`. Modern browsers have removed the XSS
+auditor, and its blocking mode could be abused for cross-site information
+leaks in browsers that still honour it, so OWASP and MDN recommend disabling
+it. The strict nonce-based CSP is the XSS defence.
+
 ## Hall of Fame
 
 We thank the following researchers for their responsible disclosures:

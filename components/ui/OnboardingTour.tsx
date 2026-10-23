@@ -57,6 +57,8 @@ export default function OnboardingTour({
     if (!selectorIsVisible(currentStepData.targetSelector)) {
       setShownStepId(null);
       if (process.env.NODE_ENV !== 'production') {
+        // Dev-only diagnostic; stripped from production by the NODE_ENV guard.
+        // eslint-disable-next-line no-console
         console.debug(
           `[OnboardingTour] skipping step "${currentStepData.id}": target ${currentStepData.targetSelector} is missing or hidden`,
         );

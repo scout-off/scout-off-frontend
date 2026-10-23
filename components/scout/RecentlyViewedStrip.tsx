@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import type { RecentlyViewedEntry } from '@/types';
 
 /** Recently viewed players on the scout dashboard; renders nothing when empty. */
@@ -7,10 +8,11 @@ export default function RecentlyViewedStrip({
 }: {
   entries: RecentlyViewedEntry[];
 }) {
+  const t = useTranslations('scout_dashboard.recently_viewed_strip');
   if (entries.length === 0) return null;
   return (
     <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
-      <h2 className="text-sm font-medium text-gray-300">Recently Viewed</h2>
+      <h2 className="text-sm font-medium text-gray-300">{t('title')}</h2>
       <ul className="flex flex-col gap-2">
         {entries.map((entry) => (
           <li

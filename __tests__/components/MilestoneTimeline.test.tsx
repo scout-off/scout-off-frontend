@@ -1,5 +1,7 @@
+jest.unmock('next-intl');
+
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent } from '@/__tests__/setup-providers-intl';
 import '@testing-library/jest-dom';
 import MilestoneTimeline from '@/components/player/MilestoneTimeline';
 import type { Milestone, MilestoneDispute } from '@/types';
@@ -334,5 +336,22 @@ describe('MilestoneTimeline — dispute flow (issue #562)', () => {
     expect(
       screen.getByRole('button', { name: /Dispute this milestone/i }),
     ).toBeInTheDocument();
+  });
+});
+
+describe('MilestoneTimeline — localisation', () => {
+  it('renders labels and dates in French', () => {
+    render(<MilestoneTimeline milestones={MS} currentLevel={1} />, {
+      locale: 'fr',
+    });
+
+    expect(
+      screen.getByRole('list', {
+        name: 'Chronologie de progression des niveaux',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText('Pas encore atteint').length).toBeGreaterThan(0);
+    // fr-FR medium date for 2023-11-14.
+    expect(screen.getByText('14 nov. 2023')).toBeInTheDocument();
   });
 });

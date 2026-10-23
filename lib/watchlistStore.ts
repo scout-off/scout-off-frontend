@@ -4,12 +4,22 @@
  * DB bootstrap and schema shared via lib/sqliteDb.ts's openSqliteDb, with
  * schema applied through lib/sqliteMigrations.ts's versioned migration
  * runner (see lib/migrations/watchlistMigrations.ts).
+ *
+ * Per-wallet cap: each scout is limited to MAX_WATCHLIST_ENTRIES (500)
+ * watchlist entries. The route layer enforces the cap before calling add()
+ * and returns 409 when the limit is reached (issue #1507).
  */
 import type Database from 'better-sqlite3';
 import { openSqliteDb } from './sqliteDb';
 import { watchlistMigrations } from './migrations/watchlistMigrations';
 import { normalizeStellarAddress } from './stellar';
 import type { WatchlistEntry } from '@/types';
+
+/**
+ * Maximum number of watchlist entries allowed per scout wallet.
+ * Exported so route handlers and tests can reference the canonical value.
+ */
+export const MAX_WATCHLIST_ENTRIES = 500;
 
 interface WatchlistRow {
   id: number;
@@ -103,6 +113,17 @@ export class WatchlistStore {
       )
       .all(normalizedScoutWallet) as WatchlistRow[];
     return rows.map(rowToEntry);
+  }
+
+  /** Returns the number of entries owned by scoutWallet. */
+  count(scoutWallet: string): number {
+    const normalizedScoutWallet = normalizeStellarAddress(scoutWallet);
+    const row = this.db
+      .prepare(
+        'SELECT COUNT(*) AS n FROM watchlist WHERE scout_wallet = ?',
+      )
+      .get(normalizedScoutWallet) as { n: number };
+    return row.n;
   }
 
   close(): void {

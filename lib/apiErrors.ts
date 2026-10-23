@@ -11,16 +11,50 @@ import { NextResponse } from 'next/server';
  * request id instead.
  */
 export const ApiErrorCode = {
+  // ── Auth / access ──────────────────────────────────────────────────────────
   RATE_LIMITED: 'RATE_LIMITED',
-  INVALID_REQUEST: 'INVALID_REQUEST',
-  QUERY_TOO_LONG: 'QUERY_TOO_LONG',
-  UPSTREAM_FAILED: 'UPSTREAM_FAILED',
+  UNAUTHORIZED: 'UNAUTHORIZED',
+  FORBIDDEN: 'FORBIDDEN',
   INVALID_SIGNATURE: 'INVALID_SIGNATURE',
+  SESSION_EXPIRED: 'SESSION_EXPIRED',
+
+  // ── Request validation ────────────────────────────────────────────────────
+  INVALID_REQUEST: 'INVALID_REQUEST',
+  INVALID_JSON: 'INVALID_JSON',
+  MISSING_FIELDS: 'MISSING_FIELDS',
+  QUERY_TOO_LONG: 'QUERY_TOO_LONG',
+  FIELD_TOO_LONG: 'FIELD_TOO_LONG',
+  INVALID_FIELD_VALUE: 'INVALID_FIELD_VALUE',
+
+  // ── Resource not found ────────────────────────────────────────────────────
+  NOT_FOUND: 'NOT_FOUND',
+  PLAYER_NOT_FOUND: 'PLAYER_NOT_FOUND',
+  MILESTONE_NOT_FOUND: 'MILESTONE_NOT_FOUND',
+  DISPUTE_NOT_FOUND: 'DISPUTE_NOT_FOUND',
+  ACADEMY_NOT_FOUND: 'ACADEMY_NOT_FOUND',
   UPLOAD_SESSION_NOT_FOUND: 'UPLOAD_SESSION_NOT_FOUND',
+  THROTTLE_NOT_FOUND: 'THROTTLE_NOT_FOUND',
+
+  // ── Conflict / business rules ─────────────────────────────────────────────
+  DISPUTE_ALREADY_PENDING: 'DISPUTE_ALREADY_PENDING',
+  ALREADY_MEMBER: 'ALREADY_MEMBER',
+  ALREADY_EXISTS: 'ALREADY_EXISTS',
+
+  // ── Upload ────────────────────────────────────────────────────────────────
   CHUNK_INDEX_OUT_OF_RANGE: 'CHUNK_INDEX_OUT_OF_RANGE',
   UPLOAD_INCOMPLETE: 'UPLOAD_INCOMPLETE',
-  DISPUTE_ALREADY_PENDING: 'DISPUTE_ALREADY_PENDING',
-  MILESTONE_NOT_FOUND: 'MILESTONE_NOT_FOUND',
+  UPLOAD_SIZE_MISMATCH: 'UPLOAD_SIZE_MISMATCH',
+  UPLOAD_TYPE_NOT_ALLOWED: 'UPLOAD_TYPE_NOT_ALLOWED',
+  UPLOAD_CONTENT_MISMATCH: 'UPLOAD_CONTENT_MISMATCH',
+
+  // ── External / upstream ───────────────────────────────────────────────────
+  UPSTREAM_FAILED: 'UPSTREAM_FAILED',
+  IPFS_UPLOAD_FAILED: 'IPFS_UPLOAD_FAILED',
+  IPFS_NOT_CONFIGURED: 'IPFS_NOT_CONFIGURED',
+  UPLOAD_VERIFICATION_FAILED: 'UPLOAD_VERIFICATION_FAILED',
+
+  // ── Server ────────────────────────────────────────────────────────────────
+  INTERNAL_ERROR: 'INTERNAL_ERROR',
   UNKNOWN: 'UNKNOWN',
 } as const;
 

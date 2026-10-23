@@ -7,6 +7,7 @@ import useIsPaused from '@/hooks/useIsPaused';
 import { useValidator } from '@/hooks/useValidator';
 import { getPlayer } from '@/lib/contract';
 import { endorseMilestone } from '@/lib/api';
+import { getErrorMessage } from '@/lib/getErrorMessage';
 import {
   isOnChainApproved,
   submitAndConfirmApproval,
@@ -97,8 +98,8 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
     try {
       const result = await getPlayer(playerId.trim());
       setPlayer(result as Player);
-    } catch (e: any) {
-      setPlayerError(e.message);
+    } catch (e: unknown) {
+      setPlayerError(getErrorMessage(e, 'Failed to load player.'));
       setPlayer(null);
     } finally {
       setPlayerLoading(false);
@@ -176,9 +177,9 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
           // Best-effort — see comment above.
         }
       })();
-    } catch (e: any) {
+    } catch (e: unknown) {
       setTxStatus('error');
-      setSubmitError(e?.message ?? 'Approval failed');
+      setSubmitError(getErrorMessage(e, 'Approval failed'));
     } finally {
       setSubmitting(false);
     }

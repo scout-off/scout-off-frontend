@@ -44,3 +44,14 @@ To extract client IP addresses accurately for rate limiting without allowing IP 
 
 - Do not include wallet addresses in any custom analytics events.
 - The app only uses Vercel Analytics for standard pageviews and Web Vitals, not custom PII events.
+
+## Scheduled Cron Jobs
+
+`vercel.json` schedules the routes under `app/api/cron/` (all times UTC). Each requires `CRON_SECRET` to be set in the Vercel project, sent as `Authorization: Bearer <CRON_SECRET>`:
+
+| Route                         | Schedule    | Purpose                                                         |
+| ----------------------------- | ----------- | --------------------------------------------------------------- |
+| `/api/cron/fraud-flags`       | `0 * * * *` | Hourly fraud-flag evaluation                                    |
+| `/api/cron/escalate-disputes` | `0 2 * * *` | Daily at 02:00, escalates disputes past their response deadline |
+
+`__tests__/config/vercelCrons.test.ts` fails if a cron route is added without a matching `vercel.json` schedule (or vice versa).

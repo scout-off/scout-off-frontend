@@ -3,6 +3,14 @@
     {
       "path": "/api/cron/fraud-flags",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/escalate-disputes",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/prune-data",
+      "schedule": "0 3 * * *"
     }
   ]
 }

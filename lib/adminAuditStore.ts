@@ -11,9 +11,8 @@
  * `CREATE TABLE IF NOT EXISTS` — a process-wide singleton and keyset
  * pagination rather than OFFSET otherwise unchanged.
  */
-import Database from 'better-sqlite3';
+import type Database from 'better-sqlite3';
 import { openSqliteDb } from './sqliteDb';
-import { applyMigrations } from './sqliteMigrations';
 import { adminAuditMigrations } from './migrations/adminAuditMigrations';
 import type {
   AdminAuditEntry,
@@ -75,20 +74,12 @@ export class AdminAuditStore {
   /** Returns the process-wide singleton, matching EventStore's pattern. */
   static getInstance(dbPath?: string): AdminAuditStore {
     if (!AdminAuditStore._instance) {
-      let db: Database.Database;
-      if (dbPath) {
-        db = new Database(dbPath);
-        if (dbPath !== ':memory:') {
-          db.pragma('journal_mode = WAL');
-        }
-        applyMigrations(db, adminAuditMigrations);
-      } else {
-        db = openSqliteDb(
-          'admin-audit.db',
-          'ADMIN_AUDIT_DB_PATH',
-          adminAuditMigrations,
-        );
-      }
+      const db = openSqliteDb(
+        'admin-audit.db',
+        'ADMIN_AUDIT_DB_PATH',
+        adminAuditMigrations,
+        dbPath,
+      );
       AdminAuditStore._instance = new AdminAuditStore(db);
     }
     return AdminAuditStore._instance;

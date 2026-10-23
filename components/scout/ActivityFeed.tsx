@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
+import { useFormatter, useTranslations } from 'next-intl';
 import api from '@/lib/api';
 import {
   useContractEvents,
@@ -15,15 +16,6 @@ interface FeedEvent {
   payload?: Record<string, any>;
 }
 
-function timeAgo(ms: number) {
-  const secs = Math.floor((Date.now() - ms) / 1000);
-  if (secs < 5) return 'just now';
-  if (secs < 60) return `${secs}s ago`;
-  if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
-  if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
-  return `${Math.floor(secs / 86400)}d ago`;
-}
-
 const ICONS: Record<EventType, JSX.Element> = {
   player_registered: <span>👤</span>,
   profile_updated: <span>✏️</span>,
@@ -36,64 +28,49 @@ const ICONS: Record<EventType, JSX.Element> = {
   unknown: <span>ℹ️</span>,
 };
 
-function renderDescription(ev: FeedEvent) {
+type Translate = ReturnType<typeof useTranslations>;
+
+/**
+ * Human-readable description for a contract event. Message keys live under
+ * scout_dashboard.activityFeed.events and are keyed by contract event type so
+ * other components can reuse the same translated labels.
+ */
+function renderDescription(ev: FeedEvent, t: Translate) {
+  const p = ev.payload ?? {};
+  const player = p.playerName || p.playerId || t('fallback.player');
+  const scout = p.scoutName || p.scoutId || t('fallback.scout');
   switch (ev.type) {
-    case 'player_registered': {
-      const name = ev.payload?.playerName || ev.payload?.playerId || 'Player';
-      return <>{name} registered</>;
-    }
-    case 'profile_updated': {
-      const name = ev.payload?.playerName || ev.payload?.playerId || 'Player';
-      return <>{name} updated their profile</>;
-    }
-    case 'milestone_approved': {
-      const who = ev.payload?.scoutName || ev.payload?.scoutId || 'A scout';
-      const milestone = ev.payload?.milestone || 'milestone';
-      return (
-        <>
-          {who} approved {milestone}
-        </>
-      );
-    }
-    case 'trial_offer_logged': {
-      const player = ev.payload?.playerName || ev.payload?.playerId || 'Player';
-      return <>{player} received a trial offer</>;
-    }
-    case 'milestone_revoked': {
-      const player = ev.payload?.playerName || ev.payload?.playerId || 'Player';
-      const milestone =
-        ev.payload?.milestone || ev.payload?.milestoneId || 'a milestone';
-      return (
-        <>
-          {milestone} revoked for {player}
-        </>
-      );
-    }
-    case 'scout_subscribed': {
-      const who = ev.payload?.scoutName || ev.payload?.scoutId || 'A scout';
-      const tier = ev.payload?.tier;
-      return (
-        <>
-          {who} subscribed{tier ? ` (${tier})` : ''}
-        </>
-      );
-    }
-    case 'player_contacted': {
-      const who = ev.payload?.scoutName || ev.payload?.scoutId || 'A scout';
-      const player =
-        ev.payload?.playerName || ev.payload?.playerId || 'a player';
-      return (
-        <>
-          {who} contacted {player}
-        </>
-      );
-    }
+    case 'player_registered':
+    case 'profile_updated':
+    case 'trial_offer_logged':
+      return t(`events.${ev.type}`, { player });
+    case 'milestone_approved':
+      return t('events.milestone_approved', {
+        scout,
+        milestone: p.milestone || t('fallback.milestone'),
+      });
+    case 'milestone_revoked':
+      return t('events.milestone_revoked', {
+        player,
+        milestone: p.milestone || p.milestoneId || t('fallback.aMilestone'),
+      });
+    case 'scout_subscribed':
+      return p.tier
+        ? t('events.scout_subscribed_tier', { scout, tier: p.tier })
+        : t('events.scout_subscribed', { scout });
+    case 'player_contacted':
+      return t('events.player_contacted', {
+        scout,
+        player: p.playerName || p.playerId || t('fallback.aPlayer'),
+      });
     case 'fees_withdrawn': {
-      const amount = ev.payload?.amountXlm || ev.payload?.amount;
-      return <>Platform fees withdrawn{amount ? ` (${amount} XLM)` : ''}</>;
+      const amount = p.amountXlm || p.amount;
+      return amount
+        ? t('events.fees_withdrawn_amount', { amount })
+        : t('events.fees_withdrawn');
     }
     default:
-      return <>Event</>;
+      return t('events.unknown');
   }
 }
 
@@ -107,6 +84,8 @@ export default function ActivityFeed({ scoutId }: ActivityFeedProps) {
   const intervalRef = useRef<number | null>(null);
   const seenRef = useRef<Set<string>>(new Set());
   const [freshIds, setFreshIds] = useState<Set<string>>(new Set());
+  const t = useTranslations('scout_dashboard.activityFeed');
+  const format = useFormatter();
 
   const { events: liveEvents, isLive } = useContractEvents();
 
@@ -174,10 +153,10 @@ export default function ActivityFeed({ scoutId }: ActivityFeedProps) {
   return (
     <section className="bg-brand-card border border-gray-800 rounded-xl p-5">
       <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-        Activity Feed
+        {t('title')}
         {isLive && (
           <span className="text-xs bg-green-600 text-white px-1.5 py-0.5 rounded-full">
-            Live
+            {t('live')}
           </span>
         )}
       </h2>
@@ -197,7 +176,7 @@ export default function ActivityFeed({ scoutId }: ActivityFeedProps) {
       )}
 
       {!loading && (!events || events.length === 0) && (
-        <p className="text-sm text-gray-400">No recent activity.</p>
+        <p className="text-sm text-gray-400">{t('empty')}</p>
       )}
 
       {!loading && events && events.length > 0 && (
@@ -218,10 +197,10 @@ export default function ActivityFeed({ scoutId }: ActivityFeedProps) {
                 </div>
                 <div className="flex-1">
                   <div className="text-sm text-gray-200">
-                    {renderDescription(ev)}
+                    {renderDescription(ev, t)}
                   </div>
                   <div className="text-xs text-gray-400 mt-0.5">
-                    {timeAgo(ts)}
+                    {format.relativeTime(ts, Date.now())}
                   </div>
                 </div>
               </li>

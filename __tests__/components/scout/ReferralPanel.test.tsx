@@ -1,5 +1,12 @@
+jest.unmock('next-intl');
+
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import {
+  render,
+  screen,
+  waitFor,
+  fireEvent,
+} from '@/__tests__/setup-providers-intl';
 import ReferralPanel from '@/components/scout/ReferralPanel';
 import {
   generateReferralCode,
@@ -334,5 +341,17 @@ describe('ReferralPanel pagination', () => {
     expect(
       screen.queryByRole('button', { name: /show more/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it('renders the panel in French', async () => {
+    render(<ReferralPanel />, { locale: 'fr' });
+
+    expect(screen.getByText('Parrainer un collègue')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Générer un lien d’invitation' }),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('0 parrainage')).toBeInTheDocument();
+    });
   });
 });

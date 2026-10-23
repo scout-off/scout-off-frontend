@@ -17,6 +17,7 @@ import FraudFlagsStalenessBadge from '@/components/admin/FraudFlagsStalenessBadg
 import AdminLoadError from '@/components/admin/AdminLoadError';
 import { useAdminConfirm } from '@/components/admin/useAdminConfirm';
 import { useAdminContractState } from '@/hooks/useAdminContractState';
+import { useLocale } from 'next-intl';
 
 // Admin-only components lazy-loaded to avoid bundling into shared chunks
 // for the much larger player/scout user base (issue #967).
@@ -64,6 +65,7 @@ const EVENT_LABELS: Record<ActivityEventType, string> = {
  * (see components/admin/AdminNav.tsx); the admin guard lives in the layout.
  */
 export default function AdminOverviewPage() {
+  const locale = useLocale();
   const { publicKey, signAndSubmit } = useWallet();
   const { show } = useToast();
   const { paused, setPaused, loading, fetchError, reload } =
@@ -239,7 +241,7 @@ export default function AdminOverviewPage() {
                     </span>
                   )}
                   <span className="text-gray-400 shrink-0 ml-auto">
-                    {new Date(event.timestamp * 1000).toLocaleString()}
+                    {new Date(event.timestamp * 1000).toLocaleString(locale)}
                   </span>
                 </li>
               ))}

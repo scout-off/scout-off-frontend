@@ -88,7 +88,13 @@
     "scroll_to_top": "Rudi juu",
     "cookie_consent": "Idhini ya vidakuzi",
     "close_consent_banner": "Funga bango la idhini",
-    "confirm": "Thibitisha"
+    "confirm": "Thibitisha",
+    "data_freshness": {
+      "title": "Upya wa data ya kiorodheshaji",
+      "updated": "Imesasishwa {time}",
+      "updated_stale": "Imesasishwa {time} · data inaweza kuwa imepitwa na wakati",
+      "pending_write": "Mabadiliko yako yanaweza kuchukua hadi dakika moja kuonekana"
+    }
   },
   "language": {
     "select_language": "Chagua Lugha",
@@ -125,12 +131,30 @@
     "roster_error": "Imeshindikana kupakia wachezaji walioidhinishwa. Kiashiria huenda hakipatikani kwa sasa.",
     "roster_retry": "Jaribu tena",
     "roster_count_one": "mchezaji 1",
-    "roster_count_other": "wachezaji {count}"
+    "roster_count_other": "wachezaji {count}",
+    "chip": {
+      "loading": "Inakagua mthibitishaji…",
+      "active": "Mthibitishaji hai",
+      "former": "Mthibitishaji wa zamani",
+      "unknown": "Hali ya mthibitishaji haijulikani",
+      "fetching": "Inapata taarifa za mthibitishaji…",
+      "milestones_approved": "{status} · {count, plural, one {hatua # imeidhinishwa} other {hatua # zimeidhinishwa}}",
+      "academy_affiliated": "Inahusishwa na akademia"
+    }
   },
   "scout_dashboard": {
     "title": "Dashibodi ya Scout",
     "welcome": "Karibu kwenye Dashibodi ya Scout",
     "description": "Dhibiti wachezaji na majaribio",
+    "watchlist_preview": {
+      "title": "Orodha Yangu ya Ufuatiliaji",
+      "view_all": "Tazama zote",
+      "remove": "Ondoa",
+      "remove_aria": "Ondoa {playerId} kwenye orodha ya ufuatiliaji"
+    },
+    "recently_viewed_strip": {
+      "title": "Zilizotazamwa Hivi Karibuni"
+    },
     "recent_activity": "TODO: Machine-translated - Shughuli ya Hivi Karibuni",
     "players": "Wachezaji",
     "trials": "Majaribio",
@@ -143,7 +167,34 @@
     "results_behind": "Matokeo yanaweza kuwa nyuma ya {count, plural, one {ledger #} other {ledgers #}}",
     "all_regions": "Maeneo yote",
     "any_position": "Nafasi yoyote",
-    "save_search_placeholder": "mf. washambuliaji wa Lagos"
+    "save_search_placeholder": "mf. washambuliaji wa Lagos",
+    "rateLimited": "Unatafuta haraka mno — tafadhali subiri {seconds, plural, one {sekunde #} other {sekunde #}} kisha ujaribu tena.",
+    "rateLimitedNoRetry": "Unatafuta haraka mno — tafadhali punguza kasi kisha ujaribu tena.",
+    "activityFeed": {
+      "title": "Mlisho wa Shughuli",
+      "live": "Moja kwa moja",
+      "empty": "Hakuna shughuli za hivi karibuni.",
+      "fallback": {
+        "player": "Mchezaji",
+        "scout": "Skauti",
+        "aPlayer": "mchezaji",
+        "milestone": "hatua",
+        "aMilestone": "hatua"
+      },
+      "events": {
+        "player_registered": "{player} amejisajili",
+        "profile_updated": "{player} amesasisha wasifu wake",
+        "milestone_approved": "{scout} ameidhinisha {milestone}",
+        "milestone_revoked": "{milestone} imebatilishwa kwa {player}",
+        "trial_offer_logged": "{player} amepokea ofa ya majaribio",
+        "scout_subscribed": "{scout} amejisajili kwa usajili",
+        "scout_subscribed_tier": "{scout} amejisajili kwa usajili ({tier})",
+        "player_contacted": "{scout} amewasiliana na {player}",
+        "fees_withdrawn": "Ada za jukwaa zimetolewa",
+        "fees_withdrawn_amount": "Ada za jukwaa zimetolewa ({amount} XLM)",
+        "unknown": "Tukio"
+      }
+    }
   },
   "trial_offer": {
     "form_label": "Rekodi ofa ya majaribio",
@@ -160,9 +211,104 @@
     "submit": "Wasilisha Ofa ya Majaribio",
     "submitting": "Inawasilisha…"
   },
+  "saved_searches_menu": {
+    "title": "Utafutaji Uliohifadhiwa",
+    "new_count": "{count} mpya",
+    "apply": "Tumia",
+    "rename": "Badilisha jina",
+    "remove": "Ondoa",
+    "save": "Hifadhi",
+    "cancel": "Ghairi"
+  },
   "player_profile": {
     "back_to_scout_dashboard": "← Rudi kwenye Dashibodi ya Scout",
-    "verified_on_chain": "Imethibitishwa kwenye blockchain"
+    "verified_on_chain": "Imethibitishwa kwenye blockchain",
+    "media_report": {
+      "report": "Ripoti",
+      "title": "Ripoti maudhui haya",
+      "thanks": "Asante — wasimamizi wetu watakagua maudhui haya.",
+      "reason": "Sababu",
+      "details": "Maelezo (si lazima)",
+      "ipfs_notice": "Uondoaji unatumika kwa ScoutOff pekee. Maudhui yaliyohifadhiwa kwenye IPFS yanaweza kuendelea kupatikana kupitia lango za umma.",
+      "request_failed": "Ombi limeshindikana",
+      "request_failed_status": "Ombi limeshindikana (HTTP {status})",
+      "sending": "Inatuma…",
+      "submit": "Tuma ripoti",
+      "reasons": {
+        "nudity": "Uchi au maudhui ya ngono",
+        "violence": "Vurugu au umwagaji damu",
+        "impersonation": "Kujifanya mtu mwingine",
+        "copyright": "Ukiukaji wa hakimiliki",
+        "other": "Nyingine"
+      }
+    },
+    "achievement_badges": {
+      "label": "Beji za mafanikio",
+      "badges": {
+        "first_milestone": {
+          "label": "Hatua ya Kwanza",
+          "description": "Umepata hatua yako ya kwanza iliyothibitishwa kwenye mnyororo."
+        },
+        "milestone_collector": {
+          "label": "Mkusanyaji wa Hatua",
+          "description": "Umefikia {count, plural, one {hatua # iliyothibitishwa} other {hatua # zilizothibitishwa}}."
+        },
+        "milestone_master": {
+          "label": "Bingwa wa Hatua",
+          "description": "Umefikia {count, plural, one {hatua # iliyothibitishwa} other {hatua # zilizothibitishwa}}."
+        },
+        "profile_complete": {
+          "label": "Wasifu Kamili",
+          "description": "Taarifa muhimu, takwimu na video za vivutio zote zimejazwa."
+        },
+        "elite_tier": {
+          "label": "Kiwango cha Juu",
+          "description": "Umefikia Kiwango cha Juu, kiwango cha juu zaidi cha maendeleo."
+        }
+      }
+    },
+    "milestoneTimeline": {
+      "timelineLabel": "Ratiba ya maendeleo ya viwango",
+      "levelAchieved": "{level}, imefikiwa {date}",
+      "levelNotReached": "{level}, bado haijafikiwa",
+      "expandAchieved": "{level}, imefikiwa {date}. Panua maelezo",
+      "collapseAchieved": "{level}, imefikiwa {date}. Kunja maelezo",
+      "expandLevel": "{level}. Panua maelezo",
+      "collapseLevel": "{level}. Kunja maelezo",
+      "badgeTooltip": "Mthibitishaji: {validator} · Imeidhinishwa: {date}",
+      "notYetReached": "Bado haijafikiwa",
+      "detailsFor": "Maelezo ya {level}",
+      "profileCreated": "Wasifu umeundwa kwenye blockchain. Hakuna mthibitishaji anayehitajika.",
+      "approvedBy": "Imeidhinishwa na {address}",
+      "verifiedBy": "Imethibitishwa na",
+      "dateLabel": "Tarehe:",
+      "disputePending": "Pingamizi linasubiri ukaguzi",
+      "disputeUnderReview": "Pingamizi linakaguliwa",
+      "disputeEscalated": "Pingamizi limepelekwa kwa msimamizi",
+      "disputeUpheld": "Pingamizi limekaguliwa — uamuzi umedumishwa",
+      "disputeReversed": "Pingamizi limekaguliwa — hatua imebatilishwa",
+      "disputeMilestone": "Pinga hatua hii",
+      "noMilestoneData": "Bado hakuna data ya hatua."
+    },
+    "mediaGallery": {
+      "removedLabel": "Media imeondolewa na udhibiti",
+      "removedText": "Media hii iliondolewa kwa kukiuka sera za ScoutOff.",
+      "playVideo": "Cheza video",
+      "reconnecting": "Inaunganisha upya…",
+      "unavailableRetry": "Haipatikani — Jaribu tena",
+      "imageAlt": "Media ya IPFS {cid}"
+    }
+  },
+  "spending_summary": {
+    "title": "Muhtasari wa Matumizi",
+    "load_error": "Imeshindwa kupakia data ya matumizi. Kielezo kinaweza kuwa hakipatikani.",
+    "no_data": "Bado hakuna data ya matumizi.",
+    "contact_fees": "Ada za Mawasiliano",
+    "subscriptions": "Usajili",
+    "total": "Jumla",
+    "monthly_breakdown": "Mchanganuo wa Kila Mwezi",
+    "month": "Mwezi",
+    "no_payments": "Bado hakuna malipo yaliyorekodiwa. Historia yako ya matumizi itaonekana hapa mara tu utakapoanza kuwasiliana na wachezaji au kujisajili."
   },
   "player_dashboard": {
     "title": "Dashibodi ya Mchezaji",
@@ -178,6 +324,12 @@
     "stats": "Takwimu",
     "download_data": "Pakua data yangu",
     "download_data_success": "Data yako imepakuliwa."
+  },
+  "subscription_status_banner": {
+    "expired": "Usajili umeisha muda",
+    "renew": "Sasisha",
+    "expires_in": "{tier} — {count, plural, one {unaisha baada ya siku #} other {unaisha baada ya siku #}}",
+    "days_remaining": "{tier} — {count, plural, one {siku # imebaki} other {siku # zimebaki}}"
   },
   "wallet": {
     "connect": "Unganisha Pochi",
@@ -215,6 +367,13 @@
     "removeAccountConfirmTitle": "TODO: Machine-translated - Ondoa akaunti hii?",
     "removeAccountConfirmMessage": "TODO: Machine-translated - Anwani hii itaondolewa kutoka kwa akaunti zako zilizokumbukwa kwenye kifaa hiki."
   },
+  "session_mismatch_warning": {
+    "title": "Hitilafu ya kikao imegunduliwa",
+    "body": "Anwani ya pochi inayoonyeshwa ({address}…) ni tofauti na utambulisho ambao kikao chako kimethibitishwa. Hii inaweza kutokea ukibadilisha akaunti kwenye kiendelezi cha pochi yako bila kutoka kwanza.",
+    "reauthenticate": "Thibitisha tena",
+    "reauthenticating": "Inathibitisha tena…",
+    "dismiss_aria": "Funga onyo"
+  },
   "errors": {
     "not_found": "Haijafikiwa",
     "unauthorized": "TODO: Machine-translated - Sio Halali",
@@ -225,10 +384,30 @@
     "wallet_error": "TODO: Machine-translated - Operesheni ya pochi imeshindwa"
   },
   "contract_status": {
-    "paused_hint": "Haipatikani kwa muda — jukwaa limepumzishwa kwa matengenezo"
+    "paused_hint": "Haipatikani kwa muda — jukwaa limepumzishwa kwa matengenezo",
+    "incompatible_title": "Sasisho la mkataba linahitajika.",
+    "incompatible_message": "Toleo hili la programu halilingani na mkataba uliowekwa. Tafadhali onyesha upya ukurasa au angalia sasisho."
   },
   "dispute_modal": {
-    "character_count": "{count} ya {max} herufi"
+    "character_count": "{count} ya {max} herufi",
+    "evidence": {
+      "submit": "Wasilisha ushahidi",
+      "unsupported_type": "Aina ya faili haitumiki. Zinazoruhusiwa: JPEG, PNG, WebP, GIF, MP4, WebM, PDF.",
+      "too_large": "Faili lazima liwe chini ya MB {size}.",
+      "submit_failed": "Imeshindwa kuwasilisha. Jaribu tena.",
+      "submitted": "✓ Ushahidi umewasilishwa. Msimamizi atakagua ratiba iliyosasishwa.",
+      "add_more": "Ongeza zaidi",
+      "validator_notice": "Unajibu kama mthibitishaji aliyeidhinisha hatua hii. Jibu lako litaonekana kwa mchezaji na msimamizi anayekagua.",
+      "file_label": "Faili la ushahidi",
+      "required": "(inahitajika)",
+      "file_size": "{name} (KB {size})",
+      "allowed_formats": "JPEG, PNG, WebP, GIF, MP4, WebM, PDF — upeo MB {size}",
+      "note_label": "Maelezo",
+      "note_hint": "(si lazima, upeo {kind, select, response {jibu lako} other {muktadha}})",
+      "placeholder_validator": "Eleza sababu zako za kuidhinisha hatua hii…",
+      "placeholder_player": "Ongeza muktadha kuhusu ushahidi huu…",
+      "uploading": "Inapakia…"
+    }
   },
   "actions": {
     "refresh": "Refresh",
@@ -476,7 +655,17 @@
     "og_image_alt": "ScoutOff — Utafutaji wa Vipaji vya Soka Uliogatuliwa kwenye Stellar"
   },
   "offline": {
-    "bannerMessage": "Uko nje ya mtandao. Baadhi ya vipengele huenda visipatikane hadi muunganisho urudi."
+    "bannerMessage": "Huna mtandao. Baadhi ya vipengele vinaweza kutofanya kazi mpaka muunganisho urejee.",
+    "fallback_heading": "Huna mtandao",
+    "fallback_body": "Ukurasa huu haukuhifadhiwa kwenye kifaa chako. Tafadhali unganisha upya mtandao na ujaribu tena, au nenda kwenye ukurasa uliowahi kutembelea.",
+    "fallback_retry": "Jaribu tena"
+  },
+  "service_worker_update_banner": {
+    "title": "Toleo jipya linapatikana.",
+    "message": "Pakia upya ili kupata masasisho mapya zaidi.",
+    "reload": "Pakia upya",
+    "dismiss": "Funga",
+    "dismiss_aria": "Funga bango la sasisho"
   },
   "apiErrors": {
     "RATE_LIMITED": "Maombi ni mengi mno. Tafadhali punguza kasi na ujaribu tena baada ya muda mfupi.",
@@ -489,7 +678,28 @@
     "UPLOAD_INCOMPLETE": "Upakiaji haujakamilika: sehemu {received} kati ya {total} zimepokelewa.",
     "DISPUTE_ALREADY_PENDING": "Hatua hii tayari ina pingamizi linalosubiri.",
     "MILESTONE_NOT_FOUND": "Hatua haijapatikana.",
-    "UNKNOWN": "Hitilafu imetokea. Tafadhali jaribu tena."
+    "UNKNOWN": "Hitilafu imetokea. Tafadhali jaribu tena.",
+    "UNAUTHORIZED": "Lazima uingie ili kufanya hilo.",
+    "FORBIDDEN": "Huna ruhusa ya kufanya kitendo hiki.",
+    "SESSION_EXPIRED": "Kipindi chako kimeisha muda. Tafadhali ingia tena.",
+    "INVALID_JSON": "Mwili wa ombi si JSON halali.",
+    "MISSING_FIELDS": "Sehemu moja au zaidi zinazohitajika hazipo.",
+    "FIELD_TOO_LONG": "Sehemu \"{field}\" ni ndefu mno (upeo ni herufi {max}).",
+    "INVALID_FIELD_VALUE": "Thamani ya sehemu \"{field}\" si sahihi.",
+    "NOT_FOUND": "Rasilimali iliyoombwa haikupatikana.",
+    "PLAYER_NOT_FOUND": "Mchezaji hakupatikana.",
+    "DISPUTE_NOT_FOUND": "Pingamizi halijapatikana.",
+    "ACADEMY_NOT_FOUND": "Chuo hakijapatikana.",
+    "THROTTLE_NOT_FOUND": "Kizuizi cha udanganyifu hakijapatikana au kimeshaondolewa.",
+    "ALREADY_MEMBER": "Pochi hii tayari ni mwanachama wa chuo.",
+    "ALREADY_EXISTS": "Rasilimali hii tayari ipo.",
+    "UPLOAD_SIZE_MISMATCH": "Ukubwa uliopakiwa haulingani na ukubwa uliotangazwa. Tafadhali anza upya.",
+    "UPLOAD_TYPE_NOT_ALLOWED": "Aina ya faili \"{type}\" hairuhusiwi. Faili za picha na video pekee zinakubaliwa.",
+    "UPLOAD_CONTENT_MISMATCH": "Maudhui ya faili hayalingani na aina yake iliyotangazwa. Upakiaji umekataliwa.",
+    "IPFS_UPLOAD_FAILED": "Imeshindwa kupakia faili kwenye IPFS. Tafadhali jaribu tena.",
+    "IPFS_NOT_CONFIGURED": "Upakiaji wa faili haupatikani kwa sasa.",
+    "UPLOAD_VERIFICATION_FAILED": "Uthibitishaji wa upakiaji umeshindwa. Tafadhali jaribu tena.",
+    "INTERNAL_ERROR": "Hitilafu ya ndani imetokea. Tafadhali jaribu tena baadaye."
   },
   "player": {
     "modals": {
@@ -691,6 +901,15 @@
       "milestone_approvals_description": "Nijulishe mthibitishaji anapoidhinisha mojawapo ya hatua zangu.",
       "contact_unlocks_label": "Kufungua mawasiliano",
       "contact_unlocks_description": "Nijulishe ninapofungua maelezo ya mawasiliano ya mchezaji."
+    },
+    "push": {
+      "unsupported": "Arifa za push hazitumiki kwenye kivinjari hiki.",
+      "denied": "Arifa zimezuiwa. Ziruhusu katika mipangilio ya tovuti ya kivinjari chako ili kuwasha arifa za hatua.",
+      "turned_off": "Arifa za push zimezimwa.",
+      "title": "Arifa za idhini za hatua",
+      "description": "Pokea arifa ya kivinjari kocha au akademia inapoidhinisha mojawapo ya hatua zako — hata programu ikiwa imefungwa.",
+      "turn_off": "Zima",
+      "enable": "Washa"
     }
   },
   "stats": {
@@ -788,6 +1007,49 @@
           "title": "Elite"
         }
       }
+    },
+    "contact_modal": {
+      "title": "Mawasiliano ya Mchezaji",
+      "confirming": "Inathibitisha muamala wa kulipia mawasiliano…",
+      "no_details": "Bado hakuna mawasiliano yaliyofunguliwa kwa mchezaji huyu.",
+      "email": "Barua pepe: {value}",
+      "phone": "Simu: {value}",
+      "telegram": "Telegram: {value}",
+      "copy": "Nakili",
+      "processing": "Inachakata…",
+      "pending_swap": "Jaribio la awali tayari limebadilisha malipo yako kuwa {xlm} XLM. Jaribu tena malipo ya mawasiliano bila kubadilisha tena.",
+      "retry_payment": "Jaribu malipo tena ({fee} XLM)",
+      "usdc_intro": "Huna XLM? Lipa ada ya mawasiliano kwa USDC. Kwanza inabadilishwa kuwa XLM katika muamala tofauti, kisha malipo ya mawasiliano yanatumwa.",
+      "getting_quote": "Inapata bei…",
+      "quote_summary": "Lipa ~{amount} USDC (inabadilishwa kuwa {fee} XLM)",
+      "quote_limit_valid": "Upeo wa {sendMax} USDC na utelezi wa {slippage}%. Bei ni halali kwa sekunde {seconds}.",
+      "quote_limit_expired": "Upeo wa {sendMax} USDC na utelezi wa {slippage}%. Muda wa bei umeisha.",
+      "max_slippage": "Utelezi wa juu",
+      "refresh_quote": "Onyesha upya bei",
+      "pay_with_usdc": "Lipa kwa USDC",
+      "quote_error": "Imeshindwa kupata bei"
+    },
+    "export_csv": {
+      "label": "Hamisha CSV",
+      "exporting": "Inahamisha…",
+      "error": "Imeshindwa kuhamisha anwani."
+    },
+    "referralPanel": {
+      "title": "Mpendekeze Mwenzako",
+      "statsError": "Imeshindwa kupakia takwimu za rufaa.",
+      "generateError": "Imeshindwa kuunda kiungo cha mwaliko. Tafadhali jaribu tena.",
+      "loadingStats": "Inapakia takwimu",
+      "referralCount": "{count, plural, one {rufaa #} other {rufaa #}}",
+      "description": "Shiriki kiungo chako binafsi cha mwaliko. Skauti mpya akijisajili kwa kutumia kiungo chako, utapewa rufaa.",
+      "generating": "Inaunda…",
+      "generate": "Unda Kiungo cha Mwaliko",
+      "exportCsv": "Hamisha kama CSV",
+      "loadingCodes": "Inapakia viungo vyako vya mwaliko…",
+      "emptyCodes": "Viungo vyako vya mwaliko vilivyoundwa vitaonekana hapa.",
+      "copyLabel": "Nakili kiungo cha mwaliko cha msimbo {code}",
+      "copy": "Nakili",
+      "copied": "Imenakiliwa!",
+      "showMore": "Onyesha zaidi ({count} zimebaki)"
     }
   }
 }

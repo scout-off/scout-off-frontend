@@ -4,6 +4,7 @@ import { FraudThrottleStore } from '@/lib/fraudThrottleStore';
 import { createRequestLogger } from '@/lib/logger';
 import { sanitizeTextInput } from '@/lib/inputValidation';
 import { privateJson } from '@/lib/httpResponses';
+import { apiError, ApiErrorCode } from '@/lib/apiErrors';
 
 // Lift-reason is free-form admin note — cap at 500 characters (same as bio).
 const LIFT_REASON_MAX = 500;
@@ -24,12 +25,12 @@ export async function POST(
   const params = await props.params;
   const adminWallet = requireAdminWallet(req);
   if (!adminWallet) {
-    return privateJson({ error: 'Forbidden' }, { status: 403 });
+    return apiError(ApiErrorCode.FORBIDDEN, 403, 'Admin access required');
   }
 
   const id = Number(params.id);
   if (!Number.isInteger(id)) {
-    return privateJson({ error: 'Invalid throttle id' }, { status: 400 });
+    return apiError(ApiErrorCode.INVALID_FIELD_VALUE, 400, 'Invalid throttle id', { field: 'id' });
   }
 
   const body = await req.json().catch(() => ({}));
@@ -59,16 +60,13 @@ export async function POST(
       reason,
     );
     if (!lifted) {
-      return privateJson(
-        { error: 'Throttle not found or already lifted' },
-        { status: 404 },
-      );
+      return apiError(ApiErrorCode.THROTTLE_NOT_FOUND, 404, 'Throttle not found or already lifted');
     }
     return privateJson(lifted);
   } catch (err) {
     log.error('Failed to lift fraud throttle', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return privateJson({ error: 'Failed to lift throttle' }, { status: 500 });
+    return apiError(ApiErrorCode.INTERNAL_ERROR, 500, 'Failed to lift throttle');
   }
 }

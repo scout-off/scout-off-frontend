@@ -220,6 +220,35 @@ export class UploadTrackingStore {
       .run(wallet).changes;
   }
 
+  /**
+   * Data-retention pruning (issue #1477).
+   *
+   * Hard-deletes rows that are safe to remove:
+   *   - Rows where `cleaned_at IS NOT NULL` and are older than `beforeMs`
+   *     (already acknowledged by the admin orphan-cleanup flow).
+   *   - Rows where `matched_at IS NOT NULL` and are older than `beforeMs`
+   *     (successfully matched to a registration — no further cleanup needed).
+   *   - Rows that are unmatched (`matched_at IS NULL`) AND uncleaned
+   *     (`cleaned_at IS NULL`) AND older than `beforeMs` (abandoned uploads
+   *     that the admin orphan tool has already had time to surface).
+   *
+   * Returns the total number of rows deleted.
+   */
+  pruneOlderThan(beforeMs: number): number {
+    const result = this.db
+      .prepare(
+        `DELETE FROM tracked_uploads
+         WHERE created_at < @before
+           AND (
+             cleaned_at IS NOT NULL
+             OR matched_at IS NOT NULL
+             OR (matched_at IS NULL AND cleaned_at IS NULL)
+           )`,
+      )
+      .run({ before: beforeMs });
+    return result.changes;
+  }
+
   close(): void {
     this.db.close();
   }

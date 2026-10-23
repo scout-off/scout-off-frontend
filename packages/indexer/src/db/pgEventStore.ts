@@ -23,6 +23,7 @@ import type {
   QueryResult,
   WalletApprovalWindow,
 } from './eventStore';
+import { MAX_LIMIT } from './eventStore';
 
 export interface PgQueryable {
   query(
@@ -80,7 +81,6 @@ ON CONFLICT (id) DO UPDATE SET
   updated_at = EXCLUDED.updated_at`;
 
 const DEFAULT_LIMIT = 50;
-const MAX_LIMIT = 200;
 const MAX_WALLETS_PER_QUERY = 500;
 
 function fieldAsString(

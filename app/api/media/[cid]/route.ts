@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyMediaUrlSignature } from '@/lib/mediaUrlSigning';
 import { createRequestLogger } from '@/lib/logger';
 import { fetchMediaFromGateways } from '@/lib/mediaProxyGateway';
-import { isValidCid } from '@/lib/cid';
+import { isValidCid, normalizeCid } from '@/lib/cid';
 import { withRouteTelemetry } from '@/lib/telemetry';
 import { IPFS_FALLBACK_GATEWAYS } from '@/lib/ipfsGateways';
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
@@ -101,15 +101,16 @@ async function getMedia(
   { params }: { params: { cid: string } },
 ) {
   const log = createRequestLogger(req);
-  const cid = params.cid;
-  if (!cid) {
+  if (!params.cid) {
     return errorResponse('Missing cid', 400);
   }
   // Validate before any upstream fetch so callers can't shape arbitrary
   // gateway requests (path traversal, query injection) through our origin.
-  if (!isValidCid(cid)) {
+  if (!isValidCid(params.cid)) {
     return errorResponse('Invalid cid', 400);
   }
+  // Canonical case, so `B…`/`b…` share one denylist entry and cache key.
+  const cid = normalizeCid(params.cid);
 
   // Moderated media (issue #1320): never proxied, and never cached, so a
   // later reinstatement takes effect. This only covers ScoutOff's own

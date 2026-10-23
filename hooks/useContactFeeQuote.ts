@@ -1,5 +1,6 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   fetchStrictReceiveQuote,
   USDC,
@@ -18,24 +19,43 @@ export function useContactFeeQuote(
   enabled: boolean,
   asset: FeeAsset = USDC,
 ) {
+  const t = useTranslations('scout.contact_modal');
   const [quote, setQuote] = useState<PathQuote | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
+  // Request-scoped token used to guard against stale quote overwrites
+  // (issue #1497). Each call to `refresh` increments this token and captures
+  // its value before awaiting `fetchStrictReceiveQuote`. When the response
+  // resolves, the callback only commits state if the token still matches —
+  // if a newer request (or asset/fee change) has bumped the token in the
+  // meantime, the stale response is discarded.
+  const requestToken = useRef(0);
+
   const refresh = useCallback(async () => {
+    // Bump the token so any in-flight request is invalidated.
+    const token = ++requestToken.current;
     setLoading(true);
     setError(null);
     try {
-      setQuote(await fetchStrictReceiveQuote(feeXlm, asset));
+      const fetched = await fetchStrictReceiveQuote(feeXlm, asset);
+      // A newer request, or an asset/fee change, bumped the token — discard
+      // this stale response instead of overwriting the newer quote.
+      if (token !== requestToken.current) return;
+      setQuote(fetched);
     } catch (err) {
+      // A newer request invalidated this one — don't clobber its state.
+      if (token !== requestToken.current) return;
       setQuote(null);
-      setError(err instanceof Error ? err.message : 'Could not fetch a quote');
+      setError(err instanceof Error ? err.message : t('quote_error'));
     } finally {
-      setLoading(false);
-      setNow(Date.now());
+      if (token === requestToken.current) {
+        setLoading(false);
+        setNow(Date.now());
+      }
     }
-  }, [feeXlm, asset]);
+  }, [feeXlm, asset, t]);
 
   useEffect(() => {
     if (enabled) refresh();

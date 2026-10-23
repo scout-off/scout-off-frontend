@@ -1,5 +1,8 @@
 import type { PlayerFilter, SavedSearch } from '@/types';
-import { fetchWithRetry } from '@/lib/fetchWithRetry';
+import {
+  fetchWithRetry,
+  fetchWithTimeout,
+} from '@/lib/fetchWithRetry';
 
 /** Client for app/api/saved-searches — same-origin, cookie-authenticated. */
 
@@ -21,15 +24,17 @@ export class SavedSearchConflictError extends Error {
   }
 }
 
-// saveSearch/renameSavedSearch/removeSavedSearch deliberately use a bare
-// `fetch`, not `fetchWithRetry`: these are mutations with no idempotency
-// key, so an automatic retry after a lost response risks e.g. creating a
-// duplicate saved search.
+// saveSearch/renameSavedSearch/removeSavedSearch deliberately use
+// fetchWithTimeout rather than fetchWithRetry: these are mutations with no
+// idempotency key, so an automatic retry after a lost response risks e.g.
+// creating a duplicate saved search. fetchWithTimeout adds a 10 s deadline
+// so the UI never hangs indefinitely on a flaky mobile connection
+// (issue #1508).
 export async function saveSearch(
   name: string,
   filter: PlayerFilter,
 ): Promise<SavedSearch> {
-  const res = await fetch('/api/saved-searches', {
+  const res = await fetchWithTimeout('/api/saved-searches', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, filter }),
@@ -49,7 +54,7 @@ export async function renameSavedSearch(
   if (version !== undefined) {
     headers['If-Match'] = `"${version}"`;
   }
-  const res = await fetch('/api/saved-searches', {
+  const res = await fetchWithTimeout('/api/saved-searches', {
     method: 'PATCH',
     headers,
     body: JSON.stringify({ id, name }),
@@ -76,7 +81,7 @@ export async function markSavedSearchViewed(
   if (version !== undefined) {
     headers['If-Match'] = `"${version}"`;
   }
-  const res = await fetch('/api/saved-searches', {
+  const res = await fetchWithTimeout('/api/saved-searches', {
     method: 'PATCH',
     headers,
     body: JSON.stringify({ id, markViewed: true }),
@@ -103,7 +108,7 @@ export async function removeSavedSearch(
   if (version !== undefined) {
     headers['If-Match'] = `"${version}"`;
   }
-  const res = await fetch('/api/saved-searches', {
+  const res = await fetchWithTimeout('/api/saved-searches', {
     method: 'DELETE',
     headers,
     body: JSON.stringify({ id }),

@@ -16,6 +16,10 @@
  * failures stay distinguishable from each other in the UI.
  */
 import type { ContactDetails } from '@/types';
+import {
+  fetchWithRetry,
+  fetchWithTimeout,
+} from '@/lib/fetchWithRetry';
 
 /** Existence/age metadata for the caller's own row. Never contains PII. */
 export interface ContactVaultMetadata {
@@ -41,7 +45,10 @@ async function readError(res: Response, fallback: string): Promise<string> {
 
 export const defaultContactVaultClient: VaultClient = {
   async getMetadata(playerId) {
-    const res = await fetch(
+    // Use fetchWithRetry for the idempotent GET so transient failures are
+    // retried automatically. A 5 s timeout is enforced per attempt
+    // (issue #1508).
+    const res = await fetchWithRetry(
       `/api/contact/vault?playerId=${encodeURIComponent(playerId)}`,
     );
     if (!res.ok) {
@@ -53,7 +60,9 @@ export const defaultContactVaultClient: VaultClient = {
   },
 
   async save(playerId, details) {
-    const res = await fetch('/api/contact/vault', {
+    // fetchWithTimeout (no retry) for the non-idempotent POST — a duplicate
+    // write on retry could silently replace a concurrent update.
+    const res = await fetchWithTimeout('/api/contact/vault', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ playerId, ...details }),
@@ -64,7 +73,7 @@ export const defaultContactVaultClient: VaultClient = {
   },
 
   async remove(playerId) {
-    const res = await fetch(
+    const res = await fetchWithTimeout(
       `/api/contact/vault?playerId=${encodeURIComponent(playerId)}`,
       { method: 'DELETE' },
     );

@@ -1,14 +1,23 @@
 import { randomUUID } from 'crypto';
 import { NextResponse } from 'next/server';
+import {
+  getOrCreateTraceContext,
+  outboundTraceparent,
+  TRACEPARENT_HEADER,
+  type TraceContext,
+} from './traceContext';
 
 /**
  * Shared request-scoped structured logging for API routes (issue #707).
  *
+ * Extended by issue #1478 to propagate W3C Trace Context (`traceparent`)
+ * alongside the existing `x-request-id` header. Every log line now carries
+ * both `requestId` (kept for backwards-compat with existing log queries) and
+ * `traceId`/`spanId` (for cross-service correlation in a W3C-compliant way).
+ *
  * Framework-agnostic on purpose: it only depends on the standard `Request`/
  * `Headers` interfaces (not `NextRequest`), so the same module works in any
- * Next.js API route (Node or Edge runtime) without adopting a full
- * observability platform — just consistent, grep/query-able JSON lines
- * correlated by a request id.
+ * Next.js API route (Node or Edge runtime).
  */
 
 export const REQUEST_ID_HEADER = 'x-request-id';
@@ -44,6 +53,15 @@ export function getOrCreateRequestId(request: Request): string {
 
 export interface RequestLogger {
   requestId: string;
+  /** W3C trace id shared across the whole distributed call tree. */
+  traceId: string;
+  /** W3C span id for this service's leg. */
+  spanId: string;
+  /**
+   * Returns the `traceparent` header value to forward to downstream services
+   * (indexer, Express backend). Keeps the traceId, mints a new spanId.
+   */
+  outboundTraceparent(): string;
   info(message: string, fields?: LogFields): void;
   warn(message: string, fields?: LogFields): void;
   error(message: string, fields?: LogFields): void;
@@ -52,6 +70,8 @@ export interface RequestLogger {
 function emit(
   level: LogLevel,
   requestId: string,
+  traceId: string,
+  spanId: string,
   route: string,
   message: string,
   fields?: LogFields,
@@ -60,6 +80,8 @@ function emit(
     timestamp: new Date().toISOString(),
     level,
     requestId,
+    traceId,
+    spanId,
     route,
     message,
     ...redactFields(fields),
@@ -71,29 +93,45 @@ function emit(
 }
 
 /**
- * Creates a logger scoped to a single request — every line it emits carries
- * the same `requestId` (propagated from an incoming `x-request-id` header,
- * or freshly generated) and the request's route, so log lines from the same
- * request can be correlated across a log aggregator.
+ * Creates a logger scoped to a single request.
+ *
+ * Every line it emits carries:
+ * - `requestId`  — propagated from `x-request-id`, or freshly generated.
+ * - `traceId`    — propagated from `traceparent`, or freshly generated.
+ * - `spanId`     — the span id for this service's leg of the trace.
+ *
+ * Use `logger.outboundTraceparent()` to get the correct `traceparent` value
+ * to include when forwarding a request to the indexer or Express backend.
  */
 export function createRequestLogger(request: Request): RequestLogger {
   const requestId = getOrCreateRequestId(request);
   const route = new URL(request.url).pathname;
 
+  const traceCtx: TraceContext = getOrCreateTraceContext(request.headers);
+
   return {
     requestId,
-    info: (message, fields) => emit('info', requestId, route, message, fields),
-    warn: (message, fields) => emit('warn', requestId, route, message, fields),
+    traceId: traceCtx.traceId,
+    spanId: traceCtx.parentSpanId,
+    outboundTraceparent: () => outboundTraceparent(traceCtx),
+    info: (message, fields) =>
+      emit('info', requestId, traceCtx.traceId, traceCtx.parentSpanId, route, message, fields),
+    warn: (message, fields) =>
+      emit('warn', requestId, traceCtx.traceId, traceCtx.parentSpanId, route, message, fields),
     error: (message, fields) =>
-      emit('error', requestId, route, message, fields),
+      emit('error', requestId, traceCtx.traceId, traceCtx.parentSpanId, route, message, fields),
   };
 }
 
-/** Stamps the request id onto a response so a client can report it back. */
+/** Stamps the request id and traceparent onto a response so a client can report them back. */
 export function withRequestId(
   response: NextResponse,
   requestId: string,
+  traceparent?: string,
 ): NextResponse {
   response.headers.set(REQUEST_ID_HEADER, requestId);
+  if (traceparent) {
+    response.headers.set(TRACEPARENT_HEADER, traceparent);
+  }
   return response;
 }

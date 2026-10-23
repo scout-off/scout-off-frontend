@@ -9,6 +9,7 @@ import ThemeToggle from './ui/ThemeToggle';
 import { useContractStatus } from '@/hooks/useContractStatus';
 import { useWallet } from '@/hooks/useWallet';
 import { useCurrencyPreference } from '@/hooks/useCurrencyPreference';
+import { getCurrencyLabel } from '@/lib/currencies';
 import NotificationBell from './NotificationBell';
 import { LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE } from '@/lib/locales';
 import SessionMismatchWarning from './SessionMismatchWarning';
@@ -228,7 +229,7 @@ export default function Navbar() {
                           : ''
                       }`}
                     >
-                      {c.label}
+                      {getCurrencyLabel(c.code, currentLocale)}
                     </button>
                   ))}
                 </div>
@@ -381,7 +382,7 @@ export default function Navbar() {
                       : ''
                   }`}
                 >
-                  {c.label}
+                  {getCurrencyLabel(c.code, currentLocale)}
                 </button>
               ))}
             </div>

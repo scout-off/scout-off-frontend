@@ -6,6 +6,7 @@ import { buildValidatorActionLogCsv } from '@/lib/validatorActionLogCsv';
 import TruncatedAddress from '@/components/ui/TruncatedAddress';
 import EmptyState from '@/components/ui/EmptyState';
 import DataFreshnessBadge from '@/components/ui/DataFreshnessBadge';
+import { useLocale } from 'next-intl';
 
 const ACTION_LABELS = {
   approved: 'Approved',
@@ -31,6 +32,7 @@ function downloadCsv(content: string, filename: string) {
 }
 
 export default function ValidatorActionLog() {
+  const locale = useLocale();
   const { entries, validators, loading, error, filter, setFilter } =
     useValidatorActionLog();
 
@@ -147,7 +149,7 @@ export default function ValidatorActionLog() {
               {entries.map((entry) => (
                 <tr key={entry.id}>
                   <td className="py-2 pr-4 text-gray-400 whitespace-nowrap">
-                    {new Date(entry.timestamp * 1000).toLocaleString()}
+                    {new Date(entry.timestamp * 1000).toLocaleString(locale)}
                   </td>
                   <td className="py-2 pr-4">
                     <span

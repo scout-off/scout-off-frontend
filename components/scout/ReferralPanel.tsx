@@ -1,6 +1,7 @@
 'use client';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { useTranslations } from 'next-intl';
 import {
   generateReferralCode,
   getReferralStats,
@@ -44,6 +45,7 @@ export default function ReferralPanel({ scoutId }: { scoutId?: string } = {}) {
   const { publicKey } = useWallet();
   const effectivePublicKey = scoutId ?? publicKey;
   const { show } = useToast();
+  const t = useTranslations('scout.referralPanel');
   const [codes, setCodes] = useState<ReferralCode[]>([]);
   const [codesLoading, setCodesLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -81,11 +83,11 @@ export default function ReferralPanel({ scoutId }: { scoutId?: string } = {}) {
       const [s] = await Promise.all([getReferralStats(effectivePublicKey)]);
       setStats(s);
     } catch {
-      show({ message: 'Failed to load referral stats.', variant: 'error' });
+      show({ message: t('statsError'), variant: 'error' });
     } finally {
       setLoading(false);
     }
-  }, [effectivePublicKey, show]);
+  }, [effectivePublicKey, show, t]);
 
   const loadCodes = useCallback(async () => {
     if (!effectivePublicKey) return;
@@ -122,9 +124,7 @@ export default function ReferralPanel({ scoutId }: { scoutId?: string } = {}) {
       const serverMessage = axios.isAxiosError(err)
         ? (err.response?.data as { error?: string } | undefined)?.error
         : undefined;
-      setGenerateError(
-        serverMessage ?? 'Failed to generate an invite link. Please try again.',
-      );
+      setGenerateError(serverMessage ?? t('generateError'));
     } finally {
       setGenerating(false);
       // Turnstile tokens are single-use — force a fresh widget/token for
@@ -132,7 +132,7 @@ export default function ReferralPanel({ scoutId }: { scoutId?: string } = {}) {
       setTurnstileToken(null);
       setTurnstileKey((k) => k + 1);
     }
-  }, [publicKey, loadStats, show, turnstileToken]);
+  }, [publicKey, loadStats, show, turnstileToken, t]);
 
   const handleShowMore = useCallback(() => {
     setVisibleCount((count) => count + PAGE_SIZE);
@@ -161,21 +161,20 @@ export default function ReferralPanel({ scoutId }: { scoutId?: string } = {}) {
   return (
     <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-white">Refer a Colleague</h2>
+        <h2 className="text-lg font-semibold text-white">{t('title')}</h2>
         <span
           className="text-sm text-gray-400"
-          {...(loading ? { 'aria-label': 'Loading stats' } : {})}
+          {...(loading ? { 'aria-label': t('loadingStats') } : {})}
         >
           {loading
             ? '…'
-            : `${stats?.successfulReferrals ?? 0} referral${(stats?.successfulReferrals ?? 0) !== 1 ? 's' : ''}`}
+            : t('referralCount', {
+                count: stats?.successfulReferrals ?? 0,
+              })}
         </span>
       </div>
 
-      <p className="text-sm text-gray-400">
-        Share your personal invite link. When a new scout signs up using your
-        link, you will be credited with a referral.
-      </p>
+      <p className="text-sm text-gray-400">{t('description')}</p>
 
       {TURNSTILE_SITE_KEY && (
         <Turnstile
@@ -212,7 +211,7 @@ export default function ReferralPanel({ scoutId }: { scoutId?: string } = {}) {
           className="self-start px-4 py-2 rounded-lg bg-brand-green text-black font-medium transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
         >
           {generating && <Spinner size="sm" />}
-          {generating ? 'Generating…' : 'Generate Invite Link'}
+          {generating ? t('generating') : t('generate')}
         </button>
 
         <button
@@ -220,16 +219,14 @@ export default function ReferralPanel({ scoutId }: { scoutId?: string } = {}) {
           disabled={codesLoading || codes.length === 0 || !effectivePublicKey}
           className="self-start px-4 py-2 rounded-lg border border-gray-700 bg-gray-900 text-sm font-medium text-gray-200 transition hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Export as CSV
+          {t('exportCsv')}
         </button>
       </div>
 
       {codesLoading && codes.length === 0 ? (
-        <p className="text-sm text-gray-400">Loading your invite links…</p>
+        <p className="text-sm text-gray-400">{t('loadingCodes')}</p>
       ) : codes.length === 0 ? (
-        <p className="text-sm text-gray-400">
-          Your generated invite links will appear here.
-        </p>
+        <p className="text-sm text-gray-400">{t('emptyCodes')}</p>
       ) : (
         <div className="flex flex-col gap-2">
           {codes.slice(0, visibleCount).map((ref, i) => {
@@ -244,18 +241,18 @@ export default function ReferralPanel({ scoutId }: { scoutId?: string } = {}) {
                 </code>
                 <button
                   onClick={() => handleCopy(i, inviteUrl)}
-                  aria-label={`Copy invite link for code ${ref.code}`}
+                  aria-label={t('copyLabel', { code: ref.code })}
                   className="shrink-0 rounded px-2 py-1 text-xs font-medium transition bg-gray-700 text-gray-300 hover:bg-gray-600"
                 >
                   {copiedIndex === i ? (
                     <>
                       <Check className="w-3.5 h-3.5" aria-hidden="true" />
-                      Copied!
+                      {t('copied')}
                     </>
                   ) : (
                     <>
                       <Copy className="w-3.5 h-3.5" aria-hidden="true" />
-                      Copy
+                      {t('copy')}
                     </>
                   )}
                 </button>
@@ -268,7 +265,7 @@ export default function ReferralPanel({ scoutId }: { scoutId?: string } = {}) {
               onClick={handleShowMore}
               className="self-start text-sm text-brand-green hover:underline"
             >
-              Show more ({codes.length - visibleCount} remaining)
+              {t('showMore', { count: codes.length - visibleCount })}
             </button>
           )}
         </div>

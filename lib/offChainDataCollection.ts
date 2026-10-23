@@ -71,6 +71,7 @@ import type {
   MilestoneEndorsement,
   RecentlyViewedEntry,
 } from '@/types';
+import { getExplorerAccountUrl } from './network';
 
 const SCHEMA_VERSION = 2;
 
@@ -175,9 +176,7 @@ export interface CollectedUserData {
 }
 
 function explorerUrlFor(wallet: string): string {
-  const network =
-    process.env.NEXT_PUBLIC_NETWORK === 'mainnet' ? 'mainnet' : 'testnet';
-  return `https://stellar.expert/explorer/${network}/account/${wallet}`;
+  return getExplorerAccountUrl(wallet);
 }
 
 /**

@@ -23,6 +23,7 @@ import {
 } from '@/lib/storageKeys';
 import { removeWalletScopedKeys, setActiveWallet } from '@/lib/activeWallet';
 import { BLOCKED_USERS_KEY } from '@/lib/messaging/moderation';
+import { isMainnet } from '@/lib/network';
 
 // @stellar/stellar-sdk and lib/stellar.ts (which also pulls it in) are
 // dynamically imported inside the functions below that actually need them
@@ -30,11 +31,11 @@ import { BLOCKED_USERS_KEY } from '@/lib/messaging/moderation';
 // here — WalletProvider is mounted at the root layout, so a static import
 // would put the whole SDK (and its sodium-native/crypto deps) on every
 // page's critical path just to compute a couple of constants and support
-// features most visitors never touch. This mirrors NETWORK's own
-// computation in lib/stellar.ts without needing the SDK's `Networks` enum
-// for it.
-const CURRENT_NETWORK_TYPE: 'testnet' | 'public' =
-  process.env.NEXT_PUBLIC_NETWORK === 'mainnet' ? 'public' : 'testnet';
+// features most visitors never touch. lib/network.ts is SDK-free, so it is
+// safe to import here.
+const CURRENT_NETWORK_TYPE: 'testnet' | 'public' = isMainnet()
+  ? 'public'
+  : 'testnet';
 
 // ── Wallet provider types ─────────────────────────────────────────────────────
 

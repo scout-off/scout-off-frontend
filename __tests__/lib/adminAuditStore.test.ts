@@ -1,6 +1,10 @@
 /**
  * @jest-environment node
  */
+import Database from 'better-sqlite3';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import {
   AdminAuditStore,
   type NewAdminAuditEntry,
@@ -138,5 +142,34 @@ describe('AdminAuditStore', () => {
 
   it('getAllByActionTypeOldestFirst returns an empty array for an empty type list', () => {
     expect(store.getAllByActionTypeOldestFirst([])).toEqual([]);
+  });
+});
+
+describe('opening a pre-migration database', () => {
+  it('keeps existing rows when the legacy schema has no schema_version', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'admin-audit-'));
+    const dbPath = path.join(dir, 'admin-audit.db');
+
+    const legacy = new Database(dbPath);
+    legacy.exec(`CREATE TABLE admin_audit_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, action_type TEXT NOT NULL,
+      admin_wallet TEXT NOT NULL, target TEXT, amount_stroops INTEGER,
+      tx_hash TEXT, status TEXT NOT NULL, timestamp INTEGER NOT NULL,
+      data TEXT NOT NULL, inserted_at INTEGER NOT NULL)`);
+    legacy
+      .prepare(
+        `INSERT INTO admin_audit_log (action_type, admin_wallet, status, timestamp, data, inserted_at)
+         VALUES ('validator_add', 'GLEGACY', 'submitted', 1, '{}', 1)`,
+      )
+      .run();
+    legacy.close();
+
+    AdminAuditStore.resetInstance();
+    const reopened = AdminAuditStore.getInstance(dbPath);
+    expect(reopened.getEntries().entries.map((e) => e.adminWallet)).toEqual([
+      'GLEGACY',
+    ]);
+    AdminAuditStore.resetInstance();
+    fs.rmSync(dir, { recursive: true, force: true });
   });
 });

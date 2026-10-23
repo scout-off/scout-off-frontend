@@ -4,7 +4,10 @@ import type {
   ReconciliationResult,
   ReconciliationRun,
 } from '@/lib/adminAudit';
-import { fetchWithRetry } from '@/lib/fetchWithRetry';
+import {
+  fetchWithRetry,
+  fetchWithTimeout,
+} from '@/lib/fetchWithRetry';
 
 /** Client for app/api/admin/audit-log/* — same-origin, cookie-authenticated. */
 
@@ -56,14 +59,15 @@ export interface RecordAuditEntryInput {
  * a failure to *log* an action must never block or roll back the action
  * itself, which has already gone on-chain by the time this is called.
  *
- * Deliberately a bare `fetch`, not `fetchWithRetry`: this is a POST with no
+ * Deliberately fetchWithTimeout (no retry): this is a POST with no
  * idempotency key, so an automatic retry after a lost response risks writing
- * a duplicate audit entry.
+ * a duplicate audit entry. A 10 s deadline is enforced so the caller is not
+ * blocked indefinitely on a flaky connection (issue #1508).
  */
 export async function recordAuditEntry(
   input: RecordAuditEntryInput,
 ): Promise<void> {
-  const res = await fetch('/api/admin/audit-log', {
+  const res = await fetchWithTimeout('/api/admin/audit-log', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
@@ -82,7 +86,9 @@ export async function fetchReconciliationHistory(
   limit?: number,
 ): Promise<ReconciliationRun[]> {
   const qs = limit ? `?limit=${limit}` : '';
-  const res = await fetch(`/api/admin/audit-log/reconcile/history${qs}`);
+  const res = await fetchWithRetry(
+    `/api/admin/audit-log/reconcile/history${qs}`,
+  );
   if (!res.ok) throw new Error('Failed to fetch reconciliation history');
   const body = await res.json();
   return body.runs;

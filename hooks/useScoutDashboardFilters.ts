@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useToast } from '@/components/ui/Toast';
 import type { PlayerFilter } from '@/types';
@@ -39,42 +40,55 @@ export function useScoutDashboardFilters({
   const router = useRouter();
   const searchParams = useSearchParams();
   const { show: showToast } = useToast();
+  const t = useTranslations('scout_dashboard');
 
   const [remainingSec, setRemainingSec] = useState<number | null>(null);
+  const [deadline, setDeadline] = useState<number | null>(null);
 
   useEffect(() => {
     if (!isRateLimited) {
-      setRemainingSec(null);
+      setDeadline(null);
       return;
     }
 
     if (retryAfterSec === null) {
       showToast({
-        message: 'Searching too fast — please slow down and try again.',
+        message: t('rateLimitedNoRetry'),
         variant: 'warning',
       });
-      setRemainingSec(null);
+      setDeadline(null);
       return;
     }
 
-    setRemainingSec(retryAfterSec);
+    setDeadline(Date.now() + retryAfterSec * 1000);
     showToast({
-      message: `Searching too fast — please wait ${retryAfterSec}s and try again.`,
+      message: t('rateLimited', { seconds: retryAfterSec }),
       variant: 'warning',
     });
-  }, [isRateLimited, retryAfterSec, showToast]);
+  }, [isRateLimited, retryAfterSec, showToast, t]);
 
-  // Countdown timer for rate limit
+  // Countdown timer for rate limit: one interval per deadline, derived from
+  // the wall clock so it stays accurate when background tabs are throttled.
   useEffect(() => {
-    if (remainingSec === null || remainingSec <= 0) {
+    if (deadline === null) {
       setRemainingSec(null);
       return;
     }
+    const remaining = () => Math.ceil((deadline - Date.now()) / 1000);
+    const initial = remaining();
+    setRemainingSec(initial > 0 ? initial : null);
+    if (initial <= 0) return;
     const interval = setInterval(() => {
-      setRemainingSec((prev) => (prev !== null && prev > 0 ? prev - 1 : null));
+      const next = remaining();
+      if (next > 0) {
+        setRemainingSec(next);
+      } else {
+        setRemainingSec(null);
+        clearInterval(interval);
+      }
     }, 1000);
     return () => clearInterval(interval);
-  }, [remainingSec]);
+  }, [deadline]);
 
   const hasLoaded = useRef(false);
   const loadingEverStarted = useRef(false);

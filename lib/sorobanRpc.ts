@@ -10,9 +10,11 @@
  * back `{ status, hash }`. Signing (which does need the SDK / wallet
  * extension) has already happened by the time anything here runs.
  */
+import { withTimeoutSignal } from './fetchTimeout';
 
 const DEFAULT_SOROBAN_RPC_URL = 'https://soroban-testnet.stellar.org';
 const RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC || DEFAULT_SOROBAN_RPC_URL;
+const SUBMIT_TIMEOUT_MS = 15_000;
 
 export interface SorobanSendTransactionResult {
   status: string;
@@ -48,69 +50,72 @@ let rpcRequestId = 0;
 export async function submitSignedTransaction(
   signedXdr: string,
 ): Promise<SorobanSendTransactionResult> {
-  let res: Response;
-  try {
-    res = await fetch(RPC_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        id: ++rpcRequestId,
-        method: 'sendTransaction',
-        params: { transaction: signedXdr },
-      }),
-    });
-  } catch {
-    // fetch() rejects (TypeError) on DNS failure / offline / CORS-blocked —
-    // exactly the "no network" case this whole feature exists to recover from.
-    throw new SorobanRpcError(
-      'Network error while submitting transaction',
-      'network',
-    );
-  }
+  return withTimeoutSignal(SUBMIT_TIMEOUT_MS, async (signal) => {
+    let res: Response;
+    try {
+      res = await fetch(RPC_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: ++rpcRequestId,
+          method: 'sendTransaction',
+          params: { transaction: signedXdr },
+        }),
+        signal,
+      });
+    } catch {
+      // fetch() rejects (TypeError) on DNS failure / offline / CORS-blocked —
+      // exactly the "no network" case this whole feature exists to recover from.
+      throw new SorobanRpcError(
+        'Network error while submitting transaction',
+        'network',
+      );
+    }
 
-  if (!res.ok) {
-    // A non-2xx from the RPC node itself (5xx, rate limit, etc.) is treated
-    // as transient rather than a rejection of the transaction.
-    throw new SorobanRpcError(
-      `Soroban RPC returned HTTP ${res.status}`,
-      'network',
-    );
-  }
+    if (!res.ok) {
+      // A non-2xx from the RPC node itself (5xx, rate limit, etc.) is treated
+      // as transient rather than a rejection of the transaction.
+      throw new SorobanRpcError(
+        `Soroban RPC returned HTTP ${res.status}`,
+        'network',
+      );
+    }
 
-  let body: {
-    result?: SorobanSendTransactionResult;
-    error?: { message?: string };
-  };
-  try {
-    body = await res.json();
-  } catch {
-    throw new SorobanRpcError(
-      'Soroban RPC returned a malformed response',
-      'network',
-    );
-  }
+    let body: {
+      result?: SorobanSendTransactionResult;
+      error?: { message?: string };
+    };
+    try {
+      body = await res.json();
+    } catch {
+      throw new SorobanRpcError(
+        'Soroban RPC returned a malformed response',
+        'network',
+      );
+    }
 
-  if (body.error) {
-    throw new SorobanRpcError(
-      body.error.message ?? 'Soroban RPC returned an error',
-      'network',
-    );
-  }
-  if (!body.result) {
-    throw new SorobanRpcError(
-      'Soroban RPC returned an empty result',
-      'network',
-    );
-  }
-  if (body.result.status === 'ERROR') {
-    throw new SorobanRpcError(
-      `Transaction rejected by the network: ${body.result.errorResultXdr ?? 'unknown error'}`,
-      'rejected',
-    );
-  }
+    if (body.error) {
+      throw new SorobanRpcError(
+        body.error.message ?? 'Soroban RPC returned an error',
+        'network',
+      );
+    }
+    if (!body.result) {
+      throw new SorobanRpcError(
+        'Soroban RPC returned an empty result',
+        'network',
+      );
+    }
+    if (body.result.status === 'ERROR') {
+      throw new SorobanRpcError(
+        `Transaction rejected by the network: ${body.result.errorResultXdr ?? 'unknown error'}`,
+        'rejected',
+      );
+    }
 
-  return body.result;
+    return body.result;
+  });
 }
 
 /** True for a failure worth queuing for background-sync retry. */

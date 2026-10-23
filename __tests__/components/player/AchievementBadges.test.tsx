@@ -1,8 +1,10 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen } from '../../setup-providers-intl';
 import '@testing-library/jest-dom';
 import AchievementBadges from '@/components/player/AchievementBadges';
 import type { Player, Milestone } from '@/types';
+
+jest.unmock('next-intl');
 
 // Tooltip creates a portal and relies on Popper/floating-ui positioning APIs
 // that jsdom does not support. Stub it to render its children directly so
@@ -208,5 +210,25 @@ describe('AchievementBadges', () => {
     tooltips.forEach((tooltip) => {
       expect(tooltip.getAttribute('data-content')).toBeTruthy();
     });
+  });
+
+  // ── Localization ─────────────────────────────────────────────────────────
+
+  it('renders badge labels, descriptions and the aria-label in French', () => {
+    const milestones = Array.from({ length: 5 }, (_, i) =>
+      makeMilestone({ id: `m${i + 1}` }),
+    );
+    const player = makePlayer({ milestones, progressLevel: 1 });
+    render(<AchievementBadges player={player} />, { locale: 'fr' });
+
+    expect(
+      screen.getByRole('generic', { name: 'Badges de réussite' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Collectionneur de jalons')).toBeInTheDocument();
+    expect(
+      screen
+        .getAllByTestId('tooltip')
+        .map((el) => el.getAttribute('data-content')),
+    ).toContain('5 jalons vérifiés atteints.');
   });
 });

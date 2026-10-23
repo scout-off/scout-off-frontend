@@ -4,6 +4,7 @@ import { getSessionWallet } from '@/lib/session';
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 import { privateJson } from '@/lib/httpResponses';
 import { createRequestLogger } from '@/lib/logger';
+import { apiError, ApiErrorCode } from '@/lib/apiErrors';
 import {
   getPinataCredentials,
   getMissingPinataEnvVars,
@@ -45,9 +46,12 @@ export async function POST(req: NextRequest) {
   const rl = await checkRateLimit(`ipfs-upload-init:${key}`, RATE_LIMIT);
   if (rl.limited) {
     const retryAfter = rl.retryAfterSec ?? 60;
-    return privateJson(
-      { error: 'Too many requests' },
-      { status: 429, headers: { 'Retry-After': String(retryAfter) } },
+    return apiError(
+      ApiErrorCode.RATE_LIMITED,
+      429,
+      'Too many requests',
+      undefined,
+      { headers: { 'Retry-After': String(retryAfter) } },
     );
   }
 
@@ -55,7 +59,7 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
   } catch {
-    return privateJson({ error: 'Invalid JSON body' }, { status: 400 });
+    return apiError(ApiErrorCode.INVALID_JSON, 400, 'Invalid JSON body');
   }
 
   const { filename, fileType, fileSize, totalChunks } = (body ?? {}) as Record<
@@ -64,7 +68,7 @@ export async function POST(req: NextRequest) {
   >;
 
   if (typeof filename !== 'string' || !filename.trim()) {
-    return privateJson({ error: 'filename is required' }, { status: 400 });
+    return apiError(ApiErrorCode.MISSING_FIELDS, 400, 'filename is required', { field: 'filename' });
   }
 
   if (
@@ -73,11 +77,11 @@ export async function POST(req: NextRequest) {
       fileType.toLowerCase().startsWith(prefix),
     )
   ) {
-    return privateJson(
-      {
-        error: `File type "${fileType}" is not allowed. Only image/* and video/* files are accepted.`,
-      },
-      { status: 400 },
+    return apiError(
+      ApiErrorCode.UPLOAD_TYPE_NOT_ALLOWED,
+      400,
+      `File type "${fileType}" is not allowed. Only image/* and video/* files are accepted.`,
+      { type: String(fileType ?? '') },
     );
   }
 
@@ -86,18 +90,14 @@ export async function POST(req: NextRequest) {
     !Number.isFinite(fileSize) ||
     fileSize <= 0
   ) {
-    return privateJson(
-      { error: 'fileSize must be a positive number' },
-      { status: 400 },
-    );
+    return apiError(ApiErrorCode.INVALID_FIELD_VALUE, 400, 'fileSize must be a positive number', { field: 'fileSize' });
   }
 
   if (fileSize > MAX_FILE_SIZE_BYTES) {
-    return privateJson(
-      {
-        error: `File exceeds the 100 MB size limit (received ${(fileSize / 1024 / 1024).toFixed(1)} MB)`,
-      },
-      { status: 400 },
+    return apiError(
+      ApiErrorCode.INVALID_REQUEST,
+      400,
+      `File exceeds the 100 MB size limit (received ${(fileSize / 1024 / 1024).toFixed(1)} MB)`,
     );
   }
 
@@ -106,24 +106,15 @@ export async function POST(req: NextRequest) {
     !Number.isInteger(totalChunks) ||
     totalChunks <= 0
   ) {
-    return privateJson(
-      { error: 'totalChunks must be a positive integer' },
-      { status: 400 },
-    );
+    return apiError(ApiErrorCode.INVALID_FIELD_VALUE, 400, 'totalChunks must be a positive integer', { field: 'totalChunks' });
   }
 
   if (totalChunks > MAX_CHUNKS) {
-    return privateJson(
-      { error: 'totalChunks is unreasonably high' },
-      { status: 400 },
-    );
+    return apiError(ApiErrorCode.INVALID_REQUEST, 400, 'totalChunks is unreasonably high');
   }
 
   if (totalChunks > 1 && fileSize / totalChunks < MIN_CHUNK_SIZE_BYTES) {
-    return privateJson(
-      { error: 'Chunk count too high for the given file size' },
-      { status: 400 },
-    );
+    return apiError(ApiErrorCode.INVALID_REQUEST, 400, 'Chunk count too high for the given file size');
   }
 
   const { sessionId } = await initSession({

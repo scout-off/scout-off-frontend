@@ -8,6 +8,11 @@ import { SessionStore } from '@/lib/sessionStore';
 // Keypair.fromSecret is mocked to return the secret itself as the "public
 // key", so route.ts's `Keypair.fromSecret(serverKey).publicKey()` resolves
 // to `process.env.SEP10_SERVER_KEY` for assertion purposes below.
+//
+// TransactionBuilder.fromXDR is mocked to return a minimal transaction
+// envelope with realistic timeBounds so the nonce-extraction path in
+// postSep10 doesn't need a real XDR string.
+const MOCK_MAX_TIME_SEC = Math.floor(Date.now() / 1000) + 300;
 jest.mock('@stellar/stellar-sdk', () => ({
   WebAuth: {
     verifyChallengeTxSigners: jest.fn(),
@@ -25,6 +30,30 @@ jest.mock('@stellar/stellar-sdk', () => ({
   // without needing real checksummed addresses.
   StrKey: {
     isValidEd25519PublicKey: (key: string) => key.startsWith('G'),
+  },
+  // Returns a minimal fake transaction with timeBounds so postSep10 can
+  // read maxTime without needing a real XDR.
+  TransactionBuilder: {
+    fromXDR: jest.fn(() => ({
+      timeBounds: { maxTime: String(MOCK_MAX_TIME_SEC) },
+    })),
+  },
+}));
+
+// Mock Sep10NonceStore so route tests are fully isolated from SQLite and
+// can control consumeNonce / sweepExpired return values per-test.
+const mockConsumeNonce = jest.fn().mockReturnValue(true); // true = first use
+const mockSweepExpired = jest.fn().mockReturnValue(0);
+const mockHashXdr = jest.fn((xdr: string) => `hash:${xdr}`);
+
+jest.mock('@/lib/sep10NonceStore', () => ({
+  Sep10NonceStore: {
+    getInstance: jest.fn(() => ({
+      consumeNonce: mockConsumeNonce,
+      sweepExpired: mockSweepExpired,
+    })),
+    hashXdr: mockHashXdr,
+    resetInstance: jest.fn(),
   },
 }));
 
@@ -61,6 +90,11 @@ function makeRequest(
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // Restore default mock implementations cleared by clearAllMocks().
+  // consumeNonce returns true (first use / not a replay) by default; individual
+  // tests that want to simulate a replay override this with mockReturnValueOnce.
+  mockConsumeNonce.mockReturnValue(true);
+  mockHashXdr.mockImplementation((xdr: string) => `hash:${xdr}`);
   SessionStore.resetInstance();
   process.env.NEXT_PUBLIC_BASE_URL = ALLOWED_ORIGIN;
   process.env.SEP10_SERVER_KEY =
@@ -418,6 +452,118 @@ describe('POST /api/auth/sep10 — production fails closed with no allow-list co
     expect(mockVerify).not.toHaveBeenCalled();
   });
 });
+
+// ── SEP-10 replay protection (#1488) ────────────────────────────────────────
+describe('POST /api/auth/sep10 — nonce replay protection', () => {
+  test('returns 200 for the first use of a signed XDR', async () => {
+    mockVerify.mockReturnValueOnce(undefined);
+    // consumeNonce default is true (first use) — restored in beforeEach
+
+    const res = await POST(makeRequest(ALLOWED_ORIGIN));
+
+    expect(res.status).toBe(200);
+    expect(mockConsumeNonce).toHaveBeenCalledTimes(1);
+    // The hash passed to consumeNonce must equal hashXdr(SIGNED_XDR)
+    expect(mockConsumeNonce).toHaveBeenCalledWith(
+      `hash:${SIGNED_XDR}`,
+      expect.any(Number),
+    );
+  });
+
+  test('returns 401 when the same signed XDR is submitted a second time (replay)', async () => {
+    mockVerify.mockReturnValue(undefined); // both calls pass signature check
+    // First call: first use — mints a session
+    mockConsumeNonce.mockReturnValueOnce(true);
+    const first = await POST(makeRequest(ALLOWED_ORIGIN));
+    expect(first.status).toBe(200);
+
+    // Second call: consumeNonce returns false — this XDR was already used
+    mockConsumeNonce.mockReturnValueOnce(false);
+    const second = await POST(makeRequest(ALLOWED_ORIGIN));
+    expect(second.status).toBe(401);
+    const body = await second.json();
+    expect(body).toEqual({
+      error: { code: 'INVALID_SIGNATURE', message: 'Verification failed' },
+    });
+  });
+
+  test('does not set session cookies when consumeNonce returns false', async () => {
+    mockVerify.mockReturnValueOnce(undefined);
+    mockConsumeNonce.mockReturnValueOnce(false); // simulate replay
+
+    const res = await POST(makeRequest(ALLOWED_ORIGIN));
+
+    expect(res.status).toBe(401);
+    // No session cookie must have been set
+    expect(res.cookies.get('session')).toBeUndefined();
+    expect(res.cookies.get('session_refresh')).toBeUndefined();
+  });
+
+  test('two different XDR values each succeed independently', async () => {
+    mockVerify.mockReturnValue(undefined);
+    mockConsumeNonce.mockReturnValue(true); // both are first-use
+
+    const xdr1 = 'CHALLENGE_XDR_ONE==';
+    const xdr2 = 'CHALLENGE_XDR_TWO==';
+
+    const res1 = await POST(
+      makeRequest(ALLOWED_ORIGIN, { signedXdr: xdr1, publicKey: VALID_PUBLIC_KEY }),
+    );
+    const res2 = await POST(
+      makeRequest(ALLOWED_ORIGIN, { signedXdr: xdr2, publicKey: VALID_PUBLIC_KEY }),
+    );
+
+    expect(res1.status).toBe(200);
+    expect(res2.status).toBe(200);
+    // hashXdr must have been called with each distinct XDR
+    expect(mockHashXdr).toHaveBeenCalledWith(xdr1);
+    expect(mockHashXdr).toHaveBeenCalledWith(xdr2);
+  });
+
+  test('passes the challenge maxTime from the parsed XDR to consumeNonce', async () => {
+    mockVerify.mockReturnValueOnce(undefined);
+
+    await POST(makeRequest(ALLOWED_ORIGIN));
+
+    // MOCK_MAX_TIME_SEC is what TransactionBuilder.fromXDR returns in the mock
+    expect(mockConsumeNonce).toHaveBeenCalledWith(
+      expect.any(String),
+      MOCK_MAX_TIME_SEC,
+    );
+  });
+
+  test('sweepExpired is called after a successful login', async () => {
+    mockVerify.mockReturnValueOnce(undefined);
+    mockConsumeNonce.mockReturnValueOnce(true);
+
+    const res = await POST(makeRequest(ALLOWED_ORIGIN));
+    expect(res.status).toBe(200);
+    expect(mockSweepExpired).toHaveBeenCalledTimes(1);
+  });
+
+  test('sweepExpired failure does not abort an otherwise-successful login', async () => {
+    mockVerify.mockReturnValueOnce(undefined);
+    mockConsumeNonce.mockReturnValueOnce(true);
+    mockSweepExpired.mockImplementationOnce(() => {
+      throw new Error('disk full');
+    });
+
+    const res = await POST(makeRequest(ALLOWED_ORIGIN));
+    expect(res.status).toBe(200);
+  });
+
+  test('a replay is rejected before any session is persisted to SessionStore', async () => {
+    mockVerify.mockReturnValueOnce(undefined);
+    mockConsumeNonce.mockReturnValueOnce(false); // replay
+
+    const createSpy = jest.spyOn(SessionStore.getInstance(), 'create');
+
+    const res = await POST(makeRequest(ALLOWED_ORIGIN));
+    expect(res.status).toBe(401);
+    expect(createSpy).not.toHaveBeenCalled();
+  });
+});
+// ── end replay protection ────────────────────────────────────────────────────
 
 describe('DELETE /api/auth/sep10 — logout', () => {
   function deleteRequest(cookieHeader?: string): NextRequest {

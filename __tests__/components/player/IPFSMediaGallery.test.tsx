@@ -1,4 +1,11 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
+jest.unmock('next-intl');
+
+import {
+  render,
+  screen,
+  fireEvent,
+  act,
+} from '@/__tests__/setup-providers-intl';
 import '@testing-library/jest-dom';
 import IPFSMediaGallery from '@/components/player/IPFSMediaGallery';
 import { useVideoPosterFrame } from '@/hooks/useVideoPosterFrame';
@@ -299,5 +306,20 @@ describe('IPFSMediaGallery', () => {
     expect(screen.queryByText(/unavailable/i)).not.toBeInTheDocument();
     expect(HTMLMediaElement.prototype.load).toHaveBeenCalled();
     expect(container.querySelector('source')).toBeInTheDocument();
+  });
+
+  it('renders accessible names in Swahili', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({ denylisted: ['QmRemoved'] }),
+    });
+    render(<IPFSMediaGallery cids={['QmRemoved', 'QmKept.jpg']} />, {
+      locale: 'sw',
+    });
+
+    expect(
+      await screen.findByRole('img', { name: 'Media imeondolewa na udhibiti' }),
+    ).toBeInTheDocument();
+    expect(screen.getByAltText('Media ya IPFS QmKept.jpg')).toBeInTheDocument();
   });
 });

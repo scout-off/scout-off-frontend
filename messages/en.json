@@ -44,7 +44,13 @@
     "scroll_to_top": "Scroll to top",
     "cookie_consent": "Cookie consent",
     "close_consent_banner": "Close consent banner",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "data_freshness": {
+      "title": "Indexer data freshness",
+      "updated": "Updated {time}",
+      "updated_stale": "Updated {time} · data may be out of date",
+      "pending_write": "Your change may take up to a minute to appear"
+    }
   },
   "language": {
     "select_language": "Select Language",
@@ -56,6 +62,15 @@
     "title": "Scout Dashboard",
     "welcome": "Welcome to Scout Dashboard",
     "description": "Manage players and trials",
+    "watchlist_preview": {
+      "title": "My Watchlist",
+      "view_all": "View all",
+      "remove": "Remove",
+      "remove_aria": "Remove {playerId} from watchlist"
+    },
+    "recently_viewed_strip": {
+      "title": "Recently Viewed"
+    },
     "recent_activity": "Recent Activity",
     "players": "Players",
     "trials": "Trials",
@@ -68,7 +83,34 @@
     "results_behind": "Results may be up to {count, plural, one {# ledger} other {# ledgers}} behind",
     "all_regions": "All regions",
     "any_position": "Any position",
-    "save_search_placeholder": "e.g. Lagos strikers"
+    "save_search_placeholder": "e.g. Lagos strikers",
+    "rateLimited": "Searching too fast — please wait {seconds, plural, one {# second} other {# seconds}} and try again.",
+    "rateLimitedNoRetry": "Searching too fast — please slow down and try again.",
+    "activityFeed": {
+      "title": "Activity Feed",
+      "live": "Live",
+      "empty": "No recent activity.",
+      "fallback": {
+        "player": "Player",
+        "scout": "A scout",
+        "aPlayer": "a player",
+        "milestone": "milestone",
+        "aMilestone": "a milestone"
+      },
+      "events": {
+        "player_registered": "{player} registered",
+        "profile_updated": "{player} updated their profile",
+        "milestone_approved": "{scout} approved {milestone}",
+        "milestone_revoked": "{milestone} revoked for {player}",
+        "trial_offer_logged": "{player} received a trial offer",
+        "scout_subscribed": "{scout} subscribed",
+        "scout_subscribed_tier": "{scout} subscribed ({tier})",
+        "player_contacted": "{scout} contacted {player}",
+        "fees_withdrawn": "Platform fees withdrawn",
+        "fees_withdrawn_amount": "Platform fees withdrawn ({amount} XLM)",
+        "unknown": "Event"
+      }
+    }
   },
   "trial_offer": {
     "form_label": "Log trial offer",
@@ -85,9 +127,104 @@
     "submit": "Submit Trial Offer",
     "submitting": "Submitting…"
   },
+  "saved_searches_menu": {
+    "title": "Saved Searches",
+    "new_count": "{count} new",
+    "apply": "Apply",
+    "rename": "Rename",
+    "remove": "Remove",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
   "player_profile": {
     "back_to_scout_dashboard": "← Back to Scout Dashboard",
-    "verified_on_chain": "Verified on-chain"
+    "verified_on_chain": "Verified on-chain",
+    "media_report": {
+      "report": "Report",
+      "title": "Report this media",
+      "thanks": "Thanks — our moderators will review this media.",
+      "reason": "Reason",
+      "details": "Details (optional)",
+      "ipfs_notice": "Removal applies to ScoutOff only. Content stored on IPFS may remain reachable through public gateways.",
+      "request_failed": "Request failed",
+      "request_failed_status": "Request failed (HTTP {status})",
+      "sending": "Sending…",
+      "submit": "Submit report",
+      "reasons": {
+        "nudity": "Nudity or sexual content",
+        "violence": "Violence or gore",
+        "impersonation": "Impersonation",
+        "copyright": "Copyright infringement",
+        "other": "Other"
+      }
+    },
+    "achievement_badges": {
+      "label": "Achievement badges",
+      "badges": {
+        "first_milestone": {
+          "label": "First Milestone",
+          "description": "Earned your first verified on-chain milestone."
+        },
+        "milestone_collector": {
+          "label": "Milestone Collector",
+          "description": "Reached {count, plural, one {# verified milestone} other {# verified milestones}}."
+        },
+        "milestone_master": {
+          "label": "Milestone Master",
+          "description": "Reached {count, plural, one {# verified milestone} other {# verified milestones}}."
+        },
+        "profile_complete": {
+          "label": "Profile Complete",
+          "description": "Vitals, stats, and highlight media are all filled in."
+        },
+        "elite_tier": {
+          "label": "Elite Tier",
+          "description": "Reached Elite Tier, the highest progress level."
+        }
+      }
+    },
+    "milestoneTimeline": {
+      "timelineLabel": "Level progression timeline",
+      "levelAchieved": "{level}, achieved {date}",
+      "levelNotReached": "{level}, not yet reached",
+      "expandAchieved": "{level}, achieved {date}. Expand details",
+      "collapseAchieved": "{level}, achieved {date}. Collapse details",
+      "expandLevel": "{level}. Expand details",
+      "collapseLevel": "{level}. Collapse details",
+      "badgeTooltip": "Validator: {validator} · Approved: {date}",
+      "notYetReached": "Not yet reached",
+      "detailsFor": "Details for {level}",
+      "profileCreated": "Profile created on-chain. No validator required.",
+      "approvedBy": "Approved by {address}",
+      "verifiedBy": "Verified by",
+      "dateLabel": "Date:",
+      "disputePending": "Dispute pending review",
+      "disputeUnderReview": "Dispute under review",
+      "disputeEscalated": "Dispute escalated to admin",
+      "disputeUpheld": "Dispute reviewed — decision upheld",
+      "disputeReversed": "Dispute reviewed — milestone reversed",
+      "disputeMilestone": "Dispute this milestone",
+      "noMilestoneData": "No milestone data yet."
+    },
+    "mediaGallery": {
+      "removedLabel": "Media removed by moderation",
+      "removedText": "This media was removed for violating ScoutOff's policies.",
+      "playVideo": "Play video",
+      "reconnecting": "Reconnecting…",
+      "unavailableRetry": "Unavailable — Retry",
+      "imageAlt": "IPFS media {cid}"
+    }
+  },
+  "spending_summary": {
+    "title": "Spending Summary",
+    "load_error": "Could not load spending data. The indexer may be unavailable.",
+    "no_data": "No spending data available yet.",
+    "contact_fees": "Contact Fees",
+    "subscriptions": "Subscriptions",
+    "total": "Total",
+    "monthly_breakdown": "Monthly Breakdown",
+    "month": "Month",
+    "no_payments": "No payments recorded yet. Your spending history will appear here once you start contacting players or subscribing."
   },
   "player_dashboard": {
     "title": "Player Dashboard",
@@ -103,6 +240,12 @@
     "stats": "Statistics",
     "download_data": "Download my data",
     "download_data_success": "Your data has been downloaded."
+  },
+  "subscription_status_banner": {
+    "expired": "Subscription expired",
+    "renew": "Renew",
+    "expires_in": "{tier} — {count, plural, one {expires in # day} other {expires in # days}}",
+    "days_remaining": "{tier} — {count, plural, one {# day remaining} other {# days remaining}}"
   },
   "wallet": {
     "connect": "Connect Wallet",
@@ -140,6 +283,13 @@
     "removeAccountConfirmTitle": "Remove this account?",
     "removeAccountConfirmMessage": "This address will be removed from your remembered accounts on this device."
   },
+  "session_mismatch_warning": {
+    "title": "Session mismatch detected",
+    "body": "The wallet address shown ({address}…) differs from the identity your session is authenticated to. This may happen if you switched accounts in your wallet extension without logging out first.",
+    "reauthenticate": "Re-authenticate",
+    "reauthenticating": "Re-authenticating…",
+    "dismiss_aria": "Dismiss warning"
+  },
   "errors": {
     "not_found": "Not found",
     "unauthorized": "Unauthorized",
@@ -150,10 +300,30 @@
     "wallet_error": "Wallet operation failed"
   },
   "contract_status": {
-    "paused_hint": "Temporarily unavailable — the platform is paused for maintenance"
+    "paused_hint": "Temporarily unavailable — the platform is paused for maintenance",
+    "incompatible_title": "Contract update required.",
+    "incompatible_message": "This app version is out of sync with the deployed contract. Please refresh or check for an update."
   },
   "dispute_modal": {
-    "character_count": "{count} of {max} characters"
+    "character_count": "{count} of {max} characters",
+    "evidence": {
+      "submit": "Submit evidence",
+      "unsupported_type": "Unsupported file type. Allowed: JPEG, PNG, WebP, GIF, MP4, WebM, PDF.",
+      "too_large": "File must be under {size} MB.",
+      "submit_failed": "Submission failed. Try again.",
+      "submitted": "✓ Evidence submitted. The admin will review the updated timeline.",
+      "add_more": "Add more",
+      "validator_notice": "You are responding as the validator who approved this milestone. Your response will be visible to the player and the reviewing admin.",
+      "file_label": "Evidence file",
+      "required": "(required)",
+      "file_size": "{name} ({size} KB)",
+      "allowed_formats": "JPEG, PNG, WebP, GIF, MP4, WebM, PDF — max {size} MB",
+      "note_label": "Note",
+      "note_hint": "(optional, max {kind, select, response {your response} other {context}})",
+      "placeholder_validator": "Explain your reasoning for the milestone approval…",
+      "placeholder_player": "Add context about this evidence…",
+      "uploading": "Uploading…"
+    }
   },
   "actions": {
     "refresh": "Refresh",
@@ -243,7 +413,16 @@
     "roster_error": "Could not load approved players. The indexer may be temporarily unavailable.",
     "roster_retry": "Retry",
     "roster_count_one": "1 player",
-    "roster_count_other": "{count} players"
+    "roster_count_other": "{count} players",
+    "chip": {
+      "loading": "Checking validator…",
+      "active": "Active validator",
+      "former": "Former validator",
+      "unknown": "Validator status unknown",
+      "fetching": "Fetching validator information…",
+      "milestones_approved": "{status} · {count, plural, one {# milestone} other {# milestones}} approved",
+      "academy_affiliated": "Academy-affiliated"
+    }
   },
   "admin": {
     "title": "Admin Dashboard",
@@ -476,7 +655,17 @@
     "og_image_alt": "ScoutOff — Decentralized Football Scouting on Stellar"
   },
   "offline": {
-    "bannerMessage": "You're offline. Some features may be unavailable until your connection returns."
+    "bannerMessage": "You're offline. Some features may be unavailable until your connection returns.",
+    "fallback_heading": "You're offline",
+    "fallback_body": "This page wasn't cached on your device. Please reconnect to the internet and try again, or navigate to a page you've visited before.",
+    "fallback_retry": "Try again"
+  },
+  "service_worker_update_banner": {
+    "title": "New version available.",
+    "message": "Reload to get the latest updates.",
+    "reload": "Reload",
+    "dismiss": "Dismiss",
+    "dismiss_aria": "Dismiss update banner"
   },
   "apiErrors": {
     "RATE_LIMITED": "Too many requests. Please slow down and try again shortly.",
@@ -489,7 +678,28 @@
     "UPLOAD_INCOMPLETE": "Upload incomplete: received {received} of {total} parts.",
     "DISPUTE_ALREADY_PENDING": "This milestone already has a pending dispute.",
     "MILESTONE_NOT_FOUND": "Milestone not found.",
-    "UNKNOWN": "Something went wrong. Please try again."
+    "UNKNOWN": "Something went wrong. Please try again.",
+    "UNAUTHORIZED": "You must be signed in to do that.",
+    "FORBIDDEN": "You do not have permission to perform this action.",
+    "SESSION_EXPIRED": "Your session has expired. Please sign in again.",
+    "INVALID_JSON": "The request body was not valid JSON.",
+    "MISSING_FIELDS": "One or more required fields are missing.",
+    "FIELD_TOO_LONG": "The field \"{field}\" is too long (maximum {max} characters).",
+    "INVALID_FIELD_VALUE": "The value for \"{field}\" is not valid.",
+    "NOT_FOUND": "The requested resource was not found.",
+    "PLAYER_NOT_FOUND": "Player not found.",
+    "DISPUTE_NOT_FOUND": "Dispute not found.",
+    "ACADEMY_NOT_FOUND": "Academy not found.",
+    "THROTTLE_NOT_FOUND": "Fraud throttle not found or already lifted.",
+    "ALREADY_MEMBER": "This wallet is already a member of the academy.",
+    "ALREADY_EXISTS": "This resource already exists.",
+    "UPLOAD_SIZE_MISMATCH": "Uploaded size does not match the declared file size. Please restart the upload.",
+    "UPLOAD_TYPE_NOT_ALLOWED": "File type \"{type}\" is not allowed. Only image and video files are accepted.",
+    "UPLOAD_CONTENT_MISMATCH": "File content does not match its declared type. Upload rejected.",
+    "IPFS_UPLOAD_FAILED": "Failed to upload file to IPFS. Please try again.",
+    "IPFS_NOT_CONFIGURED": "File uploads are currently unavailable.",
+    "UPLOAD_VERIFICATION_FAILED": "Upload verification failed. Please try again.",
+    "INTERNAL_ERROR": "An internal error occurred. Please try again later."
   },
   "player": {
     "modals": {
@@ -691,6 +901,15 @@
       "milestone_approvals_description": "Notify me when a validator approves one of my milestones.",
       "contact_unlocks_label": "Contact unlocks",
       "contact_unlocks_description": "Notify me when I unlock a player’s contact details."
+    },
+    "push": {
+      "unsupported": "Push notifications aren’t supported in this browser.",
+      "denied": "Notifications are blocked. Allow them in your browser’s site settings to enable milestone alerts.",
+      "turned_off": "Push notifications turned off.",
+      "title": "Milestone approval alerts",
+      "description": "Get a browser notification when a coach or academy approves one of your milestones — even when the app is closed.",
+      "turn_off": "Turn off",
+      "enable": "Enable"
     }
   },
   "stats": {
@@ -788,6 +1007,49 @@
           "title": "Elite"
         }
       }
+    },
+    "contact_modal": {
+      "title": "Player Contact Details",
+      "confirming": "Confirming pay-to-contact transaction…",
+      "no_details": "No contact details unlocked for this player yet.",
+      "email": "Email: {value}",
+      "phone": "Phone: {value}",
+      "telegram": "Telegram: {value}",
+      "copy": "Copy",
+      "processing": "Processing…",
+      "pending_swap": "A previous attempt already converted your payment into {xlm} XLM. Retry the contact payment without converting again.",
+      "retry_payment": "Retry payment ({fee} XLM)",
+      "usdc_intro": "No XLM? Pay the contact fee in USDC. It is converted to XLM in a separate transaction first, then the contact payment is sent.",
+      "getting_quote": "Getting a quote…",
+      "quote_summary": "Pay ~{amount} USDC (converted to {fee} XLM)",
+      "quote_limit_valid": "At most {sendMax} USDC with {slippage}% slippage. Quote valid for {seconds}s.",
+      "quote_limit_expired": "At most {sendMax} USDC with {slippage}% slippage. Quote expired.",
+      "max_slippage": "Max slippage",
+      "refresh_quote": "Refresh quote",
+      "pay_with_usdc": "Pay with USDC",
+      "quote_error": "Could not fetch a quote"
+    },
+    "export_csv": {
+      "label": "Export CSV",
+      "exporting": "Exporting…",
+      "error": "Could not export contacts."
+    },
+    "referralPanel": {
+      "title": "Refer a Colleague",
+      "statsError": "Failed to load referral stats.",
+      "generateError": "Failed to generate an invite link. Please try again.",
+      "loadingStats": "Loading stats",
+      "referralCount": "{count, plural, one {# referral} other {# referrals}}",
+      "description": "Share your personal invite link. When a new scout signs up using your link, you will be credited with a referral.",
+      "generating": "Generating…",
+      "generate": "Generate Invite Link",
+      "exportCsv": "Export as CSV",
+      "loadingCodes": "Loading your invite links…",
+      "emptyCodes": "Your generated invite links will appear here.",
+      "copyLabel": "Copy invite link for code {code}",
+      "copy": "Copy",
+      "copied": "Copied!",
+      "showMore": "Show more ({count} remaining)"
     }
   }
 }
