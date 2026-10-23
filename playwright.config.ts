@@ -121,6 +121,9 @@ export default defineConfig({
       // env declares it empty, so a plain spread would leave nobody admin.
       NEXT_PUBLIC_ADMIN_ADDRESS: E2E_ADMIN_ADDRESS,
       NEXT_PUBLIC_CONTRACT_ID: E2E_CONTRACT_ID,
+      // Enables test-only routes such as POST /api/migration/test-advance,
+      // which 404 unless this is set (see lib/envManifest.json).
+      E2E_TEST_ROUTES: '1',
       // Passed through only when the runner asks for it. Unset means the real
       // 20-minute access-token TTL, so the rest of the suite exercises
       // production-like lifetimes; e2e/session-lifecycle.spec.ts needs a short
