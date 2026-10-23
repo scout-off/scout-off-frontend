@@ -7,7 +7,7 @@
  */
 import {
   Keypair,
-  SorobanRpc,
+  rpc as SorobanRpc,
   TransactionBuilder,
   Networks,
   BASE_FEE,

@@ -25,22 +25,31 @@ export const walletAdapters: Record<
       const connected = await isConnected();
       if (!connected?.isConnected) throw new Error('Freighter not installed');
       const result = await getAddress();
-      if (result?.error) throw new Error(result.error);
+      if (result?.error) {
+        const e = result.error as string | { message?: string };
+        throw new Error(typeof e === 'string' ? e : e.message ?? 'Freighter access failed');
+      }
       if (!result?.address) throw new Error('Freighter did not return an address');
       return result.address;
     },
     async signTransaction(xdr, networkPassphrase) {
       const { signTransaction } = await import('@stellar/freighter-api');
-      const result = await signTransaction(xdr, { networkPassphrase });
-      // freighter-api v3+ returns { signedTransaction, signerAddress, error? }
-      if (result && typeof result === 'object' && 'signedTransaction' in result) {
-        if ((result as { error?: string }).error) {
-          throw new Error((result as { error: string }).error);
-        }
-        return (result as { signedTransaction: string }).signedTransaction;
+      const result: unknown = await signTransaction(xdr, { networkPassphrase });
+      // v2 returned the XDR string directly.
+      if (typeof result === 'string') return result;
+      // v6 returns { signedTxXdr, signerAddress, error? }; earlier v3+ builds
+      // used `signedTransaction`. An empty XDR means the user declined.
+      const r = (result ?? {}) as {
+        signedTxXdr?: string;
+        signedTransaction?: string;
+        error?: string | { message?: string };
+      };
+      if (r.error) {
+        throw new Error(typeof r.error === 'string' ? r.error : r.error.message ?? 'Freighter signing failed');
       }
-      // v2 compat: returned the XDR string directly
-      return result as unknown as string;
+      const signed = r.signedTxXdr || r.signedTransaction;
+      if (!signed) throw new Error('Freighter did not return a signed transaction');
+      return signed;
     },
   },
   // Albedo is web-based — there's no extension to inject `window.albedo`,

@@ -1,6 +1,6 @@
 // Mock stellar-sdk to avoid real SDK/network calls.
 jest.mock('@stellar/stellar-sdk', () => ({
-  SorobanRpc: {
+  rpc: {
     Api: {
       isSimulationRestore: (simulation: { restorePreamble?: unknown }) =>
         Boolean(simulation.restorePreamble),

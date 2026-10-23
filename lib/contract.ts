@@ -12,7 +12,9 @@
  * helpers must therefore pass the same key as both arguments.
  */
 import {
-  SorobanRpc,
+  // stellar-sdk 13 removed the deprecated `SorobanRpc` alias; `rpc` is the
+  // same namespace.
+  rpc as SorobanRpc,
   Contract,
   nativeToScVal,
   scValToNative,
