@@ -6,7 +6,9 @@
  * immediately. This is the only practical way to exercise the execute path
  * in a browser-level E2E test without waiting 72 real hours.
  *
- * This route is disabled in production (returns 404).
+ * This route returns 404 in production builds, and everywhere else unless
+ * E2E_TEST_ROUTES=1 (set only by playwright.config.ts's webServer env), so a
+ * plain `next dev` or staging deploy can't be used to skip the cooling-off.
  * It is intentionally NOT protected by session auth — the test runner needs
  * to call it from a plain request context, not from an authenticated page.
  *
@@ -21,6 +23,10 @@ export const runtime = 'nodejs';
 export async function POST(req: NextRequest) {
   // Hard gate: never available in production builds.
   if (process.env.NODE_ENV === 'production') {
+    return privateJson({ error: 'Not Found' }, { status: 404 });
+  }
+  // Opt-in gate: only the Playwright dev server enables test routes.
+  if (process.env.E2E_TEST_ROUTES !== '1') {
     return privateJson({ error: 'Not Found' }, { status: 404 });
   }
 
