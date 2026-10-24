@@ -58,7 +58,10 @@ describe('GET /api/admin/fraud-flags/status', () => {
   it('rejects non-admin callers with 403', async () => {
     const res = await GET(makeRequest(NON_ADMIN));
     expect(res.status).toBe(403);
-    expect(await res.json()).toEqual({ error: 'Forbidden' });
+    // Coded error body (#1627).
+    expect(await res.json()).toEqual({
+      error: { code: 'FORBIDDEN', message: 'Admin access required' },
+    });
   });
 
   it('returns the no-runs-yet state when nothing has been evaluated', async () => {

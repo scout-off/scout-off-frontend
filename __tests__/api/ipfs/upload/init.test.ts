@@ -95,7 +95,10 @@ describe('POST /api/ipfs/upload/init', () => {
       ),
     );
     expect(res.status).toBe(400);
-    expect((await res.json()).error).toMatch(/not allowed/i);
+    // Coded error body (#1627): { error: { code, message, params? } }.
+    const { error } = await res.json();
+    expect(error.code).toBe('UPLOAD_TYPE_NOT_ALLOWED');
+    expect(error.message).toMatch(/not allowed/i);
   });
 
   it('returns 400 when fileSize exceeds the 100 MB limit', async () => {
@@ -111,7 +114,9 @@ describe('POST /api/ipfs/upload/init', () => {
       ),
     );
     expect(res.status).toBe(400);
-    expect((await res.json()).error).toMatch(/100 MB/i);
+    const { error } = await res.json();
+    expect(error.code).toBe('INVALID_REQUEST');
+    expect(error.message).toMatch(/100 MB/i);
   });
 
   it('returns 400 when totalChunks is not a positive integer', async () => {

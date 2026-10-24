@@ -200,26 +200,26 @@ export function applyActivityEvent(
   const actor = event.actor;
   if (!actor) return [];
 
+  // Only event types that feed a heuristic create a wallet entry — otherwise
+  // every unrelated event would leave an empty aggregate behind.
+  if (event.type !== 'player_contacted' && event.type !== 'scout_subscribed') {
+    return [];
+  }
+
   const timestampMs = event.timestamp * 1000;
   const agg = getOrCreateWallet(state, actor);
-  let changed = false;
 
   if (event.type === 'player_contacted') {
     agg.payToContact.contactTimestamps.push(timestampMs);
     const hourBucket = formatHourBucket(timestampMs);
     agg.payToContact.contactsPerHour[hourBucket] =
       (agg.payToContact.contactsPerHour[hourBucket] ?? 0) + 1;
-    changed = true;
-  } else if (event.type === 'scout_subscribed') {
+  } else {
     agg.payToContact.subscriptionTimestamps.push(timestampMs);
-    changed = true;
   }
 
-  if (changed) {
-    agg.updatedAt = Date.now();
-    return [actor];
-  }
-  return [];
+  agg.updatedAt = Date.now();
+  return [actor];
 }
 
 /**

@@ -119,6 +119,8 @@ export const EXEMPT_STORES: Record<string, string> = {
     'Sealed (encrypted) contact blobs keyed by player id. Not yet covered by export/deletion — needs a follow-up to delete by owner wallet.',
   migrationStore:
     'Wallet-migration requests (fromWallet/toWallet). Not yet covered by export/deletion — needs a follow-up.',
+  sep10NonceStore:
+    'SHA-256 hashes of consumed SEP-10 challenge XDRs plus an expiry (replay protection); no wallet column, and rows expire within minutes.',
 };
 // Redis rate-limit keys (lib/rateLimit.ts) are ephemeral, TTL-bound counters
 // and are intentionally not exported or deleted.

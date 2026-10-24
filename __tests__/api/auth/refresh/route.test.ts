@@ -21,6 +21,13 @@ jest.mock('@stellar/stellar-sdk', () => ({
     fromSecret: jest.fn((secret: string) => ({ publicKey: () => secret })),
   },
   StrKey: { isValidEd25519PublicKey: (key: string) => key.startsWith('G') },
+  // The SEP-10 route parses the signed XDR for its replay check (#1660);
+  // only timeBounds.maxTime is read.
+  TransactionBuilder: {
+    fromXDR: jest.fn(() => ({
+      timeBounds: { maxTime: String(Math.floor(Date.now() / 1000) + 300) },
+    })),
+  },
 }));
 
 import { WebAuth } from '@stellar/stellar-sdk';
