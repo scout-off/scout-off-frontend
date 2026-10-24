@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server';
 import { privateJson } from '@/lib/httpResponses';
+import { verifyCronRequest } from '@/lib/cronAuth';
+import { createRequestLogger } from '@/lib/logger';
 import { SessionStore } from '@/lib/sessionStore';
 import { ChunkedUploadChunkStore } from '@/lib/chunkedUploadChunkStore';
 import { NotificationReadStore } from '@/lib/notificationReadStore';
@@ -107,38 +109,22 @@ async function runPruning(): Promise<PruneResult> {
 }
 
 export async function GET(req: NextRequest) {
-  const configuredSecret = process.env.CRON_SECRET;
-  if (!configuredSecret) {
-    return privateJson(
-      { error: 'CRON_SECRET is not configured' },
-      { status: 500 },
-    );
-  }
+  // Same fail-closed, constant-time CRON_SECRET check as the other cron
+  // routes (lib/cronAuth.ts).
+  const authError = verifyCronRequest(req);
+  if (authError) return authError;
 
-  const authHeader = req.headers.get('authorization');
-  if (authHeader !== `Bearer ${configuredSecret}`) {
-    return privateJson({ error: 'Forbidden' }, { status: 403 });
-  }
-
+  const log = createRequestLogger(req);
   try {
     const result = await runPruning();
-    console.log(
-      JSON.stringify({
-        level: 'info',
-        message: 'data-retention prune completed',
-        ...result,
-      }),
-    );
+    log.info('data-retention prune completed', { ...result });
     return privateJson({ ok: true, ...result });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error(
-      JSON.stringify({
-        level: 'error',
-        message: 'data-retention prune failed',
-        error: message,
-      }),
+    log.error('data-retention prune failed', { error: message });
+    return privateJson(
+      { error: 'Prune job failed', detail: message },
+      { status: 500 },
     );
-    return privateJson({ error: 'Prune job failed', detail: message }, { status: 500 });
   }
 }

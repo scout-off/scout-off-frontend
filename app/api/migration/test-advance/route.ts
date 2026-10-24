@@ -56,8 +56,7 @@ export async function POST(req: NextRequest) {
   // passes immediately on the very next call to POST /api/migration/execute.
   // We reach directly into the store's backing DB via the store's own
   // SQLite handle to avoid adding a method to the public API surface.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = (store as any).db as import('better-sqlite3').Database;
+  const db = (store as unknown as { db: import('better-sqlite3').Database }).db;
   db.prepare(
     `UPDATE migration_requests SET execute_after = ? WHERE id = ?`,
   ).run(Date.now() - 1, requestId.trim());
