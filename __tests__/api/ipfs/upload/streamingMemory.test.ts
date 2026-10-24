@@ -42,8 +42,17 @@ const NO_GC_SMOKE_BOUND_MB = 256;
 const hasGc = typeof (globalThis as { gc?: () => void }).gc === 'function';
 
 /** Bytes of live heap + Buffer backing stores, in MB. */
-function liveMb(): number {
-  if (hasGc) (globalThis as unknown as { gc: () => void }).gc();
+async function liveMb(): Promise<number> {
+  if (hasGc) {
+    const gc = (globalThis as unknown as { gc: () => void }).gc;
+    // Buffer backing stores are released by finalizers that run after the
+    // collection that found them dead, so a single gc() can still count
+    // already-dropped 1 MB chunks (or seeding garbage) as live. Collect,
+    // yield so finalizers run, then collect again for a stable reading.
+    gc();
+    await new Promise((resolve) => setImmediate(resolve));
+    gc();
+  }
   const { heapUsed, external } = process.memoryUsage();
   return (heapUsed + external) / (1024 * 1024);
 }
@@ -65,7 +74,7 @@ describe('issue #1295: 100 MB complete stays under the memory budget', () => {
     }
 
     // Baseline AFTER seeding: this measures /complete's own footprint.
-    const baseline = liveMb();
+    const baseline = await liveMb();
     let peak = baseline;
 
     const assembly = await prepareStreamedAssembly(sessionId);
@@ -85,9 +94,9 @@ describe('issue #1295: 100 MB complete stays under the memory budget', () => {
       received += piece.length;
       // Sample every ~10 chunks: enough to catch any accumulation without
       // paying for a forced GC per 1 MB piece.
-      if (++seen % 10 === 0) peak = Math.max(peak, liveMb());
+      if (++seen % 10 === 0) peak = Math.max(peak, await liveMb());
     }
-    peak = Math.max(peak, liveMb());
+    peak = Math.max(peak, await liveMb());
 
     // Exactly one complete file, nothing lost between framing and chunks.
     expect(received).toBe(contentLength);

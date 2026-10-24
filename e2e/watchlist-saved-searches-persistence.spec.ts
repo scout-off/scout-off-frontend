@@ -44,8 +44,10 @@ const WALLET_B_ADDRESS = Keypair.fromSecret(WALLET_B_SECRET).publicKey();
 // We reuse wallet B's address for simplicity; it never has to be a real
 // registered player for the API to store it.
 const MOCK_PLAYER_ID = WALLET_B_ADDRESS;
-const MOCK_PLAYER_ID_2 = Keypair.fromSecret(
-  'SCZANGBA338W4BDBBZJULY5TCZFZEPKQE7BRFZQRJTWOPNLQOPJQR4AI',
+// Derived from a fixed seed so it's always a valid, deterministic key (the
+// previous hard-coded secret wasn't valid base32 and threw at load time).
+const MOCK_PLAYER_ID_2 = Keypair.fromRawEd25519Seed(
+  Buffer.alloc(32, 2),
 ).publicKey();
 
 // ---------------------------------------------------------------------------

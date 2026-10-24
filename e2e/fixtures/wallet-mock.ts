@@ -143,6 +143,10 @@ export async function installMockFreighter(
           behaviorFlag
         ] as WalletBehavior;
 
+        // freighter-api v6 reads failures from `apiError` ({ code, message });
+        // `error` is kept for the older wire format.
+        const DECLINED = { code: -4, message: 'User declined access' };
+
         const respond = (payload: Record<string, unknown>) => {
           window.postMessage(
             {
@@ -160,7 +164,11 @@ export async function installMockFreighter(
             return;
           case 'REQUEST_PUBLIC_KEY':
             if (behavior === 'reject') {
-              respond({ publicKey: '', error: 'User declined access' });
+              respond({
+                publicKey: '',
+                error: 'User declined access',
+                apiError: DECLINED,
+              });
               return;
             }
             // Ask Node for the *current* account rather than using a value
@@ -185,6 +193,7 @@ export async function installMockFreighter(
               respond({
                 signedTransaction: '',
                 error: 'User declined access',
+                apiError: DECLINED,
               });
               return;
             }
