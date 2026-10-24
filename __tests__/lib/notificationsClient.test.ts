@@ -32,7 +32,7 @@ describe('fetchReadNotificationIds', () => {
     // fetchWithRetry calls fetch(url, init) where init may be undefined
     expect(mockFetch).toHaveBeenCalledWith(
       '/api/notifications/read',
-      undefined,
+      { signal: undefined },
     );
     expect(result).toEqual([1, 2, 3]);
   });

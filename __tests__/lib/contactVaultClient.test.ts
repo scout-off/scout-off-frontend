@@ -32,6 +32,7 @@ describe('defaultContactVaultClient.getMetadata', () => {
     await defaultContactVaultClient.getMetadata(PLAYER);
     expect(fetchMock).toHaveBeenCalledWith(
       `/api/contact/vault?playerId=${PLAYER}`,
+      { signal: undefined },
     );
   });
 
@@ -42,6 +43,7 @@ describe('defaultContactVaultClient.getMetadata', () => {
     await defaultContactVaultClient.getMetadata('G/../evil');
     expect(fetchMock).toHaveBeenCalledWith(
       `/api/contact/vault?playerId=${encodeURIComponent('G/../evil')}`,
+      { signal: undefined },
     );
   });
 
