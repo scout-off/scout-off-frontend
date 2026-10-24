@@ -322,6 +322,29 @@ describe('fetchValidatorMilestoneCount', () => {
     expect(result).toBeNull();
   });
 
+  it('counts only approvals inside a ms range, comparing against unix-second event timestamps', async () => {
+    const end = Date.UTC(2026, 0, 31);
+    const start = end - 7 * 24 * 60 * 60 * 1000;
+    const sec = (ms: number) => Math.floor(ms / 1000);
+    mockGet.mockResolvedValueOnce({
+      data: {
+        events: [
+          { timestamp: sec(end - 60_000) }, // inside the window
+          { timestamp: sec(start + 60_000) }, // inside the window
+          { timestamp: sec(start - 60_000) }, // before the window
+        ],
+        nextCursor: null,
+      },
+    });
+
+    const result = await fetchValidatorMilestoneCount('GVALIDATOR', {
+      start,
+      end,
+    });
+
+    expect(result).toBe(2);
+  });
+
   it('URL-encodes the validator address', async () => {
     mockGet.mockResolvedValueOnce({ data: { milestoneCount: 1 } });
 
@@ -364,10 +387,9 @@ describe('fetchAcademies', () => {
 
     const result = await fetchAcademies();
 
-    expect(global.fetch).toHaveBeenCalledWith(
-      '/api/admin/academies',
-      { signal: undefined },
-    );
+    expect(global.fetch).toHaveBeenCalledWith('/api/admin/academies', {
+      signal: undefined,
+    });
     expect(result).toEqual([ACADEMY]);
   });
 
@@ -685,10 +707,9 @@ describe('getReferralOverview', () => {
 
     const result = await getReferralOverview();
 
-    expect(global.fetch).toHaveBeenCalledWith(
-      '/api/admin/referrals',
-      { signal: undefined },
-    );
+    expect(global.fetch).toHaveBeenCalledWith('/api/admin/referrals', {
+      signal: undefined,
+    });
     expect(result).toEqual(mockData);
   });
 
@@ -718,10 +739,9 @@ describe('fetchFraudFlags', () => {
 
     const result = await fetchFraudFlags();
 
-    expect(global.fetch).toHaveBeenCalledWith(
-      '/api/admin/fraud-flags',
-      { signal: undefined },
-    );
+    expect(global.fetch).toHaveBeenCalledWith('/api/admin/fraud-flags', {
+      signal: undefined,
+    });
     expect(result).toEqual(mockData);
   });
 

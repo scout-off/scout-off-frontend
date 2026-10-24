@@ -112,12 +112,11 @@ jest.mock('next-intl', () => ({
       onError: () => {},
       getMessageFallback: ({ key }: { key: string }) => key,
     });
-    const overrides: Record<string, (params?: { count?: number }) => string> =
-      {
-        'scout_dashboard.no_players': () => 'No players found',
-        'scout_dashboard.players_found': (p) =>
-          `${p?.count} ${p?.count === 1 ? 'player' : 'players'} found`,
-      };
+    const overrides: Record<string, (params?: { count?: number }) => string> = {
+      'scout_dashboard.no_players': () => 'No players found',
+      'scout_dashboard.players_found': (p) =>
+        `${p?.count} ${p?.count === 1 ? 'player' : 'players'} found`,
+    };
     const t = (key: string, params?: { count?: number }) => {
       const override = overrides[namespace ? `${namespace}.${key}` : key];
       return override ? override(params) : english(key, params);

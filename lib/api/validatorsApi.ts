@@ -3,7 +3,6 @@
  */
 import { backendClient as api } from './playersApi';
 import { fetchValidatorEvents, type IndexedEvent } from '../indexerClient';
-import type { ValidatorLeaderboardRange } from '../validatorLeaderboard';
 
 /**
  * Fetches the number of milestones approved by a specific validator from the
@@ -12,7 +11,9 @@ import type { ValidatorLeaderboardRange } from '../validatorLeaderboard';
  */
 export const fetchValidatorMilestoneCount = async (
   validatorAddress: string,
-  range?: ValidatorLeaderboardRange,
+  // Time bounds from getValidatorLeaderboardRange (ms since epoch); omit
+  // for all-time stats.
+  range?: { start: number; end: number },
 ): Promise<number | null> => {
   try {
     if (range) {
@@ -28,10 +29,11 @@ export const fetchValidatorMilestoneCount = async (
         if (result.nextCursor === null || result.events.length === 0) break;
         before = result.nextCursor;
       }
-      return events.filter(
-        (event) =>
-          event.timestamp >= range.start && event.timestamp <= range.end,
-      ).length;
+      // Indexer timestamps are Unix seconds; the range bounds are ms.
+      return events.filter((event) => {
+        const ms = event.timestamp * 1000;
+        return ms >= range.start && ms <= range.end;
+      }).length;
     }
 
     const data = await api
