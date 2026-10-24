@@ -134,6 +134,9 @@ test.describe('personal data export', () => {
   test('downloads a valid, isolated export without secrets', async ({
     browser,
   }) => {
+    // Two full sign-ins, seeding for both wallets, the settings page and a
+    // download routinely exceed the 30 s default (CI flaked on it).
+    test.setTimeout(90_000);
     const owner = await signIn(browser);
     const other = await signIn(browser);
     try {
