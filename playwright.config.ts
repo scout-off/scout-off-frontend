@@ -124,6 +124,10 @@ export default defineConfig({
       // Enables test-only routes such as POST /api/migration/test-advance,
       // which 404 unless this is set (see lib/envManifest.json).
       E2E_TEST_ROUTES: '1',
+      // Lets specs give each test its own client IP via X-Forwarded-For so
+      // strict per-IP limits (e.g. 3 migration requests/hour) don't carry
+      // over between tests sharing this one dev server.
+      TRUSTED_PROXY_COUNT: '1',
       // Passed through only when the runner asks for it. Unset means the real
       // 20-minute access-token TTL, so the rest of the suite exercises
       // production-like lifetimes; e2e/session-lifecycle.spec.ts needs a short

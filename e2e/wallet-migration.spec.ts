@@ -21,7 +21,21 @@
  */
 import type { BrowserContext, Page } from '@playwright/test';
 import { test, expect, E2E_ALT_WALLET_SECRET } from './fixtures';
+import { Keypair } from '@stellar/stellar-sdk';
 import { installMockFreighter } from './fixtures/wallet-mock';
+
+// POST /api/migration/request allows 3 requests per client IP per hour, and
+// every test in this file talks to the same dev server. Give each test its
+// own client address (unique per worker and per test) so the limit doesn't
+// carry over between tests. The e2e server runs with TRUSTED_PROXY_COUNT=1
+// (playwright.config.ts), so the app reads it from X-Forwarded-For exactly
+// as it would behind a real proxy.
+let testClientIp = '10.0.0.1';
+let testCounter = 0;
+test.beforeEach(({}, testInfo) => {
+  testCounter++;
+  testClientIp = `10.${testInfo.workerIndex % 250}.${Math.floor(testCounter / 250) % 250}.${(testCounter % 250) + 1}`;
+});
 
 // ---------------------------------------------------------------------------
 // Shared helpers (mirrored from session-lifecycle.spec.ts)
@@ -58,16 +72,19 @@ async function apiRequest(
   body?: Record<string, unknown>,
 ): Promise<{ status: number; body: unknown }> {
   return page.evaluate(
-    ({ path, method, body }) =>
+    ({ path, method, body, clientIp }) =>
       fetch(path, {
         method,
-        headers: body ? { 'Content-Type': 'application/json' } : undefined,
+        headers: {
+          'X-Forwarded-For': clientIp,
+          ...(body ? { 'Content-Type': 'application/json' } : {}),
+        },
         body: body ? JSON.stringify(body) : undefined,
       }).then(async (res) => ({
         status: res.status,
         body: await res.json().catch(() => null),
       })),
-    { path, method, body },
+    { path, method, body, clientIp: testClientIp },
   );
 }
 
@@ -340,8 +357,13 @@ test.describe.serial('cancel path: request → cancel → nothing moved', () => 
 
     // Wallet A signs in and seeds one watchlist entry
     await connect(page, walletA.publicKey);
-    const playerC = 'GBHWKBPP3O4H2BUUKSFXE4PK5WHLF522FAGLUSP4HPVGPNMKJQ2IGVON';
-    await apiRequest(page, '/api/watchlist', 'POST', { playerId: playerC });
+    // Derived from a fixed seed: the previous hard-coded key had a bad
+    // checksum, so the watchlist API rejected it and the entry never existed.
+    const playerC = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 3)).publicKey();
+    const seeded = await apiRequest(page, '/api/watchlist', 'POST', {
+      playerId: playerC,
+    });
+    expect(seeded.status, 'seeding wallet A watchlist must succeed').toBe(201);
 
     // Wallet B signs in as the requester (toWallet)
     const contextB = await page.context().browser()!.newContext();
