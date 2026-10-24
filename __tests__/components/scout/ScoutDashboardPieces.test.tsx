@@ -229,7 +229,10 @@ describe('WatchlistPreview', () => {
     const entry = { id: 1, playerId: 'p1' } as never;
     const onRemove = jest.fn();
     render(<WatchlistPreview entries={[entry]} onRemove={onRemove} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+    // The aria-label names the player (#1659), overriding the visible text.
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Remove p1 from watchlist' }),
+    );
     expect(onRemove).toHaveBeenCalledWith(entry);
   });
 });

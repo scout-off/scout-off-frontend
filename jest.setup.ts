@@ -57,6 +57,14 @@ const mockTranslatedNamespaces = [
   'player_profile',
   'scout',
   'stats',
+  // Localized in the #1630s i18n batch.
+  'session_mismatch_warning',
+  'contract_status',
+  'spending_summary',
+  'service_worker_update_banner',
+  'saved_searches_menu',
+  'scout_dashboard',
+  'subscription_status_banner',
 ];
 
 // Namespaces translated after the flat stub below was written (#1340-#1342)
@@ -75,8 +83,15 @@ function mockEnglishTranslator(namespace?: string) {
   });
 }
 
+// One translator per namespace: real next-intl returns a stable `t`, and
+// hooks list it in useCallback/useEffect deps (a fresh `t` per render would
+// re-run those effects forever).
+const mockTranslators = new Map<string | undefined, unknown>();
+
 jest.mock('next-intl', () => ({
   useTranslations: (namespace?: string) => {
+    const cached = mockTranslators.get(namespace);
+    if (cached) return cached;
     const english = mockEnglishTranslator(namespace);
     const t = (key: string, values?: Record<string, unknown>) => {
       const stub: Record<string, string> = {
@@ -101,6 +116,7 @@ jest.mock('next-intl', () => ({
     };
     t.rich = (key: string, values?: Record<string, unknown>) =>
       english ? english.rich(key, values) : key;
+    mockTranslators.set(namespace, t);
     return t;
   },
   useLocale: () => 'en',

@@ -95,20 +95,36 @@ jest.mock('next/navigation', () => ({
   useSearchParams: () => ({ get: () => null, toString: () => '' }),
 }));
 
+// Stable per-namespace translators (like real next-intl), so components that
+// list `t` in hook deps don't re-run effects every render.
+const mockDashboardTranslators = new Map<string | undefined, unknown>();
+
 jest.mock('next-intl', () => ({
-  useTranslations:
-    (namespace?: string) => (key: string, params?: { count?: number }) => {
-      const translations: Record<
-        string,
-        (params?: { count?: number }) => string
-      > = {
+  useTranslations: (namespace?: string) => {
+    const cached = mockDashboardTranslators.get(namespace);
+    if (cached) return cached;
+    // Everything without an explicit override below resolves against the
+    // real English messages, so assertions match the UI copy.
+    const english = jest.requireActual('use-intl').createTranslator({
+      locale: 'en',
+      messages: jest.requireActual('@/messages/en.json'),
+      namespace,
+      onError: () => {},
+      getMessageFallback: ({ key }: { key: string }) => key,
+    });
+    const overrides: Record<string, (params?: { count?: number }) => string> =
+      {
         'scout_dashboard.no_players': () => 'No players found',
         'scout_dashboard.players_found': (p) =>
           `${p?.count} ${p?.count === 1 ? 'player' : 'players'} found`,
       };
-      const t = translations[namespace ? `${namespace}.${key}` : key];
-      return t ? t(params) : key;
-    },
+    const t = (key: string, params?: { count?: number }) => {
+      const override = overrides[namespace ? `${namespace}.${key}` : key];
+      return override ? override(params) : english(key, params);
+    };
+    mockDashboardTranslators.set(namespace, t);
+    return t;
+  },
 }));
 
 jest.mock('@/components/PlayerCard', () => ({
@@ -787,7 +803,7 @@ describe('ScoutDashboardContent — rate limit toast', () => {
     expect(mockShowToast).toHaveBeenCalledWith(
       expect.objectContaining({
         variant: 'warning',
-        message: expect.stringContaining('5s'),
+        message: expect.stringContaining('5 seconds'),
       }),
     );
   });
