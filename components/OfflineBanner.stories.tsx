@@ -12,7 +12,7 @@ const messages = {
 function ConnectionState({ Story }: { Story: Parameters<Decorator>[0] }) {
   useEffect(() => {
     return () => {
-      delete (navigator as Navigator & { onLine?: boolean }).onLine;
+      delete (navigator as unknown as { onLine?: boolean }).onLine;
     };
   }, []);
 

@@ -30,10 +30,9 @@ describe('fetchReadNotificationIds', () => {
     const result = await fetchReadNotificationIds();
 
     // fetchWithRetry calls fetch(url, init) where init may be undefined
-    expect(mockFetch).toHaveBeenCalledWith(
-      '/api/notifications/read',
-      { signal: undefined },
-    );
+    expect(mockFetch).toHaveBeenCalledWith('/api/notifications/read', {
+      signal: undefined,
+    });
     expect(result).toEqual([1, 2, 3]);
   });
 

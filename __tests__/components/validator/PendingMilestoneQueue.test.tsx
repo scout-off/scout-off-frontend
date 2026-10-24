@@ -323,8 +323,10 @@ describe('PendingMilestoneQueue', () => {
       );
       const bulkButton = screen.getByRole('button', { name: /Bulk Approve/ });
       expect(bulkButton).toHaveAttribute('aria-disabled', 'true');
-      // The global next-intl mock echoes keys (contract_status.paused_hint).
-      expect(bulkButton).toHaveAccessibleDescription('paused_hint');
+      // contract_status resolves to the English copy in the global mock.
+      expect(bulkButton).toHaveAccessibleDescription(
+        'Temporarily unavailable — the platform is paused for maintenance',
+      );
     });
   });
 
