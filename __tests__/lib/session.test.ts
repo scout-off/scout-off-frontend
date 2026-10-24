@@ -96,15 +96,19 @@ describe('createSessionToken / verifySessionToken', () => {
     expect(verifySessionToken('a.b.c', 'access')).toBeNull();
   });
 
-  it('rejects when SESSION_SECRET is not configured', () => {
+  it('rejects when neither SESSION_SECRET nor SESSION_SECRET_KEYS is configured', () => {
     const original = process.env.SESSION_SECRET;
+    const originalKeys = process.env.SESSION_SECRET_KEYS;
     delete process.env.SESSION_SECRET;
+    delete process.env.SESSION_SECRET_KEYS;
     try {
       expect(() =>
         createSessionToken(PUBLIC_KEY, 'access', ACCESS_TOKEN_TTL_SEC),
-      ).toThrow('SESSION_SECRET is not configured');
+      ).toThrow('SESSION_SECRET (or SESSION_SECRET_KEYS) is not configured');
     } finally {
       process.env.SESSION_SECRET = original;
+      if (originalKeys !== undefined)
+        process.env.SESSION_SECRET_KEYS = originalKeys;
     }
   });
 });

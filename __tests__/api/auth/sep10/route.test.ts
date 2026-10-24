@@ -52,7 +52,8 @@ jest.mock('@/lib/sep10NonceStore', () => ({
       consumeNonce: mockConsumeNonce,
       sweepExpired: mockSweepExpired,
     })),
-    hashXdr: mockHashXdr,
+    // Deferred: jest.mock is hoisted above the const, so read it at call time.
+    hashXdr: (xdr: string) => mockHashXdr(xdr),
     resetInstance: jest.fn(),
   },
 }));

@@ -69,6 +69,28 @@ jest.mock('@upstash/redis', () => {
       if (entry.expiresAt === null) return -1;
       return Math.max(0, entry.expiresAt - Date.now());
     }
+
+    // lib/rateLimit runs INCR + EXPIRE as one Lua EVAL (#1493). Emulate that
+    // script with the commands above: returns [count, ttlSec].
+    async eval(
+      _script: string,
+      keys: string[],
+      args: string[],
+    ): Promise<[number, number]> {
+      const [key] = keys;
+      const windowSec = Number(args[0]);
+      const count = await this.incr(key);
+      if (count === 1) {
+        await this.expire(key, windowSec);
+        return [count, windowSec];
+      }
+      const ttl = await this.pttl(key);
+      if (ttl < 0) {
+        await this.expire(key, windowSec);
+        return [count, windowSec];
+      }
+      return [count, Math.floor(ttl / 1000)];
+    }
   }
 
   return { Redis: MockRedis, __mockBackingStores: backingStores };
