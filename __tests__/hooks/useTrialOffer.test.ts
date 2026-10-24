@@ -145,7 +145,7 @@ describe('useTrialOffer', () => {
     expect(mockSignAndSubmit).toHaveBeenCalledWith(MOCK_XDR);
   });
 
-  it('accepts a null hash from the result without throwing', async () => {
+  it('reports an error when the result carries no hash', async () => {
     mockBuildLogTrialOffer.mockResolvedValue(MOCK_XDR);
     mockSignAndSubmit.mockResolvedValue({}); // no .hash field
 
@@ -155,8 +155,12 @@ describe('useTrialOffer', () => {
       await result.current.logTrialOffer(PLAYER_ID, DETAILS);
     });
 
+    // lib/sorobanTx treats a hash-less result as a failure rather than a
+    // silent success.
     expect(result.current.txHash).toBeNull();
-    expect(result.current.error).toBeNull();
+    expect(result.current.error).toBe(
+      'Transaction completed but no hash was returned.',
+    );
   });
 
   // ── Error handling ────────────────────────────────────────────────────────

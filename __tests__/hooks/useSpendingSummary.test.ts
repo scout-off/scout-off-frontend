@@ -289,7 +289,9 @@ describe('useSpendingSummary', () => {
 
   it('falls back to a default error message when the rejection has no message', async () => {
     mockUseWallet.mockReturnValue({ publicKey: SCOUT });
-    mockFetchEvents.mockRejectedValue('boom');
+    // getErrorMessage surfaces a thrown string as-is, so use a value that
+    // genuinely carries no message.
+    mockFetchEvents.mockRejectedValue({});
 
     const { result } = renderHook(() => useSpendingSummary());
     await waitFor(() => expect(result.current.loading).toBe(false));
