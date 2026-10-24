@@ -27,9 +27,12 @@ export const walletAdapters: Record<
       const result = await getAddress();
       if (result?.error) {
         const e = result.error as string | { message?: string };
-        throw new Error(typeof e === 'string' ? e : e.message ?? 'Freighter access failed');
+        throw new Error(
+          typeof e === 'string' ? e : (e.message ?? 'Freighter access failed'),
+        );
       }
-      if (!result?.address) throw new Error('Freighter did not return an address');
+      if (!result?.address)
+        throw new Error('Freighter did not return an address');
       return result.address;
     },
     async signTransaction(xdr, networkPassphrase) {
@@ -45,10 +48,15 @@ export const walletAdapters: Record<
         error?: string | { message?: string };
       };
       if (r.error) {
-        throw new Error(typeof r.error === 'string' ? r.error : r.error.message ?? 'Freighter signing failed');
+        throw new Error(
+          typeof r.error === 'string'
+            ? r.error
+            : (r.error.message ?? 'Freighter signing failed'),
+        );
       }
       const signed = r.signedTxXdr || r.signedTransaction;
-      if (!signed) throw new Error('Freighter did not return a signed transaction');
+      if (!signed)
+        throw new Error('Freighter did not return a signed transaction');
       return signed;
     },
   },

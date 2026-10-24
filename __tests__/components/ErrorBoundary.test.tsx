@@ -6,7 +6,9 @@ const ERROR_MESSAGE = 'Test error';
 // Mock @sentry/nextjs so tests don't require a real Sentry DSN and we can
 // assert that captureException / withScope are called correctly (issue #1495).
 const mockCaptureException = jest.fn();
-const mockWithScope = jest.fn((cb: (scope: unknown) => void) => cb({ setContext: jest.fn() }));
+const mockWithScope = jest.fn((cb: (scope: unknown) => void) =>
+  cb({ setContext: jest.fn() }),
+);
 
 jest.mock('@sentry/nextjs', () => ({
   captureException: (...args: unknown[]) => mockCaptureException(...args),

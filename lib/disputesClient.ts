@@ -5,10 +5,7 @@ import type {
   DisputeWithEvents,
   DisputeEvent,
 } from '@/types';
-import {
-  fetchWithRetry,
-  fetchWithTimeout,
-} from '@/lib/fetchWithRetry';
+import { fetchWithRetry, fetchWithTimeout } from '@/lib/fetchWithRetry';
 
 export interface CreateDisputeParams {
   playerId: string;

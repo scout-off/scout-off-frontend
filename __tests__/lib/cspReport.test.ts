@@ -181,7 +181,9 @@ describe('normalizeReport', () => {
     expect(
       normalizeReport({ 'line-number': 'not-a-number' })?.lineNumber,
     ).toBeUndefined();
-    expect(normalizeReport({ 'line-number': Infinity })?.lineNumber).toBeUndefined();
+    expect(
+      normalizeReport({ 'line-number': Infinity })?.lineNumber,
+    ).toBeUndefined();
     expect(normalizeReport({ 'line-number': NaN })?.lineNumber).toBeUndefined();
   });
 
@@ -247,7 +249,9 @@ describe('extractReports', () => {
 
   it('wraps a bare payload (no csp-report key) into a single-element array', () => {
     const payload = { 'violated-directive': 'script-src' };
-    expect(extractReports('application/csp-report', payload)).toEqual([payload]);
+    expect(extractReports('application/csp-report', payload)).toEqual([
+      payload,
+    ]);
     expect(extractReports('application/json', payload)).toEqual([payload]);
   });
 });

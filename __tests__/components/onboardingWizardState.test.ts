@@ -35,7 +35,9 @@ describe('stepReducer', () => {
 describe('validation', () => {
   it('validates single fields', () => {
     expect(validateField('name', ' ')).toBe('Name is required');
-    expect(validateField('name', 'A')).toBe('Name must be at least 2 characters');
+    expect(validateField('name', 'A')).toBe(
+      'Name must be at least 2 characters',
+    );
     expect(validateField('name', 'Ab')).toBeUndefined();
     expect(validateField('age', '')).toBe('Age is required');
     expect(validateField('age', '13')).toBe('Age must be between 14 and 45');
@@ -71,6 +73,8 @@ describe('validation', () => {
 
   it('shortens CIDs', () => {
     expect(formatShortCid('')).toBe('');
-    expect(formatShortCid('abcdefghijklmnopqrstuvwxyz')).toBe('abcdefgh…voxyz'.replace('voxyz', 'uvwxyz'));
+    expect(formatShortCid('abcdefghijklmnopqrstuvwxyz')).toBe(
+      'abcdefgh…voxyz'.replace('voxyz', 'uvwxyz'),
+    );
   });
 });

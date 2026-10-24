@@ -230,9 +230,7 @@ export class SavedSearchStore {
   /** Returns the number of saved searches owned by scoutWallet. */
   count(scoutWallet: string): number {
     const row = this.db
-      .prepare(
-        'SELECT COUNT(*) AS n FROM saved_search WHERE scout_wallet = ?',
-      )
+      .prepare('SELECT COUNT(*) AS n FROM saved_search WHERE scout_wallet = ?')
       .get(scoutWallet) as { n: number };
     return row.n;
   }

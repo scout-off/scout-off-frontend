@@ -38,13 +38,19 @@ const isDry = process.argv.includes('--dry');
 
 // ── Step 1: generate types with openapi-typescript ───────────────────────────
 
-console.log('[generate-api-client] Generating types from', path.relative(ROOT, SPEC));
+console.log(
+  '[generate-api-client] Generating types from',
+  path.relative(ROOT, SPEC),
+);
 
 const typegenCmd = `npx --yes openapi-typescript@7.4.4 "${SPEC}" --output "${TYPES_OUT}"`;
 if (!isDry) {
   fs.mkdirSync(GEN_DIR, { recursive: true });
   execSync(typegenCmd, { stdio: 'inherit' });
-  console.log('[generate-api-client] Types written to', path.relative(ROOT, TYPES_OUT));
+  console.log(
+    '[generate-api-client] Types written to',
+    path.relative(ROOT, TYPES_OUT),
+  );
 } else {
   console.log('[dry] Would run:', typegenCmd);
 }
@@ -435,7 +441,10 @@ if (isDry) {
 } else {
   fs.mkdirSync(GEN_DIR, { recursive: true });
   fs.writeFileSync(CLIENT_OUT, CLIENT_SOURCE, 'utf-8');
-  console.log('[generate-api-client] Client written to', path.relative(ROOT, CLIENT_OUT));
+  console.log(
+    '[generate-api-client] Client written to',
+    path.relative(ROOT, CLIENT_OUT),
+  );
 }
 
 console.log('[generate-api-client] Done.');

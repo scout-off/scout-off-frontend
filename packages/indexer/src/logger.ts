@@ -68,7 +68,9 @@ function generateHex(bytes: number): string {
  * Parses a W3C `traceparent` header value. Returns null when absent or
  * malformed so the caller can generate a fresh root context.
  */
-export function parseTraceparent(value: string | null | undefined): TraceContext | null {
+export function parseTraceparent(
+  value: string | null | undefined,
+): TraceContext | null {
   if (!value) return null;
   const m = TRACEPARENT_RE.exec(value.trim());
   if (!m) return null;

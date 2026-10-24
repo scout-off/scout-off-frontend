@@ -507,10 +507,16 @@ describe('POST /api/auth/sep10 — nonce replay protection', () => {
     const xdr2 = 'CHALLENGE_XDR_TWO==';
 
     const res1 = await POST(
-      makeRequest(ALLOWED_ORIGIN, { signedXdr: xdr1, publicKey: VALID_PUBLIC_KEY }),
+      makeRequest(ALLOWED_ORIGIN, {
+        signedXdr: xdr1,
+        publicKey: VALID_PUBLIC_KEY,
+      }),
     );
     const res2 = await POST(
-      makeRequest(ALLOWED_ORIGIN, { signedXdr: xdr2, publicKey: VALID_PUBLIC_KEY }),
+      makeRequest(ALLOWED_ORIGIN, {
+        signedXdr: xdr2,
+        publicKey: VALID_PUBLIC_KEY,
+      }),
     );
 
     expect(res1.status).toBe(200);

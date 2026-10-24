@@ -239,7 +239,9 @@ describe('extractPlaceholders', () => {
 
   it('extracts multiple simple arguments', () => {
     expect(
-      [...extractPlaceholders('{greeting}, {name}! You have {n} messages.')].sort(),
+      [
+        ...extractPlaceholders('{greeting}, {name}! You have {n} messages.'),
+      ].sort(),
     ).toEqual(['greeting', 'n', 'name']);
   });
 
@@ -369,9 +371,7 @@ function detectPlaceholderMismatches(locales) {
           ]
             .filter(Boolean)
             .join('; ');
-          errors.push(
-            `Placeholder mismatch for key "${key}": ${detail}`,
-          );
+          errors.push(`Placeholder mismatch for key "${key}": ${detail}`);
         }
       }
     }
@@ -417,10 +417,12 @@ describe('placeholder mismatch detection', () => {
     // argument is `retryCount` in both — no mismatch.
     const locales = {
       en: {
-        label: '{type} action (attempted {retryCount} {retryCount, plural, one {time} other {times}})',
+        label:
+          '{type} action (attempted {retryCount} {retryCount, plural, one {time} other {times}})',
       },
       fr: {
-        label: 'Action {type} (tentée {retryCount} {retryCount, plural, one {fois} other {fois}})',
+        label:
+          'Action {type} (tentée {retryCount} {retryCount, plural, one {fois} other {fois}})',
       },
     };
     expect(detectPlaceholderMismatches(locales)).toEqual([]);
@@ -429,7 +431,9 @@ describe('placeholder mismatch detection', () => {
   it('does NOT flag rich-text tag content as a mismatch', () => {
     const locales = {
       en: { intro: 'Flag <highlight>{milestone}</highlight> for review' },
-      fr: { intro: 'Signaler <highlight>{milestone}</highlight> pour révision' },
+      fr: {
+        intro: 'Signaler <highlight>{milestone}</highlight> pour révision',
+      },
     };
     expect(detectPlaceholderMismatches(locales)).toEqual([]);
   });

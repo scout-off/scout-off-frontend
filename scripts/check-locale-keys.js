@@ -248,9 +248,7 @@ if (require.main === module) {
           ]
             .filter(Boolean)
             .join('; ');
-          console.error(
-            `Placeholder mismatch for key "${key}": ${detail}`,
-          );
+          console.error(`Placeholder mismatch for key "${key}": ${detail}`);
         }
       }
     }

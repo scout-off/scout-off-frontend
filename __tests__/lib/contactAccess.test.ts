@@ -193,7 +193,10 @@ describe('hasPaidForContact', () => {
     it('returns false after exhausting all pages without finding a match', async () => {
       const fetchEvents = jest
         .fn()
-        .mockResolvedValueOnce({ events: [makeContactedEvent('GOTHER')], nextCursor: 10 })
+        .mockResolvedValueOnce({
+          events: [makeContactedEvent('GOTHER')],
+          nextCursor: 10,
+        })
         .mockResolvedValueOnce({ events: [], nextCursor: null });
 
       const result = await hasPaidForContact('GSCOUT1', 'player-1', {

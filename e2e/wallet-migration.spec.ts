@@ -63,7 +63,10 @@ async function apiRequest(
         method,
         headers: body ? { 'Content-Type': 'application/json' } : undefined,
         body: body ? JSON.stringify(body) : undefined,
-      }).then(async (res) => ({ status: res.status, body: await res.json().catch(() => null) })),
+      }).then(async (res) => ({
+        status: res.status,
+        body: await res.json().catch(() => null),
+      })),
     { path, method, body },
   );
 }
@@ -107,7 +110,8 @@ async function advanceCoolingOff(page: Page, requestId: string): Promise<void> {
 // ---------------------------------------------------------------------------
 // Scenario 1 — Happy path
 // ---------------------------------------------------------------------------
-test.describe.serial('happy path: request → execute → data under new wallet', () => {
+test.describe
+  .serial('happy path: request → execute → data under new wallet', () => {
   test('seeds data for wallet A and migrates it to wallet B', async ({
     page,
     context,
@@ -125,9 +129,13 @@ test.describe.serial('happy path: request → execute → data under new wallet'
     const playerB = 'GA2FVN5BW56RS2W2DURP257O5YDTLICTMVBMTHQX3BJNSEGCCGAG5IFH';
 
     // Seed watchlist
-    const wl1 = await apiRequest(page, '/api/watchlist', 'POST', { playerId: playerA });
+    const wl1 = await apiRequest(page, '/api/watchlist', 'POST', {
+      playerId: playerA,
+    });
     expect(wl1.status, 'watchlist add 1').toBe(201);
-    const wl2 = await apiRequest(page, '/api/watchlist', 'POST', { playerId: playerB });
+    const wl2 = await apiRequest(page, '/api/watchlist', 'POST', {
+      playerId: playerB,
+    });
     expect(wl2.status, 'watchlist add 2').toBe(201);
 
     // Seed saved search
@@ -154,19 +162,26 @@ test.describe.serial('happy path: request → execute → data under new wallet'
     // Confirm data is present for wallet A
     const watchlistA = await apiRequest(page, '/api/watchlist');
     expect(watchlistA.status).toBe(200);
-    expect((watchlistA.body as { length: number }).length ?? (watchlistA.body as unknown[]).length).toBeGreaterThanOrEqual(2);
+    expect(
+      (watchlistA.body as { length: number }).length ??
+        (watchlistA.body as unknown[]).length,
+    ).toBeGreaterThanOrEqual(2);
 
     // ----- Step 2: Open a second browser context as wallet B (toWallet) -----
-    const contextB = await (page.context().browser()!).newContext();
+    const contextB = await page.context().browser()!.newContext();
     const pageB = await contextB.newPage();
-    const walletB = await installMockFreighter(pageB, { secret: E2E_ALT_WALLET_SECRET });
+    const walletB = await installMockFreighter(pageB, {
+      secret: E2E_ALT_WALLET_SECRET,
+    });
     await connect(pageB, walletB.publicKey);
 
     // ----- Step 3: Wallet B submits migration request for wallet A's data -----
     const reqRes = await apiRequest(pageB, '/api/migration/request', 'POST', {
       fromWallet: walletA.publicKey,
     });
-    expect(reqRes.status, 'POST /api/migration/request must return 201').toBe(201);
+    expect(reqRes.status, 'POST /api/migration/request must return 201').toBe(
+      201,
+    );
 
     const migRequest = reqRes.body as {
       id: string;
@@ -188,7 +203,9 @@ test.describe.serial('happy path: request → execute → data under new wallet'
     const execRes = await apiRequest(pageB, '/api/migration/execute', 'POST', {
       requestId: migRequest.id,
     });
-    expect(execRes.status, 'POST /api/migration/execute must return 200').toBe(200);
+    expect(execRes.status, 'POST /api/migration/execute must return 200').toBe(
+      200,
+    );
 
     const execBody = execRes.body as {
       request: { id: string; status: string };
@@ -208,15 +225,32 @@ test.describe.serial('happy path: request → execute → data under new wallet'
     };
 
     // Verify migration request is now completed
-    expect(execBody.request.status, 'request must be completed').toBe('completed');
+    expect(execBody.request.status, 'request must be completed').toBe(
+      'completed',
+    );
 
     // Verify counts match what we seeded
     const counts = execBody.migration.counts;
-    expect(counts.watchlist, 'watchlist count must be ≥ 2').toBeGreaterThanOrEqual(2);
-    expect(counts.savedSearches, 'savedSearches count must be ≥ 1').toBeGreaterThanOrEqual(1);
-    expect(counts.notificationPrefsTransferred, 'prefs must be transferred').toBe(true);
-    expect(counts.recentlyViewed, 'recentlyViewed count must be ≥ 1').toBeGreaterThanOrEqual(1);
-    expect(counts.sessionsRevoked, 'wallet A sessions must be revoked').toBeGreaterThanOrEqual(1);
+    expect(
+      counts.watchlist,
+      'watchlist count must be ≥ 2',
+    ).toBeGreaterThanOrEqual(2);
+    expect(
+      counts.savedSearches,
+      'savedSearches count must be ≥ 1',
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      counts.notificationPrefsTransferred,
+      'prefs must be transferred',
+    ).toBe(true);
+    expect(
+      counts.recentlyViewed,
+      'recentlyViewed count must be ≥ 1',
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      counts.sessionsRevoked,
+      'wallet A sessions must be revoked',
+    ).toBeGreaterThanOrEqual(1);
 
     // Verify the on-chain-transfer notice is present in the response
     expect(execBody.migration.onChainTransferBlocked.reason).toContain(
@@ -234,9 +268,11 @@ test.describe.serial('happy path: request → execute → data under new wallet'
     ).toBe(401);
 
     // UI also reflects sign-out (WalletContext reconciliation picks up the 401)
-    await expect.poll(() => connectButton(page).isVisible(), {
-      timeout: 70_000,
-    }).toBe(true);
+    await expect
+      .poll(() => connectButton(page).isVisible(), {
+        timeout: 70_000,
+      })
+      .toBe(true);
 
     // Verify wallet A's session cookie is gone or dead
     // (cookie may still physically exist, but the server now rejects it)
@@ -251,8 +287,12 @@ test.describe.serial('happy path: request → execute → data under new wallet'
     expect(watchlistB.status).toBe(200);
     const wlItems = watchlistB.body as Array<{ playerId: string }>;
     const playerIds = wlItems.map((e) => e.playerId);
-    expect(playerIds, 'playerA must be in wallet B watchlist').toContain(playerA);
-    expect(playerIds, 'playerB must be in wallet B watchlist').toContain(playerB);
+    expect(playerIds, 'playerA must be in wallet B watchlist').toContain(
+      playerA,
+    );
+    expect(playerIds, 'playerB must be in wallet B watchlist').toContain(
+      playerB,
+    );
 
     const savedSearchesB = await apiRequest(pageB, '/api/saved-searches');
     expect(savedSearchesB.status).toBe(200);
@@ -262,10 +302,18 @@ test.describe.serial('happy path: request → execute → data under new wallet'
       'saved search must be present under wallet B',
     ).toBe(true);
 
-    const notifPrefsB = await apiRequest(pageB, '/api/notification-preferences');
+    const notifPrefsB = await apiRequest(
+      pageB,
+      '/api/notification-preferences',
+    );
     expect(notifPrefsB.status).toBe(200);
-    const prefs = notifPrefsB.body as { milestoneApprovals: boolean; contactUnlocks: boolean };
-    expect(prefs.milestoneApprovals, 'milestoneApprovals pref migrated').toBe(true);
+    const prefs = notifPrefsB.body as {
+      milestoneApprovals: boolean;
+      contactUnlocks: boolean;
+    };
+    expect(prefs.milestoneApprovals, 'milestoneApprovals pref migrated').toBe(
+      true,
+    );
     expect(prefs.contactUnlocks, 'contactUnlocks pref migrated').toBe(false);
 
     const recentlyViewedB = await apiRequest(pageB, '/api/recently-viewed');
@@ -296,9 +344,11 @@ test.describe.serial('cancel path: request → cancel → nothing moved', () => 
     await apiRequest(page, '/api/watchlist', 'POST', { playerId: playerC });
 
     // Wallet B signs in as the requester (toWallet)
-    const contextB = await (page.context().browser()!).newContext();
+    const contextB = await page.context().browser()!.newContext();
     const pageB = await contextB.newPage();
-    const walletB = await installMockFreighter(pageB, { secret: E2E_ALT_WALLET_SECRET });
+    const walletB = await installMockFreighter(pageB, {
+      secret: E2E_ALT_WALLET_SECRET,
+    });
     await connect(pageB, walletB.publicKey);
 
     // Wallet B creates the migration request
@@ -313,16 +363,25 @@ test.describe.serial('cancel path: request → cancel → nothing moved', () => 
       requestId: migRequest.id,
     });
     expect(cancelRes.status, 'cancel must return 200').toBe(200);
-    const cancelled = cancelRes.body as { id: string; status: string; cancelledBy: string };
+    const cancelled = cancelRes.body as {
+      id: string;
+      status: string;
+      cancelledBy: string;
+    };
     expect(cancelled.status, 'status must be cancelled').toBe('cancelled');
-    expect(cancelled.cancelledBy, 'cancelledBy must be wallet A').toBe(walletA.publicKey);
+    expect(cancelled.cancelledBy, 'cancelledBy must be wallet A').toBe(
+      walletA.publicKey,
+    );
 
     // Attempting to execute a cancelled request must be rejected
     await advanceCoolingOff(pageB, migRequest.id);
     const execRes = await apiRequest(pageB, '/api/migration/execute', 'POST', {
       requestId: migRequest.id,
     });
-    expect(execRes.status, 'executing a cancelled request must return 409').toBe(409);
+    expect(
+      execRes.status,
+      'executing a cancelled request must return 409',
+    ).toBe(409);
 
     // Wallet A's data must still be intact
     const watchlistA = await apiRequest(page, '/api/watchlist');
@@ -353,9 +412,11 @@ test.describe.serial('cancel path: request → cancel → nothing moved', () => 
 
     await connect(page, walletA.publicKey);
 
-    const contextB = await (page.context().browser()!).newContext();
+    const contextB = await page.context().browser()!.newContext();
     const pageB = await contextB.newPage();
-    const walletB = await installMockFreighter(pageB, { secret: E2E_ALT_WALLET_SECRET });
+    const walletB = await installMockFreighter(pageB, {
+      secret: E2E_ALT_WALLET_SECRET,
+    });
     await connect(pageB, walletB.publicKey);
 
     // Wallet B submits the request
@@ -419,9 +480,11 @@ test.describe('negative cases: invalid requests are rejected', () => {
     await connect(page, walletA.publicKey);
 
     // Wallet B logs in a separate context and creates the migration request
-    const contextB = await (page.context().browser()!).newContext();
+    const contextB = await page.context().browser()!.newContext();
     const pageB = await contextB.newPage();
-    const walletB = await installMockFreighter(pageB, { secret: E2E_ALT_WALLET_SECRET });
+    const walletB = await installMockFreighter(pageB, {
+      secret: E2E_ALT_WALLET_SECRET,
+    });
     await connect(pageB, walletB.publicKey);
 
     const reqRes = await apiRequest(pageB, '/api/migration/request', 'POST', {
@@ -454,9 +517,11 @@ test.describe('negative cases: invalid requests are rejected', () => {
     await connect(page, walletA.publicKey);
 
     // Wallet B creates the request but does NOT advance cooling-off
-    const contextB = await (page.context().browser()!).newContext();
+    const contextB = await page.context().browser()!.newContext();
     const pageB = await contextB.newPage();
-    const walletB = await installMockFreighter(pageB, { secret: E2E_ALT_WALLET_SECRET });
+    const walletB = await installMockFreighter(pageB, {
+      secret: E2E_ALT_WALLET_SECRET,
+    });
     await connect(pageB, walletB.publicKey);
 
     const reqRes = await apiRequest(pageB, '/api/migration/request', 'POST', {
@@ -469,10 +534,21 @@ test.describe('negative cases: invalid requests are rejected', () => {
     const execRes = await apiRequest(pageB, '/api/migration/execute', 'POST', {
       requestId: migRequest.id,
     });
-    expect(execRes.status, 'premature execute must return 425 Too Early').toBe(425);
-    const execBody = execRes.body as { executeAfter: number; remainingMs: number };
-    expect(execBody.executeAfter, 'response must include executeAfter').toBeGreaterThan(Date.now());
-    expect(execBody.remainingMs, 'response must include remainingMs').toBeGreaterThan(0);
+    expect(execRes.status, 'premature execute must return 425 Too Early').toBe(
+      425,
+    );
+    const execBody = execRes.body as {
+      executeAfter: number;
+      remainingMs: number;
+    };
+    expect(
+      execBody.executeAfter,
+      'response must include executeAfter',
+    ).toBeGreaterThan(Date.now());
+    expect(
+      execBody.remainingMs,
+      'response must include remainingMs',
+    ).toBeGreaterThan(0);
 
     // Cancel to clean up
     await apiRequest(pageB, '/api/migration/cancel', 'POST', {
@@ -516,9 +592,11 @@ test.describe('negative cases: invalid requests are rejected', () => {
     await connect(page, walletA.publicKey);
 
     // Wallet B creates a request targeting wallet A
-    const contextB = await (page.context().browser()!).newContext();
+    const contextB = await page.context().browser()!.newContext();
     const pageB = await contextB.newPage();
-    const walletB = await installMockFreighter(pageB, { secret: E2E_ALT_WALLET_SECRET });
+    const walletB = await installMockFreighter(pageB, {
+      secret: E2E_ALT_WALLET_SECRET,
+    });
     await connect(pageB, walletB.publicKey);
 
     const reqRes = await apiRequest(pageB, '/api/migration/request', 'POST', {

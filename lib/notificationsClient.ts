@@ -1,8 +1,5 @@
 /** Client for app/api/notifications/read — same-origin, cookie-authenticated. */
-import {
-  fetchWithRetry,
-  fetchWithTimeout,
-} from '@/lib/fetchWithRetry';
+import { fetchWithRetry, fetchWithTimeout } from '@/lib/fetchWithRetry';
 
 export async function fetchReadNotificationIds(): Promise<number[]> {
   const res = await fetchWithRetry('/api/notifications/read');

@@ -38,7 +38,9 @@ async function signIn(browser: Browser): Promise<Actor> {
     secret: Keypair.random().secret(),
   });
   await page.goto('/en');
-  await page.getByRole('button', { name: 'Connect Wallet', exact: true }).click();
+  await page
+    .getByRole('button', { name: 'Connect Wallet', exact: true })
+    .click();
   await page.getByRole('button', { name: /freighter/i }).click();
   await expect(connectedButton(page, wallet.publicKey)).toBeVisible();
   return { context, page, publicKey: wallet.publicKey };
@@ -78,27 +80,35 @@ async function seed(actor: Actor, label: string): Promise<Seeded> {
   };
   const { page } = actor;
   expect(
-    (await apiCall(page, '/api/watchlist', 'POST', {
-      playerId: seeded.watchlistPlayer,
-    })).status,
+    (
+      await apiCall(page, '/api/watchlist', 'POST', {
+        playerId: seeded.watchlistPlayer,
+      })
+    ).status,
   ).toBeLessThan(300);
   expect(
-    (await apiCall(page, '/api/saved-searches', 'POST', {
-      name: seeded.searchName,
-      filter: {},
-    })).status,
+    (
+      await apiCall(page, '/api/saved-searches', 'POST', {
+        name: seeded.searchName,
+        filter: {},
+      })
+    ).status,
   ).toBeLessThan(300);
   expect(
-    (await apiCall(page, '/api/notification-preferences', 'PUT', {
-      milestoneApprovals: false,
-      contactUnlocks: true,
-    })).status,
+    (
+      await apiCall(page, '/api/notification-preferences', 'PUT', {
+        milestoneApprovals: false,
+        contactUnlocks: true,
+      })
+    ).status,
   ).toBeLessThan(300);
   expect(
-    (await apiCall(page, '/api/recently-viewed', 'POST', {
-      playerId: seeded.recentPlayer,
-      viewedAt: Date.now(),
-    })).status,
+    (
+      await apiCall(page, '/api/recently-viewed', 'POST', {
+        playerId: seeded.recentPlayer,
+        viewedAt: Date.now(),
+      })
+    ).status,
   ).toBeLessThan(300);
   return seeded;
 }
@@ -216,7 +226,9 @@ test.describe('personal data deletion', () => {
       await expect(dialog).toBeVisible();
 
       // On-chain data is explained as not deletable.
-      await expect(dialog.getByText('On-Chain Data (Cannot Be Deleted)')).toBeVisible();
+      await expect(
+        dialog.getByText('On-Chain Data (Cannot Be Deleted)'),
+      ).toBeVisible();
       await expect(
         dialog.getByText(/No one .* can modify or delete this data/),
       ).toBeVisible();

@@ -82,7 +82,12 @@ export async function POST(req: NextRequest) {
   let note: string | undefined;
   if (rawNote !== undefined) {
     if (typeof rawNote !== 'string') {
-      return apiError(ApiErrorCode.INVALID_FIELD_VALUE, 400, 'note must be a string', { field: 'note' });
+      return apiError(
+        ApiErrorCode.INVALID_FIELD_VALUE,
+        400,
+        'note must be a string',
+        { field: 'note' },
+      );
     }
     const sanitized = sanitizeTextInput(rawNote);
     if (sanitized.length > NOTE_MAX) {
@@ -142,6 +147,10 @@ export async function POST(req: NextRequest) {
     log.error('Failed to dismiss fraud flag', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return apiError(ApiErrorCode.INTERNAL_ERROR, 500, 'Failed to dismiss fraud flag');
+    return apiError(
+      ApiErrorCode.INTERNAL_ERROR,
+      500,
+      'Failed to dismiss fraud flag',
+    );
   }
 }

@@ -40,34 +40,34 @@ by the non-blocking exit code is no longer present — the step now fails the
 
 ## Exempt components (components/ui/)
 
-| Component | Reason |
-|-----------|--------|
-| `Turnstile.tsx` | Cloudflare Turnstile — requires external script + real siteKey |
-| `CookieConsentGate.tsx` | Gate based on real localStorage consent state |
-| `CookieSettingsLink.tsx` | Triggers CookieConsentBanner imperative API |
-| `DataFreshnessBadge.tsx` | Live SWR + indexer endpoint; needs MSW mock first |
-| `CookieConsentBanner.tsx` | useEffect + localStorage; needs consent-flow MSW mock |
-| `LegalPageLayout.tsx` | Pure layout wrapper; deferred to legal-page story pass |
-| `OnboardingTour.tsx` | Multi-step tour + portal; needs full step fixture |
-| `RedirectReasonBanner.tsx` | Reads URL search params; needs router mock setup |
-| `ScrollToTop.tsx` | scroll-position triggered; story needs scroll-decorator |
-| `ThemeToggle.tsx` | Writes to document.documentElement; needs DOM reset decorator |
+| Component                  | Reason                                                         |
+| -------------------------- | -------------------------------------------------------------- |
+| `Turnstile.tsx`            | Cloudflare Turnstile — requires external script + real siteKey |
+| `CookieConsentGate.tsx`    | Gate based on real localStorage consent state                  |
+| `CookieSettingsLink.tsx`   | Triggers CookieConsentBanner imperative API                    |
+| `DataFreshnessBadge.tsx`   | Live SWR + indexer endpoint; needs MSW mock first              |
+| `CookieConsentBanner.tsx`  | useEffect + localStorage; needs consent-flow MSW mock          |
+| `LegalPageLayout.tsx`      | Pure layout wrapper; deferred to legal-page story pass         |
+| `OnboardingTour.tsx`       | Multi-step tour + portal; needs full step fixture              |
+| `RedirectReasonBanner.tsx` | Reads URL search params; needs router mock setup               |
+| `ScrollToTop.tsx`          | scroll-position triggered; story needs scroll-decorator        |
+| `ThemeToggle.tsx`          | Writes to document.documentElement; needs DOM reset decorator  |
 
 ## Files changed
 
-| File | Change |
-|------|--------|
+| File                                  | Change                                                                                                       |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `scripts/check-storybook-coverage.js` | Multi-directory config, `warnOnly` per dir, explicit exempt set with comments, blocking for `components/ui/` |
-| `.github/workflows/ci.yml` | Update step name/comment; gate is now blocking |
+| `.github/workflows/ci.yml`            | Update step name/comment; gate is now blocking                                                               |
 
 ## Validation
 
-| Check | Result |
-|-------|--------|
-| `node scripts/validate-pr-bodies.js` | ✅ passes |
-| `node scripts/check-storybook-coverage.js` | ✅ exits 0 (ui passes, others warn) |
-| `npm run type-check` | ✅ no new errors (script is plain JS) |
-| CI step `Storybook coverage check` | ✅ will now fail if a new non-exempt `components/ui/` component ships without a story |
+| Check                                      | Result                                                                                |
+| ------------------------------------------ | ------------------------------------------------------------------------------------- |
+| `node scripts/validate-pr-bodies.js`       | ✅ passes                                                                             |
+| `node scripts/check-storybook-coverage.js` | ✅ exits 0 (ui passes, others warn)                                                   |
+| `npm run type-check`                       | ✅ no new errors (script is plain JS)                                                 |
+| CI step `Storybook coverage check`         | ✅ will now fail if a new non-exempt `components/ui/` component ships without a story |
 
 ## Out of scope
 

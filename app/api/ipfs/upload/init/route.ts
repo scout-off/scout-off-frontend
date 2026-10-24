@@ -68,7 +68,9 @@ export async function POST(req: NextRequest) {
   >;
 
   if (typeof filename !== 'string' || !filename.trim()) {
-    return apiError(ApiErrorCode.MISSING_FIELDS, 400, 'filename is required', { field: 'filename' });
+    return apiError(ApiErrorCode.MISSING_FIELDS, 400, 'filename is required', {
+      field: 'filename',
+    });
   }
 
   if (
@@ -90,7 +92,12 @@ export async function POST(req: NextRequest) {
     !Number.isFinite(fileSize) ||
     fileSize <= 0
   ) {
-    return apiError(ApiErrorCode.INVALID_FIELD_VALUE, 400, 'fileSize must be a positive number', { field: 'fileSize' });
+    return apiError(
+      ApiErrorCode.INVALID_FIELD_VALUE,
+      400,
+      'fileSize must be a positive number',
+      { field: 'fileSize' },
+    );
   }
 
   if (fileSize > MAX_FILE_SIZE_BYTES) {
@@ -106,15 +113,28 @@ export async function POST(req: NextRequest) {
     !Number.isInteger(totalChunks) ||
     totalChunks <= 0
   ) {
-    return apiError(ApiErrorCode.INVALID_FIELD_VALUE, 400, 'totalChunks must be a positive integer', { field: 'totalChunks' });
+    return apiError(
+      ApiErrorCode.INVALID_FIELD_VALUE,
+      400,
+      'totalChunks must be a positive integer',
+      { field: 'totalChunks' },
+    );
   }
 
   if (totalChunks > MAX_CHUNKS) {
-    return apiError(ApiErrorCode.INVALID_REQUEST, 400, 'totalChunks is unreasonably high');
+    return apiError(
+      ApiErrorCode.INVALID_REQUEST,
+      400,
+      'totalChunks is unreasonably high',
+    );
   }
 
   if (totalChunks > 1 && fileSize / totalChunks < MIN_CHUNK_SIZE_BYTES) {
-    return apiError(ApiErrorCode.INVALID_REQUEST, 400, 'Chunk count too high for the given file size');
+    return apiError(
+      ApiErrorCode.INVALID_REQUEST,
+      400,
+      'Chunk count too high for the given file size',
+    );
   }
 
   const { sessionId } = await initSession({

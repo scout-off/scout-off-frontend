@@ -153,7 +153,10 @@ describe('useApprovalQueue', () => {
 
     let intent: ApprovalIntent | undefined;
     await act(async () => {
-      intent = await result.current.enqueue({ playerId: 'p1', milestone: 'm1' });
+      intent = await result.current.enqueue({
+        playerId: 'p1',
+        milestone: 'm1',
+      });
     });
 
     expect(intent?.queuedAt).toBe(NOW);
@@ -375,9 +378,7 @@ describe('useApprovalQueue', () => {
     });
 
     try {
-      const { result, unmount } = renderHook(() =>
-        useApprovalQueue(VALIDATOR),
-      );
+      const { result, unmount } = renderHook(() => useApprovalQueue(VALIDATOR));
       await waitFor(() => expect(result.current.loaded).toBe(true));
       unmount();
 

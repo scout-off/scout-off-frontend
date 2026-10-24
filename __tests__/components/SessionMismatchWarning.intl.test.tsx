@@ -19,15 +19,25 @@ describe('SessionMismatchWarning localization', () => {
 
   it('renders French copy and accessible names', () => {
     render(<SessionMismatchWarning />, { locale: 'fr' });
-    expect(screen.getByText('Incohérence de session détectée')).toBeInTheDocument();
+    expect(
+      screen.getByText('Incohérence de session détectée'),
+    ).toBeInTheDocument();
     expect(screen.getByText(/GABCDEFG…/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Se réauthentifier' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: "Fermer l'avertissement" })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Se réauthentifier' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: "Fermer l'avertissement" }),
+    ).toBeInTheDocument();
   });
 
   it('renders Swahili copy', () => {
     render(<SessionMismatchWarning />, { locale: 'sw' });
-    expect(screen.getByText('Hitilafu ya kikao imegunduliwa')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Funga onyo' })).toBeInTheDocument();
+    expect(
+      screen.getByText('Hitilafu ya kikao imegunduliwa'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Funga onyo' }),
+    ).toBeInTheDocument();
   });
 });

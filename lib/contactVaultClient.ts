@@ -16,10 +16,7 @@
  * failures stay distinguishable from each other in the UI.
  */
 import type { ContactDetails } from '@/types';
-import {
-  fetchWithRetry,
-  fetchWithTimeout,
-} from '@/lib/fetchWithRetry';
+import { fetchWithRetry, fetchWithTimeout } from '@/lib/fetchWithRetry';
 
 /** Existence/age metadata for the caller's own row. Never contains PII. */
 export interface ContactVaultMetadata {

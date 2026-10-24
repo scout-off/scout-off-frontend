@@ -126,7 +126,10 @@ describe('sweepExpired()', () => {
 
   it('sweeps multiple expired rows in one call', () => {
     for (let i = 0; i < 5; i++) {
-      store.consumeNonce(Sep10NonceStore.hashXdr(`expired-${i}`), pastSec(i + 1));
+      store.consumeNonce(
+        Sep10NonceStore.hashXdr(`expired-${i}`),
+        pastSec(i + 1),
+      );
     }
     expect(store.sweepExpired()).toBe(5);
   });
@@ -138,7 +141,9 @@ describe('sweepExpired()', () => {
     expect(store.sweepExpired()).toBe(1);
 
     // The live nonce is still there — a second consumeNonce call returns false
-    expect(store.consumeNonce(Sep10NonceStore.hashXdr('live'), futureSec())).toBe(false);
+    expect(
+      store.consumeNonce(Sep10NonceStore.hashXdr('live'), futureSec()),
+    ).toBe(false);
   });
 
   it('is idempotent — a second sweep of the same data returns 0', () => {

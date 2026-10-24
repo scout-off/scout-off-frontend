@@ -49,7 +49,10 @@ describe('useContactFeeQuote', () => {
     mockFetch.mockReturnValueOnce(new Promise((r) => (resolve = r)));
     const { result } = renderHook(() => useContactFeeQuote(10, true));
     expect(result.current.loading).toBe(true);
-    expect(mockFetch).toHaveBeenCalledWith(10, expect.objectContaining({ code: 'USDC' }));
+    expect(mockFetch).toHaveBeenCalledWith(
+      10,
+      expect.objectContaining({ code: 'USDC' }),
+    );
 
     await act(async () => {
       resolve(makeQuote());

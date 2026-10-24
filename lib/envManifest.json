@@ -233,7 +233,10 @@
       "name": "E2E_TEST_ROUTES",
       "requiredIn": [],
       "secret": false,
-      "usedBy": ["app/api/migration/test-advance/route.ts", "playwright.config.ts"],
+      "usedBy": [
+        "app/api/migration/test-advance/route.ts",
+        "playwright.config.ts"
+      ],
       "description": "Set to 1 to enable test-only API routes (e.g. POST /api/migration/test-advance). playwright.config.ts sets it for the e2e dev server; leave unset everywhere else. Ignored in production builds."
     },
     {
