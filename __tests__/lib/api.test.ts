@@ -187,7 +187,7 @@ describe('searchPlayersByName', () => {
 
     expect(global.fetch).toHaveBeenCalledWith(
       '/api/players/search?name=Alice',
-      undefined,
+      { signal: undefined },
     );
     expect(result).toEqual(mockData);
   });
@@ -366,7 +366,7 @@ describe('fetchAcademies', () => {
 
     expect(global.fetch).toHaveBeenCalledWith(
       '/api/admin/academies',
-      undefined,
+      { signal: undefined },
     );
     expect(result).toEqual([ACADEMY]);
   });
@@ -687,7 +687,7 @@ describe('getReferralOverview', () => {
 
     expect(global.fetch).toHaveBeenCalledWith(
       '/api/admin/referrals',
-      undefined,
+      { signal: undefined },
     );
     expect(result).toEqual(mockData);
   });
@@ -720,7 +720,7 @@ describe('fetchFraudFlags', () => {
 
     expect(global.fetch).toHaveBeenCalledWith(
       '/api/admin/fraud-flags',
-      undefined,
+      { signal: undefined },
     );
     expect(result).toEqual(mockData);
   });

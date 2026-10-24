@@ -8,7 +8,10 @@ import {
 } from '@/lib/savedSearchClient';
 import { fetchWithRetry } from '@/lib/fetchWithRetry';
 
-jest.mock('@/lib/fetchWithRetry', () => ({ fetchWithRetry: jest.fn() }));
+jest.mock('@/lib/fetchWithRetry', () => ({
+  ...jest.requireActual('@/lib/fetchWithRetry'),
+  fetchWithRetry: jest.fn(),
+}));
 
 const mockFetchWithRetry = fetchWithRetry as jest.MockedFunction<
   typeof fetchWithRetry

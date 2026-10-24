@@ -77,7 +77,7 @@ describe('fetchNotificationPreferences', () => {
     // fetchWithRetry calls fetch(url, init) where init may be undefined
     expect(mockFetch).toHaveBeenCalledWith(
       '/api/notification-preferences',
-      undefined,
+      { signal: undefined },
     );
     expect(result).toEqual(PREFS);
   });

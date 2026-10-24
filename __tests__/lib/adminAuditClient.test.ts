@@ -6,7 +6,10 @@ import {
 } from '@/lib/adminAuditClient';
 import { fetchWithRetry } from '@/lib/fetchWithRetry';
 
-jest.mock('@/lib/fetchWithRetry', () => ({ fetchWithRetry: jest.fn() }));
+jest.mock('@/lib/fetchWithRetry', () => ({
+  ...jest.requireActual('@/lib/fetchWithRetry'),
+  fetchWithRetry: jest.fn(),
+}));
 
 const mockFetchWithRetry = fetchWithRetry as jest.MockedFunction<
   typeof fetchWithRetry
@@ -115,21 +118,21 @@ describe('adminAuditClient', () => {
   describe('fetchReconciliationHistory', () => {
     it('unwraps runs and passes an optional limit', async () => {
       const runs = [{ id: 1 }];
-      fetchMock.mockResolvedValue(response({ runs }));
+      mockFetchWithRetry.mockResolvedValue(response({ runs }));
 
       await expect(fetchReconciliationHistory(5)).resolves.toEqual(runs);
-      expect(fetchMock).toHaveBeenCalledWith(
+      expect(mockFetchWithRetry).toHaveBeenCalledWith(
         '/api/admin/audit-log/reconcile/history?limit=5',
       );
 
       await fetchReconciliationHistory();
-      expect(fetchMock).toHaveBeenLastCalledWith(
+      expect(mockFetchWithRetry).toHaveBeenLastCalledWith(
         '/api/admin/audit-log/reconcile/history',
       );
     });
 
     it('throws on failure', async () => {
-      fetchMock.mockResolvedValue(response({}, false, 500));
+      mockFetchWithRetry.mockResolvedValue(response({}, false, 500));
       await expect(fetchReconciliationHistory()).rejects.toThrow(
         'Failed to fetch reconciliation history',
       );
