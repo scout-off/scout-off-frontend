@@ -141,7 +141,9 @@ function main() {
   }
 }
 
-main();
+// Only run when executed directly, so requiring it from tests has no side
+// effects (and can't process.exit the test runner).
+if (require.main === module) main();
 
 // Export for unit tests and other scripts.
 module.exports = { findComponentsMissingStories, DIRS };

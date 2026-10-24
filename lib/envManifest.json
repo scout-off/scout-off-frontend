@@ -120,6 +120,13 @@
       "description": "Secret used to HMAC-sign the `session`/`session_refresh` cookies issued after a successful SEP-10 verification (see lib/session.ts). REQUIRED — routes that read the session cookie throw if this is unset. Use a long, random value (e.g. `openssl rand -base64 48`) and never commit the real value. Rotating it immediately invalidates every outstanding session."
     },
     {
+      "name": "SESSION_SECRET_KEYS",
+      "requiredIn": [],
+      "secret": true,
+      "usedBy": ["lib/session.ts"],
+      "description": "Optional comma-separated list of session signing secrets, newest first, for rotating SESSION_SECRET without logging everyone out (lib/session.ts). The first key signs new tokens; every key is tried when verifying. Takes precedence over SESSION_SECRET when set. Drop old keys once max(ACCESS_TOKEN_TTL_SEC, REMEMBER_ME_REFRESH_TTL_SEC) has passed since the rotation."
+    },
+    {
       "name": "TURNSTILE_SECRET_KEY",
       "requiredIn": ["production"],
       "secret": true,

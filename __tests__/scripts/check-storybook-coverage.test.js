@@ -4,6 +4,10 @@ const {
   findComponentsMissingStories,
 } = require('../../scripts/check-storybook-coverage');
 
+// The function takes one DIRS entry (#1608); `dir` must exist on disk because
+// only readdirSync is stubbed.
+const CONFIG = { dir: 'components/ui', exempt: new Set() };
+
 describe('check-storybook-coverage.js', () => {
   let readdirSyncSpy;
 
@@ -21,7 +25,7 @@ describe('check-storybook-coverage.js', () => {
         'Button.stories.tsx',
       ]);
 
-    expect(findComponentsMissingStories()).toEqual([]);
+    expect(findComponentsMissingStories(CONFIG)).toEqual([]);
   });
 
   it('flags a component whose .stories.tsx file is missing', () => {
@@ -29,7 +33,7 @@ describe('check-storybook-coverage.js', () => {
       .spyOn(fs, 'readdirSync')
       .mockReturnValue(['Badge.tsx', 'Badge.stories.tsx', 'NewThing.tsx']);
 
-    expect(findComponentsMissingStories()).toEqual(['NewThing.tsx']);
+    expect(findComponentsMissingStories(CONFIG)).toEqual(['NewThing.tsx']);
   });
 
   it('does not flag .stories.tsx files themselves as missing coverage', () => {
@@ -37,7 +41,7 @@ describe('check-storybook-coverage.js', () => {
       .spyOn(fs, 'readdirSync')
       .mockReturnValue(['Badge.tsx', 'Badge.stories.tsx']);
 
-    expect(findComponentsMissingStories()).toEqual([]);
+    expect(findComponentsMissingStories(CONFIG)).toEqual([]);
   });
 
   it('ignores non-.tsx files in the directory listing', () => {
@@ -50,6 +54,6 @@ describe('check-storybook-coverage.js', () => {
         '.DS_Store',
       ]);
 
-    expect(findComponentsMissingStories()).toEqual([]);
+    expect(findComponentsMissingStories(CONFIG)).toEqual([]);
   });
 });
