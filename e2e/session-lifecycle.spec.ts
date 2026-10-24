@@ -112,6 +112,25 @@ async function listSessions(page: Page): Promise<ListedSession[]> {
 }
 
 test.describe.serial('SEP-10 session lifecycle', () => {
+  // CI runs this file on its own fresh dev server with retries off, so the
+  // first login would also pay for compiling the home page and the
+  // stellar-sdk-heavy SEP-10 route on demand — longer than the 15 s
+  // connect assertion allows. Compile them up front; the responses
+  // themselves don't matter.
+  test.beforeAll(async ({ request }) => {
+    test.setTimeout(180_000);
+    const warm = [
+      '/en',
+      '/api/auth/sep10?account=GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF',
+      '/api/auth/session',
+      '/api/auth/sessions',
+      '/api/auth/refresh',
+    ];
+    for (const path of warm) {
+      await request.get(path, { timeout: 120_000 }).catch(() => undefined);
+    }
+  });
+
   test('login issues httpOnly, SameSite=Strict cookies scoped to / and /api/auth', async ({
     page,
     wallet,
