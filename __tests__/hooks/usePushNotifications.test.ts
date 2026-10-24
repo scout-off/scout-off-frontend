@@ -1,3 +1,4 @@
+import React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react';
 
 jest.mock('@/lib/api', () => ({
@@ -51,10 +52,14 @@ function uninstallBrowser() {
   delete (window as unknown as Record<string, unknown>).Notification;
 }
 
-function load(vapid: string | undefined = VAPID) {
-  if (vapid === undefined) delete process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+// `null` means "no key" — passing `undefined` would trigger the default.
+function load(vapid: string | null = VAPID) {
+  if (vapid === null) delete process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   else process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY = vapid;
   jest.isolateModules(() => {
+    // Share the renderer's React instance: an isolated copy would leave the
+    // hook calling useState on a React with no active dispatcher.
+    jest.doMock('react', () => React);
     usePushNotifications =
       require('@/hooks/usePushNotifications').usePushNotifications;
     const api = require('@/lib/api');
@@ -95,7 +100,7 @@ describe('usePushNotifications', () => {
   });
 
   it('reports unsupported when the VAPID key is missing', async () => {
-    load(undefined);
+    load(null);
     const { result } = renderHook(() => usePushNotifications(WALLET));
     await waitFor(() => expect(result.current.status).toBe('unsupported'));
     expect(pushManager.getSubscription).not.toHaveBeenCalled();
@@ -103,6 +108,8 @@ describe('usePushNotifications', () => {
 
   it('reports denied when permission is denied and never subscribes', async () => {
     installBrowser({ permission: 'denied' });
+    // A blocked site's requestPermission() resolves 'denied' without prompting.
+    requestPermission.mockResolvedValue('denied');
     load();
     const { result } = renderHook(() => usePushNotifications(WALLET));
     await waitFor(() => expect(result.current.status).toBe('denied'));
