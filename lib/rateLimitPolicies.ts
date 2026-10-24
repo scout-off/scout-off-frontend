@@ -19,7 +19,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { checkRateLimit, getClientIp, type RateLimitOptions } from './rateLimit';
+import {
+  checkRateLimit,
+  getClientIp,
+  type RateLimitOptions,
+} from './rateLimit';
 
 // ── Policy definition ─────────────────────────────────────────────────────────
 
@@ -162,7 +166,8 @@ export const POLICIES = {
     slug: 'dispute-create',
     limit: 5,
     windowMs: 60_000,
-    message: 'Too many dispute submissions. Please wait before submitting again.',
+    message:
+      'Too many dispute submissions. Please wait before submitting again.',
   },
 
   /** Adding evidence to an existing dispute. */

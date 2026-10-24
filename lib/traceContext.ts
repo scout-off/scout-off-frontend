@@ -51,11 +51,13 @@ export function generateSpanId(): string {
  * Returns null when the value is absent or malformed (callers should then
  * generate a fresh context with {@link newTraceContext}).
  */
-export function parseTraceparent(value: string | null | undefined): TraceContext | null {
+export function parseTraceparent(
+  value: string | null | undefined,
+): TraceContext | null {
   if (!value) return null;
   const m = TRACEPARENT_RE.exec(value.trim());
   if (!m) return null;
-  const [, /* version */ , traceId, parentSpanId, flags] = m;
+  const [, , /* version */ traceId, parentSpanId, flags] = m;
   // All-zeros trace-id or span-id are forbidden by the spec.
   if (/^0+$/.test(traceId) || /^0+$/.test(parentSpanId)) return null;
   return {
@@ -81,9 +83,7 @@ export function newTraceContext(): TraceContext {
 export function getOrCreateTraceContext(headers: {
   get(name: string): string | null;
 }): TraceContext {
-  return (
-    parseTraceparent(headers.get(TRACEPARENT_HEADER)) ?? newTraceContext()
-  );
+  return parseTraceparent(headers.get(TRACEPARENT_HEADER)) ?? newTraceContext();
 }
 
 /**

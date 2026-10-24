@@ -110,11 +110,35 @@ function createRequestLogger(req) {
     /** Returns a child traceparent for forwarding to downstream services. */
     outboundTraceparent: () => makeChildTraceparent(traceCtx),
     info: (message, fields) =>
-      emit('info', requestId, traceCtx.traceId, traceCtx.parentSpanId, route, message, fields),
+      emit(
+        'info',
+        requestId,
+        traceCtx.traceId,
+        traceCtx.parentSpanId,
+        route,
+        message,
+        fields,
+      ),
     warn: (message, fields) =>
-      emit('warn', requestId, traceCtx.traceId, traceCtx.parentSpanId, route, message, fields),
+      emit(
+        'warn',
+        requestId,
+        traceCtx.traceId,
+        traceCtx.parentSpanId,
+        route,
+        message,
+        fields,
+      ),
     error: (message, fields) =>
-      emit('error', requestId, traceCtx.traceId, traceCtx.parentSpanId, route, message, fields),
+      emit(
+        'error',
+        requestId,
+        traceCtx.traceId,
+        traceCtx.parentSpanId,
+        route,
+        message,
+        fields,
+      ),
   };
 }
 

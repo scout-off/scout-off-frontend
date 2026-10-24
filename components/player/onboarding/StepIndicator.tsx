@@ -1,6 +1,10 @@
 import { STEPS } from './wizardState';
 
-export default function StepIndicator({ currentStep }: { currentStep: number }) {
+export default function StepIndicator({
+  currentStep,
+}: {
+  currentStep: number;
+}) {
   return (
     <nav aria-label="Registration progress">
       <ol className="flex items-center w-full">

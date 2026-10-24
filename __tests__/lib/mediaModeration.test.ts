@@ -177,9 +177,9 @@ describe('isValidMediaCid – invalid / non-string inputs', () => {
 describe('isValidMediaCid – format violations', () => {
   it('rejects a string shorter than 46 chars', () => {
     // 45 chars — one short
-    expect(isValidMediaCid('QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPb')).toBe(
-      false,
-    );
+    expect(
+      isValidMediaCid('QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPb'),
+    ).toBe(false);
   });
 
   it('rejects a string longer than 100 chars', () => {
@@ -187,15 +187,15 @@ describe('isValidMediaCid – format violations', () => {
   });
 
   it('rejects a path containing "/"', () => {
-    expect(isValidMediaCid('QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG/evil')).toBe(
-      false,
-    );
+    expect(
+      isValidMediaCid('QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG/evil'),
+    ).toBe(false);
   });
 
   it('rejects a CID with a "?" query character', () => {
-    expect(isValidMediaCid('QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG?x=1')).toBe(
-      false,
-    );
+    expect(
+      isValidMediaCid('QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG?x=1'),
+    ).toBe(false);
   });
 
   it('rejects a CID with a double extension (.jpg.exe)', () => {
@@ -207,9 +207,7 @@ describe('isValidMediaCid – format violations', () => {
 
   it('rejects whitespace-padded CID', () => {
     expect(
-      isValidMediaCid(
-        ' QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG',
-      ),
+      isValidMediaCid(' QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG'),
     ).toBe(false);
   });
 });

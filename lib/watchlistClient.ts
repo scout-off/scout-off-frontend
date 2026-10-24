@@ -1,8 +1,5 @@
 import type { WatchlistEntry } from '@/types';
-import {
-  fetchWithRetry,
-  fetchWithTimeout,
-} from '@/lib/fetchWithRetry';
+import { fetchWithRetry, fetchWithTimeout } from '@/lib/fetchWithRetry';
 
 /** Client for app/api/watchlist — same-origin, cookie-authenticated. */
 

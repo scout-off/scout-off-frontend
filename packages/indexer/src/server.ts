@@ -23,7 +23,14 @@ import {
 import { closeStore, createPgPoolFromEnv, getStore, initStore } from './db';
 import { LeaderElector } from './leaderElection';
 import type { EventType } from './metrics/IndexerMetrics';
-import { logger, parseTraceparent, newTraceContext, withTraceContext, makeChildTraceparent, TRACEPARENT_HEADER } from './logger';
+import {
+  logger,
+  parseTraceparent,
+  newTraceContext,
+  withTraceContext,
+  makeChildTraceparent,
+  TRACEPARENT_HEADER,
+} from './logger';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 
@@ -676,7 +683,10 @@ function route(
     if (req.method === 'GET' && url.pathname === '/players') {
       return handlePlayersQuery(url, res);
     }
-    if (req.method === 'POST' && url.pathname === '/validators/approval-counts') {
+    if (
+      req.method === 'POST' &&
+      url.pathname === '/validators/approval-counts'
+    ) {
       handleApprovalCountsQuery(req, res).catch((err) =>
         handleUnexpectedError(res, err),
       );
@@ -732,10 +742,7 @@ export async function shutdown(signal: string): Promise<void> {
     return Promise.race([
       task,
       new Promise<void>((resolve) => {
-        timer = setTimeout(
-          resolve,
-          Math.max(0, deadline - Date.now()),
-        ).unref();
+        timer = setTimeout(resolve, Math.max(0, deadline - Date.now())).unref();
       }),
     ]).finally(() => clearTimeout(timer));
   };

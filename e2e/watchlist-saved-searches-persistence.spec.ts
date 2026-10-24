@@ -66,7 +66,9 @@ async function connectWallet(
   publicKey: string,
 ): Promise<void> {
   await page.goto('/en');
-  await page.getByRole('button', { name: 'Connect Wallet', exact: true }).click();
+  await page
+    .getByRole('button', { name: 'Connect Wallet', exact: true })
+    .click();
   await page.getByRole('button', { name: /freighter/i }).click();
   await expect(
     page.getByRole('button', {
@@ -200,9 +202,7 @@ test.describe('Watchlist server-side persistence', () => {
     await ctxB.close();
   });
 
-  test('deletion on device A is reflected on device B', async ({
-    browser,
-  }) => {
+  test('deletion on device A is reflected on device B', async ({ browser }) => {
     // ── Device A: add, then delete ───────────────────────────────────────
     const ctxA = await browser.newContext();
     const pageA = await ctxA.newPage();
@@ -419,9 +419,7 @@ test.describe('Saved-search server-side persistence', () => {
     await ctxB.close();
   });
 
-  test('deletion on device A is reflected on device B', async ({
-    browser,
-  }) => {
+  test('deletion on device A is reflected on device B', async ({ browser }) => {
     // ── Device A: create then delete ─────────────────────────────────────
     const ctxA = await browser.newContext();
     const pageA = await ctxA.newPage();

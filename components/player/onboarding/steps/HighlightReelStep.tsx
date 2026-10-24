@@ -41,8 +41,8 @@ export default function HighlightReelStep({
           Highlight Reel
         </h2>
         <p className="text-sm text-gray-400 mt-1">
-          Upload a video showcasing your skills. The upload must complete
-          before you can continue.
+          Upload a video showcasing your skills. The upload must complete before
+          you can continue.
         </p>
       </div>
 

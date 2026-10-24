@@ -68,7 +68,10 @@ describe('useIsMobile', () => {
   it('toggles when a change event is dispatched', () => {
     const { emit, addEventListener } = installMatchMedia(false);
     const { result } = renderHook(() => useIsMobile());
-    expect(addEventListener).toHaveBeenCalledWith('change', expect.any(Function));
+    expect(addEventListener).toHaveBeenCalledWith(
+      'change',
+      expect.any(Function),
+    );
     act(() => emit(true));
     expect(result.current).toBe(true);
     act(() => emit(false));
@@ -80,7 +83,10 @@ describe('useIsMobile', () => {
     const { unmount } = renderHook(() => useIsMobile());
     expect(listeners.size).toBe(1);
     unmount();
-    expect(removeEventListener).toHaveBeenCalledWith('change', expect.any(Function));
+    expect(removeEventListener).toHaveBeenCalledWith(
+      'change',
+      expect.any(Function),
+    );
     expect(listeners.size).toBe(0);
   });
 });

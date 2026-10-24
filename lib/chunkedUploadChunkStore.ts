@@ -191,9 +191,7 @@ export class ChunkedUploadChunkStore {
    */
   pruneOlderThan(beforeMs: number): number {
     const result = this.db
-      .prepare(
-        `DELETE FROM chunked_upload_chunks WHERE created_at < ?`,
-      )
+      .prepare(`DELETE FROM chunked_upload_chunks WHERE created_at < ?`)
       .run(beforeMs);
     return result.changes;
   }

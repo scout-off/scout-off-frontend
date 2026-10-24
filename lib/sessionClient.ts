@@ -200,7 +200,9 @@ export function refreshSession(): Promise<ServerSession> {
       // We are the leader (or BroadcastChannel is unavailable). Do the
       // actual network call.
       if (channel) {
-        channel.postMessage({ type: 'refresh-started' } satisfies RefreshMessage);
+        channel.postMessage({
+          type: 'refresh-started',
+        } satisfies RefreshMessage);
       }
 
       try {
@@ -212,7 +214,8 @@ export function refreshSession(): Promise<ServerSession> {
           let publicKey: string | null = null;
           try {
             const data = await res.json();
-            publicKey = typeof data.publicKey === 'string' ? data.publicKey : null;
+            publicKey =
+              typeof data.publicKey === 'string' ? data.publicKey : null;
           } catch {
             // body unreadable — treat as authenticated but publicKey unknown
           }
@@ -229,7 +232,10 @@ export function refreshSession(): Promise<ServerSession> {
 
         return session;
       } catch {
-        const session: ServerSession = { authenticated: false, publicKey: null };
+        const session: ServerSession = {
+          authenticated: false,
+          publicKey: null,
+        };
         if (channel) {
           channel.postMessage({
             type: 'refresh-result',

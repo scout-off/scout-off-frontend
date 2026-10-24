@@ -26,7 +26,9 @@ describe('createIdempotencyKey', () => {
     });
 
     it('returns a different key on each call (uniqueness)', () => {
-      const keys = new Set(Array.from({ length: 50 }, () => createIdempotencyKey()));
+      const keys = new Set(
+        Array.from({ length: 50 }, () => createIdempotencyKey()),
+      );
       expect(keys.size).toBe(50);
     });
   });
@@ -71,7 +73,9 @@ describe('createIdempotencyKey', () => {
     });
 
     it('returns distinct keys across multiple calls (uniqueness)', () => {
-      const keys = new Set(Array.from({ length: 50 }, () => createIdempotencyKey()));
+      const keys = new Set(
+        Array.from({ length: 50 }, () => createIdempotencyKey()),
+      );
       expect(keys.size).toBe(50);
     });
   });

@@ -24,7 +24,9 @@ describe('pinataConfig', () => {
     });
 
     it('has the correct error message', () => {
-      expect(PINATA_NOT_CONFIGURED_ERROR).toBe('IPFS uploads are not configured');
+      expect(PINATA_NOT_CONFIGURED_ERROR).toBe(
+        'IPFS uploads are not configured',
+      );
     });
   });
 

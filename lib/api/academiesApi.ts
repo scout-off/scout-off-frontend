@@ -9,7 +9,11 @@
  */
 import { backendClient as api } from './playersApi';
 import { fetchWithRetry } from '../fetchWithRetry';
-import type { Academy, AcademyMilestoneRollup, MilestoneEndorsement } from '@/types';
+import type {
+  Academy,
+  AcademyMilestoneRollup,
+  MilestoneEndorsement,
+} from '@/types';
 
 async function parseErrorMessage(
   res: Response,

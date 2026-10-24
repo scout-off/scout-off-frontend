@@ -1,8 +1,5 @@
 import type { RecentlyViewedEntry } from '@/types';
-import {
-  fetchWithRetry,
-  fetchWithTimeout,
-} from '@/lib/fetchWithRetry';
+import { fetchWithRetry, fetchWithTimeout } from '@/lib/fetchWithRetry';
 
 /** Client for app/api/recently-viewed — same-origin, cookie-authenticated. */
 

@@ -5,7 +5,11 @@
  * the external backend, except `searchPlayersByName` which is routed through
  * the same-origin /api/players/search proxy so per-IP rate limiting applies.
  */
-import { createClient, BACKEND_READ_TIMEOUT_MS, BACKEND_WRITE_TIMEOUT_MS } from '../httpClient';
+import {
+  createClient,
+  BACKEND_READ_TIMEOUT_MS,
+  BACKEND_WRITE_TIMEOUT_MS,
+} from '../httpClient';
 import type { Player } from '@/types';
 import { fetchWithRetry } from '../fetchWithRetry';
 

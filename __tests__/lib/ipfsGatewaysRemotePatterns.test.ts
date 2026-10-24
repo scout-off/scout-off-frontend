@@ -10,15 +10,23 @@ function loadRemotePatterns(): RemotePattern[] {
     jest.doMock('next-pwa', () => () => (config: unknown) => config, {
       virtual: true,
     });
-    jest.doMock('@next/bundle-analyzer', () => () => (config: unknown) => config, {
-      virtual: true,
-    });
+    jest.doMock(
+      '@next/bundle-analyzer',
+      () => () => (config: unknown) => config,
+      {
+        virtual: true,
+      },
+    );
     jest.doMock('next-intl/plugin', () => () => (config: unknown) => config, {
       virtual: true,
     });
-    jest.doMock('@sentry/nextjs', () => ({
-      withSentryConfig: (config: unknown) => config,
-    }), { virtual: true });
+    jest.doMock(
+      '@sentry/nextjs',
+      () => ({
+        withSentryConfig: (config: unknown) => config,
+      }),
+      { virtual: true },
+    );
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const config = require('../../next.config.js');
     patterns = config.images.remotePatterns;

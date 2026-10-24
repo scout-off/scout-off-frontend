@@ -41,7 +41,9 @@ describe('useVisibilityInterval', () => {
   it('runs immediately when the tab becomes visible with runOnVisible', () => {
     const callback = jest.fn();
 
-    renderHook(() => useVisibilityInterval(callback, 1000, { runOnVisible: true }));
+    renderHook(() =>
+      useVisibilityInterval(callback, 1000, { runOnVisible: true }),
+    );
 
     expect(callback).toHaveBeenCalledTimes(1);
 

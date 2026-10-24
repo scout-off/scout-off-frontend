@@ -5,7 +5,8 @@ jest.mock('@/lib/api', () => ({
   unsubscribeFromPush: jest.fn(),
 }));
 
-type PushHook = typeof import('@/hooks/usePushNotifications').usePushNotifications;
+type PushHook =
+  typeof import('@/hooks/usePushNotifications').usePushNotifications;
 
 const WALLET = 'GWALLET';
 // base64url for bytes [1, 2, 3, 4]
@@ -151,7 +152,9 @@ describe('usePushNotifications', () => {
     expect(Array.from(arg.applicationServerKey as Uint8Array)).toEqual([
       1, 2, 3, 4,
     ]);
-    expect(subscribeToPush).toHaveBeenCalledWith(WALLET, { endpoint: sub.endpoint });
+    expect(subscribeToPush).toHaveBeenCalledWith(WALLET, {
+      endpoint: sub.endpoint,
+    });
     expect(result.current.status).toBe('subscribed');
   });
 

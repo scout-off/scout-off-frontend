@@ -21,7 +21,9 @@ const basePlayer = {
 } as unknown as Player;
 
 const milestones = (n: number) =>
-  Array.from({ length: n }, (_, i) => ({ id: `m${i}` })) as unknown as Player['milestones'];
+  Array.from({ length: n }, (_, i) => ({
+    id: `m${i}`,
+  })) as unknown as Player['milestones'];
 
 const meta: Meta<typeof AchievementBadges> = {
   title: 'Components/Player/AchievementBadges',
@@ -45,18 +47,29 @@ export const NoBadges: Story = {
 
 export const OneBadge: Story = {
   args: {
-    player: { ...basePlayer, vitals: { ...basePlayer.vitals, name: '' }, stats: undefined, milestones: milestones(1) } as unknown as Player,
+    player: {
+      ...basePlayer,
+      vitals: { ...basePlayer.vitals, name: '' },
+      stats: undefined,
+      milestones: milestones(1),
+    } as unknown as Player,
   },
 };
 
 export const AllBadges: Story = {
   args: {
-    player: { ...basePlayer, milestones: milestones(10), progressLevel: 3 } as unknown as Player,
+    player: {
+      ...basePlayer,
+      milestones: milestones(10),
+      progressLevel: 3,
+    } as unknown as Player,
   },
   parameters: {
     docs: {
       description: {
-        story: `Badges defined in lib/badges.ts: ${Object.values(BADGE_DEFINITIONS)
+        story: `Badges defined in lib/badges.ts: ${Object.values(
+          BADGE_DEFINITIONS,
+        )
           .map((b) => b.label)
           .join(', ')}.`,
       },

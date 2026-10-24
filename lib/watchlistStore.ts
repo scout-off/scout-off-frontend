@@ -119,9 +119,7 @@ export class WatchlistStore {
   count(scoutWallet: string): number {
     const normalizedScoutWallet = normalizeStellarAddress(scoutWallet);
     const row = this.db
-      .prepare(
-        'SELECT COUNT(*) AS n FROM watchlist WHERE scout_wallet = ?',
-      )
+      .prepare('SELECT COUNT(*) AS n FROM watchlist WHERE scout_wallet = ?')
       .get(normalizedScoutWallet) as { n: number };
     return row.n;
   }

@@ -42,16 +42,16 @@ promise leakage between tests.
 
 ## Files changed
 
-| File | Change |
-|------|--------|
+| File             | Change                                                                                                                                                            |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `lib/xlmRate.ts` | Add `inFlight` map, `getXlmRate` becomes sync wrapper returning the in-flight or new promise, extract `fetchXlmRate` private async fn, update `resetXlmRateCache` |
 
 ## Validation
 
-| Check | Result |
-|-------|--------|
-| `node scripts/validate-pr-bodies.js` | ✅ passes |
-| `npm run type-check` | ✅ no new errors |
+| Check                                            | Result                                       |
+| ------------------------------------------------ | -------------------------------------------- |
+| `node scripts/validate-pr-bodies.js`             | ✅ passes                                    |
+| `npm run type-check`                             | ✅ no new errors                             |
 | Existing `__tests__/api/rates/xlm.route.test.ts` | ✅ all 5 tests pass (API contract unchanged) |
 
 ## Out of scope

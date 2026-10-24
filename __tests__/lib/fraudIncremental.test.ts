@@ -238,26 +238,34 @@ describe('applyActivityEvent', () => {
     applyActivityEvent(state, makeEvent('player_contacted', 'S1', base));
     applyActivityEvent(state, makeEvent('player_contacted', 'S1', base + 60));
     applyActivityEvent(state, makeEvent('player_contacted', 'S1', base + 120));
-    expect(state.wallets.get('S1')!.payToContact.contactsPerHour['2024-01-15T14']).toBe(3);
+    expect(
+      state.wallets.get('S1')!.payToContact.contactsPerHour['2024-01-15T14'],
+    ).toBe(3);
   });
 
   it('records scout_subscribed timestamps', () => {
     const state = createInitialIncrementalState();
     applyActivityEvent(state, makeEvent('scout_subscribed', 'S1', 2_000_000));
-    expect(state.wallets.get('S1')!.payToContact.subscriptionTimestamps).toContain(
-      2_000_000_000,
-    );
+    expect(
+      state.wallets.get('S1')!.payToContact.subscriptionTimestamps,
+    ).toContain(2_000_000_000);
   });
 
   it('ignores unrecognised event types without modifying state', () => {
     const state = createInitialIncrementalState();
-    applyActivityEvent(state, makeEvent('milestone_approved' as ActivityEvent['type'], 'S1', 1000));
+    applyActivityEvent(
+      state,
+      makeEvent('milestone_approved' as ActivityEvent['type'], 'S1', 1000),
+    );
     expect(state.wallets.has('S1')).toBe(false);
   });
 
   it('returns [] for an event with no actor', () => {
     const state = createInitialIncrementalState();
-    const event = { ...makeEvent('player_contacted', '', 1000), actor: undefined } as unknown as ActivityEvent;
+    const event = {
+      ...makeEvent('player_contacted', '', 1000),
+      actor: undefined,
+    } as unknown as ActivityEvent;
     const changed = applyActivityEvent(state, event);
     expect(changed).toEqual([]);
   });
@@ -280,7 +288,9 @@ describe('evaluateRulesForWallet — self_redemption', () => {
     );
     const flags = evaluateRulesForWallet(state, 'S1');
     expect(flags.some((f) => f.heuristic === 'self_redemption')).toBe(true);
-    expect(flags.find((f) => f.heuristic === 'self_redemption')!.severity).toBe('high');
+    expect(flags.find((f) => f.heuristic === 'self_redemption')!.severity).toBe(
+      'high',
+    );
   });
 
   it('does not flag when a different wallet redeemed the code', () => {
@@ -303,7 +313,10 @@ describe('evaluateRulesForWallet — self_redemption', () => {
 // ─── evaluateRulesForWallet — fast_redemption_pattern ───────────────────────
 
 describe('evaluateRulesForWallet — fast_redemption_pattern', () => {
-  function buildFastRedemptionState(fastCount: number, slowCount: number): IncrementalFraudState {
+  function buildFastRedemptionState(
+    fastCount: number,
+    slowCount: number,
+  ): IncrementalFraudState {
     const state = createInitialIncrementalState();
     let idx = 0;
     for (let i = 0; i < fastCount; i++) {
@@ -337,20 +350,26 @@ describe('evaluateRulesForWallet — fast_redemption_pattern', () => {
     // 5 fast / 5 total = 100% > 0.6 threshold
     const state = buildFastRedemptionState(5, 0);
     const flags = evaluateRulesForWallet(state, 'S2');
-    expect(flags.some((f) => f.heuristic === 'fast_redemption_pattern')).toBe(true);
+    expect(flags.some((f) => f.heuristic === 'fast_redemption_pattern')).toBe(
+      true,
+    );
   });
 
   it('does not flag below the minimum redemption volume', () => {
     // Only 2 redemptions, below MIN_REDEMPTIONS_FOR_SPEED_CHECK (3)
     const state = buildFastRedemptionState(2, 0);
     const flags = evaluateRulesForWallet(state, 'S2');
-    expect(flags.some((f) => f.heuristic === 'fast_redemption_pattern')).toBe(false);
+    expect(flags.some((f) => f.heuristic === 'fast_redemption_pattern')).toBe(
+      false,
+    );
   });
 
   it('does not flag when fast ratio is below threshold (1 fast / 5 total = 20%)', () => {
     const state = buildFastRedemptionState(1, 4);
     const flags = evaluateRulesForWallet(state, 'S2');
-    expect(flags.some((f) => f.heuristic === 'fast_redemption_pattern')).toBe(false);
+    expect(flags.some((f) => f.heuristic === 'fast_redemption_pattern')).toBe(
+      false,
+    );
   });
 });
 
@@ -380,11 +399,17 @@ describe('evaluateRulesForWallet — rapid_contact_burst', () => {
     for (let i = 0; i < MIN_COUNT; i++) {
       applyActivityEvent(
         state,
-        makeEvent('player_contacted', 'S3', baseTs + i * (WINDOW_MS / 1000 + 60)),
+        makeEvent(
+          'player_contacted',
+          'S3',
+          baseTs + i * (WINDOW_MS / 1000 + 60),
+        ),
       );
     }
     const flags = evaluateRulesForWallet(state, 'S3');
-    expect(flags.some((f) => f.heuristic === 'rapid_contact_burst')).toBe(false);
+    expect(flags.some((f) => f.heuristic === 'rapid_contact_burst')).toBe(
+      false,
+    );
   });
 });
 
@@ -442,7 +467,10 @@ describe('updateActiveFlagsForChangedWallets', () => {
     // S2 — rapid contact burst (medium at 8, high at 16+)
     const baseTs = 1_700_000_000;
     for (let i = 0; i < DEFAULT_THRESHOLDS.CONTACT_BURST_MIN_COUNT; i++) {
-      applyActivityEvent(state, makeEvent('player_contacted', 'S2', baseTs + i * 60));
+      applyActivityEvent(
+        state,
+        makeEvent('player_contacted', 'S2', baseTs + i * 60),
+      );
     }
     const allFlags = updateActiveFlagsForChangedWallets(state, ['S1', 'S2']);
     const severities = allFlags.map((f) => f.severity);
@@ -461,9 +489,17 @@ describe('runIncrementalStep', () => {
   it('processes referral codes and activity events and returns changed wallets', () => {
     const state = createInitialIncrementalState();
     const codes: ReferralCode[] = [
-      makeCode({ code: 'A', scoutWallet: 'S1', createdAt: 1000, usedBy: 'S1', usedAt: 2000 }),
+      makeCode({
+        code: 'A',
+        scoutWallet: 'S1',
+        createdAt: 1000,
+        usedBy: 'S1',
+        usedAt: 2000,
+      }),
     ];
-    const events: ActivityEvent[] = [makeEvent('player_contacted', 'S2', 1_700_000_000)];
+    const events: ActivityEvent[] = [
+      makeEvent('player_contacted', 'S2', 1_700_000_000),
+    ];
     const result = runIncrementalStep(state, codes, events);
     expect(result.changedWallets).toContain('S1');
     expect(result.changedWallets).toContain('S2');
@@ -504,8 +540,20 @@ describe('EQUIVALENCE: incremental vs full evaluation', () => {
   // ── self_redemption ────────────────────────────────────────────────────────
   describe('self_redemption', () => {
     const codes: ReferralCode[] = [
-      makeCode({ code: 'A', scoutWallet: 'S1', createdAt: 0, usedBy: 'S1', usedAt: 1000 }),
-      makeCode({ code: 'B', scoutWallet: 'S2', createdAt: 0, usedBy: 'R1', usedAt: 1000 }),
+      makeCode({
+        code: 'A',
+        scoutWallet: 'S1',
+        createdAt: 0,
+        usedBy: 'S1',
+        usedAt: 1000,
+      }),
+      makeCode({
+        code: 'B',
+        scoutWallet: 'S2',
+        createdAt: 0,
+        usedBy: 'R1',
+        usedAt: 1000,
+      }),
     ];
 
     it('produces the same flags incrementally and in full', () => {
@@ -598,9 +646,9 @@ describe('EQUIVALENCE: incremental vs full evaluation', () => {
       const fullFlags = analyzePayToContactAbuse(events);
       const state = createInitialIncrementalState();
       const { flags: incFlags } = runIncrementalStep(state, [], events);
-      expect(
-        incFlags.some((f) => f.heuristic === 'rapid_contact_burst'),
-      ).toBe(fullFlags.some((f) => f.heuristic === 'rapid_contact_burst'));
+      expect(incFlags.some((f) => f.heuristic === 'rapid_contact_burst')).toBe(
+        fullFlags.some((f) => f.heuristic === 'rapid_contact_burst'),
+      );
     });
   });
 
@@ -621,9 +669,9 @@ describe('EQUIVALENCE: incremental vs full evaluation', () => {
       const fullFlags = analyzePayToContactAbuse(events);
       const state = createInitialIncrementalState();
       const { flags: incFlags } = runIncrementalStep(state, [], events);
-      expect(
-        incFlags.some((f) => f.heuristic === 'subscription_cycling'),
-      ).toBe(fullFlags.some((f) => f.heuristic === 'subscription_cycling'));
+      expect(incFlags.some((f) => f.heuristic === 'subscription_cycling')).toBe(
+        fullFlags.some((f) => f.heuristic === 'subscription_cycling'),
+      );
     });
   });
 
@@ -631,7 +679,13 @@ describe('EQUIVALENCE: incremental vs full evaluation', () => {
   describe('combined dataset (all referral heuristics at once)', () => {
     const codes: ReferralCode[] = [
       // self_redemption
-      makeCode({ code: 'SELF', scoutWallet: 'SCOUT_SELF', createdAt: 0, usedBy: 'SCOUT_SELF', usedAt: 1000 }),
+      makeCode({
+        code: 'SELF',
+        scoutWallet: 'SCOUT_SELF',
+        createdAt: 0,
+        usedBy: 'SCOUT_SELF',
+        usedAt: 1000,
+      }),
       // fast_redemption_pattern (5 fast codes for SCOUT_FAST)
       ...Array.from({ length: 5 }, (_, i) =>
         makeCode({
@@ -686,7 +740,13 @@ describe('EQUIVALENCE: incremental vs full evaluation', () => {
 
 describe('chunked incremental processing', () => {
   const codes: ReferralCode[] = [
-    makeCode({ code: 'A', scoutWallet: 'S1', createdAt: 0, usedBy: 'S1', usedAt: 1000 }),
+    makeCode({
+      code: 'A',
+      scoutWallet: 'S1',
+      createdAt: 0,
+      usedBy: 'S1',
+      usedAt: 1000,
+    }),
     ...Array.from({ length: 5 }, (_, i) =>
       makeCode({
         code: `F${i}`,
@@ -731,7 +791,9 @@ describe('chunked incremental processing', () => {
 
     // First pass: ultra-short budget
     const stateResume = createInitialIncrementalState();
-    const pass1 = runIncrementalStep(stateResume, codes, [], { timeBudgetMs: 0 });
+    const pass1 = runIncrementalStep(stateResume, codes, [], {
+      timeBudgetMs: 0,
+    });
     expect(pass1.hitTimeBudget).toBe(true);
 
     // Second pass: process remaining codes on the same state

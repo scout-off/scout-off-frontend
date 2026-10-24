@@ -115,11 +115,35 @@ export function createRequestLogger(request: Request): RequestLogger {
     spanId: traceCtx.parentSpanId,
     outboundTraceparent: () => outboundTraceparent(traceCtx),
     info: (message, fields) =>
-      emit('info', requestId, traceCtx.traceId, traceCtx.parentSpanId, route, message, fields),
+      emit(
+        'info',
+        requestId,
+        traceCtx.traceId,
+        traceCtx.parentSpanId,
+        route,
+        message,
+        fields,
+      ),
     warn: (message, fields) =>
-      emit('warn', requestId, traceCtx.traceId, traceCtx.parentSpanId, route, message, fields),
+      emit(
+        'warn',
+        requestId,
+        traceCtx.traceId,
+        traceCtx.parentSpanId,
+        route,
+        message,
+        fields,
+      ),
     error: (message, fields) =>
-      emit('error', requestId, traceCtx.traceId, traceCtx.parentSpanId, route, message, fields),
+      emit(
+        'error',
+        requestId,
+        traceCtx.traceId,
+        traceCtx.parentSpanId,
+        route,
+        message,
+        fields,
+      ),
   };
 }
 

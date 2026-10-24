@@ -1,8 +1,5 @@
 import type { PlayerFilter, SavedSearch } from '@/types';
-import {
-  fetchWithRetry,
-  fetchWithTimeout,
-} from '@/lib/fetchWithRetry';
+import { fetchWithRetry, fetchWithTimeout } from '@/lib/fetchWithRetry';
 
 /** Client for app/api/saved-searches — same-origin, cookie-authenticated. */
 

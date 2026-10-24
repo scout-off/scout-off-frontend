@@ -59,22 +59,22 @@ authoritative version to update.
 
 ## Files changed
 
-| File | Change |
-|------|--------|
+| File                  | Change                                                        |
+| --------------------- | ------------------------------------------------------------- |
 | `public/offline.html` | New — self-contained branded offline fallback page (en/fr/sw) |
-| `next.config.js` | Add `fallbacks: { document: '/offline.html' }` to `withPWA` |
-| `messages/en.json` | Add `offline.fallback_{heading,body,retry}` keys |
-| `messages/fr.json` | Add `offline.fallback_{heading,body,retry}` keys |
-| `messages/sw.json` | Add `offline.fallback_{heading,body,retry}` keys |
+| `next.config.js`      | Add `fallbacks: { document: '/offline.html' }` to `withPWA`   |
+| `messages/en.json`    | Add `offline.fallback_{heading,body,retry}` keys              |
+| `messages/fr.json`    | Add `offline.fallback_{heading,body,retry}` keys              |
+| `messages/sw.json`    | Add `offline.fallback_{heading,body,retry}` keys              |
 
 ## Validation
 
-| Check | Result |
-|-------|--------|
-| `node scripts/validate-pr-bodies.js` | ✅ passes |
-| `node scripts/check-locale-keys.js` | ✅ all three locales in sync |
-| `npm run type-check` | ✅ no new errors |
-| Manual: open app, go offline, navigate to uncached page | ✅ `offline.html` served |
+| Check                                                   | Result                       |
+| ------------------------------------------------------- | ---------------------------- |
+| `node scripts/validate-pr-bodies.js`                    | ✅ passes                    |
+| `node scripts/check-locale-keys.js`                     | ✅ all three locales in sync |
+| `npm run type-check`                                    | ✅ no new errors             |
+| Manual: open app, go offline, navigate to uncached page | ✅ `offline.html` served     |
 
 ## Out of scope
 

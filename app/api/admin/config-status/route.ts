@@ -24,7 +24,9 @@ export async function GET(req: NextRequest) {
     };
   });
 
-  const siteKeySet = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim());
+  const siteKeySet = Boolean(
+    process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim(),
+  );
   const secretSet = Boolean(process.env.TURNSTILE_SECRET_KEY?.trim());
   // Both set or both unset is consistent; a mismatch means the widget renders
   // without server verification, or the server verifies without a widget.

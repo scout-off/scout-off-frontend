@@ -52,7 +52,9 @@ const TOPICS_RE = /^[a-zA-Z0-9_-]+(,[a-zA-Z0-9_-]+)*$/;
  */
 const LAST_EVENT_ID_RE = /^[a-zA-Z0-9_\-.:/]{1,128}$/;
 
-function validateParams(searchParams: URLSearchParams):
+function validateParams(
+  searchParams: URLSearchParams,
+):
   | { topics?: string; wallet?: string; lastEventId?: string }
   | { error: string } {
   const topics = searchParams.get('topics');

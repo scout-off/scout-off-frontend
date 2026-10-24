@@ -21,8 +21,7 @@ export default function ServiceWorkerUpdateBanner() {
       className="w-full bg-sky-500 text-white px-4 py-3 flex items-center justify-between gap-4 sticky top-0 z-50 border-b border-sky-600"
     >
       <span className="text-sm">
-        <strong className="font-semibold">{t('title')}</strong>{' '}
-        {t('message')}
+        <strong className="font-semibold">{t('title')}</strong> {t('message')}
       </span>
       <div className="flex shrink-0 items-center gap-2">
         <button

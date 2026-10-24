@@ -1,10 +1,7 @@
 /** Client for app/api/notification-preferences — same-origin, cookie-authenticated. */
 import type { NotificationPreferences } from '@/types';
 import { registerHandler, OfflineQueueConflictError } from '@/lib/offlineQueue';
-import {
-  fetchWithRetry,
-  fetchWithTimeout,
-} from '@/lib/fetchWithRetry';
+import { fetchWithRetry, fetchWithTimeout } from '@/lib/fetchWithRetry';
 
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   milestoneApprovals: true,

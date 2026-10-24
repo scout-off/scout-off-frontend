@@ -14,7 +14,8 @@ describe('database store lifecycle', () => {
     }));
     process.env.INDEXER_DATABASE_URL = 'postgres://localhost/indexer';
 
-    const { closeStore, createPgPoolFromEnv } = require('../index') as typeof import('../index');
+    const { closeStore, createPgPoolFromEnv } =
+      require('../index') as typeof import('../index');
     expect(createPgPoolFromEnv()).not.toBeNull();
 
     await closeStore();

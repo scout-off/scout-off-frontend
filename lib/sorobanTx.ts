@@ -36,10 +36,7 @@
  *   setTxHash(hash);
  */
 
-import {
-  TransactionFailedError,
-  TransactionTimeoutError,
-} from '@/lib/stellar';
+import { TransactionFailedError, TransactionTimeoutError } from '@/lib/stellar';
 import { extractContractErrorKey } from '@/lib/contractErrorMessage';
 
 export { TransactionFailedError, TransactionTimeoutError };
@@ -161,7 +158,8 @@ export function classifySorobanError(err: unknown): SorobanTxError {
     };
   }
 
-  const rawMessage = err instanceof Error ? err.message : String(err ?? 'Transaction failed');
+  const rawMessage =
+    err instanceof Error ? err.message : String(err ?? 'Transaction failed');
   const i18nKey = extractContractErrorKey(rawMessage);
 
   return {

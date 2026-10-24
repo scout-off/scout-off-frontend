@@ -37,9 +37,7 @@ export default function SpendingSummary() {
       <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
         <h2 className="text-lg font-semibold text-white">{t('title')}</h2>
         <p className="text-sm text-gray-500">
-          {error
-            ? t('load_error')
-            : t('no_data')}
+          {error ? t('load_error') : t('no_data')}
         </p>
       </section>
     );
@@ -96,8 +94,12 @@ export default function SpendingSummary() {
               <thead>
                 <tr className="text-left text-gray-500 text-xs uppercase tracking-wider">
                   <th className="pb-2 font-medium">{t('month')}</th>
-                  <th className="pb-2 font-medium text-right">{t('contact_fees')}</th>
-                  <th className="pb-2 font-medium text-right">{t('subscriptions')}</th>
+                  <th className="pb-2 font-medium text-right">
+                    {t('contact_fees')}
+                  </th>
+                  <th className="pb-2 font-medium text-right">
+                    {t('subscriptions')}
+                  </th>
                   <th className="pb-2 font-medium text-right">{t('total')}</th>
                 </tr>
               </thead>
@@ -125,9 +127,7 @@ export default function SpendingSummary() {
       )}
 
       {!hasSpending && (
-        <p className="text-sm text-gray-500">
-          {t('no_payments')}
-        </p>
+        <p className="text-sm text-gray-500">{t('no_payments')}</p>
       )}
     </section>
   );

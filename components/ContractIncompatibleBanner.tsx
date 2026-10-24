@@ -22,9 +22,7 @@ export default function ContractIncompatibleBanner() {
       className="w-full bg-red-600 text-white px-4 py-3 sticky top-0 z-50 border-b border-red-800"
     >
       <strong className="font-semibold">{t('incompatible_title')}</strong>{' '}
-      <span className="text-sm">
-        {message ?? t('incompatible_message')}
-      </span>
+      <span className="text-sm">{message ?? t('incompatible_message')}</span>
     </div>
   );
 }

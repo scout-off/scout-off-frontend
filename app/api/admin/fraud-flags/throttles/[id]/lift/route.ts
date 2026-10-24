@@ -30,7 +30,12 @@ export async function POST(
 
   const id = Number(params.id);
   if (!Number.isInteger(id)) {
-    return apiError(ApiErrorCode.INVALID_FIELD_VALUE, 400, 'Invalid throttle id', { field: 'id' });
+    return apiError(
+      ApiErrorCode.INVALID_FIELD_VALUE,
+      400,
+      'Invalid throttle id',
+      { field: 'id' },
+    );
   }
 
   const body = await req.json().catch(() => ({}));
@@ -60,13 +65,21 @@ export async function POST(
       reason,
     );
     if (!lifted) {
-      return apiError(ApiErrorCode.THROTTLE_NOT_FOUND, 404, 'Throttle not found or already lifted');
+      return apiError(
+        ApiErrorCode.THROTTLE_NOT_FOUND,
+        404,
+        'Throttle not found or already lifted',
+      );
     }
     return privateJson(lifted);
   } catch (err) {
     log.error('Failed to lift fraud throttle', {
       reason: err instanceof Error ? err.message : String(err),
     });
-    return apiError(ApiErrorCode.INTERNAL_ERROR, 500, 'Failed to lift throttle');
+    return apiError(
+      ApiErrorCode.INTERNAL_ERROR,
+      500,
+      'Failed to lift throttle',
+    );
   }
 }

@@ -69,9 +69,11 @@ describe('executeWalletMigration', () => {
 
     expect(WatchlistStore.getInstance().list(TO)).toHaveLength(2);
     expect(WatchlistStore.getInstance().list(FROM)).toHaveLength(0);
-    expect(SavedSearchStore.getInstance().list(TO).map((s) => s.name)).toEqual([
-      'Strikers',
-    ]);
+    expect(
+      SavedSearchStore.getInstance()
+        .list(TO)
+        .map((s) => s.name),
+    ).toEqual(['Strikers']);
     expect(SavedSearchStore.getInstance().list(FROM)).toHaveLength(0);
     expect(NotificationPreferencesStore.getInstance().get(TO)).toEqual({
       milestoneApprovals: false,
@@ -99,7 +101,10 @@ describe('executeWalletMigration', () => {
 
     // counts reflects what was snapshotted from `from`, not net-new rows.
     expect(result.counts.watchlist).toBe(2);
-    const ids = watchlist.list(TO).map((e) => e.playerId).sort();
+    const ids = watchlist
+      .list(TO)
+      .map((e) => e.playerId)
+      .sort();
     expect(ids).toEqual(['PLAYER-1', 'PLAYER-2']);
     expect(watchlist.list(FROM)).toHaveLength(0);
   });
@@ -153,7 +158,10 @@ describe('executeWalletMigration', () => {
   it('writes default preferences to the destination when the source had none', async () => {
     const prefs = NotificationPreferencesStore.getInstance();
     const defaults = prefs.get('GNOBODY');
-    prefs.set(TO, { milestoneApprovals: !defaults.milestoneApprovals, contactUnlocks: !defaults.contactUnlocks });
+    prefs.set(TO, {
+      milestoneApprovals: !defaults.milestoneApprovals,
+      contactUnlocks: !defaults.contactUnlocks,
+    });
 
     const result = await executeWalletMigration(FROM, TO);
 
@@ -200,7 +208,9 @@ describe('executeWalletMigration', () => {
 
     // Documents current behaviour: no guard against from === to.
     expect(WatchlistStore.getInstance().list(FROM)).toHaveLength(2);
-    expect(NotificationReadStore.getInstance().getReadIds(FROM)).toHaveLength(3);
+    expect(NotificationReadStore.getInstance().getReadIds(FROM)).toHaveLength(
+      3,
+    );
     expect(NotificationPreferencesStore.getInstance().get(FROM)).toEqual(
       NotificationPreferencesStore.getInstance().get('GNOBODY'),
     );
@@ -215,7 +225,9 @@ describe('executeWalletMigration', () => {
     expect(result.toWallet).toBe(TO);
     expect(result.migratedAt).toBeGreaterThanOrEqual(before);
     expect(result.migratedAt).toBeLessThanOrEqual(Date.now());
-    expect(result.onChainTransferBlocked.trackingIssue).toMatch(/\/issues\/1315$/);
+    expect(result.onChainTransferBlocked.trackingIssue).toMatch(
+      /\/issues\/1315$/,
+    );
     expect(result.onChainTransferBlocked.reason).toContain('transfer_player');
   });
 });

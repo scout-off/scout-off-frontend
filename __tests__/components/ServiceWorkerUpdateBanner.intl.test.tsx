@@ -19,8 +19,12 @@ describe('ServiceWorkerUpdateBanner localization', () => {
 
   it('renders French copy and accessible names', () => {
     render(<ServiceWorkerUpdateBanner />, { locale: 'fr' });
-    expect(screen.getByText('Nouvelle version disponible.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Recharger' })).toBeInTheDocument();
+    expect(
+      screen.getByText('Nouvelle version disponible.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Recharger' }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Fermer la bannière de mise à jour' }),
     ).toBeInTheDocument();
@@ -29,6 +33,8 @@ describe('ServiceWorkerUpdateBanner localization', () => {
   it('renders Swahili copy', () => {
     render(<ServiceWorkerUpdateBanner />, { locale: 'sw' });
     expect(screen.getByText('Toleo jipya linapatikana.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Pakia upya' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Pakia upya' }),
+    ).toBeInTheDocument();
   });
 });
