@@ -47,6 +47,9 @@ function stubMessage(key: string): string {
 
 jest.mock('next-intl', () => {
   const original = jest.requireActual<typeof import('next-intl')>('next-intl');
+  // Built once: real next-intl returns a stable `t` across renders, which
+  // the hook's useCallback relies on.
+  let apiErrorsT: ((key: string) => string) | undefined;
   return {
     ...original,
     useTranslations: (namespace?: string) => {
@@ -54,12 +57,15 @@ jest.mock('next-intl', () => {
         // Delegate to the original mock for other namespaces
         return (key: string) => key;
       }
-      const knownSet = new Set<string>(KNOWN_CODES);
-      const t = (key: string, _values?: Record<string, unknown>) =>
-        stubMessage(key);
-      t.has = (key: string) => knownSet.has(key);
-      t.rich = (key: string) => stubMessage(key);
-      return t;
+      if (!apiErrorsT) {
+        const knownSet = new Set<string>(KNOWN_CODES);
+        const t = (key: string, _values?: Record<string, unknown>) =>
+          stubMessage(key);
+        t.has = (key: string) => knownSet.has(key);
+        t.rich = (key: string) => stubMessage(key);
+        apiErrorsT = t;
+      }
+      return apiErrorsT;
     },
     useLocale: () => 'en',
   };

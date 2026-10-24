@@ -151,6 +151,9 @@ describe('useApprovalQueue', () => {
     const { result } = renderHook(() => useApprovalQueue(VALIDATOR));
     await waitFor(() => expect(result.current.loaded).toBe(true));
 
+    // waitFor advances the fake clock while polling, so compare against the
+    // clock as it stands when enqueue runs rather than the initial NOW.
+    const enqueuedAt = Date.now();
     let intent: ApprovalIntent | undefined;
     await act(async () => {
       intent = await result.current.enqueue({
@@ -159,7 +162,7 @@ describe('useApprovalQueue', () => {
       });
     });
 
-    expect(intent?.queuedAt).toBe(NOW);
+    expect(intent?.queuedAt).toBe(enqueuedAt);
     expect(result.current.pending).toHaveLength(1);
     expect(result.current.pending[0].playerId).toBe('p1');
   });

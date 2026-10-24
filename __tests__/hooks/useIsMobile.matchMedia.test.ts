@@ -4,6 +4,9 @@ import { useIsMobile } from '@/hooks/useIsMobile';
 type Listener = (e: { matches: boolean }) => void;
 
 function installMatchMedia(initial: boolean) {
+  // Like a real MediaQueryList, `matches` reflects the latest state — the
+  // hook re-reads it (useSyncExternalStore) when a change event fires.
+  let current = initial;
   const listeners = new Set<Listener>();
   const addEventListener = jest.fn((_type: string, cb: Listener) => {
     listeners.add(cb);
@@ -12,7 +15,9 @@ function installMatchMedia(initial: boolean) {
     listeners.delete(cb);
   });
   const matchMedia = jest.fn((query: string) => ({
-    matches: initial,
+    get matches() {
+      return current;
+    },
     media: query,
     addEventListener,
     removeEventListener,
@@ -22,7 +27,10 @@ function installMatchMedia(initial: boolean) {
     writable: true,
     value: matchMedia,
   });
-  const emit = (matches: boolean) => listeners.forEach((l) => l({ matches }));
+  const emit = (matches: boolean) => {
+    current = matches;
+    listeners.forEach((l) => l({ matches }));
+  };
   return { matchMedia, addEventListener, removeEventListener, emit, listeners };
 }
 

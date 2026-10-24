@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { parseApiError } from '@/lib/apiErrors';
+import { parseApiError } from '@/lib/apiErrorCodes';
 
 /**
  * Returns a function mapping an API error response body (see
