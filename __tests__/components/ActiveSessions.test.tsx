@@ -14,6 +14,11 @@ jest.mock('@/components/ui/Toast', () => ({
   useToast: () => ({ show: mockShow }),
 }));
 
+const mockRefreshSession = jest.fn();
+jest.mock('@/lib/sessionClient', () => ({
+  refreshSession: () => mockRefreshSession(),
+}));
+
 function session(overrides: Record<string, unknown> = {}) {
   return {
     id: 'sess-1',
@@ -184,5 +189,56 @@ describe('ActiveSessions', () => {
         }),
       ),
     );
+  });
+
+  it('refreshes an expired access token once and retries the revoke', async () => {
+    mockRefreshSession.mockResolvedValue({
+      authenticated: true,
+      publicKey: 'GWALLET',
+    });
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ sessions: [session()] }),
+      })
+      .mockResolvedValueOnce({ ok: false, status: 401 })
+      .mockResolvedValueOnce({ ok: true });
+
+    render(<ActiveSessions />);
+    await screen.findByText('Chrome on macOS');
+    await userEvent.click(screen.getByRole('button', { name: 'Revoke' }));
+
+    await waitFor(() =>
+      expect(screen.queryByText('Chrome on macOS')).not.toBeInTheDocument(),
+    );
+    expect(mockRefreshSession).toHaveBeenCalledTimes(1);
+    expect(global.fetch).toHaveBeenCalledTimes(3);
+    expect(global.fetch).toHaveBeenLastCalledWith('/api/auth/sessions/sess-1', {
+      method: 'DELETE',
+    });
+  });
+
+  it('does not retry when the session cannot be refreshed', async () => {
+    mockRefreshSession.mockResolvedValue({
+      authenticated: false,
+      publicKey: null,
+    });
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ sessions: [session()] }),
+      })
+      .mockResolvedValueOnce({ ok: false, status: 401 });
+
+    render(<ActiveSessions />);
+    await screen.findByText('Chrome on macOS');
+    await userEvent.click(screen.getByRole('button', { name: 'Revoke' }));
+
+    await waitFor(() =>
+      expect(mockShow).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: 'error' }),
+      ),
+    );
+    expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 });

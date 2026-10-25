@@ -8,6 +8,23 @@ import { useToast } from '@/components/ui/Toast';
 import type { ActiveSessionSummary } from '@/app/api/auth/sessions/route';
 import { formatDateTime, formatRelativeTime } from '@/lib/localeFormat';
 import type { Locale } from '@/lib/locales';
+import { refreshSession } from '@/lib/sessionClient';
+
+/**
+ * fetch() that survives an access token expiring mid-visit: on a 401 it
+ * rotates the session once (refreshSession dedupes across callers and tabs)
+ * and retries. Without this, revoking a device right after the short-lived
+ * access token lapsed failed with "couldn't revoke" instead of just working.
+ */
+async function fetchWithSessionRefresh(
+  input: string,
+  init?: RequestInit,
+): Promise<Response> {
+  const res = await fetch(input, init);
+  if (res.status !== 401) return res;
+  const refreshed = await refreshSession();
+  return refreshed.authenticated ? fetch(input, init) : res;
+}
 
 /**
  * "Active sessions" view (issue #1187) — every currently-active server-side
@@ -35,7 +52,7 @@ export default function ActiveSessions() {
     setLoading(true);
     setError(false);
     try {
-      const res = await fetch('/api/auth/sessions');
+      const res = await fetchWithSessionRefresh('/api/auth/sessions');
       if (!res.ok) throw new Error(`Failed to load sessions: ${res.status}`);
       const body = await res.json();
       setSessions(body.sessions ?? []);
@@ -58,9 +75,12 @@ export default function ActiveSessions() {
 
     setRevokingId(session.id);
     try {
-      const res = await fetch(`/api/auth/sessions/${session.id}`, {
-        method: 'DELETE',
-      });
+      const res = await fetchWithSessionRefresh(
+        `/api/auth/sessions/${session.id}`,
+        {
+          method: 'DELETE',
+        },
+      );
       if (!res.ok) throw new Error(`Failed to revoke session: ${res.status}`);
 
       if (session.isCurrent) {
