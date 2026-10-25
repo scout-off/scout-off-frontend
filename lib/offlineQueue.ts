@@ -255,15 +255,27 @@ async function getDb(): Promise<IDBDatabase> {
  *   cost are identical to before this option existed.
  * @returns The id of the newly queued action.
  */
+// Last queuedAt handed out by this page. Actions replay in queuedAt order
+// (the IndexedDB index), and ties fall back to the id's random suffix, so two
+// actions queued in the same millisecond could replay out of order. Keep the
+// timestamps strictly increasing instead.
+let lastQueuedAt = 0;
+
+function nextQueuedAt(): number {
+  lastQueuedAt = Math.max(Date.now(), lastQueuedAt + 1);
+  return lastQueuedAt;
+}
+
 export async function enqueueAction(
   type: string,
   payload: unknown,
   options?: { baseVersion?: number },
 ): Promise<string> {
   const db = await getDb();
+  const queuedAt = nextQueuedAt();
   const action: QueuedAction = {
-    id: `${type}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    queuedAt: Date.now(),
+    id: `${type}_${queuedAt}_${Math.random().toString(36).slice(2, 8)}`,
+    queuedAt,
     retryCount: 0,
     type,
     payload,

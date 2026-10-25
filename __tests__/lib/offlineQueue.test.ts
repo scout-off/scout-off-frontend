@@ -725,6 +725,29 @@ describe('Ordering: same-type actions process in enqueue order', () => {
 
     expect(processed).toEqual([1, 2, 3, 4, 5]);
   });
+
+  it('keeps enqueue order for actions queued in the same millisecond', async () => {
+    const processed: number[] = [];
+    registerHandler('same_ms_type', (a) => {
+      processed.push((a.payload as { seq: number }).seq);
+      return Promise.resolve();
+    });
+
+    // Freeze the clock: every action gets the same Date.now(). queuedAt must
+    // still increase, or ties replay in random id order.
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1_800_000_000_000);
+    try {
+      for (let seq = 1; seq <= 5; seq++) {
+        await enqueueAction('same_ms_type', { seq });
+      }
+    } finally {
+      nowSpy.mockRestore();
+    }
+
+    await processQueue();
+
+    expect(processed).toEqual([1, 2, 3, 4, 5]);
+  });
 });
 
 // ── Acceptance criterion 4 (issue #1178): multi-tab/device conflict resolution ─
