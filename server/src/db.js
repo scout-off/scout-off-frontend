@@ -102,4 +102,34 @@ if (!academyColumns.some((c) => c.name === 'quorum')) {
   db.exec('ALTER TABLE academies ADD COLUMN quorum INTEGER');
 }
 
+// Off-chain player data (issue #1287): the frontend's lib/api.ts already
+// calls GET /players/:id, GET /players/:id/comments, POST /players/:id/archive,
+// POST /players/:id/unarchive and POST /players/:id/backup-wallet/remove.
+// These tables back those endpoints. `players_offchain` holds per-player
+// off-chain profile state (archive flag + backup wallet), while
+// `player_comments` holds profile comments. Both are keyed by the on-chain
+// player id (a string) so they can be joined against on-chain data by the
+// frontend without a separate mapping table.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS players_offchain (
+    player_id TEXT PRIMARY KEY,
+    archived INTEGER NOT NULL DEFAULT 0,
+    archived_at INTEGER,
+    backup_wallet TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS player_comments (
+    id TEXT PRIMARY KEY,
+    player_id TEXT NOT NULL,
+    author_wallet TEXT NOT NULL,
+    body TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_player_comments_player_id
+    ON player_comments (player_id, created_at);
+`);
+
 module.exports = db;
