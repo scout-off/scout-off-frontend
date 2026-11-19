@@ -3,6 +3,7 @@ import { requireAdminWallet } from '@/lib/adminAuth';
 import { getSessionWallet } from '@/lib/session';
 import { privateJson } from '@/lib/httpResponses';
 import { ENV_MANIFEST, isRequiredInProduction } from '@/lib/envManifest';
+import { getContactVaultKeyIdCounts } from '@/lib/contactVaultCrypto';
 
 // Driven by lib/envManifest.ts (issue #1327). Only reports presence — never
 // return secret values.
@@ -35,6 +36,16 @@ export async function GET(req: NextRequest) {
     mismatched: siteKeySet !== secretSet,
   };
 
+  // Per-kid row counts for the contact vault keyring (issue #1472). Operators
+  // use this to know when an old key can be removed. Never returns key
+  // material — only kid labels and counts.
+  let contactVaultKeys: { kid: string; count: number }[] = [];
+  try {
+    contactVaultKeys = await getContactVaultKeyIdCounts();
+  } catch {
+    contactVaultKeys = [];
+  }
+
   // Appended as an extra row so the existing array response shape is unchanged.
   return privateJson([
     ...result,
@@ -44,6 +55,13 @@ export async function GET(req: NextRequest) {
       secret: false,
       present: !turnstile.mismatched,
       turnstile,
+    },
+    {
+      name: 'CONTACT_VAULT_KEYS',
+      required: false,
+      secret: false,
+      present: contactVaultKeys.length > 0,
+      contactVaultKeys,
     },
   ]);
 }
