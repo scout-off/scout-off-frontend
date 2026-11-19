@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { useComparePlayers } from '@/hooks/useComparePlayers';
 import PlayerCompareView from '@/components/scout/PlayerCompareView';
+import CompareActions from '@/components/scout/CompareActions';
 import Spinner from '@/components/ui/Spinner';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 
@@ -96,6 +97,7 @@ function ParseIds() {
           })}
         </p>
       )}
+      <CompareActions players={players} />
       <PlayerCompareView players={players} />
     </div>
   );

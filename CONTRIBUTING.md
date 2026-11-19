@@ -152,6 +152,17 @@ Allowed types: `feat`, `fix`, `build`, `chore`, `ci`, `docs`, `perf`, `refactor`
 - `Update file`
 - `asdf`
 
+### Release changelog step
+
+At release time, maintainers draft the public changelog (`content/changelog.md`, rendered at `/en/changelog`) from the commits since the last release tag:
+
+```bash
+npm run changelog:draft -- --dry-run          # preview the entry
+npm run changelog:draft -- --title "Release title"
+```
+
+`feat` commits go under **Added**, `perf`/`refactor` under **Improved**, and `fix` under **Fixed**. `chore`, `ci`, `test`, `docs`, `build`, `style`, and dependency bumps are skipped, and issue/PR refs are stripped. Without a tag, commits since the newest entry's date are used (`--since <ref>` overrides). The output is a draft: edit each line to be user-facing before merging. Changelog content is English only; translated changelogs are a possible follow-up.
+
 ## Development Workflow
 
 1. Create a branch from `main`:
