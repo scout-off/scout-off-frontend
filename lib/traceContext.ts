@@ -24,8 +24,9 @@ import { randomBytes } from 'crypto';
 export const TRACEPARENT_HEADER = 'traceparent';
 export const TRACESTATE_HEADER = 'tracestate';
 
+// The spec requires lowercase hex, so the match is case-sensitive.
 const TRACEPARENT_RE =
-  /^([0-9a-f]{2})-([0-9a-f]{32})-([0-9a-f]{16})-([0-9a-f]{2})$/i;
+  /^([0-9a-f]{2})-([0-9a-f]{32})-([0-9a-f]{16})-([0-9a-f]{2})$/;
 
 export interface TraceContext {
   /** 32-char hex trace id — the same across the whole distributed call tree. */
@@ -57,12 +58,14 @@ export function parseTraceparent(
   if (!value) return null;
   const m = TRACEPARENT_RE.exec(value.trim());
   if (!m) return null;
-  const [, , /* version */ traceId, parentSpanId, flags] = m;
+  const [, version, traceId, parentSpanId, flags] = m;
+  // Version ff is reserved as invalid by the spec.
+  if (version === 'ff') return null;
   // All-zeros trace-id or span-id are forbidden by the spec.
   if (/^0+$/.test(traceId) || /^0+$/.test(parentSpanId)) return null;
   return {
-    traceId: traceId.toLowerCase(),
-    parentSpanId: parentSpanId.toLowerCase(),
+    traceId,
+    parentSpanId,
     sampled: (parseInt(flags, 16) & 0x01) === 1,
   };
 }
