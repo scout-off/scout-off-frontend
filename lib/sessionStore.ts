@@ -16,6 +16,14 @@
  * cookie on its very next request even though the token remains
  * cryptographically valid until its `exp`.
  *
+ * Step-up re-authentication (issue #1676): each row also records
+ * `auth_time`, the epoch-ms instant the wallet owner last proved presence
+ * with a fresh SEP-10 signature. It is set on login and on a successful
+ * step-up challenge, and is deliberately NOT touched by refresh-token
+ * rotation (`touch()`), so a stolen refresh cookie cannot refresh its way
+ * into a "recently authenticated" state. Sensitive routes gate on it via
+ * requireRecentAuth().
+ *
  * Mirrors lib/watchlistStore.ts / lib/notificationReadStore.ts's
  * conventions: one table, idempotent `CREATE TABLE IF NOT EXISTS` DDL run
  * on construction, a process-wide singleton, DB bootstrap shared via
@@ -32,7 +40,8 @@ CREATE TABLE IF NOT EXISTS sessions (
   expires_at INTEGER NOT NULL,
   last_seen_at INTEGER NOT NULL,
   revoked_at INTEGER,
-  user_agent TEXT
+  user_agent TEXT,
+  auth_time INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_wallet ON sessions(wallet);
 `;
@@ -45,6 +54,8 @@ export interface SessionRow {
   lastSeenAt: number;
   revokedAt: number | null;
   userAgent: string | null;
+  /** Epoch ms of the last fresh SEP-10 proof of presence (login or step-up). */
+  authTime: number | null;
 }
 
 interface RawSessionRow {
@@ -55,6 +66,7 @@ interface RawSessionRow {
   last_seen_at: number;
   revoked_at: number | null;
   user_agent: string | null;
+  auth_time: number | null;
 }
 
 function rowToSession(row: RawSessionRow): SessionRow {
@@ -66,6 +78,7 @@ function rowToSession(row: RawSessionRow): SessionRow {
     lastSeenAt: row.last_seen_at,
     revokedAt: row.revoked_at,
     userAgent: row.user_agent,
+    authTime: row.auth_time,
   };
 }
 
@@ -77,6 +90,13 @@ export class SessionStore {
   private constructor(db: Database.Database) {
     this.db = db;
     this.db.exec(SCHEMA);
+    // Migrate pre-#1676 databases that predate the auth_time column.
+    const cols = this.db
+      .prepare('PRAGMA table_info(sessions)')
+      .all() as Array<{ name: string }>;
+    if (!cols.some((c) => c.name === 'auth_time')) {
+      this.db.exec('ALTER TABLE sessions ADD COLUMN auth_time INTEGER');
+    }
   }
 
   static getInstance(): SessionStore {
@@ -99,7 +119,8 @@ export class SessionStore {
   /**
    * Registers a freshly-issued session id, mapped to `wallet`, expiring at
    * `expiresAt` (epoch ms) — the same instant the paired refresh cookie's
-   * `maxAge` would naturally expire it.
+   * `maxAge` would naturally expire it. `auth_time` is stamped to now: a
+   * successful SEP-10 login is itself a fresh proof of presence.
    */
   create(
     id: string,
@@ -110,8 +131,8 @@ export class SessionStore {
     const now = Date.now();
     this.db
       .prepare(
-        `INSERT INTO sessions (id, wallet, created_at, expires_at, last_seen_at, revoked_at, user_agent)
-         VALUES (@id, @wallet, @created_at, @expires_at, @last_seen_at, NULL, @user_agent)`,
+        `INSERT INTO sessions (id, wallet, created_at, expires_at, last_seen_at, revoked_at, user_agent, auth_time)
+         VALUES (@id, @wallet, @created_at, @expires_at, @last_seen_at, NULL, @user_agent, @auth_time)`,
       )
       .run({
         id,
@@ -120,6 +141,7 @@ export class SessionStore {
         expires_at: expiresAt,
         last_seen_at: now,
         user_agent: userAgent ?? null,
+        auth_time: now,
       });
   }
 
@@ -129,6 +151,9 @@ export class SessionStore {
    * underlying session id (and therefore its revocation state) survives
    * across rotations instead of each refresh minting an unrelated session.
    * No-op if the session doesn't exist or is already revoked.
+   *
+   * Deliberately does NOT touch `auth_time`: refresh rotation must never
+   * count as a fresh proof of presence (issue #1676).
    */
   touch(id: string, expiresAt: number): void {
     this.db
@@ -137,6 +162,35 @@ export class SessionStore {
          WHERE id = ? AND revoked_at IS NULL`,
       )
       .run(expiresAt, Date.now(), id);
+  }
+
+  /**
+   * Records a fresh SEP-10 proof of presence on an existing session — the
+   * step-up re-authentication primitive (issue #1676). Updates `auth_time`
+   * on the given sid without minting a new session. Returns false if the
+   * session doesn't exist or is already revoked.
+   */
+  markReauthenticated(id: string): boolean {
+    const result = this.db
+      .prepare(
+        'UPDATE sessions SET auth_time = ? WHERE id = ? AND revoked_at IS NULL',
+      )
+      .run(Date.now(), id);
+    return result.changes > 0;
+  }
+
+  /**
+   * Returns the epoch-ms `auth_time` for `id`, or null if the session is
+   * missing, revoked, or has never recorded a proof of presence.
+   */
+  getAuthTime(id: string): number | null {
+    const row = this.db
+      .prepare(
+        'SELECT auth_time, revoked_at FROM sessions WHERE id = ?',
+      )
+      .get(id) as { auth_time: number | null; revoked_at: number | null } | undefined;
+    if (!row || row.revoked_at !== null) return null;
+    return row.auth_time;
   }
 
   /**
