@@ -16,6 +16,15 @@
  * cookie on its very next request even though the token remains
  * cryptographically valid until its `exp`.
  *
+ * Refresh-token rotation with reuse detection (see #1292): each session
+ * row records the `jti` of the refresh token currently in circulation
+ * (`current_refresh_jti`) plus the previous one and when it was rotated
+ * (`previous_refresh_jti` / `rotated_at`), so a short grace window can
+ * absorb concurrent refreshes from multiple tabs without looking like
+ * theft. Presenting any older `jti` revokes the whole session. Rows also
+ * carry an `absolute_expires_at` cap so a session can never be extended
+ * indefinitely by repeated refreshes.
+ *
  * Mirrors lib/watchlistStore.ts / lib/notificationReadStore.ts's
  * conventions: one table, idempotent `CREATE TABLE IF NOT EXISTS` DDL run
  * on construction, a process-wide singleton, DB bootstrap shared via
@@ -37,6 +46,18 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE INDEX IF NOT EXISTS idx_sessions_wallet ON sessions(wallet);
 `;
 
+/**
+ * Columns added after the initial schema. Applied idempotently on
+ * construction so existing databases pick them up without a separate
+ * migration runner.
+ */
+const ADDED_COLUMNS: Array<{ name: string; ddl: string }> = [
+  { name: 'current_refresh_jti', ddl: 'TEXT' },
+  { name: 'previous_refresh_jti', ddl: 'TEXT' },
+  { name: 'rotated_at', ddl: 'INTEGER' },
+  { name: 'absolute_expires_at', ddl: 'INTEGER' },
+];
+
 export interface SessionRow {
   id: string;
   wallet: string;
@@ -45,6 +66,10 @@ export interface SessionRow {
   lastSeenAt: number;
   revokedAt: number | null;
   userAgent: string | null;
+  currentRefreshJti: string | null;
+  previousRefreshJti: string | null;
+  rotatedAt: number | null;
+  absoluteExpiresAt: number | null;
 }
 
 interface RawSessionRow {
@@ -55,6 +80,10 @@ interface RawSessionRow {
   last_seen_at: number;
   revoked_at: number | null;
   user_agent: string | null;
+  current_refresh_jti: string | null;
+  previous_refresh_jti: string | null;
+  rotated_at: number | null;
+  absolute_expires_at: number | null;
 }
 
 function rowToSession(row: RawSessionRow): SessionRow {
@@ -66,8 +95,24 @@ function rowToSession(row: RawSessionRow): SessionRow {
     lastSeenAt: row.last_seen_at,
     revokedAt: row.revoked_at,
     userAgent: row.user_agent,
+    currentRefreshJti: row.current_refresh_jti,
+    previousRefreshJti: row.previous_refresh_jti,
+    rotatedAt: row.rotated_at,
+    absoluteExpiresAt: row.absolute_expires_at,
   };
 }
+
+/**
+ * Outcome of a refresh-token rotation attempt. `ok` carries the new
+ * `expiresAt` the caller should stamp on the rotated token; the failure
+ * variants tell the caller whether to revoke the session (theft) or just
+ * reject the refresh (expired / unknown).
+ */
+export type RotateResult =
+  | { status: 'ok'; expiresAt: number }
+  | { status: 'reuse' }
+  | { status: 'absolute_expired' }
+  | { status: 'inactive' };
 
 export class SessionStore {
   private static _instance: SessionStore | null = null;
@@ -77,6 +122,23 @@ export class SessionStore {
   private constructor(db: Database.Database) {
     this.db = db;
     this.db.exec(SCHEMA);
+    this.migrate();
+  }
+
+  /** Adds any post-initial columns that are missing from an existing DB. */
+  private migrate(): void {
+    const existing = new Set(
+      (
+        this.db.prepare('PRAGMA table_info(sessions)').all() as Array<{
+          name: string;
+        }>
+      ).map((c) => c.name),
+    );
+    for (const col of ADDED_COLUMNS) {
+      if (!existing.has(col.name)) {
+        this.db.exec(`ALTER TABLE sessions ADD COLUMN ${col.name} ${col.ddl}`);
+      }
+    }
   }
 
   static getInstance(): SessionStore {
@@ -100,18 +162,24 @@ export class SessionStore {
    * Registers a freshly-issued session id, mapped to `wallet`, expiring at
    * `expiresAt` (epoch ms) — the same instant the paired refresh cookie's
    * `maxAge` would naturally expire it.
+   *
+   * `refreshJti` is the `jti` of the refresh token minted alongside this
+   * session; `absoluteExpiresAt` caps how far repeated refreshes may extend
+   * the session (see #1292).
    */
   create(
     id: string,
     wallet: string,
     expiresAt: number,
     userAgent?: string | null,
+    refreshJti?: string | null,
+    absoluteExpiresAt?: number | null,
   ): void {
     const now = Date.now();
     this.db
       .prepare(
-        `INSERT INTO sessions (id, wallet, created_at, expires_at, last_seen_at, revoked_at, user_agent)
-         VALUES (@id, @wallet, @created_at, @expires_at, @last_seen_at, NULL, @user_agent)`,
+        `INSERT INTO sessions (id, wallet, created_at, expires_at, last_seen_at, revoked_at, user_agent, current_refresh_jti, previous_refresh_jti, rotated_at, absolute_expires_at)
+         VALUES (@id, @wallet, @created_at, @expires_at, @last_seen_at, NULL, @user_agent, @current_refresh_jti, NULL, NULL, @absolute_expires_at)`,
       )
       .run({
         id,
@@ -120,6 +188,8 @@ export class SessionStore {
         expires_at: expiresAt,
         last_seen_at: now,
         user_agent: userAgent ?? null,
+        current_refresh_jti: refreshJti ?? null,
+        absolute_expires_at: absoluteExpiresAt ?? null,
       });
   }
 
@@ -137,6 +207,87 @@ export class SessionStore {
          WHERE id = ? AND revoked_at IS NULL`,
       )
       .run(expiresAt, Date.now(), id);
+  }
+
+  /**
+   * Rotates the refresh token for `id` from `presentedJti` to `newJti`,
+   * enforcing reuse detection and the absolute lifetime cap (see #1292).
+   *
+   * - If the session is missing/revoked/expired → `inactive`.
+   * - If `presentedJti` matches the current jti → rotate, returning the
+   *   new `expiresAt` (clamped to `absoluteExpiresAt`).
+   * - If `presentedJti` matches the previous jti and we are still inside
+   *   `graceMs` of the last rotation → accept once (concurrent tabs) and
+   *   rotate again.
+   * - Otherwise the presented jti is stale → `reuse`; the caller must
+   *   revoke the session.
+   * - If the session is already past `absoluteExpiresAt` → `absolute_expired`.
+   */
+  rotate(
+    id: string,
+    presentedJti: string,
+    newJti: string,
+    refreshTtlMs: number,
+    graceMs: number,
+  ): RotateResult {
+    const row = this.db
+      .prepare(
+        `SELECT revoked_at, expires_at, current_refresh_jti, previous_refresh_jti, rotated_at, absolute_expires_at
+         FROM sessions WHERE id = ?`,
+      )
+      .get(id) as
+      | {
+          revoked_at: number | null;
+          expires_at: number;
+          current_refresh_jti: string | null;
+          previous_refresh_jti: string | null;
+          rotated_at: number | null;
+          absolute_expires_at: number | null;
+        }
+      | undefined;
+
+    if (!row) return { status: 'inactive' };
+    if (row.revoked_at !== null) return { status: 'inactive' };
+
+    const now = Date.now();
+    if (row.expires_at < now) return { status: 'inactive' };
+
+    if (row.absolute_expires_at !== null && now >= row.absolute_expires_at) {
+      return { status: 'absolute_expired' };
+    }
+
+    const isCurrent =
+      row.current_refresh_jti !== null &&
+      row.current_refresh_jti === presentedJti;
+    const isGracePrevious =
+      !isCurrent &&
+      row.previous_refresh_jti !== null &&
+      row.previous_refresh_jti === presentedJti &&
+      row.rotated_at !== null &&
+      now - row.rotated_at <= graceMs;
+
+    if (!isCurrent && !isGracePrevious) {
+      return { status: 'reuse' };
+    }
+
+    let expiresAt = now + refreshTtlMs;
+    if (row.absolute_expires_at !== null) {
+      expiresAt = Math.min(expiresAt, row.absolute_expires_at);
+    }
+
+    this.db
+      .prepare(
+        `UPDATE sessions
+         SET expires_at = @expires_at,
+             last_seen_at = @now,
+             previous_refresh_jti = current_refresh_jti,
+             current_refresh_jti = @new_jti,
+             rotated_at = @now
+         WHERE id = @id AND revoked_at IS NULL`,
+      )
+      .run({ id, expires_at: expiresAt, now, new_jti: newJti });
+
+    return { status: 'ok', expiresAt };
   }
 
   /**
