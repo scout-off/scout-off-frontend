@@ -284,3 +284,47 @@ export const MobileViewport: Story = {
     },
   },
 };
+
+// ── Best-value highlighting (issue #1721) ────────────────────────────────────
+
+const tiePlayers: Player[] = [
+  basePlayer({
+    id: 'tie_001',
+    vitals: { ...basePlayer({}).vitals, name: 'Kwame Asante' },
+    progressLevel: 2,
+    stats: { goals: 12, assists: 5, appearances: 30, clean_sheets: 0 },
+  }),
+  basePlayer({
+    id: 'tie_002',
+    vitals: { ...basePlayer({}).vitals, name: 'Amara Diallo', position: 'CM' },
+    progressLevel: 2,
+    stats: { goals: 12, assists: 9, appearances: 28 },
+  }),
+  basePlayer({
+    id: 'tie_003',
+    vitals: { ...basePlayer({}).vitals, name: 'Juma Mwangi', position: 'GK' },
+    progressLevel: 1,
+    stats: { goals: 0, assists: 1, appearances: 30, clean_sheets: 11 },
+  }),
+  basePlayer({
+    id: 'tie_004',
+    vitals: { ...basePlayer({}).vitals, name: 'Chidi Okafor', position: 'LW' },
+    progressLevel: 3,
+    stats: { goals: 7, assists: 9, appearances: 22 },
+  }),
+];
+
+/** Two players tied on goals and progress level — both are marked best. */
+export const TwoPlayersWithTies: Story = {
+  args: { players: tiePlayers.slice(0, 2) },
+};
+
+/** Three players: tie on appearances, missing stats are never best. */
+export const ThreePlayersWithTies: Story = {
+  args: { players: tiePlayers.slice(0, 3) },
+};
+
+/** Four players: ties on assists, single leader on progress. */
+export const FourPlayersWithTies: Story = {
+  args: { players: tiePlayers },
+};

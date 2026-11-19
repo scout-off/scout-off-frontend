@@ -945,7 +945,15 @@
       "progress_label": "{name} – Progress level",
       "milestones": "Milestones",
       "milestones_label": "{name} – Milestones",
-      "milestone_count": "{count, plural, one {# milestone} other {# milestones}}"
+      "milestone_count": "{count, plural, one {# milestone} other {# milestones}}",
+      "best": "Best",
+      "best_progress": "Highest progress level",
+      "copy_link": "Copy link",
+      "link_copied": "Comparison link copied to clipboard.",
+      "link_copy_failed": "Could not copy automatically. Share this link: {url}",
+      "download_csv": "Download CSV",
+      "csv_downloaded": "Comparison CSV downloaded.",
+      "attribute": "Attribute"
     },
     "profile": {
       "title": "Scout Profile",
@@ -1051,5 +1059,10 @@
       "copied": "Copied!",
       "showMore": "Show more ({count} remaining)"
     }
+  },
+  "dataTable": {
+    "sorted_ascending": "Sorted by {column}, ascending",
+    "sorted_descending": "Sorted by {column}, descending",
+    "scroll_region": "{caption} (scrollable)"
   }
 }

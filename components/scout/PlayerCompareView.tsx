@@ -10,6 +10,25 @@ import ProgressBar from '@/components/ProgressBar';
 import MilestoneTimeline from '@/components/player/MilestoneTimeline';
 import Badge from '@/components/ui/Badge';
 import Tooltip from '@/components/ui/Tooltip';
+import { Trophy } from 'lucide-react';
+import { getLeadersByMetric, type CompareMetricKey } from '@/lib/playerCompare';
+
+type Leaders = Record<CompareMetricKey, Set<string>>;
+
+/** Icon + visually hidden text so the leader cue never relies on colour alone. */
+function BestMarker({ label }: { label: string }) {
+  return (
+    <>
+      <Trophy
+        size={14}
+        aria-hidden="true"
+        className="inline-block mr-1 text-yellow-400 align-[-2px]"
+        data-testid="compare-best"
+      />
+      <span className="sr-only">{label}: </span>
+    </>
+  );
+}
 
 const LEVEL_VARIANT: Record<number, 'level0' | 'level1' | 'level2' | 'level3'> =
   {
@@ -23,13 +42,29 @@ const POSITION_LABEL: Record<string, string> = Object.fromEntries(
   FOOTBALL_POSITIONS.map(({ value, label }) => [value, label]),
 );
 
-function CompareColumn({ player }: { player: Player }) {
+function CompareColumn({
+  player,
+  leaders,
+}: {
+  player: Player;
+  leaders?: Leaders;
+}) {
   const levelLabel = getProgressLabel(player.progressLevel);
   const nameId = `compare-col-name-${player.id}`;
   const t = useTranslations('scout.compare');
   // Stat labels are shared with PlayerStatsCard.
   const ts = useTranslations('stats');
   const name = player.vitals.name;
+  const isBest = (key: CompareMetricKey) =>
+    leaders?.[key]?.has(player.id) ?? false;
+  const statCell = (key: CompareMetricKey, value: number) => (
+    <dd
+      className={`text-right ${isBest(key) ? 'text-yellow-300 font-semibold' : 'text-white'}`}
+    >
+      {isBest(key) && <BestMarker label={t('best')} />}
+      {value}
+    </dd>
+  );
 
   return (
     // Each column is a labelled group (not a landmark) so screen-reader users
@@ -106,31 +141,25 @@ function CompareColumn({ player }: { player: Player }) {
             {player.stats.goals !== undefined && (
               <>
                 <dt className="text-gray-400">{ts('goals')}</dt>
-                <dd className="text-white text-right">{player.stats.goals}</dd>
+                {statCell('goals', player.stats.goals)}
               </>
             )}
             {player.stats.assists !== undefined && (
               <>
                 <dt className="text-gray-400">{ts('assists')}</dt>
-                <dd className="text-white text-right">
-                  {player.stats.assists}
-                </dd>
+                {statCell('assists', player.stats.assists)}
               </>
             )}
             {player.stats.appearances !== undefined && (
               <>
                 <dt className="text-gray-400">{ts('appearances')}</dt>
-                <dd className="text-white text-right">
-                  {player.stats.appearances}
-                </dd>
+                {statCell('appearances', player.stats.appearances)}
               </>
             )}
             {player.stats.clean_sheets !== undefined && (
               <>
                 <dt className="text-gray-400">{ts('clean_sheets')}</dt>
-                <dd className="text-white text-right">
-                  {player.stats.clean_sheets}
-                </dd>
+                {statCell('clean_sheets', player.stats.clean_sheets)}
               </>
             )}
           </dl>
@@ -142,6 +171,12 @@ function CompareColumn({ player }: { player: Player }) {
         <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
           {t('progress')}
         </h4>
+        {isBest('progressLevel') && (
+          <p className="text-xs text-yellow-300 font-semibold mb-1">
+            <BestMarker label={t('best')} />
+            {t('best_progress')}
+          </p>
+        )}
         <ProgressBar level={player.progressLevel} />
       </section>
 
@@ -168,10 +203,11 @@ interface PlayerCompareViewProps {
 }
 
 export default function PlayerCompareView({ players }: PlayerCompareViewProps) {
+  const leaders = getLeadersByMetric(players);
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {players.map((player) => (
-        <CompareColumn key={player.id} player={player} />
+        <CompareColumn key={player.id} player={player} leaders={leaders} />
       ))}
     </div>
   );

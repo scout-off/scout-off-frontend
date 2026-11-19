@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import DataTable from '@/components/ui/DataTable';
 
 type ConfigEntry = {
   name: string;
@@ -48,47 +49,62 @@ export default function ConfigStatus() {
       <h2 className="text-lg font-semibold text-white">
         Runtime Configuration Status
       </h2>
-      <table className="w-full table-auto text-sm">
-        <thead className="text-left text-gray-400">
-          <tr>
-            <th className="pr-4">Variable</th>
-            <th className="pr-4">Required</th>
-            <th className="pr-4">Present</th>
-          </tr>
-        </thead>
-        <tbody>
-          {config &&
-            config.map((c) => (
-              <tr key={c.name} className="border-t border-gray-700">
-                <td className="py-2 text-gray-300">{c.name}</td>
-                <td className="py-2 text-gray-300">
-                  {c.required ? 'Yes' : 'No'}
-                </td>
-                <td className="py-2">
-                  {c.turnstile ? (
-                    c.turnstile.mismatched ? (
-                      <span className="text-red-400 font-medium">
-                        Mismatched (site key / secret)
-                      </span>
-                    ) : c.turnstile.configured ? (
-                      <span className="text-green-400 font-medium">
-                        Configured
-                      </span>
-                    ) : (
-                      <span className="text-gray-400 font-medium">
-                        Unconfigured
-                      </span>
-                    )
-                  ) : c.present ? (
-                    <span className="text-green-400 font-medium">Present</span>
-                  ) : (
-                    <span className="text-red-400 font-medium">Missing</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-        </tbody>
-      </table>
+      <DataTable
+        caption="Runtime configuration variables"
+        captionHidden
+        sortParam="configSort"
+        className="w-full table-auto text-sm text-left"
+        headerRowClassName="text-left text-gray-400"
+        bodyClassName=""
+        rowClassName="border-t border-gray-700"
+        rows={config ?? []}
+        rowKey={(c) => c.name}
+        columns={[
+          {
+            key: 'name',
+            header: 'Variable',
+            sortable: true,
+            headerClassName: 'pr-4',
+            className: 'py-2 text-gray-300',
+            render: (c) => c.name,
+          },
+          {
+            key: 'required',
+            header: 'Required',
+            sortable: true,
+            sortValue: (c) => (c.required ? 1 : 0),
+            headerClassName: 'pr-4',
+            className: 'py-2 text-gray-300',
+            render: (c) => (c.required ? 'Yes' : 'No'),
+          },
+          {
+            key: 'present',
+            header: 'Present',
+            sortable: true,
+            sortValue: (c) => (c.present ? 1 : 0),
+            headerClassName: 'pr-4',
+            className: 'py-2',
+            render: (c) =>
+              c.turnstile ? (
+                c.turnstile.mismatched ? (
+                  <span className="text-red-400 font-medium">
+                    Mismatched (site key / secret)
+                  </span>
+                ) : c.turnstile.configured ? (
+                  <span className="text-green-400 font-medium">Configured</span>
+                ) : (
+                  <span className="text-gray-400 font-medium">
+                    Unconfigured
+                  </span>
+                )
+              ) : c.present ? (
+                <span className="text-green-400 font-medium">Present</span>
+              ) : (
+                <span className="text-red-400 font-medium">Missing</span>
+              ),
+          },
+        ]}
+      />
     </section>
   );
 }
