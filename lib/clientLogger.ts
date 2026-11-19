@@ -6,11 +6,12 @@ import type { LogFields, LogLevel } from './logger';
  * can be used from modules that run in client components.
  */
 function emit(level: LogLevel, message: string, fields?: LogFields): void {
+  // Caller fields are spread first so they cannot override the core fields.
   const line = JSON.stringify({
+    ...fields,
     timestamp: new Date().toISOString(),
     level,
     message,
-    ...fields,
   });
 
   if (level === 'error') console.error(line);
