@@ -21,6 +21,33 @@ export interface UploadOutcome {
   error: string | null;
 }
 
+/**
+ * Optional client-side compression step (issue #1679). When enabled and
+ * supported, the video is re-encoded to a delivery profile (≤720p, ~2.5 Mbps)
+ * in a Web Worker before the chunked upload starts, cutting the uploader's
+ * mobile data usage. Progressive enhancement: unsupported browsers upload the
+ * original untouched.
+ */
+export interface CompressionOptions {
+  /** Defaults to true. Set false to upload the original file. */
+  enabled?: boolean;
+  /** Called with [0, 1] as the worker re-encodes. */
+  onProgress?: (fraction: number) => void;
+  /** Aborts the in-flight compression; the original file is uploaded instead. */
+  signal?: AbortSignal;
+}
+
+export interface CompressionResult {
+  /** The file to upload — compressed output, or the original on fallback. */
+  file: File;
+  /** True when the returned file is the re-encoded output. */
+  compressed: boolean;
+  /** Original size in bytes. */
+  originalSize: number;
+  /** Human-readable reason when compression was skipped/fell back. */
+  reason?: string;
+}
+
 export interface UseChunkedUploadResult {
   /** Upload progress in [0, 100]. Only meaningful during the 'uploading' phase. */
   progress: number;
@@ -32,8 +59,17 @@ export interface UseChunkedUploadResult {
   retryAfterSec: number | null;
   /** True after an interrupted upload that can continue from its last chunk. */
   canResume: boolean;
-  /** Starts a fresh chunked upload for `file`. */
-  upload: (file: File) => Promise<UploadOutcome>;
+  /**
+   * Compression progress in [0, 100] while the worker re-encodes, or null when
+   * no compression is running. Reported separately from `progress` so the UI
+   * can distinguish "compressing" from "uploading".
+   */
+  compressionProgress: number | null;
+  /**
+   * Starts a fresh chunked upload for `file`. When `compression` is enabled
+   * (the default) and WebCodecs is supported, the file is re-encoded first.
+   */
+  upload: (file: File, compression?: CompressionOptions) => Promise<UploadOutcome>;
   /** Continues the most recently interrupted upload from its last successful chunk. */
   resume: () => Promise<UploadOutcome>;
   /**
@@ -60,6 +96,79 @@ export interface UseChunkedUploadResult {
 }
 
 /**
+ * Feature-detects WebCodecs video encode/decode support for a delivery
+ * profile (H.264 Baseline `avc1.42E01F` or VP9 `vp09.*`). Returns false on
+ * older Android WebViews / Firefox ESR so callers fall back to the original.
+ */
+async function isWebCodecsSupported(): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+  const g = window as unknown as {
+    VideoEncoder?: { isConfigSupported?: (c: unknown) => Promise<{ supported?: boolean }> };
+    VideoDecoder?: { isConfigSupported?: (c: unknown) => Promise<{ supported?: boolean }> };
+  };
+  if (!g.VideoEncoder?.isConfigSupported || !g.VideoDecoder?.isConfigSupported) {
+    return false;
+  }
+  const candidates = [
+    { codec: 'avc1.42E01F', width: 1280, height: 720, bitrate: 2_500_000 },
+    { codec: 'vp09.00.10.08', width: 1280, height: 720, bitrate: 2_500_000 },
+  ];
+  for (const config of candidates) {
+    try {
+      const enc = await g.VideoEncoder.isConfigSupported(config);
+      const dec = await g.VideoDecoder.isConfigSupported(config);
+      if (enc?.supported && dec?.supported) return true;
+    } catch {
+      // try next candidate
+    }
+  }
+  return false;
+}
+
+/**
+ * Runs the compression worker. The worker (and its lazy-loaded demuxer/muxer)
+ * is only imported here, inside the upload step, so route bundles stay small.
+ * Resolves with the compressed file, or the original when the worker reports
+ * a fallback (unsupported codec, budget exceeded, backgrounded tab, cancel).
+ */
+async function compressInWorker(
+  file: File,
+  options: CompressionOptions,
+): Promise<CompressionResult> {
+  const originalSize = file.size;
+  const fallback = (reason: string): CompressionResult => ({
+    file,
+    compressed: false,
+    originalSize,
+    reason,
+  });
+
+  if (options.enabled === false) return fallback('disabled');
+  if (!(await isWebCodecsSupported())) return fallback('unsupported');
+
+  try {
+    const { compressVideo } = await import('@/lib/videoCompression');
+    const blob = await compressVideo(file, {
+      onProgress: options.onProgress,
+      signal: options.signal,
+    });
+    if (!blob || blob.size === 0 || blob.size >= originalSize) {
+      return fallback('no-savings');
+    }
+    const out = new File([blob], file.name.replace(/\.[^.]+$/, '') + '.mp4', {
+      type: blob.type || 'video/mp4',
+    });
+    return { file: out, compressed: true, originalSize };
+  } catch (err) {
+    const reason =
+      err instanceof Error && err.name === 'AbortError'
+        ? 'cancelled'
+        : 'compression-failed';
+    return fallback(reason);
+  }
+}
+
+/**
  * Drives lib/ipfs.ts's chunked/resumable upload for a single file, exposing
  * progress and a resume affordance for VideoUpload (issue #664 — chunked
  * uploads on unreliable mobile connections, paired with the
@@ -77,6 +186,13 @@ export interface UseChunkedUploadResult {
  * fileSize, fileType, totalChunks) is saved to localStorage when an upload
  * is interrupted and cleared on success or expiry. The File object itself
  * cannot be serialized — the caller must re-supply the file when resuming.
+ *
+ * Issue #1679: `upload` optionally re-encodes the video in a Web Worker
+ * before the chunked upload starts. The compressed output becomes the upload
+ * source; resume state records the compressed file's name/size, so a reload
+ * mid-upload resumes against the compressed bytes (the caller re-supplies the
+ * original file and compression is re-run deterministically to reproduce the
+ * same output). Unsupported browsers upload the original with no errors.
  */
 export function useChunkedUpload(): UseChunkedUploadResult {
   const [progress, setProgress] = useState(0);
@@ -85,6 +201,9 @@ export function useChunkedUpload(): UseChunkedUploadResult {
   const [error, setError] = useState<string | null>(null);
   const [retryAfterSec, setRetryAfterSec] = useState<number | null>(null);
   const [canResume, setCanResume] = useState(false);
+  const [compressionProgress, setCompressionProgress] = useState<number | null>(
+    null,
+  );
   const [persistedSession, setPersistedSession] =
     useState<PersistedUploadState | null>(null);
 
@@ -155,11 +274,30 @@ export function useChunkedUpload(): UseChunkedUploadResult {
   );
 
   const upload = useCallback(
-    (file: File) => {
+    async (file: File, compression?: CompressionOptions): Promise<UploadOutcome> => {
       resumeStateRef.current = null;
       setCanResume(false);
       setProgress(0);
-      return runUpload(file);
+
+      // Optional client-side compression before the chunked upload starts.
+      // Falls back to the original file on unsupported browsers, cancel, or
+      // when the output would not be smaller.
+      let source = file;
+      setCompressionProgress(0);
+      try {
+        const result = await compressInWorker(file, {
+          ...compression,
+          onProgress: (fraction) => {
+            setCompressionProgress(Math.round(fraction * 100));
+            compression?.onProgress?.(fraction);
+          },
+        });
+        source = result.file;
+      } finally {
+        setCompressionProgress(null);
+      }
+
+      return runUpload(source);
     },
     [runUpload],
   );
@@ -177,6 +315,11 @@ export function useChunkedUpload(): UseChunkedUploadResult {
    * Validation is intentionally strict (name AND size) — a file with the
    * same name but a different byte-count is almost certainly a different
    * recording, and sending mismatched chunks would corrupt the assembly.
+   *
+   * Issue #1679: when the interrupted upload used a compressed source, the
+   * persisted filename/size refer to the compressed output. The caller
+   * re-supplies the original file; we re-run compression deterministically
+   * to reproduce the same bytes before resuming.
    */
   const promptResume = useCallback(
     async (file: File): Promise<UploadOutcome> => {
@@ -189,7 +332,23 @@ export function useChunkedUpload(): UseChunkedUploadResult {
       }
 
       // Validate that the re-supplied file matches the original session.
+      // If it does not match directly, it may be the original file whose
+      // compressed output was the upload source — re-compress to reproduce.
+      let source = file;
       if (file.name !== stored.filename || file.size !== stored.fileSize) {
+        setCompressionProgress(0);
+        try {
+          const result = await compressInWorker(file, {
+            onProgress: (fraction) =>
+              setCompressionProgress(Math.round(fraction * 100)),
+          });
+          source = result.file;
+        } finally {
+          setCompressionProgress(null);
+        }
+      }
+
+      if (source.name !== stored.filename || source.size !== stored.fileSize) {
         clearResumeState();
         setPersistedSession(null);
         return {
@@ -205,20 +364,16 @@ export function useChunkedUpload(): UseChunkedUploadResult {
       try {
         await getChunkedUploadStatus(stored.sessionId);
       } catch {
-        // 404 or network error — the server-side session is gone.
+        // 404 or network error — the server-side session has expired.
         clearResumeState();
         setPersistedSession(null);
         return {
           cid: null,
-          error: 'The upload session has expired. Please start a new upload.',
+          error: 'The interrupted upload has expired. Please start a new upload.',
         };
       }
 
-      // Session validated — wire up the in-memory ref so resume() also works,
-      // then run the upload against the persisted sessionId.
-      resumeStateRef.current = { file, sessionId: stored.sessionId };
-      setCanResume(true);
-      return runUpload(file, stored.sessionId);
+      return runUpload(source, stored.sessionId);
     },
     [runUpload],
   );
@@ -230,6 +385,7 @@ export function useChunkedUpload(): UseChunkedUploadResult {
     error,
     retryAfterSec,
     canResume,
+    compressionProgress,
     upload,
     resume,
     persistedSession,
