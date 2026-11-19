@@ -1,4 +1,5 @@
 import { PROGRESS_LABELS, type ProgressLevel } from '@/types';
+import { escapeCsvValue } from '@/lib/csvSafe';
 
 /**
  * A player the scout has paid to unlock contact details for, as returned by
@@ -23,11 +24,6 @@ export const SCOUT_CONTACTS_CSV_HEADERS = [
   'Progress Level',
   'Contact Unlocked',
 ] as const;
-
-function escapeCsvValue(value: string): string {
-  if (/[",\r\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
-  return value;
-}
 
 function formatUnlockDate(ts: number | undefined): string {
   if (ts === undefined || !Number.isFinite(ts)) return '';
