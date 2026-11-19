@@ -18,13 +18,29 @@ export interface ChatMessage {
   status: 'sent' | 'delivered' | 'read';
 }
 
+export interface FetchThreadMessagesOptions {
+  /** Return messages older than this message id (cursor pagination). */
+  before?: string;
+  /** Max number of messages to return. */
+  limit?: number;
+  signal?: AbortSignal;
+}
+
 export async function fetchThreadMessages(
   threadId: string,
-  signal?: AbortSignal,
+  options: FetchThreadMessagesOptions | AbortSignal = {},
 ): Promise<ChatMessage[]> {
+  // Backwards compatible: callers may still pass an AbortSignal directly.
+  const opts: FetchThreadMessagesOptions =
+    options instanceof AbortSignal ? { signal: options } : options;
+
+  const params: Record<string, string | number> = {};
+  if (opts.before) params.before = opts.before;
+  if (typeof opts.limit === 'number') params.limit = opts.limit;
+
   const { data } = await chatApi.get<ChatMessage[]>(
     `/threads/${threadId}/messages`,
-    { signal },
+    { params, signal: opts.signal },
   );
   return data;
 }
