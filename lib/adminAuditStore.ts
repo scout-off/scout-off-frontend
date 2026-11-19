@@ -10,6 +10,11 @@
  * runner (see lib/migrations/adminAuditMigrations.ts) rather than a bare
  * `CREATE TABLE IF NOT EXISTS` — a process-wide singleton and keyset
  * pagination rather than OFFSET otherwise unchanged.
+ *
+ * Multisig admin support (issue #1677): when an admin operation is submitted
+ * by a multisig account, the audit entry records every co-signer that
+ * contributed a signature via the optional `signers` field (persisted inside
+ * the `data` JSON blob, so no schema migration is required).
  */
 import type Database from 'better-sqlite3';
 import { openSqliteDb } from './sqliteDb';
@@ -56,10 +61,16 @@ export interface NewAdminAuditEntry {
   adminWallet: string;
   target?: string | null;
   amountStroops?: number | null;
-  txHash?: string | null;
+  txHash?: string |null;
   status: AdminAuditStatus;
   timestamp: number;
   data?: Record<string, unknown>;
+  /**
+   * Every signer (public key) that contributed a signature to a multisig
+   * admin transaction (issue #1677). Persisted inside `data.signers` so the
+   * audit log can prove which co-signers authorized the operation.
+   */
+  signers?: string[];
 }
 
 export class AdminAuditStore {
@@ -94,6 +105,11 @@ export class AdminAuditStore {
   }
 
   insertEntry(entry: NewAdminAuditEntry): AdminAuditEntry {
+    const data: Record<string, unknown> = { ...(entry.data ?? {}) };
+    if (entry.signers && entry.signers.length > 0) {
+      data.signers = entry.signers;
+    }
+
     const result = this.db
       .prepare(
         `INSERT INTO admin_audit_log
@@ -108,7 +124,7 @@ export class AdminAuditStore {
         tx_hash: entry.txHash ?? null,
         status: entry.status,
         timestamp: entry.timestamp,
-        data: JSON.stringify(entry.data ?? {}),
+        data: JSON.stringify(data),
         inserted_at: Date.now(),
       });
 
