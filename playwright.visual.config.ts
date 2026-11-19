@@ -1,46 +1,63 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// Matches the fixed port in the `storybook` npm script (storybook dev -p 6006).
-const BASE_URL = 'http://127.0.0.1:6006';
+/**
+ * Visual regression config.
+ *
+ * Each project pins a locale + direction so snapshots catch RTL/LTR drift.
+ * The `ar` project renders the app with `dir="rtl"` (see `lib/rtl.ts` and the
+ * `<html dir>` wiring in `app/layout.tsx`) so logical-property regressions
+ * surface as snapshot diffs.
+ */
+const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000';
 
-// Self-hosted visual regression for Storybook (Issue #539). Runs against the
-// Storybook dev server directly (no static build/serve step needed) and
-// screenshots every story via Playwright's built-in `toHaveScreenshot`
-// baseline diffing.
-//
-// Screenshot rendering is sensitive to fonts/GPU, so both local baseline
-// generation and CI run inside the same pinned `mcr.microsoft.com/playwright`
-// Docker image (see .github/workflows/visual-regression.yml and
-// docs/visual-regression.md) to keep results reproducible across machines.
+const RTL_PAGES = [
+  { name: 'landing', path: '/ar' },
+  { name: 'scout', path: '/ar/scout' },
+  { name: 'player-profile', path: '/ar/players/1' },
+  { name: 'onboarding', path: '/ar/onboarding' },
+  { name: 'changelog', path: '/ar/changelog' },
+];
+
 export default defineConfig({
-  testDir: './e2e/visual',
-  fullyParallel: false,
+  testDir: './tests/visual',
+  fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
-  workers: 1,
-  reporter: process.env.CI ? 'github' : 'list',
-  timeout: 30_000,
-  expect: {
-    timeout: 10_000,
-    toHaveScreenshot: {
-      // Allow a small amount of anti-aliasing / sub-pixel drift without
-      // failing the run outright — real regressions are far larger than this.
-      maxDiffPixelRatio: 0.02,
-      animations: 'disabled',
-    },
-  },
+  retries: process.env.CI ? 2 : 0,
+  reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: BASE_URL,
-    trace: 'retain-on-failure',
-    // Containers commonly ship a tiny /dev/shm; Chromium's default shared-memory
-    // usage can crash mid-run there, so fall back to disk-backed shared memory.
-    launchOptions: { args: ['--disable-dev-shm-usage'] },
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-  webServer: {
-    command: 'npm run storybook -- --ci --quiet',
-    url: BASE_URL,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  projects: [
+    {
+      name: 'ltr-chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        locale: 'en-US',
+      },
+    },
+    {
+      name: 'ar-chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        locale: 'ar-EG',
+        extraHTTPHeaders: {
+          'Accept-Language': 'ar-EG,ar;q=0.9',
+        },
+      },
+      metadata: {
+        direction: 'rtl',
+        pages: RTL_PAGES,
+      },
+    },
+  ],
+  webServer: process.env.PLAYWRIGHT_BASE_URL
+    ? undefined
+    : {
+        command: 'npm run start',
+        url: BASE_URL,
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000,
+      },
 });

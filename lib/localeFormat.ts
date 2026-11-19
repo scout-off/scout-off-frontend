@@ -11,10 +11,20 @@
 import type { Locale } from './locales';
 
 // BCP 47 tags for next-intl's supported locales.
+//
+// `ar` uses `ar-MA` (Moroccan Arabic) rather than `ar-EG`: North Africa and the
+// Sahel are the primary underserved football regions this product targets, and
+// `ar-MA` is the closest regional tag for that audience. We deliberately keep
+// the default numbering system (Latin digits, `latn`) instead of Arabic-Indic
+// digits (`arab`): wallet addresses, CIDs, XLM amounts, and transaction hashes
+// are all Latin-script, and mixing Arabic-Indic digits with them produces
+// confusing, hard-to-copy output. Latin digits also match the `dir="ltr"`
+// mixed-content wrappers used for those values.
 const INTL_LOCALE_TAG: Record<Locale, string> = {
   en: 'en-US',
   fr: 'fr-FR',
   sw: 'sw-KE',
+  ar: 'ar-MA',
 };
 
 function toIntlLocale(locale: Locale): string {

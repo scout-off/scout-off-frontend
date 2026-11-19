@@ -18,12 +18,12 @@ import {
   TransactionBuilder,
 } from '@stellar/stellar-sdk';
 import {
-  BASE_FEE,
   HORIZON_URL,
   NETWORK,
   pollTransaction,
   rpc,
 } from '@/lib/stellar';
+import { estimateClassicFee } from '@/lib/feeEstimator';
 import { isMainnet } from '@/lib/network';
 import { withTimeoutSignal } from '@/lib/fetchTimeout';
 
@@ -176,8 +176,11 @@ function toSdkAsset(a: HorizonPathAsset): Asset {
  * Builds the self-directed path payment for `quote`. The transaction's time
  * bounds end when the quote expires, so the network itself rejects a swap
  * signed against a stale quote.
+ *
+ * The inclusion fee comes from the dynamic estimator (surge-aware) rather
+ * than a hard-coded `BASE_FEE`.
  */
-export function buildPathPaymentTx(
+export async function buildPathPaymentTx(
   account: Account,
   quote: PathQuote,
   slippageBps: number,
@@ -186,9 +189,10 @@ export function buildPathPaymentTx(
   if (isQuoteExpired(quote, now)) throw new QuoteExpiredError();
   const sendMax = computeSendMax(quote.sourceAmount, slippageBps);
   const timeoutSec = Math.max(1, Math.floor((quote.expiresAt - now) / 1000));
+  const fee = await estimateClassicFee();
 
   return new TransactionBuilder(account, {
-    fee: BASE_FEE,
+    fee,
     networkPassphrase: NETWORK,
   })
     .addOperation(
@@ -213,7 +217,7 @@ export async function swapToXlm(
   signFn: (xdr: string) => Promise<string>,
 ): Promise<string> {
   const account = await rpc.getAccount(publicKey);
-  const tx = buildPathPaymentTx(
+  const tx = await buildPathPaymentTx(
     new Account(account.accountId(), account.sequenceNumber()),
     quote,
     slippageBps,
@@ -257,52 +261,4 @@ export interface PendingSwap {
   txHash: string;
   xlmAmount: number;
   createdAt: number;
-}
-
-const PENDING_SWAP_TTL_MS = 24 * 60 * 60 * 1000;
-
-function pendingSwapKey(wallet: string, playerId: string): string {
-  return `scoutoff_pending_contact_swap:${wallet}:${playerId}`;
-}
-
-export function savePendingSwap(
-  wallet: string,
-  playerId: string,
-  swap: PendingSwap,
-): void {
-  try {
-    localStorage.setItem(
-      pendingSwapKey(wallet, playerId),
-      JSON.stringify(swap),
-    );
-  } catch {
-    // Storage unavailable — recovery is best-effort; the XLM is still in the wallet.
-  }
-}
-
-export function getPendingSwap(
-  wallet: string,
-  playerId: string,
-  now = Date.now(),
-): PendingSwap | null {
-  try {
-    const raw = localStorage.getItem(pendingSwapKey(wallet, playerId));
-    if (!raw) return null;
-    const swap = JSON.parse(raw) as PendingSwap;
-    if (now - swap.createdAt > PENDING_SWAP_TTL_MS) {
-      clearPendingSwap(wallet, playerId);
-      return null;
-    }
-    return swap;
-  } catch {
-    return null;
-  }
-}
-
-export function clearPendingSwap(wallet: string, playerId: string): void {
-  try {
-    localStorage.removeItem(pendingSwapKey(wallet, playerId));
-  } catch {
-    // ignore
-  }
 }
