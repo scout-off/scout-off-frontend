@@ -26,6 +26,7 @@ interface CspEnv {
   NEXT_PUBLIC_INDEXER_API_URL: string | undefined;
   NEXT_PUBLIC_IPFS_GATEWAY: string | undefined;
   SENTRY_DSN: string | undefined;
+  NEXT_PUBLIC_SENTRY_DSN: string | undefined;
   NODE_ENV: string | undefined;
 }
 
@@ -37,6 +38,7 @@ function readEnv(): CspEnv {
     NEXT_PUBLIC_INDEXER_API_URL: process.env.NEXT_PUBLIC_INDEXER_API_URL,
     NEXT_PUBLIC_IPFS_GATEWAY: process.env.NEXT_PUBLIC_IPFS_GATEWAY,
     SENTRY_DSN: process.env.SENTRY_DSN,
+    NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
     NODE_ENV: process.env.NODE_ENV,
   };
 }
@@ -60,6 +62,18 @@ function sentryOrigin(dsn: string | undefined): string | null {
 }
 
 /**
+ * Resolves the Sentry origin from either the server-side `SENTRY_DSN` or the
+ * client-side `NEXT_PUBLIC_SENTRY_DSN` (used by sentry.client.config.ts).
+ * A self-hosted Sentry origin must be present in connect-src, so prefer the
+ * public DSN the browser actually talks to and fall back to the server one.
+ */
+export function resolveSentryOrigin(env: Partial<CspEnv>): string | null {
+  return (
+    sentryOrigin(env.NEXT_PUBLIC_SENTRY_DSN) ?? sentryOrigin(env.SENTRY_DSN)
+  );
+}
+
+/**
  * Builds the CSP header value for a single request.
  *
  * Production: strict-dynamic + nonce, no unsafe-inline/unsafe-eval in script-src.
@@ -80,7 +94,7 @@ export function buildCsp(opts: CspOptions): string {
   const indexer = originOf(env.NEXT_PUBLIC_INDEXER_API_URL) ?? '';
   const ipfsGateway =
     originOf(env.NEXT_PUBLIC_IPFS_GATEWAY) ?? 'https://gateway.pinata.cloud';
-  const sentry = sentryOrigin(env.SENTRY_DSN) ?? '';
+  const sentry = resolveSentryOrigin(env) ?? '';
 
   // All known IPFS gateways used by lib/ipfs.ts (primary + fallbacks).
   const ipfsSrcs = [
@@ -95,14 +109,15 @@ export function buildCsp(opts: CspOptions): string {
     .filter((v, i, a) => a.indexOf(v) === i)
     .join(' ');
 
-  // connect-src: self + Stellar RPC + backend + indexer + CoinGecko + Sentry + Vercel Analytics
+  // connect-src: self + Stellar RPC + backend + indexer + Sentry + Vercel Analytics.
+  // CoinGecko is intentionally omitted: app/api/rates/xlm/route.ts proxies it
+  // server-side, so clients never contact api.coingecko.com directly.
   const connectSrcs = [
     "'self'",
     soroban,
     horizon,
     api,
     indexer,
-    'https://api.coingecko.com',
     sentry,
     'https://vitals.vercel-insights.com',
     // Sentry envelope endpoint (used by newer Sentry SDK)

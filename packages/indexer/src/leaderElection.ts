@@ -11,6 +11,10 @@
  * failure or timeout means the lock may be gone, so the replica steps down
  * immediately (and drops its connection so the lock is certainly released)
  * rather than risk two replicas polling at once.
+ *
+ * The same election also gates the retention-window backfill worker
+ * (issue #1667): only the leader fills gaps, so a gap is never backfilled
+ * twice concurrently. `isLeader` is the single source of truth for both.
  */
 import type { PgPool, PgPoolClient } from './db/pgEventStore';
 
@@ -94,6 +98,20 @@ export class LeaderElector {
       this.dropConnection();
     }
     return this.leader;
+  }
+
+  /**
+   * Runs `fn` only while this replica holds the lease (issue #1667). The
+   * backfill worker uses this so exactly one replica fills a gap at a time;
+   * followers skip the work entirely. The lease is re-checked before the
+   * callback runs, and a step-down mid-run aborts the callback's result.
+   */
+  async runIfLeader<T>(fn: () => Promise<T>): Promise<T | undefined> {
+    if (!(await this.tick())) return undefined;
+    const result = await fn();
+    // If we lost the lease while working, discard the result so callers do
+    // not treat a follower's partial backfill as authoritative.
+    return this.leader ? result : undefined;
   }
 
   /** Releases the lock (graceful shutdown) so a follower can take over at once. */

@@ -1,63 +1,53 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
-// Public, read-only freshness probe for indexer-backed views (see #1357).
-// Proxies the indexer's own /health server-side (like app/api/admin/health)
-// but exposes only the fields DataFreshnessBadge needs.
-//
-// Uses INDEXER_API_URL_INTERNAL (server-only) so the internal indexer address
-// is not inlined into the client bundle (#1492). Falls back to the deprecated
-// NEXT_PUBLIC_INDEXER_API_URL for deployments that haven't set the new var.
+const INDEXER_HEALTH_URL =
+  process.env.INDEXER_HEALTH_URL ?? "http://localhost:3001/health";
 
-const FETCH_TIMEOUT_MS = 5000;
+export const dynamic = "force-dynamic";
 
-export interface IndexerFreshness {
-  lastLedger: number | null;
-  lastUpdated: number | null;
-  ledgerLag: number | null;
+export interface IndexerGap {
+  gap_start: number;
+  gap_end: number;
+  status: "open" | "backfilling" | "closed";
+}
+
+export interface IndexerHealthResponse {
+  status: string;
+  latestLedger?: number;
+  gaps?: IndexerGap[];
+  [key: string]: unknown;
 }
 
 export async function GET() {
-  const baseUrl =
-    process.env.INDEXER_API_URL_INTERNAL ??
-    process.env.NEXT_PUBLIC_INDEXER_API_URL;
-  if (!baseUrl) {
-    return NextResponse.json(
-      { error: 'Indexer not configured' },
-      { status: 503 },
-    );
-  }
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const res = await fetch(`${baseUrl.replace(/\/+$/, '')}/health`, {
-      signal: controller.signal,
-      cache: 'no-store',
+    const res = await fetch(INDEXER_HEALTH_URL, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(5000),
     });
+
     if (!res.ok) {
       return NextResponse.json(
-        { error: 'Indexer unavailable' },
+        { status: "unavailable", gaps: [] },
         { status: 502 },
       );
     }
-    const data = await res.json();
-    const num = (v: unknown) => (typeof v === 'number' ? v : null);
-    const body: IndexerFreshness = {
-      lastLedger: num(data?.lastLedger),
-      lastUpdated: num(data?.lastUpdated),
-      ledgerLag: num(data?.ledgerLag),
-    };
-    const response = NextResponse.json(body);
-    if (body.lastLedger !== null) {
-      response.headers.set('X-Indexer-Last-Ledger', String(body.lastLedger));
-    }
-    if (body.lastUpdated !== null) {
-      response.headers.set('X-Indexer-Last-Updated', String(body.lastUpdated));
-    }
-    return response;
+
+    const body = (await res.json()) as IndexerHealthResponse;
+    const gaps = Array.isArray(body.gaps) ? body.gaps : [];
+    const openGaps = gaps.filter((gap) => gap.status !== "closed");
+
+    return NextResponse.json(
+      {
+        ...body,
+        gaps,
+        historyIncomplete: openGaps.length > 0,
+      },
+      { status: 200 },
+    );
   } catch {
-    return NextResponse.json({ error: 'Indexer unavailable' }, { status: 502 });
-  } finally {
-    clearTimeout(timer);
+    return NextResponse.json(
+      { status: "unavailable", gaps: [], historyIncomplete: false },
+      { status: 502 },
+    );
   }
 }
