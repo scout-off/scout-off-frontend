@@ -81,6 +81,10 @@ function validateEnvVars(sourceDir, envExamplePath) {
   return { missing, used, declared };
 }
 
+// Secrets that must be present in production for security-sensitive routes to
+// fail closed rather than silently accept anonymous traffic (issue #1285).
+const REQUIRED_IN_PRODUCTION = ['MODERATION_WEBHOOK_SECRET'];
+
 function main() {
   const ignore = new Set(manifest.ignore);
   const byName = new Map(manifest.vars.map((v) => [v.name, v]));
@@ -112,6 +116,18 @@ function main() {
     }
   }
 
+  // Security-critical secrets must be documented in .env.example so operators
+  // know to configure them; the routes themselves fail closed when unset.
+  const exampleDeclared = declaredIn('.env.example');
+  const undocumented = REQUIRED_IN_PRODUCTION.filter(
+    (v) => !exampleDeclared.has(v),
+  );
+  if (undocumented.length) {
+    errors.push(
+      `Missing from .env.example (required for secure routes): ${undocumented.join(', ')}`,
+    );
+  }
+
   if (errors.length) {
     errors.forEach((e) => console.error(e));
     process.exit(1);
@@ -129,6 +145,16 @@ function main() {
     );
     for (const v of missingInProd) {
       console.error(`\n⚠ ${v.name} is unset in production. ${v.description}`);
+    }
+
+    // Routes that authenticate with these secrets fail closed when unset, so
+    // surface the misconfig loudly at deploy time (issue #1285).
+    for (const name of REQUIRED_IN_PRODUCTION) {
+      if (!process.env[name]) {
+        console.error(
+          `\n⚠ ${name} is unset in production. Service-to-service routes will reject all requests (fail closed).`,
+        );
+      }
     }
   }
 
@@ -163,4 +189,5 @@ module.exports = {
   parseEnvExample,
   extractUsedEnvVars,
   walkDir,
+  REQUIRED_IN_PRODUCTION,
 };

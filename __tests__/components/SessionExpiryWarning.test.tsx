@@ -1,300 +1,144 @@
-import {
-  render,
-  screen,
-  act,
-  renderHook,
-  waitFor,
-  fireEvent,
-} from '@testing-library/react';
-import { WalletProvider, useWalletContext } from '@/context/WalletContext';
-import { walletAdapters } from '@/lib/walletAdapters';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import SessionExpiryWarning from '@/components/SessionExpiryWarning';
-import type { ReactNode } from 'react';
 
-jest.mock('@/lib/walletAdapters', () => ({
-  walletAdapters: {
-    freighter: {
-      getPublicKey: jest.fn(),
-      signTransaction: jest.fn(),
-    },
-    albedo: {
-      getPublicKey: jest.fn(),
-      signTransaction: jest.fn(),
-    },
-    lobstr: {
-      getPublicKey: jest.fn(),
-      signTransaction: jest.fn(),
-    },
-    ledger: {
-      getPublicKey: jest.fn(),
-      signTransaction: jest.fn(),
-    },
-  },
-}));
+const mockReauthenticate = jest.fn();
+const mockShowToast = jest.fn();
 
-jest.mock('@/lib/stellar', () => ({
-  rpc: { sendTransaction: jest.fn() },
-  getXLMBalance: jest.fn(),
-  NETWORK: 'Test SDF Network ; September 2015',
-  TransactionBuilder: { fromXDR: jest.fn(() => ({})) },
-}));
+let mockWallet: {
+  isAuthenticated: boolean;
+  sessionExpiresAt: number | null;
+  reauthenticate: jest.Mock;
+};
 
-// #778: WalletProvider.restoreSession reconciles the local session hint
-// against GET /api/auth/session before trusting it. This suite drives the
-// component through a second provider that restores from the localStorage
-// hint written by the connected one — stub the session client so that
-// restore resolves synchronously ("inconclusive → assume still valid")
-// instead of stalling on fetchWithRetry's backoff under fake timers.
-jest.mock('@/lib/sessionClient', () => ({
-  getServerSession: jest.fn().mockResolvedValue(null),
-  refreshSession: jest.fn().mockResolvedValue({
-    authenticated: true,
-    publicKey: 'GCFW7QAO3WZQ6X4CZ3OYZFXX3A3DL7XVI5DNVTXA5VJUGE5SU6ZRG5OV',
-  }),
-}));
-
-jest.mock('@/lib/sep10Validation', () => ({
-  validateSep10Challenge: jest.fn(() => ({ valid: true })),
-  getSep10ClientConfig: jest.fn(() => ({
-    serverAccount: 'GSERVERACCOUNT000000000000000000000000000000000000000',
-    homeDomain: 'localhost:3000',
-    networkPassphrase: 'Test SDF Network ; September 2015',
-  })),
-  SEP10_VALIDATION_USER_ERROR:
-    'Could not verify the login request from this site — please try again or contact support',
-}));
-
-jest.mock('@stellar/stellar-sdk', () => ({
-  TransactionBuilder: { fromXDR: jest.fn(() => ({})) },
-  Networks: {
-    PUBLIC: 'Public Global Stellar Network ; September 2015',
-    TESTNET: 'Test SDF Network ; September 2015',
-  },
-}));
-
-jest.mock('next-intl', () => ({
-  useTranslations: () => {
-    const translations: Record<string, string> = {
-      expiringSoonTitle: 'Session Expiring Soon',
-      expiringSoonMessage: 'Your session expires soon.',
-      dismiss: 'Dismiss',
-      reauthenticate: 'Renew Session',
-      renewedSuccess: 'Session renewed successfully',
-      renewFailed: 'Failed to renew session',
-    };
-    return (key: string) => translations[key] ?? key;
-  },
+jest.mock('@/hooks/useWallet', () => ({
+  useWallet: () => mockWallet,
 }));
 
 jest.mock('@/components/ui/Toast', () => ({
-  useToast: () => ({
-    show: jest.fn(),
-  }),
+  useToast: () => ({ show: mockShowToast }),
 }));
 
-const PUBLIC_KEY = 'GCFW7QAO3WZQ6X4CZ3OYZFXX3A3DL7XVI5DNVTXA5VJUGE5SU6ZRG5OV';
-const CHALLENGE_XDR = 'challenge-xdr';
-const SIGNED_XDR = 'signed-xdr';
+jest.mock('next-intl', () => ({
+  useTranslations: () => (key: string, values?: { minutes?: number }) =>
+    values && values.minutes !== undefined ? `${key}:${values.minutes}` : key,
+}));
 
-const mockFetch = jest.fn();
-global.fetch = mockFetch;
+jest.mock('@/components/ui/Modal', () => ({
+  __esModule: true,
+  default: ({
+    isOpen,
+    onClose,
+    title,
+    children,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+    title: string;
+    children: React.ReactNode;
+  }) =>
+    isOpen ? (
+      <div role="dialog" aria-label={title}>
+        <button type="button" onClick={onClose}>
+          close
+        </button>
+        {children}
+      </div>
+    ) : null,
+}));
 
-function wrapper({ children }: { children: ReactNode }) {
-  return <WalletProvider>{children}</WalletProvider>;
-}
+jest.mock('@/components/ui/Spinner', () => ({
+  __esModule: true,
+  default: () => <span data-testid="spinner" />,
+}));
 
-function setupSep10(maxAge?: number) {
-  mockFetch
-    .mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ transaction: CHALLENGE_XDR }),
-    })
-    .mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        success: true,
-        maxAge: maxAge ?? 86400,
-      }),
-    });
-}
+const WARNING_BEFORE_MS = 2 * 60 * 1000;
 
 describe('SessionExpiryWarning', () => {
-  const freighter = walletAdapters.freighter as jest.Mocked<
-    typeof walletAdapters.freighter
-  >;
-
   beforeEach(() => {
     jest.useFakeTimers();
-    jest.clearAllMocks();
-    localStorage.clear();
-    freighter.getPublicKey.mockResolvedValue(PUBLIC_KEY);
-    freighter.signTransaction.mockResolvedValue(SIGNED_XDR);
-    const { getXLMBalance } = jest.requireMock('@/lib/stellar');
-    getXLMBalance.mockResolvedValue(100);
+    mockReauthenticate.mockReset();
+    mockShowToast.mockReset();
+    mockWallet = {
+      isAuthenticated: true,
+      sessionExpiresAt: Date.now() + 60 * 60 * 1000,
+      reauthenticate: mockReauthenticate,
+    };
   });
 
   afterEach(() => {
     jest.useRealTimers();
   });
 
-  it('does not render the warning when sessionExpiresAt is null', () => {
-    const { result } = renderHook(() => useWalletContext(), { wrapper });
-
-    act(() => {
-      jest.advanceTimersByTime(10 * 60 * 1000);
-    });
-
-    expect(result.current.sessionExpiresAt).toBeNull();
+  it('does not render the warning when the session has ample time left', () => {
+    render(<SessionExpiryWarning />);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('shows the warning modal when within 2 minutes of expiry', async () => {
-    const baseTime = 1_000_000_000_000;
-    jest.setSystemTime(baseTime);
-
-    setupSep10(600); // 10-minute session
-
-    const { result } = renderHook(() => useWalletContext(), { wrapper });
-    await act(async () => {
-      await result.current.connectWithProvider('freighter');
-    });
-
-    const expiresAt = result.current.sessionExpiresAt!;
-    expect(expiresAt).toBe(baseTime + 600_000);
-
-    // Jump to within the 2-minute warning window
-    act(() => {
-      jest.setSystemTime(expiresAt - 90_000);
-    });
-
-    render(<SessionExpiryWarning />, { wrapper });
-
-    // The useEffect should fire on mount and show the warning immediately
-    await act(async () => {});
-
-    // Verify the modal is open (dialog role is present) and title renders
+  it('renders the warning once the session is within the warning threshold', () => {
+    mockWallet.sessionExpiresAt = Date.now() + WARNING_BEFORE_MS - 30 * 1000;
+    render(<SessionExpiryWarning />);
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('Session Expiring Soon')).toBeInTheDocument();
-    expect(screen.getByText('Renew Session')).toBeInTheDocument();
-    expect(screen.getByText('Dismiss')).toBeInTheDocument();
+    expect(screen.getByText(/expiringSoonMessage/)).toBeInTheDocument();
   });
 
-  it('does not show the warning when more than 2 minutes remain', async () => {
-    const baseTime = 1_000_000_000_000;
-    jest.setSystemTime(baseTime);
+  it('shows the warning when the threshold is reached via the timer', () => {
+    mockWallet.sessionExpiresAt = Date.now() + WARNING_BEFORE_MS + 60 * 1000;
+    render(<SessionExpiryWarning />);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
-    setupSep10(600);
-
-    const { result } = renderHook(() => useWalletContext(), { wrapper });
-    await act(async () => {
-      await result.current.connectWithProvider('freighter');
-    });
-
-    const expiresAt = result.current.sessionExpiresAt!;
-
-    // 5 minutes before expiry — well outside the 2-min warning window
     act(() => {
-      jest.setSystemTime(expiresAt - 5 * 60_000);
+      jest.advanceTimersByTime(60 * 1000);
     });
 
-    render(<SessionExpiryWarning />, { wrapper });
-    await act(async () => {});
-
-    expect(screen.queryByText('Session Expiring Soon')).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
-  it('schedules the warning to appear at the correct time via setTimeout', async () => {
-    const baseTime = 1_000_000_000_000;
-    jest.setSystemTime(baseTime);
-
-    setupSep10(600);
-
-    const { result } = renderHook(() => useWalletContext(), { wrapper });
-    await act(async () => {
-      await result.current.connectWithProvider('freighter');
-    });
-
-    const expiresAt = result.current.sessionExpiresAt!;
-
-    // 5 minutes before expiry — outside warning window
-    act(() => {
-      jest.setSystemTime(expiresAt - 5 * 60_000);
-    });
-
-    render(<SessionExpiryWarning />, { wrapper });
-    await act(async () => {});
-    expect(screen.queryByText('Session Expiring Soon')).not.toBeInTheDocument();
-
-    // Advance to exactly the warning threshold (2 min before expiry)
-    // The component should have set a setTimeout for this moment
-    act(() => {
-      jest.advanceTimersByTime(3 * 60_000); // 5min - 2min = 3min
-    });
-    await act(async () => {});
-
-    expect(screen.getByText('Session Expiring Soon')).toBeInTheDocument();
+  it('does not render when the user is not authenticated', () => {
+    mockWallet.isAuthenticated = false;
+    mockWallet.sessionExpiresAt = Date.now() + 30 * 1000;
+    render(<SessionExpiryWarning />);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('has a dismiss button that is clickable', async () => {
-    const baseTime = 1_000_000_000_000;
-    jest.setSystemTime(baseTime);
+  it('reauthenticates and shows a success toast when the stay signed in action is clicked', async () => {
+    mockReauthenticate.mockResolvedValue(undefined);
+    mockWallet.sessionExpiresAt = Date.now() + 30 * 1000;
+    render(<SessionExpiryWarning />);
 
-    setupSep10(600);
-    const { result } = renderHook(() => useWalletContext(), { wrapper });
     await act(async () => {
-      await result.current.connectWithProvider('freighter');
+      fireEvent.click(screen.getByText('reauthenticate'));
     });
 
-    const expiresAt = result.current.sessionExpiresAt!;
-    act(() => {
-      jest.setSystemTime(expiresAt - 90_000);
+    expect(mockReauthenticate).toHaveBeenCalledTimes(1);
+    expect(mockShowToast).toHaveBeenCalledWith({
+      variant: 'success',
+      message: 'renewedSuccess',
     });
-
-    render(<SessionExpiryWarning />, { wrapper });
-    await act(async () => {});
-
-    // Verify both action buttons are present and accessible
-    const dismissBtn = screen.getByText('Dismiss');
-    const reauthBtn = screen.getByText('Renew Session');
-    expect(dismissBtn).toBeEnabled();
-    expect(reauthBtn).toBeEnabled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('reauthenticate button calls reauthenticate from context', async () => {
-    const baseTime = 1_000_000_000_000;
-    jest.setSystemTime(baseTime);
+  it('shows an error toast when reauthentication fails', async () => {
+    mockReauthenticate.mockRejectedValue(new Error('nope'));
+    mockWallet.sessionExpiresAt = Date.now() + 30 * 1000;
+    render(<SessionExpiryWarning />);
 
-    setupSep10(600);
-    const { result } = renderHook(() => useWalletContext(), { wrapper });
     await act(async () => {
-      await result.current.connectWithProvider('freighter');
+      fireEvent.click(screen.getByText('reauthenticate'));
     });
 
-    const expiresAt = result.current.sessionExpiresAt!;
-    act(() => {
-      jest.setSystemTime(expiresAt - 90_000);
+    expect(mockShowToast).toHaveBeenCalledWith({
+      variant: 'error',
+      message: 'renewFailed',
     });
+  });
 
-    render(<SessionExpiryWarning />, { wrapper });
-    await act(async () => {});
-    expect(screen.getByText('Session Expiring Soon')).toBeInTheDocument();
+  it('dismisses the warning when the dismiss action is clicked', () => {
+    mockWallet.sessionExpiresAt = Date.now() + 30 * 1000;
+    render(<SessionExpiryWarning />);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
 
-    // Set up reauthentication mocks (new session with 1-day expiry)
-    freighter.getPublicKey.mockResolvedValue(PUBLIC_KEY);
-    freighter.signTransaction.mockResolvedValue(SIGNED_XDR);
-    setupSep10(86400);
+    fireEvent.click(screen.getByText('dismiss'));
 
-    // Call reauthenticate directly on the same context instance (the renderHook
-    // and render create separate WalletProvider instances, so clicking the button
-    // in the rendered component would call reauthenticate on a different context).
-    await act(async () => {
-      await result.current.reauthenticate();
-    });
-
-    // After reauthentication, the session should be refreshed with a new expiry
-    await waitFor(() => {
-      expect(result.current.isAuthenticated).toBe(true);
-    });
-    expect(result.current.sessionExpiresAt).not.toBeNull();
-    expect(result.current.sessionExpiresAt).not.toBe(expiresAt);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
