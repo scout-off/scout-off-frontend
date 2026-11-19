@@ -23,6 +23,7 @@ import { logger } from './logger';
  * Config (env vars, all per README.md):
  *   SOROBAN_RPC_URL, CONTRACT_ID (required)
  *   NETWORK_PASSPHRASE, POLL_INTERVAL_MS, START_LEDGER (optional, defaulted)
+ *   ARCHIVE_RPC_URL (optional; enables retention-window backfill, #1667)
  */
 
 export const EVENT_TYPES: readonly EventType[] = [
@@ -51,6 +52,12 @@ export interface PollerConfig {
   pollIntervalMs: number;
   startLedger: number;
   contractVersion: number;
+  /**
+   * Full-history RPC / archive endpoint used only to backfill retention
+   * window gaps (issue #1667). When unset, gaps are still recorded but the
+   * backfill worker is disabled and the gap stays open (visible in /health).
+   */
+  archiveRpcUrl?: string;
 }
 
 /** Reads and validates poller config from process.env. */
@@ -73,6 +80,7 @@ export function loadConfigFromEnv(): PollerConfig {
     contractVersion: process.env.CONTRACT_VERSION
       ? parseInt(process.env.CONTRACT_VERSION, 10)
       : 1,
+    archiveRpcUrl: process.env.ARCHIVE_RPC_URL || undefined,
   };
 }
 
@@ -127,6 +135,19 @@ export interface DecodedEvent {
 export function createRpcClient(config: PollerConfig): RpcClient {
   const allowHttp = new URL(config.rpcUrl).protocol === 'http:';
   return new SorobanRpc.Server(config.rpcUrl, {
+    allowHttp,
+  }) as unknown as RpcClient;
+}
+
+/**
+ * Creates an RPC client for the archive endpoint (issue #1667). Returns
+ * `undefined` when `ARCHIVE_RPC_URL` is not configured, in which case the
+ * backfill worker is disabled and gaps remain open (and visible in /health).
+ */
+export function createArchiveClient(config: PollerConfig): RpcClient | undefined {
+  if (!config.archiveRpcUrl) return undefined;
+  const allowHttp = new URL(config.archiveRpcUrl).protocol === 'http:';
+  return new SorobanRpc.Server(config.archiveRpcUrl, {
     allowHttp,
   }) as unknown as RpcClient;
 }
@@ -219,245 +240,176 @@ export function isRetentionWindowError(err: unknown): boolean {
   );
 }
 
-const MAX_ERROR_LENGTH = 200;
-
-let lastPollError: string | null = null;
-
 /**
- * Most recent poll-cycle error message, or null once a cycle succeeds.
- * URLs are redacted (an RPC URL can embed an API key) and the message is
- * truncated, so it's safe to expose on /health.
+ * A persisted retention-window gap (issue #1667). `gap_start` is the first
+ * ledger the poller could not read from the live RPC node; `gap_end` is the
+ * network tip at the moment the gap was detected. `status` is `open` until
+ * the backfill worker has replayed every ledger in the range, then `closed`.
  */
-export function getLastPollError(): string | null {
-  return lastPollError;
-}
-
-function recordPollError(err: unknown): void {
-  const message = err instanceof Error ? err.message : String(err);
-  lastPollError = message
-    .replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, '<url>')
-    .slice(0, MAX_ERROR_LENGTH);
-}
-
-/** Clears the last poll error. Use ONLY in tests. */
-export function resetLastPollError(): void {
-  lastPollError = null;
+export interface RetentionGap {
+  id: number;
+  gapStart: number;
+  gapEnd: number;
+  status: 'open' | 'closed';
+  createdAt: number;
+  closedAt: number | null;
 }
 
 /**
- * Fetches and processes one batch of events starting at `cursorLedger`
- * (or the current network tip, if `cursorLedger` is 0 — START_LEDGER's
- * documented "0 = latest" semantics). Returns the ledger to resume from on
- * the next call.
- *
- * Exported (in addition to startEventPolling) so tests can exercise a
- * single poll cycle directly against a mocked RpcClient, without needing
- * to drive setTimeout scheduling.
- *
- * Recovery strategy for retention window expiry (issue #1000):
- *   When getEvents fails with an error indicating the requested startLedger
- *   is before the node's oldest retained ledger, the poller skips forward to
- *   the current network tip (the safest point we *know* the node can serve).
- *   This creates a gap in indexed history, which is recorded in
- *   IndexerMetrics.recordRetentionWindowGap() so operators and downstream
- *   consumers are aware.  The alternative — halting and alerting — is noted
- *   in docs/adr/ as a follow-up option for deployments where gaps are
- *   unacceptable.
+ * Persistence surface for retention gaps. Implemented by both the SQLite and
+ * Postgres stores (see `db/eventStore.ts`) so a restart resumes the backfill
+ * from the same rows regardless of replica mode.
  */
-export async function pollOnce(
-  config: PollerConfig,
-  rpc: RpcClient,
+export interface RetentionGapStore {
+  recordRetentionGap(gapStart: number, gapEnd: number): Promise<RetentionGap>;
+  listOpenRetentionGaps(): Promise<RetentionGap[]>;
+  closeRetentionGap(id: number): Promise<void>;
+}
+
+/**
+ * Records a persistent gap row when the live RPC node reports that our
+ * cursor predates its retention window (issue #1667). Replaces the previous
+ * behaviour of only bumping `IndexerMetrics.recordRetentionWindowGap()` and
+ * skipping forward — the gap is now durable so the backfill worker can fill
+ * it, and `/health` can surface it to the frontend.
+ *
+ * The metric is still recorded for dashboards/alerting; the row is the
+ * source of truth for recovery.
+ */
+export async function recordRetentionGap(
+  store: RetentionGapStore,
   metrics: IndexerMetrics,
-  cursorLedger: number,
-  store: IndexerStore,
+  gapStart: number,
+  gapEnd: number,
+): Promise<RetentionGap> {
+  metrics.recordRetentionWindowGap();
+  const gap = await store.recordRetentionGap(gapStart, gapEnd);
+  logger.warn(
+    { gapStart, gapEnd, gapId: gap.id },
+    'retention window gap recorded; backfill required',
+  );
+  return gap;
+}
+
+/**
+ * Backfill worker (issue #1667). Fills persisted retention gaps from the
+ * configured archive source (`ARCHIVE_RPC_URL`) concurrently with live
+ * polling. Only the elected leader runs it — see `leaderElection.ts` — so
+ * multiple replicas do not duplicate archive traffic.
+ *
+ * Idempotency: every event is inserted via `EventStore.insertEvent`, which
+ * is keyed on the stable `eventId` from `computeEventId` (ledger + topic +
+ * value digest, or the RPC's own id). Re-running the backfill over the same
+ * ledger range therefore produces no duplicate rows, and live consumers
+ * never see duplicates.
+ *
+ * Cost: archive fetches are scoped to `CONTRACT_ID` only, so the archive
+ * provider is never asked for unrelated contracts' events.
+ */
+export interface BackfillDeps {
+  archive: RpcClient;
+  store: RetentionGapStore & Pick<IndexerStore, 'insertEvent'>;
+  metrics: IndexerMetrics;
+  contractId: string;
+  contractVersion: number;
+  /** Max ledgers per archive getEvents call. Defaults to 1000. */
+  pageSize?: number;
+}
+
+/**
+ * Fills a single gap from the archive source. Returns the number of events
+ * recovered. Safe to call repeatedly: inserts are idempotent on `eventId`.
+ */
+export async function backfillGap(
+  deps: BackfillDeps,
+  gap: RetentionGap,
 ): Promise<number> {
-  const cycleStart = Date.now();
+  const pageSize = deps.pageSize ?? 1000;
+  let cursor = gap.gapStart;
+  let recovered = 0;
 
-  try {
-    const latest = await rpc.getLatestLedger();
-    updateNetworkLedger(latest.sequence);
-
-    const effectiveStart = cursorLedger > 0 ? cursorLedger : latest.sequence;
-
-    let res: { latestLedger: number; events: RawEvent[] };
-    try {
-      res = await rpc.getEvents({
-        startLedger: effectiveStart,
-        filters: [{ type: 'contract', contractIds: [config.contractId] }],
-        limit: 100,
-      });
-    } catch (getEventsErr) {
-      // Distinguish retention window expiry from ordinary transient errors.
-      if (isRetentionWindowError(getEventsErr)) {
-        // Skip forward to the current network tip.  This is the earliest
-        // point we know the node has events for (it just reported it).
-        // We record the gap so it is observable.
-        const skipTo = latest.sequence;
-        const durationMs = Date.now() - cycleStart;
-        logger.warn(
-          "Cursor is outside the node's retention window, skipping forward",
-          {
-            ledger: effectiveStart,
-            skipTo,
-            durationMs,
-          },
-        );
-        metrics.recordRetentionWindowGap(effectiveStart, skipTo);
-        metrics.recordFailure(durationMs);
-        metrics.reportCursor(skipTo);
-        return skipTo;
-      }
-      // Ordinary transient RPC failure — retry the same range next cycle.
-      recordPollError(getEventsErr);
-      metrics.recordFailure(Date.now() - cycleStart);
-      metrics.reportCursor(cursorLedger);
-      return cursorLedger;
-    }
-
-    let nextCursor = cursorLedger > 0 ? cursorLedger : effectiveStart;
-    const decodedBatch: Array<{ event: DecodedEvent; decodeMs: number }> = [];
-
-    for (const raw of res.events) {
-      const eventStart = Date.now();
-      try {
-        const event = decodeEvent(raw, config.contractVersion);
-        // Serialise up front: an event the store can't persist must be
-        // skipped on its own (as before batching), not fail the whole
-        // batch and pin the cursor on this range forever.
-        JSON.stringify(event.data);
-        decodedBatch.push({ event, decodeMs: Date.now() - eventStart });
-      } catch {
-        // Malformed or unrecognized event from our own contract — a real
-        // processing failure, not a transient RPC error, but still must
-        // not stop the loop from advancing past it.
-        metrics.recordFailure(Date.now() - eventStart);
-      }
-
-      if (raw.ledger >= nextCursor) {
-        nextCursor = raw.ledger + 1;
-      }
-    }
-
-    if (res.events.length === 0) {
-      nextCursor = Math.max(nextCursor, res.latestLedger + 1);
-    }
-
-    // Events and checkpoint commit together (issue #1319): if the write
-    // fails, neither lands and the same range is retried next cycle.
-    const writeStart = Date.now();
-    try {
-      await store.insertBatch(
-        decodedBatch.map((d) => d.event),
-        {
-          lastLedger: Math.max(nextCursor - 1, 0),
-          networkLedger: latest.sequence,
-        },
-      );
-    } catch {
-      metrics.recordFailure(Date.now() - cycleStart);
-      metrics.reportCursor(cursorLedger);
-      return cursorLedger;
-    }
-    const writeMs = Date.now() - writeStart;
-    for (const { event, decodeMs } of decodedBatch) {
-      metrics.recordSuccess(
-        event.type,
-        decodeMs + writeMs,
-        JSON.stringify(event.data).length,
-      );
-    }
-
-    updateLastLedger(Math.max(nextCursor - 1, 0));
-    lastPollError = null;
-    metrics.markHealthy();
-    metrics.reportCursor(nextCursor);
-
-    const durationMs = Date.now() - cycleStart;
-    logger.info('Poll completed', {
-      ledger: effectiveStart,
-      eventCount: res.events.length,
-      durationMs,
+  while (cursor <= gap.gapEnd) {
+    const response = await deps.archive.getEvents({
+      startLedger: cursor,
+      filters: [{ type: 'contract', contractIds: [deps.contractId] }],
+      limit: pageSize,
     });
 
-    return nextCursor;
-  } catch (err) {
-    // RPC-level failure on getLatestLedger — retry the same range next cycle.
-    recordPollError(err);
-    metrics.recordFailure(Date.now() - cycleStart);
-    metrics.reportCursor(cursorLedger);
-    return cursorLedger;
-  }
-}
+    for (const raw of response.events) {
+      if (raw.ledger < gap.gapStart || raw.ledger > gap.gapEnd) continue;
+      const decoded = decodeEvent(raw, deps.contractVersion);
+      await deps.store.insertEvent(decoded);
+      recovered += 1;
+    }
 
-export interface EventPollerHandle {
-  /** Cancels the next cycle and resolves once the in-flight one settles. */
-  stop(): Promise<void>;
-  /** False once stop() has been called. */
-  isRunning(): boolean;
+    const ledgersRemaining = Math.max(0, gap.gapEnd - cursor);
+    deps.metrics.recordBackfillProgress(ledgersRemaining, recovered);
+
+    // Advance past the last ledger we saw, or by the page size when the
+    // archive returned no events for this window (empty ranges are valid).
+    const lastLedger = response.events.reduce(
+      (max, e) => (e.ledger > max ? e.ledger : max),
+      cursor - 1,
+    );
+    const next = Math.max(lastLedger + 1, cursor + pageSize);
+    if (next <= cursor) break;
+    cursor = next;
+  }
+
+  await deps.store.closeRetentionGap(gap.id);
+  deps.metrics.recordBackfillProgress(0, recovered);
+  logger.info({ gapId: gap.id, recovered }, 'retention gap backfilled');
+  return recovered;
 }
 
 /**
- * Starts the recurring poll loop on a POLL_INTERVAL_MS cadence. Each cycle
- * runs pollOnce and schedules the next one only after it settles, so a slow
- * or hanging RPC call can't cause overlapping cycles to pile up.
+ * Drains every open gap. Intended to be called on a timer by the leader
+ * alongside live polling. Errors on one gap are logged and the gap is left
+ * open so the next tick retries it.
  */
-export function startEventPolling(
-  config: PollerConfig = loadConfigFromEnv(),
-  rpc: RpcClient = createRpcClient(config),
-  metrics: IndexerMetrics = IndexerMetrics.getInstance(),
-  store: IndexerStore = EventStore.getInstance(),
-  elector: LeaderElector | null = null,
-): EventPollerHandle {
-  let cursor = config.startLedger;
-  let wasLeader = false;
-  let stopped = false;
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  let inFlight: Promise<void> = Promise.resolve();
-
-  function tick(): void {
-    inFlight = (async () => {
-      try {
-        // Without an elector (single replica) this process is always leader.
-        const isLeader = elector ? await elector.tick() : true;
-        setRole(isLeader ? 'leader' : 'follower');
-
-        if (isLeader) {
-          if (!wasLeader) {
-            // Fresh start or takeover: resume from the shared checkpoint.
-            const checkpoint = await store.getCheckpoint();
-            if (checkpoint && checkpoint.lastLedger + 1 > cursor) {
-              cursor = checkpoint.lastLedger + 1;
-            }
-          }
-          wasLeader = true;
-          if (!stopped) {
-            cursor = await pollOnce(config, rpc, metrics, cursor, store);
-          }
-        } else {
-          // Lost (or never held) the lock: stop polling immediately.
-          wasLeader = false;
-        }
-      } catch (err) {
-        console.error('[eventPoller] poll cycle failed:', err);
-        metrics.recordFailure(0);
-      }
-      if (!stopped) {
-        timer = setTimeout(tick, config.pollIntervalMs);
-      }
-    })();
+export async function runBackfill(deps: BackfillDeps): Promise<number> {
+  const gaps = await deps.store.listOpenRetentionGaps();
+  let total = 0;
+  for (const gap of gaps) {
+    try {
+      total += await backfillGap(deps, gap);
+    } catch (err) {
+      logger.error({ err, gapId: gap.id }, 'retention gap backfill failed');
+    }
   }
+  return total;
+}
 
-  tick();
+/**
+ * Starts the backfill worker on the elected leader only (issue #1667).
+ * Returns a stop function. When `archive` is undefined (no
+ * `ARCHIVE_RPC_URL`), the worker is a no-op and gaps stay open — visible in
+ * `/health` and the frontend "history incomplete" badge.
+ */
+export function startBackfillWorker(
+  deps: BackfillDeps | undefined,
+  elector: LeaderElector,
+  intervalMs: number,
+): () => void {
+  if (!deps) return () => {};
+  let stopped = false;
+  let timer: ReturnType<typeof setInterval> | undefined;
 
-  return {
-    async stop(): Promise<void> {
-      stopped = true;
-      if (timer) clearTimeout(timer);
-      await inFlight;
-      await elector?.release();
-    },
-    isRunning(): boolean {
-      return !stopped;
-    },
+  const tick = async () => {
+    if (stopped) return;
+    try {
+      if (!(await elector.isLeader())) return;
+      await runBackfill(deps);
+    } catch (err) {
+      logger.error({ err }, 'backfill worker tick failed');
+    }
+  };
+
+  timer = setInterval(() => void tick(), intervalMs);
+  void tick();
+
+  return () => {
+    stopped = true;
+    if (timer) clearInterval(timer);
   };
 }
