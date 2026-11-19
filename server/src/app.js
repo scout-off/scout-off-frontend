@@ -11,6 +11,7 @@ const academiesRouter = require('./routes/academies');
 const sponsorshipRouter = require('./routes/sponsorship');
 const milestoneSubmissionsRouter = require('./routes/milestoneSubmissions');
 const usersRouter = require('./routes/users');
+const pushRouter = require('./routes/push');
 
 function createApp() {
   const app = express();
@@ -39,6 +40,9 @@ function createApp() {
   app.use('/sponsorship', sponsorshipRouter);
   app.use('/milestone-submissions', milestoneSubmissionsRouter);
   app.use('/users', usersRouter);
+  // Web Push subscription store. Wallet identity is derived from the SEP-10
+  // session inside the router, never from the request body.
+  app.use('/push', pushRouter);
 
   app.use((req, res) => {
     res.status(404).json({ error: 'Not found' });
