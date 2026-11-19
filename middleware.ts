@@ -65,6 +65,24 @@ function normaliseAdminPath(pathname: string): string {
     .join('/');
 }
 
+/**
+ * Resolve the admin rate-limit policy for a normalised route template.
+ *
+ * The concrete limit numbers live in the central registry
+ * (`lib/rateLimitPolicies.ts`) so admin throttling is no longer bespoke to
+ * this file (issue #1665). The `normaliseAdminPath` bucket protection from
+ * #1494 is preserved by keying on the normalised template.
+ */
+function getAdminPolicy(routeTemplate: string) {
+  if (routeTemplate === '/api/admin/audit-log/reconcile') {
+    return POLICIES.adminReconcile;
+  }
+  if (routeTemplate === '/api/admin/fraud-flags') {
+    return POLICIES.adminFraudEvaluation;
+  }
+  return POLICIES.adminDefault;
+}
+
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
@@ -74,28 +92,29 @@ export async function middleware(request: NextRequest) {
   const csp = buildCsp({ nonce });
 
   if (pathname.startsWith('/api/admin/')) {
-    const isReconciliation = pathname === '/api/admin/audit-log/reconcile';
-    const isFraudEvaluation = pathname === '/api/admin/fraud-flags';
-    const limit = isReconciliation || isFraudEvaluation ? 3 : 30;
-    const windowMs = isReconciliation ? 5 * 60 * 1000 : 60 * 1000;
     // Normalise the pathname so dynamic segments (wallet addresses, UUIDs,
     // numeric IDs) are collapsed to [id] before building the bucket key —
     // preventing callers from bypassing the limit by varying path params
     // (issue #1494).
     const routeTemplate = normaliseAdminPath(pathname);
+    const policy = getAdminPolicy(routeTemplate);
     const result = await checkRateLimit(
       `admin-api:${routeTemplate}:${getClientIp(request)}`,
-      { limit, windowMs },
+      { limit: policy.limit, windowMs: policy.windowMs },
     );
 
     if (result.limited) {
       return NextResponse.json(
         {
-          error: 'Admin request rate limit exceeded. Please try again shortly.',
+          type: 'about:blank',
+          title: 'Too Many Requests',
+          status: 429,
+          detail: 'Admin request rate limit exceeded. Please try again shortly.',
         },
         {
           status: 429,
           headers: {
+            'Content-Type': 'application/problem+json',
             'Retry-After': String(result.retryAfterSec ?? 60),
           },
         },
