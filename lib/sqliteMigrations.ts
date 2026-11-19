@@ -13,6 +13,10 @@
  * existing production database a no-op (the table already exists, so the
  * statement matches and does nothing) while still recording that version 1
  * has been applied, so later migrations layer on top correctly.
+ *
+ * The same versioned-migration idea is reused by the Postgres driver in
+ * `lib/db/` (see `lib/db/postgresMigrations.ts`), which mirrors this runner
+ * against a `pg` pool so both drivers track applied versions identically.
  */
 import type Database from 'better-sqlite3';
 
