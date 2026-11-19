@@ -15,6 +15,7 @@ export const ApiErrorCode = {
   FORBIDDEN: 'FORBIDDEN',
   INVALID_SIGNATURE: 'INVALID_SIGNATURE',
   SESSION_EXPIRED: 'SESSION_EXPIRED',
+  REAUTH_REQUIRED: 'REAUTH_REQUIRED',
 
   // ── Request validation ────────────────────────────────────────────────────
   INVALID_REQUEST: 'INVALID_REQUEST',

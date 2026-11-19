@@ -99,6 +99,12 @@ async function postSep10(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
+  // Step-up re-authentication (#1676): when `?purpose=step_up`, the caller
+  // proves wallet presence with a fresh SEP-10 signature and we refresh
+  // `auth_time` on the *existing* session id — no new session is minted.
+  const purpose = req.nextUrl.searchParams.get('purpose');
+  const isStepUp = purpose === 'step_up';
+
   let body: { signedXdr?: string; publicKey?: string; rememberMe?: boolean };
   try {
     body = await req.json();
@@ -119,6 +125,36 @@ async function postSep10(req: NextRequest) {
 
   if (typeof publicKey !== 'string' || !isValidStellarAddress(publicKey)) {
     return NextResponse.json({ error: 'Invalid publicKey' }, { status: 400 });
+  }
+
+  // For step-up we must resolve the existing session up front so we can
+  // verify the signer matches the session owner and update its auth_time.
+  let stepUpSid: string | null = null;
+  if (isStepUp) {
+    const token = req.cookies.get(SESSION_COOKIE)?.value;
+    const payload = token ? verifySessionToken(token, 'access') : null;
+    if (!payload?.sid) {
+      return withRequestId(
+        apiError(ApiErrorCode.REAUTH_REQUIRED, 401, 'Re-authentication required'),
+        log.requestId,
+      );
+    }
+    const existing = SessionStore.getInstance().get(payload.sid);
+    if (!existing || existing.revokedAt) {
+      return withRequestId(
+        apiError(ApiErrorCode.REAUTH_REQUIRED, 401, 'Re-authentication required'),
+        log.requestId,
+      );
+    }
+    // The fresh signature must come from the same wallet that owns the
+    // session — otherwise a different keypair could refresh auth_time.
+    if (existing.publicKey !== publicKey) {
+      return withRequestId(
+        apiError(ApiErrorCode.INVALID_SIGNATURE, 401, 'Verification failed'),
+        log.requestId,
+      );
+    }
+    stepUpSid = payload.sid;
   }
 
   const config = getSep10Config();
@@ -155,6 +191,9 @@ async function postSep10(req: NextRequest) {
     // we know the XDR is well-formed (verifyChallengeTxSigners would have
     // thrown otherwise), so the parse is guaranteed to succeed and we avoid
     // parsing the same XDR twice on the happy path.
+    //
+    // This same nonce store applies to step-up challenges too (#1676): a
+    // captured step-up XDR cannot be replayed to refresh auth_time.
     const parsedTx = TransactionBuilder.fromXDR(signedXdr, network) as {
       timeBounds?: { maxTime: string };
     };
@@ -171,6 +210,16 @@ async function postSep10(req: NextRequest) {
       log.error('SEP-10 replay attempt detected', { xdrHash });
       return withRequestId(
         apiError(ApiErrorCode.INVALID_SIGNATURE, 401, 'Verification failed'),
+        log.requestId,
+      );
+    }
+
+    // Step-up path: refresh auth_time on the existing session and return
+    // without minting new tokens or touching cookies.
+    if (isStepUp && stepUpSid) {
+      SessionStore.getInstance().touchAuthTime(stepUpSid, Math.floor(Date.now() / 1000));
+      return withRequestId(
+        NextResponse.json({ ok: true, purpose: 'step_up' }),
         log.requestId,
       );
     }
@@ -211,120 +260,14 @@ async function postSep10(req: NextRequest) {
       req.headers.get('user-agent'),
     );
 
+    // Record auth_time on the freshly created session row so sensitive
+    // routes can require a recent signature (#1676). This lives only in the
+    // server-side row — never in the token — so it cannot be replayed via
+    // refresh rotation.
+    SessionStore.getInstance().touchAuthTime(sid, Math.floor(Date.now() / 1000));
+
     // Opportunistically evict expired nonces. This runs after the session is
     // already committed so it's on the non-critical path — a failure here
-    // would not affect the response. In practice the table is tiny (one row
-    // per challenge consumed; rows expire with the 300 s challenge window),
-    // so sweeping synchronously is negligible.
-    try {
-      Sep10NonceStore.getInstance().sweepExpired();
-    } catch {
-      // Best-effort; a sweep failure must not abort an otherwise-successful
-      // login.
-    }
+    // would not
 
-    const response = NextResponse.json({ success: true, maxAge });
-    setSessionCookies(response, {
-      accessToken,
-      refreshToken,
-      refreshMaxAge: maxAge,
-    });
-    return withRequestId(response, log.requestId);
-  } catch (error) {
-    log.error('SEP-10 verification failed', {
-      reason: error instanceof Error ? error.message : String(error),
-    });
-    return withRequestId(
-      apiError(ApiErrorCode.INVALID_SIGNATURE, 401, 'Verification failed'),
-      log.requestId,
-    );
-  }
-}
-
-async function getSep10(req: NextRequest) {
-  const log = createRequestLogger(req);
-  const account = req.nextUrl.searchParams.get('account');
-  if (!account) {
-    return NextResponse.json(
-      { error: 'Missing account parameter' },
-      { status: 400 },
-    );
-  }
-
-  if (!isValidStellarAddress(account)) {
-    return NextResponse.json(
-      { error: 'Invalid account parameter' },
-      { status: 400 },
-    );
-  }
-
-  const config = getSep10Config();
-  if (!config) return serverNotConfigured();
-  const { serverKey, homeDomain } = config;
-  const network = getNetworkPassphrase();
-
-  try {
-    const serverKeypair = Keypair.fromSecret(serverKey);
-    const challengeXdr = WebAuth.buildChallengeTx(
-      serverKeypair,
-      account,
-      homeDomain,
-      CHALLENGE_TIMEOUT_SEC,
-      network,
-      homeDomain,
-    );
-    return NextResponse.json({ transaction: challengeXdr });
-  } catch (error) {
-    log.error('SEP-10 challenge generation failed', {
-      reason: error instanceof Error ? error.message : String(error),
-    });
-    return withRequestId(
-      NextResponse.json(
-        { error: 'Failed to generate challenge' },
-        { status: 500 },
-      ),
-      log.requestId,
-    );
-  }
-}
-
-/**
- * DELETE /api/auth/sep10
- *
- * Logs the caller out: clears both session cookies AND revokes the
- * session's row server-side (see #1179), so a copy of the cookie captured
- * before this call (a stale browser tab, a proxy log, XSS exfiltration)
- * stops working immediately instead of remaining valid until its natural
- * `exp`. Called by context/WalletContext.tsx's disconnect().
- *
- * The `sid` is read from whichever of the two cookies still verifies —
- * `session` (access token) is usually present, but a caller whose access
- * token already expired and hasn't refreshed yet still has a chance to
- * revoke via `session_refresh`. Best-effort: an unreadable/absent sid just
- * means there's nothing server-side left to revoke, but the cookies are
- * still cleared either way.
- */
-async function deleteSep10(req: NextRequest) {
-  const accessToken = req.cookies.get(SESSION_COOKIE)?.value;
-  const refreshToken = req.cookies.get(REFRESH_COOKIE)?.value;
-  const sid =
-    (accessToken && verifySessionToken(accessToken, 'access')?.sid) ||
-    (refreshToken && verifySessionToken(refreshToken, 'refresh')?.sid) ||
-    null;
-
-  if (sid) {
-    try {
-      SessionStore.getInstance().revoke(sid);
-    } catch {
-      // Best-effort — cookies are still cleared below regardless.
-    }
-  }
-
-  const response = NextResponse.json({ success: true });
-  clearSessionCookies(response);
-  return response;
-}
-
-export const POST = withRouteTelemetry(postSep10, '/api/auth/sep10');
-export const GET = withRouteTelemetry(getSep10, '/api/auth/sep10');
-export const DELETE = withRouteTelemetry(deleteSep10, '/api/auth/sep10');
+/* … truncated 3700 chars — edit only what you need near the top … */
