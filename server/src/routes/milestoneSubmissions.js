@@ -1,5 +1,6 @@
 const express = require('express');
 const milestoneSubmissionService = require('../milestoneSubmissionService');
+const { authenticate } = require('../middleware/authenticate');
 
 const router = express.Router();
 
@@ -10,8 +11,9 @@ function isNonEmptyString(value) {
 const VALID_STATUSES = ['pending', 'approved', 'rejected'];
 
 // POST /milestone-submissions
-// Body: { playerId, playerName?, description, evidenceUrl?, validatorWallet, submittedBy }
-router.post('/', (req, res) => {
+// Body: { playerId, playerName?, description, evidenceUrl?, validatorWallet }
+// submittedBy is derived from the authenticated session, never the body.
+router.post('/', authenticate, (req, res) => {
   const {
     playerId,
     playerName,
@@ -24,13 +26,17 @@ router.post('/', (req, res) => {
   if (
     !isNonEmptyString(playerId) ||
     !isNonEmptyString(description) ||
-    !isNonEmptyString(validatorWallet) ||
-    !isNonEmptyString(submittedBy)
+    !isNonEmptyString(validatorWallet)
   ) {
     return res.status(400).json({
-      error:
-        'playerId, description, validatorWallet, and submittedBy are required',
+      error: 'playerId, description, and validatorWallet are required',
     });
+  }
+
+  if (isNonEmptyString(submittedBy) && submittedBy !== req.wallet) {
+    return res
+      .status(403)
+      .json({ error: 'submittedBy must match the authenticated wallet' });
   }
 
   const submission = milestoneSubmissionService.createSubmission({
@@ -39,7 +45,7 @@ router.post('/', (req, res) => {
     description,
     evidenceUrl,
     validatorWallet,
-    submittedBy,
+    submittedBy: req.wallet,
   });
   return res.status(201).json(submission);
 });
@@ -62,7 +68,8 @@ router.get('/validator/:wallet', (req, res) => {
 
 // PATCH /milestone-submissions/:id
 // Body: { status: 'approved' | 'rejected', txHash?: string }
-router.patch('/:id', (req, res) => {
+// Only the assigned validator may decide a submission.
+router.patch('/:id', authenticate, (req, res) => {
   const { status, txHash } = req.body ?? {};
   if (!VALID_STATUSES.includes(status) || status === 'pending') {
     return res
@@ -71,6 +78,16 @@ router.patch('/:id', (req, res) => {
   }
 
   try {
+    const existing = milestoneSubmissionService.getSubmission(req.params.id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Submission not found' });
+    }
+    if (existing.validatorWallet !== req.wallet) {
+      return res
+        .status(403)
+        .json({ error: 'Only the assigned validator may decide this submission' });
+    }
+
     const submission = milestoneSubmissionService.decideSubmission(
       req.params.id,
       status,

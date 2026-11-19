@@ -6,6 +6,7 @@ const {
 } = require('./middleware/security');
 const requestLogger = require('./middleware/requestLogger');
 const { createRequestLogger } = require('./logger');
+const { authenticate } = require('./middleware/authenticate');
 const referralsRouter = require('./routes/referrals');
 const academiesRouter = require('./routes/academies');
 const sponsorshipRouter = require('./routes/sponsorship');
@@ -34,11 +35,15 @@ function createApp() {
   // future off-chain features (chat history, comments — see the root
   // README architecture diagram) should follow the same pattern: a
   // dedicated service module + a router mounted here.
-  app.use('/referrals', referralsRouter);
-  app.use('/academies', academiesRouter);
-  app.use('/sponsorship', sponsorshipRouter);
-  app.use('/milestone-submissions', milestoneSubmissionsRouter);
-  app.use('/users', usersRouter);
+  //
+  // Every router below is mounted behind `authenticate`, which verifies the
+  // SEP-10 session token issued by the Next.js app and sets `req.wallet`.
+  // Routers enforce per-route ownership/role checks on top of this.
+  app.use('/referrals', authenticate, referralsRouter);
+  app.use('/academies', authenticate, academiesRouter);
+  app.use('/sponsorship', authenticate, sponsorshipRouter);
+  app.use('/milestone-submissions', authenticate, milestoneSubmissionsRouter);
+  app.use('/users', authenticate, usersRouter);
 
   app.use((req, res) => {
     res.status(404).json({ error: 'Not found' });
