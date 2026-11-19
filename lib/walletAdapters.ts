@@ -1,8 +1,58 @@
-export type WalletProvider = 'freighter' | 'albedo' | 'lobstr' | 'ledger';
+export type WalletProvider = 'freighter' | 'albedo' | 'lobstr' | 'ledger' | 'walletconnect';
 
 const STANDARD_LEDGER_PATH = "44'/148'/0'";
 
 let _ledgerPublicKey: string | null = null;
+
+// WalletConnect v2 session state. The SDK is dynamically imported on first
+// use (like Ledger below) so the root bundle never pays for it unless the
+// user actually opens the wallet modal and picks a mobile wallet.
+let _wcClient: {
+  connect(opts: unknown): Promise<unknown>;
+  request(opts: unknown): Promise<unknown>;
+  disconnect(opts: unknown): Promise<void>;
+  session?: { topic: string; namespaces: Record<string, unknown> };
+} | null = null;
+let _wcPublicKey: string | null = null;
+let _wcChainId: string | null = null;
+
+function wcProjectId(): string | undefined {
+  return process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || undefined;
+}
+
+function wcChainFor(networkPassphrase: string): string {
+  // Stellar pubnet passphrase is "Public Global Stellar Network ; September 2015".
+  return networkPassphrase.includes('Public Global')
+    ? 'stellar:pubnet'
+    : 'stellar:testnet';
+}
+
+async function getWcClient(networkPassphrase: string) {
+  const projectId = wcProjectId();
+  if (!projectId) {
+    throw new Error(
+      'WalletConnect is not configured. Set NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID to enable mobile wallets.',
+    );
+  }
+  if (_wcClient) return _wcClient;
+  const { EthereumProvider } = await import('@walletconnect/ethereum-provider');
+  const chainId = wcChainFor(networkPassphrase);
+  const provider = await EthereumProvider.init({
+    projectId,
+    chains: [chainId],
+    optionalChains: ['stellar:pubnet', 'stellar:testnet'],
+    showQrModal: true,
+    metadata: {
+      name: 'Scout',
+      description: 'Scout player wallet',
+      url: typeof window !== 'undefined' ? window.location.origin : '',
+      icons: [],
+    },
+  });
+  _wcClient = provider as unknown as typeof _wcClient;
+  _wcChainId = chainId;
+  return _wcClient;
+}
 
 export const walletAdapters: Record<
   WalletProvider,
@@ -107,6 +157,72 @@ export const walletAdapters: Record<
       throw new Error('LOBSTR adapter not configured');
     },
   },
+  // WalletConnect v2 (issue #1673): lets mobile Stellar wallets (LOBSTR
+  // mobile, etc.) pair over a QR code / deep link and sign via the Stellar
+  // namespace (`stellar:pubnet` / `stellar:testnet`). The SDK is dynamically
+  // imported on first use so the shared runtime chunk budget is unaffected.
+  walletconnect: {
+    async getPublicKey() {
+      try {
+        const client = await getWcClient('Public Global Stellar Network ; September 2015');
+        if (!client) throw new Error('WalletConnect unavailable');
+        if (!client.session) {
+          await client.connect({});
+        }
+        const result = (await client.request({
+          method: 'stellar_getAddress',
+          params: {},
+        })) as { address?: string } | string | undefined;
+        const address =
+          typeof result === 'string' ? result : result?.address;
+        if (!address) {
+          throw new Error(
+            'WalletConnect did not return a public key. Please try again.',
+          );
+        }
+        _wcPublicKey = address;
+        return address;
+      } catch (err) {
+        throw mapWalletConnectError(
+          err,
+          'Failed to get public key from WalletConnect',
+        );
+      }
+    },
+    async signTransaction(xdr, networkPassphrase) {
+      try {
+        const client = await getWcClient(networkPassphrase);
+        if (!client) throw new Error('WalletConnect unavailable');
+        const expectedChain = wcChainFor(networkPassphrase);
+        if (_wcChainId && _wcChainId !== expectedChain) {
+          throw new Error(
+            `WalletConnect session is on the wrong network (${_wcChainId}). Please reconnect on ${expectedChain}.`,
+          );
+        }
+        // SEP-10 challenge and regular transactions both go through
+        // `stellar_signXDR`; the wallet returns the signed envelope XDR.
+        const result = (await client.request({
+          method: 'stellar_signXDR',
+          params: { xdr, networkPassphrase },
+        })) as { signedXDR?: string; signedTxXdr?: string } | string | undefined;
+        const signed =
+          typeof result === 'string'
+            ? result
+            : (result?.signedXDR ?? result?.signedTxXdr);
+        if (!signed) {
+          throw new Error(
+            'WalletConnect did not return a signed transaction. Please try again.',
+          );
+        }
+        return signed;
+      } catch (err) {
+        throw mapWalletConnectError(
+          err,
+          'Failed to sign transaction with WalletConnect',
+        );
+      }
+    },
+  },
   // hw-transport-webhid/hw-app-str (WebHID + Stellar app protocol) and
   // stellar-sdk's TransactionBuilder/StrKey are dynamically imported on
   // first use for the same reason as Freighter above — a Ledger is a rare,
@@ -171,6 +287,46 @@ export const walletAdapters: Record<
   },
 };
 
+/**
+ * Tear down the WalletConnect session (issue #1673). Called from
+ * WalletContext.disconnect so a WC pairing doesn't linger in storage after
+ * the user switches to another adapter.
+ */
+export async function disconnectWalletConnect(): Promise<void> {
+  if (!_wcClient) return;
+  try {
+    await _wcClient.disconnect({ reason: { code: 6000, message: 'User disconnected' } });
+  } catch {
+    // Best-effort: the relay may already be gone.
+  } finally {
+    _wcClient = null;
+    _wcPublicKey = null;
+    _wcChainId = null;
+  }
+}
+
+/**
+ * Restore a persisted WalletConnect session after a page reload. Returns the
+ * connected public key, or null when there is no live session.
+ */
+export async function restoreWalletConnectSession(): Promise<string | null> {
+  if (!wcProjectId()) return null;
+  try {
+    const client = await getWcClient('Public Global Stellar Network ; September 2015');
+    if (!client?.session) return null;
+    if (_wcPublicKey) return _wcPublicKey;
+    const result = (await client.request({
+      method: 'stellar_getAddress',
+      params: {},
+    })) as { address?: string } | string | undefined;
+    const address = typeof result === 'string' ? result : result?.address;
+    if (address) _wcPublicKey = address;
+    return address ?? null;
+  } catch {
+    return null;
+  }
+}
+
 function mapAlbedoError(err: unknown, fallbackMessage: string): Error {
   if (err instanceof Error) {
     const msg = err.message.toLowerCase();
@@ -182,6 +338,33 @@ function mapAlbedoError(err: unknown, fallbackMessage: string): Error {
     if (msg.includes('popup') || msg.includes('blocked')) {
       return new Error(
         'Albedo popup was blocked by your browser. Please allow popups for this site and try again.',
+      );
+    }
+  }
+  return err instanceof Error ? err : new Error(fallbackMessage);
+}
+
+function mapWalletConnectError(err: unknown, fallbackMessage: string): Error {
+  if (err instanceof Error) {
+    const msg = err.message.toLowerCase();
+    if (
+      msg.includes('user rejected') ||
+      msg.includes('user declined') ||
+      msg.includes('rejected') ||
+      msg.includes('cancelled')
+    ) {
+      return new Error(
+        'WalletConnect signing was cancelled. Please try again to continue.',
+      );
+    }
+    if (msg.includes('timeout') || msg.includes('timed out')) {
+      return new Error(
+        'WalletConnect request timed out. Please check your wallet app and try again.',
+      );
+    }
+    if (msg.includes('wrong network') || msg.includes('chain')) {
+      return new Error(
+        'WalletConnect session is on the wrong network. Please reconnect on the correct Stellar network.',
       );
     }
   }
@@ -211,22 +394,7 @@ function mapLedgerError(err: unknown, fallbackMessage: string): Error {
       msg.includes('app does not seem to be open')
     ) {
       return new Error(
-        'Request cancelled. Make sure the Stellar app is open on your Ledger device and try again.',
-      );
-    }
-
-    if (
-      msg.includes('not supported') ||
-      msg.includes('webhid is not supported')
-    ) {
-      return new Error(
-        'WebHID is not supported in your browser. Please use Chrome, Edge, or Opera.',
-      );
-    }
-
-    if (msg.includes('stellar app') || msg.includes('0x6985')) {
-      return new Error(
-        'Stellar app is not open on your Ledger device. Please open it and try again.',
+        'Request cancelled. Make sure the Stellar app is open on your Ledger and try again.',
       );
     }
   }
