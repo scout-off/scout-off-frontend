@@ -1,5 +1,3 @@
-const { getPlayerSitemapPaths } = require('./lib/playerSitemapPaths');
-
 /** @type {import('next-sitemap').IConfig} */
 const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://scoutoff.app';
 
@@ -68,7 +66,8 @@ module.exports = {
     '/*/recovery',
     '/*/academy/bulk-import',
   ],
-  // Real, locale-prefixed player profile URLs from the indexer (#1350).
-  additionalPaths: () => getPlayerSitemapPaths({ siteUrl }),
+  // Player profile URLs are served dynamically by the sharded sitemap index
+  // (app/sitemap-index.xml + app/sitemaps/players-[shard].xml) so they stay
+  // current after deploy without querying the indexer at build time (#1682).
   sitemapSize: 7000,
 };
