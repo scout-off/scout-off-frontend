@@ -109,9 +109,17 @@ export async function middleware(request: NextRequest) {
 
   // Shared header mutations: stamp the nonce so app/layout.tsx can read it
   // via headers() and apply it to the no-flash theme script.
+  //
+  // The CSP header MUST also be set on the forwarded request headers (not
+  // just the response). Next.js only stamps its own framework/RSC inline
+  // scripts (`self.__next_f.push(...)`) with a nonce when it can read one
+  // from the request's Content-Security-Policy header. Without this, those
+  // scripts are blocked by the very policy the same request sends back
+  // (issue #1664).
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);
   requestHeaders.set('x-pathname', pathname);
+  requestHeaders.set('Content-Security-Policy', csp);
 
   if (pathnameHasLocale) {
     const response = NextResponse.next({
