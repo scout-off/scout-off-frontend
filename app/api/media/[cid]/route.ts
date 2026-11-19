@@ -35,6 +35,15 @@ import { MediaModerationStore } from '@/lib/mediaModerationStore';
  * A bounded read-ahead probe (lib/mediaProxyGateway.ts) retries the next
  * gateway when an upstream stream stalls or errors before any bytes are
  * committed to the client.
+ *
+ * Adaptive HLS renditions (issue #1674): a rendition directory is pinned to
+ * IPFS as its own CID. Playlists (`master.m3u8`, `*.m3u8`) and segments
+ * (`*.ts`, `*.m4s`, `*.mp4`) are requested as
+ * `/api/media/<renditionsCid>/<relative path>`. The relative path is
+ * forwarded to the gateway as `<renditionsCid>/<path>`, so the same
+ * moderation denylisting and URL signing apply to renditions as to the
+ * original. Denylisting the original CID also blocks its renditions via the
+ * `?original=<cid>` query param the player appends.
  */
 
 const PRIMARY_GATEWAY =
@@ -44,6 +53,19 @@ const PRIMARY_GATEWAY =
 const FALLBACK_GATEWAYS = IPFS_FALLBACK_GATEWAYS;
 
 const CACHE_CONTROL = 'public, max-age=31536000, immutable';
+
+/**
+ * HLS playlists are mutable-ish in the sense that a re-transcode produces a
+ * new CID, so they can still be cached immutably. Segments are immutable.
+ * We keep the same aggressive caching for both, but set the correct
+ * Content-Type so Safari's native HLS player and hls.js accept them.
+ */
+const HLS_CONTENT_TYPES: Record<string, string> = {
+  m3u8: 'application/vnd.apple.mpegurl',
+  ts: 'video/mp2t',
+  m4s: 'video/iso.segment',
+  mp4: 'video/mp4',
+};
 
 /** Error responses must never be cached by the CDN or browser. */
 function errorResponse(
@@ -96,6 +118,33 @@ function isAllowedReferrer(req: NextRequest): boolean {
   }
 }
 
+/**
+ * Split the catch-all `cid` param into the rendition directory CID and the
+ * relative path inside it (e.g. `bafy.../480p/seg0.ts`). The first segment
+ * must be a valid CID; the rest is a sanitized relative path with no `..`
+ * traversal and no leading slash.
+ */
+function parseMediaPath(raw: string): { cid: string; subPath: string } | null {
+  const slash = raw.indexOf('/');
+  if (slash === -1) {
+    return isValidCid(raw) ? { cid: normalizeCid(raw), subPath: '' } : null;
+  }
+  const cidPart = raw.slice(0, slash);
+  const subPath = raw.slice(slash + 1);
+  if (!isValidCid(cidPart)) return null;
+  if (!subPath) return null;
+  // Reject traversal and absolute paths; allow nested rendition dirs.
+  if (subPath.startsWith('/') || subPath.split('/').some((s) => s === '..' || s === '.')) {
+    return null;
+  }
+  return { cid: normalizeCid(cidPart), subPath };
+}
+
+function hlsContentType(subPath: string): string | undefined {
+  const ext = subPath.slice(subPath.lastIndexOf('.') + 1).toLowerCase();
+  return HLS_CONTENT_TYPES[ext];
+}
+
 async function getMedia(
   req: NextRequest,
   { params }: { params: { cid: string } },
@@ -106,16 +155,27 @@ async function getMedia(
   }
   // Validate before any upstream fetch so callers can't shape arbitrary
   // gateway requests (path traversal, query injection) through our origin.
-  if (!isValidCid(params.cid)) {
+  const parsed = parseMediaPath(params.cid);
+  if (!parsed) {
     return errorResponse('Invalid cid', 400);
   }
   // Canonical case, so `B…`/`b…` share one denylist entry and cache key.
-  const cid = normalizeCid(params.cid);
+  const { cid, subPath } = parsed;
+
+  const { searchParams } = new URL(req.url);
 
   // Moderated media (issue #1320): never proxied, and never cached, so a
   // later reinstatement takes effect. This only covers ScoutOff's own
   // surfaces — the CID stays reachable through public IPFS gateways.
-  if (MediaModerationStore.getInstance().isDenylisted(cid)) {
+  //
+  // Renditions (issue #1674): a rendition directory has its own CID, so the
+  // player passes `?original=<originalCid>` so denylisting the original also
+  // blocks its playlists and segments.
+  const moderation = MediaModerationStore.getInstance();
+  const originalParam = searchParams.get('original');
+  const originalCid =
+    originalParam && isValidCid(originalParam) ? normalizeCid(originalParam) : null;
+  if (moderation.isDenylisted(cid) || (originalCid && moderation.isDenylisted(originalCid))) {
     return NextResponse.json(
       { error: 'This media has been removed for legal or policy reasons' },
       { status: 451, headers: { 'Cache-Control': 'no-store' } },
@@ -135,14 +195,16 @@ async function getMedia(
     });
   }
 
-  const { searchParams } = new URL(req.url);
   const sig = searchParams.get('sig');
   const exp = searchParams.get('exp');
 
   if (sig || exp) {
     // A signature was presented — it must be valid and unexpired regardless
-    // of Referer.
-    if (!verifyMediaUrlSignature(cid, exp, sig)) {
+    // of Referer. Signatures are computed over the full media path (cid plus
+    // rendition sub-path) so a signed original URL can't be reused to fetch
+    // an unsigned rendition and vice versa.
+    const signedPath = subPath ? `${cid}/${subPath}` : cid;
+    if (!verifyMediaUrlSignature(signedPath, exp, sig)) {
       return errorResponse('Invalid or expired signature', 403);
     }
   } else if (!isAllowedReferrer(req)) {
@@ -155,21 +217,25 @@ async function getMedia(
 
   const gateways = [PRIMARY_GATEWAY, ...FALLBACK_GATEWAYS];
   const rangeHeader = req.headers.get('range');
+  // Forward the rendition sub-path to the gateway as `<cid>/<path>` so the
+  // existing gateway-racing/recovery logic (lib/mediaProxyGateway.ts) is
+  // reused unchanged for playlists and segments.
+  const upstreamCid = subPath ? `${cid}/${subPath}` : cid;
 
   try {
     const result = await fetchMediaFromGateways({
-      cid,
+      cid: upstreamCid,
       gateways,
       rangeHeader,
     });
 
     if (!result) {
-      log.error('All IPFS gateways exhausted', { cid });
+      log.error('All IPFS gateways exhausted', { cid, subPath });
       return errorResponse('Media not available', 502);
     }
 
     const responseHeaders: Record<string, string> = {
-      'Content-Type': result.contentType,
+      'Content-Type': hlsContentType(subPath) ?? result.contentType,
       'Cache-Control': CACHE_CONTROL,
       // Vercel's Edge Network (and most CDNs) prefer a dedicated
       // CDN-facing directive over the browser-facing Cache-Control when
@@ -196,6 +262,7 @@ async function getMedia(
   } catch (err) {
     log.error('All IPFS gateways exhausted', {
       cid,
+      subPath,
       reason: err instanceof Error ? err.message : String(err),
     });
     return errorResponse('Media not available', 502);
