@@ -34,6 +34,13 @@ export const runtime = 'nodejs';
  * refresh token — but does require possession of a refresh token this
  * server itself issued (HMAC-verified, see lib/session.ts), so it cannot be
  * used to mint a session for an address that never completed SEP-10.
+ *
+ * See #1292: refresh tokens are rotated with reuse detection (a
+ * refresh-token family keyed by `sid`). The session row records the
+ * currently-valid refresh `jti`; presenting any older `jti` is treated as
+ * token theft and revokes the whole session. A short grace window lets
+ * concurrent refreshes from multiple tabs succeed without false positives,
+ * and an absolute lifetime caps how long a session can be extended.
  */
 async function postRefresh(req: NextRequest) {
   const log = createRequestLogger(req);
@@ -52,6 +59,43 @@ async function postRefresh(req: NextRequest) {
   // server-side too (not revoked via disconnect() or "log out of all
   // devices"). A revoked session must not be silently renewed.
   if (!payload || !SessionStore.getInstance().isActive(payload.sid)) {
+    const response = NextResponse.json(
+      { error: 'Refresh session invalid or expired' },
+      { status: 401 },
+    );
+    clearSessionCookies(response);
+    return withRequestId(response, log.requestId);
+  }
+
+  const store = SessionStore.getInstance();
+  const now = Date.now();
+
+  // See #1292: refuse to extend a session past its absolute lifetime. The
+  // user must complete a fresh SEP-10 challenge to start a new session.
+  const absoluteExpiresAt = store.getAbsoluteExpiresAt(payload.sid);
+  if (absoluteExpiresAt !== null && now >= absoluteExpiresAt) {
+    store.revoke(payload.sid);
+    log.warn('refresh rejected: absolute session lifetime exceeded', {
+      sid: payload.sid,
+    });
+    const response = NextResponse.json(
+      { error: 'Session lifetime exceeded; please sign in again' },
+      { status: 401 },
+    );
+    clearSessionCookies(response);
+    return withRequestId(response, log.requestId);
+  }
+
+  // See #1292: reuse detection. The presented `jti` must match the session's
+  // current refresh `jti`, or be the immediately-previous one within the
+  // grace window (concurrent tabs). Anything else is a replayed, already-
+  // rotated token — treat it as theft and revoke the whole session.
+  const rotation = store.checkRefreshJti(payload.sid, payload.jti, now);
+  if (rotation === 'reuse') {
+    store.revoke(payload.sid);
+    log.warn('refresh token reuse detected; session revoked', {
+      sid: payload.sid,
+    });
     const response = NextResponse.json(
       { error: 'Refresh session invalid or expired' },
       { status: 401 },
@@ -80,7 +124,12 @@ async function postRefresh(req: NextRequest) {
     refreshTtl,
     { remember, sid: payload.sid },
   );
-  SessionStore.getInstance().touch(payload.sid, Date.now() + refreshTtl * 1000);
+  const rotatedPayload = verifySessionToken(rotatedRefreshToken, 'refresh');
+  store.rotateRefreshJti(
+    payload.sid,
+    rotatedPayload?.jti ?? null,
+    now + refreshTtl * 1000,
+  );
 
   const response = NextResponse.json({
     success: true,
