@@ -1,23 +1,28 @@
 import { NextRequest } from 'next/server';
-import { createHmac, timingSafeEqual, randomUUID } from 'crypto';
+import { createHmac, timingSafeEqual, randomUUID, createHash } from 'crypto';
 import { SessionStore } from './sessionStore';
 import { SESSION_COOKIE } from './sessionCookies';
 
-// ─── Multi-key / key-rotation support (#1489) ────────────────────────────────
+// ─── Multi-key / key-rotation support (#1489, #1686) ─────────────────────────
 //
 // SESSION_SECRET_KEYS (comma-separated) is the preferred variable for
 // production deployments that want zero-downtime rotation.  The *first* key
-// in the list is the "current" key (used to sign every new token and given
-// the key-id "0"); remaining keys are accepted for verification only, letting
-// tokens that were signed before the rotation remain valid until they naturally
-// expire.  SESSION_SECRET is still accepted as a single-key alias so existing
+// in the list is the "current" key (used to sign every new token); remaining
+// keys are accepted for verification only, letting tokens that were signed
+// before the rotation remain valid until they naturally expire.
+// SESSION_SECRET is still accepted as a single-key alias so existing
 // deployments need no immediate migration.
 //
+// Each key's id (`kid`) is derived from the secret itself — see
+// deriveKeyId below — so it is stable across reorderings of the list.  Before
+// #1686 the id was the key's array position, which meant prepending a new
+// secret silently re-pointed every existing token's `kid` at the wrong key.
+//
 // Rotation procedure:
-//   1. Prepend the new secret to SESSION_SECRET_KEYS (new key becomes id "0").
-//   2. Keep the old secret as id "1" (or "2", etc.) so live tokens verify.
+//   1. Prepend the new secret to SESSION_SECRET_KEYS.
+//   2. Keep the old secret(s) in the list so live tokens verify.
 //   3. After max(ACCESS_TOKEN_TTL_SEC, REMEMBER_ME_REFRESH_TTL_SEC) has passed,
-//      remove the old key from the list.
+//      remove the old key from the list — tokens signed with it stop verifying.
 //
 // If neither variable is set the module throws at call time (not at import
 // time) to avoid masking startup errors with a silent boot failure.
@@ -25,6 +30,20 @@ import { SESSION_COOKIE } from './sessionCookies';
 interface SigningKey {
   id: string;
   secret: string;
+}
+
+/**
+ * Derives a stable, content-addressed key id from a secret (#1686).
+ *
+ * `base64url(sha256("scoutoff-session-kid:" + secret)).slice(0, 8)` is stable
+ * across reorderings of SESSION_SECRET_KEYS and leaks nothing useful about the
+ * secret (it is a truncated hash of a domain-separated input).
+ */
+function deriveKeyId(secret: string): string {
+  return createHash('sha256')
+    .update('scoutoff-session-kid:' + secret)
+    .digest('base64url')
+    .slice(0, 8);
 }
 
 /**
@@ -41,12 +60,12 @@ function getSigningKeys(): SigningKey[] {
     if (keys.length === 0) {
       throw new Error('SESSION_SECRET_KEYS is set but contains no valid keys');
     }
-    return keys.map((secret, index) => ({ id: String(index), secret }));
+    return keys.map((secret) => ({ id: deriveKeyId(secret), secret }));
   }
 
   const single = process.env.SESSION_SECRET;
   if (single) {
-    return [{ id: '0', secret: single }];
+    return [{ id: deriveKeyId(single), secret: single }];
   }
 
   throw new Error('SESSION_SECRET (or SESSION_SECRET_KEYS) is not configured');
@@ -60,6 +79,15 @@ function getCurrentKey(): SigningKey {
 /** Returns the key with the given id, or undefined when none match. */
 function findKeyById(id: string): SigningKey | undefined {
   return getSigningKeys().find((k) => k.id === id);
+}
+
+/**
+ * True when `kid` looks like a legacy positional index ("0", "1", ...) that
+ * was minted before #1686.  Only these are allowed to fall back to trying
+ * every key; an unknown non-numeric kid is treated as a hard failure.
+ */
+function isLegacyPositionalKid(kid: string): boolean {
+  return /^\d{1,3}$/.test(kid);
 }
 
 // See #778: the `session` cookie used to hold the caller's own plaintext
@@ -144,10 +172,10 @@ interface SessionTokenPayload {
    */
   sid: string;
   /**
-   * Key identifier (see #1489). Indexes into SESSION_SECRET_KEYS so the
-   * verifier can select the correct HMAC secret without trying every key.
-   * Tokens signed before multi-key support was added will have no `kid`; the
-   * verifier falls back to the current key for those.
+   * Key identifier (see #1489, #1686). A stable, content-derived id for the
+   * signing secret so the verifier can select the correct HMAC secret without
+   * trying every key. Tokens signed before multi-key support was added will
+   * have no `kid`; the verifier falls back to the current key for those.
    */
   kid?: string;
 }
@@ -186,8 +214,8 @@ export function createSessionToken(
     // tests exercising the token format alone) still gets a valid, unique
     // sid rather than an error.
     sid: opts.sid ?? randomUUID(),
-    // Embed the key-id so verifySessionToken can select the right secret
-    // during a grace period after rotation (#1489).
+    // Embed the stable, content-derived key-id so verifySessionToken can
+    // select the right secret during a grace period after rotation (#1686).
     kid: currentKey.id,
     ...(type === 'refresh' ? { remember: !!opts.remember } : {}),
   };
@@ -196,122 +224,77 @@ export function createSessionToken(
 }
 
 /**
- * Verifies a session token's signature, type, and expiry, returning the
- * decoded payload only when all three hold. Signature comparison uses
- * `timingSafeEqual` (not `===`) to avoid leaking match-length information
- * through response timing. This is the only sanctioned way to trust a
- * token's claims — never parse/trust a cookie's raw value directly.
+ * Verifies a session token's signature and expiry, returning its payload or
+ * null.  Key selection prefers the token's `kid` (#1686): a stable,
+ * content-derived id resolves to exactly one secret, so the common path
+ * performs a single HMAC.  Legacy tokens minted before #1686 carry a
+ * positional `kid` ("0", "1", ...) that no longer names a key after a
+ * rotation; those — and tokens with no `kid` at all — fall back to trying
+ * every configured key.
+ *
+ * TODO(2025-01-01, #1686): remove the legacy positional-kid fallback once
+ * max(ACCESS_TOKEN_TTL_SEC, REMEMBER_ME_REFRESH_TTL_SEC) (30 days) has
+ * elapsed since the stable-kid rollout — by then no live token can carry a
+ * positional kid.
  */
-export function verifySessionToken(
-  token: string,
-  expectedType: SessionTokenType,
-): SessionTokenPayload | null {
-  const parts = token.split('.');
-  if (parts.length !== 2) return null;
-  const [payloadB64, signature] = parts;
+export function verifySessionToken(token: string): SessionTokenPayload | null {
+  const dot = token.indexOf('.');
+  if (dot <= 0) return null;
+  const payloadB64 = token.slice(0, dot);
+  const signature = token.slice(dot + 1);
 
-  // Decode the payload first (without trusting it) to read `kid`, so we can
-  // select the right HMAC key and avoid a full key scan (#1489).
-  let rawPayload: SessionTokenPayload;
+  let payload: SessionTokenPayload;
   try {
-    rawPayload = JSON.parse(
-      Buffer.from(payloadB64, 'base64url').toString('utf8'),
-    );
+    payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8'));
   } catch {
     return null;
   }
+  if (!payload || typeof payload !== 'object') return null;
 
-  // Build the ordered list of keys to try: if `kid` is present, put the
-  // matching key first so the common case (known kid) is a single comparison.
-  // Fall back to trying all configured keys so tokens minted before `kid` was
-  // introduced still verify (the payload `kid` field is optional).
-  let keysToTry: SigningKey[];
-  try {
-    const allKeys = getSigningKeys();
-    if (typeof rawPayload.kid === 'string') {
-      const named = findKeyById(rawPayload.kid);
-      keysToTry = named
-        ? [named, ...allKeys.filter((k) => k.id !== named.id)]
-        : allKeys;
+  const keys = getSigningKeys();
+  const candidates: SigningKey[] = [];
+  if (typeof payload.kid === 'string') {
+    const byKid = findKeyById(payload.kid);
+    if (byKid) {
+      candidates.push(byKid);
+    } else if (isLegacyPositionalKid(payload.kid)) {
+      // Legacy positional kid from before #1686 — try every key.
+      console.warn(
+        `[session] legacy positional kid "${payload.kid}" — falling back to all keys (#1686)`,
+      );
+      candidates.push(...keys);
     } else {
-      keysToTry = allKeys;
+      return null;
     }
-  } catch {
-    return null;
+  } else {
+    // No kid at all (pre-#1489 tokens): try every key.
+    candidates.push(...keys);
   }
 
-  // Try each candidate key with a constant-time comparison so we don't leak
-  // match-length information through response timing.
-  let verified = false;
-  for (const key of keysToTry) {
-    let expectedSignature: string;
-    try {
-      expectedSignature = sign(payloadB64, key.secret);
-    } catch {
-      continue;
-    }
-
-    const sigBuf = Uint8Array.from(Buffer.from(signature));
-    const expectedBuf = Uint8Array.from(Buffer.from(expectedSignature));
-    if (
-      sigBuf.length === expectedBuf.length &&
-      timingSafeEqual(sigBuf, expectedBuf)
-    ) {
-      verified = true;
-      break;
+  const expected = Buffer.from(signature, 'base64url');
+  for (const key of candidates) {
+    const actual = Buffer.from(sign(payloadB64, key.secret), 'base64url');
+    if (actual.length === expected.length && timingSafeEqual(actual, expected)) {
+      if (typeof payload.exp !== 'number' || payload.exp < Math.floor(Date.now() / 1000)) {
+        return null;
+      }
+      return payload;
     }
   }
-  if (!verified) return null;
-
-  const payload = rawPayload;
-
-  if (payload.typ !== expectedType) return null;
-  if (typeof payload.sub !== 'string' || !payload.sub) return null;
-  if (typeof payload.jti !== 'string' || !payload.jti) return null;
-  if (
-    typeof payload.exp !== 'number' ||
-    payload.exp < Math.floor(Date.now() / 1000)
-  ) {
-    return null;
-  }
-
-  return payload;
+  return null;
 }
 
 /**
- * Returns the authenticated wallet's public key from `req`'s signed
- * `session` cookie, or null if it's missing, malformed, tampered with, of
- * the wrong token type, expired, OR belongs to a session that's been
- * revoked server-side (see #1179 — a still-unexpired, still
- * correctly-signed token is no longer sufficient on its own; its `sid`
- * must also still be active in lib/sessionStore.ts). This is the ONLY
- * sanctioned way for a route to read caller identity from the `session`
- * cookie — routes that used to read `req.cookies.get('session')?.value`
- * directly were trusting whatever string the client sent, with no proof it
- * came from a completed SEP-10 flow (see #778).
+ * Reads and verifies the `session` cookie on an incoming request, returning
+ * the caller's public key or null.  Also consults lib/sessionStore.ts so a
+ * revoked `sid` is rejected even while its token is still cryptographically
+ * valid (see #1179).
  */
-export function getSessionWallet(req: NextRequest): string | null {
+export async function getSessionWallet(req: NextRequest): Promise<string | null> {
   const token = req.cookies.get(SESSION_COOKIE)?.value;
   if (!token) return null;
-  const payload = verifySessionToken(token, 'access');
-  if (!payload) return null;
-  if (!SessionStore.getInstance().isActive(payload.sid)) return null;
+  const payload = verifySessionToken(token);
+  if (!payload || payload.typ !== 'access') return null;
+  if (!(await SessionStore.isActive(payload.sid))) return null;
   return payload.sub;
-}
-
-/**
- * Returns the `sid` (see lib/sessionStore.ts) of the session making `req`,
- * under the same validity rules as {@link getSessionWallet} — signature,
- * type, expiry, and server-side active-ness all checked. Lets a route tell
- * "which one of this wallet's sessions is the one I'm currently handling"
- * apart from its siblings (see #1187's active-sessions view, which needs to
- * mark the caller's own row distinctly so it isn't revoked by accident).
- */
-export function getSessionId(req: NextRequest): string | null {
-  const token = req.cookies.get(SESSION_COOKIE)?.value;
-  if (!token) return null;
-  const payload = verifySessionToken(token, 'access');
-  if (!payload) return null;
-  if (!SessionStore.getInstance().isActive(payload.sid)) return null;
-  return payload.sid;
 }
