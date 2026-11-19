@@ -1,73 +1,87 @@
-'use client';
-
-import { useCallback, useEffect, useRef } from 'react';
-import { useToast } from '@/components/ui/Toast';
-
-const DEFAULT_UNDO_WINDOW_MS = 5000;
-
-interface UndoableRemovalParams {
-  /** Uniquely identifies this removal so a stray Undo click can't affect an unrelated one. */
-  id: string | number;
-  message: string;
-  /** Applied immediately, before the undo window starts. */
-  onOptimisticRemove: () => void;
-  /** Applied if Undo is clicked before the window expires. */
-  onRestore: () => void;
-  /** The real deletion — deferred until the window expires uninterrupted. */
-  onCommit: () => void | Promise<void>;
-}
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 /**
- * Reusable undo-toast pattern: applies a removal optimistically, then delays
- * the actual delete (onCommit) until `windowMs` has passed. An "Undo" action
- * on the toast cancels the pending delete and restores prior state; once the
- * window expires the removal is final.
+ * Optimistically removes an item and defers the real delete (`onCommit`) for
+ * `UNDO_WINDOW_MS`, giving the user a chance to undo.
+ *
+ * IMPORTANT for `onCommit` implementors: pending commits are flushed when the
+ * owning component unmounts or the page is hidden/closed. Fetch-based commits
+ * should therefore pass `keepalive: true` (or use `navigator.sendBeacon`) so
+ * the request survives page teardown.
  */
-export function useUndoableRemoval(windowMs: number = DEFAULT_UNDO_WINDOW_MS) {
-  const { show } = useToast();
-  const timersRef = useRef<Map<string | number, ReturnType<typeof setTimeout>>>(
-    new Map(),
-  );
+const UNDO_WINDOW_MS = 5000;
 
-  useEffect(() => {
-    const timers = timersRef.current;
-    return () => {
-      timers.forEach(clearTimeout);
-      timers.clear();
-    };
+type PendingRemoval = {
+  timer: ReturnType<typeof setTimeout>;
+  onCommit: () => void | Promise<void>;
+};
+
+export function useUndoableRemoval() {
+  const t = useTranslations('common');
+  const timersRef = useRef<Map<string, PendingRemoval>>(new Map());
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+
+  const flushAll = useCallback(() => {
+    const pending = timersRef.current;
+    pending.forEach(({ timer, onCommit }) => {
+      clearTimeout(timer);
+      void onCommit();
+    });
+    pending.clear();
+    setPendingIds(new Set());
   }, []);
 
-  return useCallback(
-    (params: UndoableRemovalParams) => {
-      const { id, message, onOptimisticRemove, onRestore, onCommit } = params;
+  const remove = useCallback(
+    (id: string, onCommit: () => void | Promise<void>) => {
+      const existing = timersRef.current.get(id);
+      if (existing) {
+        clearTimeout(existing.timer);
+      }
 
-      // A removal already pending for this id runs to completion untouched;
-      // starting a second one for the same id would double-commit.
-      if (timersRef.current.has(id)) return;
-
-      onOptimisticRemove();
       const timer = setTimeout(() => {
         timersRef.current.delete(id);
+        setPendingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
         void onCommit();
-      }, windowMs);
-      timersRef.current.set(id, timer);
+      }, UNDO_WINDOW_MS);
 
-      show({
-        message,
-        variant: 'info',
-        duration: windowMs,
-        action: {
-          label: 'Undo',
-          onClick: () => {
-            const pending = timersRef.current.get(id);
-            if (!pending) return; // window already expired
-            clearTimeout(pending);
-            timersRef.current.delete(id);
-            onRestore();
-          },
-        },
-      });
+      timersRef.current.set(id, { timer, onCommit });
+      setPendingIds((prev) => new Set(prev).add(id));
     },
-    [show, windowMs],
+    [],
   );
+
+  const undo = useCallback((id: string) => {
+    const pending = timersRef.current.get(id);
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    timersRef.current.delete(id);
+    setPendingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const handlePageHide = () => flushAll();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') flushAll();
+    };
+
+    window.addEventListener('pagehide', handlePageHide);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('pagehide', handlePageHide);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      flushAll();
+    };
+  }, [flushAll]);
+
+  return { remove, undo, pendingIds, undoLabel: t('undo') };
 }

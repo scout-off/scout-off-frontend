@@ -46,3 +46,28 @@ export const LOCALE_COOKIE = 'NEXT_LOCALE';
 
 /** One year, in seconds. Shared by middleware and the Navbar switcher. */
 export const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+
+/**
+ * Matches a locale-like first path segment: a two-letter language code with
+ * an optional region/script subtag (e.g. `en`, `EN`, `fr-FR`, `pt-BR`).
+ *
+ * Used by `middleware.ts` to distinguish an unsupported locale prefix (which
+ * should be replaced) from a real route segment (which should be prefixed).
+ * Kept dependency-free so it stays Edge-safe.
+ */
+export const LOCALE_LIKE_SEGMENT = /^[a-z]{2}(-[a-z]{2,4})?$/i;
+
+/**
+ * Resolve a locale-like segment to a supported locale, or `null` if it is
+ * not supported.
+ *
+ * Matching is case-insensitive and falls back to the base language for
+ * region tags (`fr-FR` → `fr`). Returns the canonical lowercase locale from
+ * `locales` so callers can redirect to a normalised path.
+ */
+export function resolveSupportedLocale(segment: string): Locale | null {
+  const lower = segment.toLowerCase();
+  const base = lower.split('-')[0];
+  const match = locales.find((l) => l === lower || l === base);
+  return (match as Locale | undefined) ?? null;
+}
