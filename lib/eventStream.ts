@@ -1,252 +1,99 @@
+import { useEffect, useRef } from 'react';
+import { mutate } from 'swr';
+
 /**
- * lib/eventStream.ts — shared client-side SSE subscription manager.
- *
- * Architecture:
- *   - One `EventSource` per browser (across tabs) is ensured via the Web
- *     Locks API. The tab that holds the lock is the "leader" and owns the
- *     actual EventSource connection.
- *   - Follower tabs receive events over a BroadcastChannel.
- *   - Every hook calls `onEvent(type, handler)` to register interest.
- *     When an event arrives the handler calls `mutate(key)` on the SWR
- *     cache instead of polling.
- *   - The fallback poll interval for hooks grows to 5 minutes while the
- *     stream is healthy, and resets to its original interval on stream
- *     failure.
- *
- * Scaling note: a single indexer instance is assumed. Horizontal scaling
- * would need Redis pub/sub on the indexer side to fan out across instances.
- *
- * Usage:
- *   const unsubscribe = onEvent('milestone_approved', (evt) => mutate(key));
- *   // call unsubscribe() in useEffect cleanup
+ * Keys that must be revalidated when the server signals that the replay gap
+ * was too large to stream and the client needs to refetch through REST.
  */
+const RESYNC_KEYS = ['/api/events', '/api/milestones', '/api/players'];
 
-const CHANNEL_NAME = 'scoutoff:indexer-events';
-const LOCK_NAME = 'scoutoff:sse-leader';
-const STREAM_URL = '/api/indexer/stream';
-const HEARTBEAT_TIMEOUT_MS = 60_000; // leader re-connects if no message for 60 s
-
-export type StreamEvent = {
-  id: number;
-  type: string;
-  [key: string]: unknown;
-};
-
-type EventHandler = (event: StreamEvent) => void;
-type TopicHandlers = Map<string, Set<EventHandler>>;
-
-/** True while the leader's EventSource is open and healthy. */
-let isStreamHealthy = false;
-
-const handlers: TopicHandlers = new Map();
-
-/** Dispatch a received event to all registered handlers for its type. */
-function dispatch(event: StreamEvent): void {
-  const set = handlers.get(event.type);
-  if (set) {
-    for (const h of set) {
-      try {
-        h(event);
-      } catch (e) {
-        console.error('[eventStream] handler error', e);
-      }
-    }
-  }
-  // Wildcard handlers registered under '*'
-  const wildcard = handlers.get('*');
-  if (wildcard) {
-    for (const h of wildcard) {
-      try {
-        h(event);
-      } catch (e) {
-        console.error('[eventStream] wildcard handler error', e);
-      }
-    }
-  }
+export interface EventStreamOptions {
+  /** Base URL of the indexer, e.g. `http://localhost:3001`. */
+  baseUrl: string;
+  /** Optional topic filter forwarded as `?topics=`. */
+  topics?: string[];
+  /** Optional wallet filter forwarded as `?wallet=`. */
+  wallet?: string;
+  /** Called for every live or replayed event. */
+  onEvent: (event: unknown) => void;
+  /** Called when the server asks the client to resync via REST. */
+  onResync?: (reason: string) => void;
 }
 
 /**
- * Register a handler for a specific event type (or `'*'` for all).
- * Returns an unsubscribe function — call it in useEffect cleanup.
+ * Subscribe to the indexer SSE stream, tracking `Last-Event-ID` so that
+ * reconnects replay exactly the events the client missed.
  */
-export function onEvent(type: string, handler: EventHandler): () => void {
-  if (!handlers.has(type)) handlers.set(type, new Set());
-  handlers.get(type)!.add(handler);
-  return () => {
-    handlers.get(type)?.delete(handler);
-    if (handlers.get(type)?.size === 0) handlers.delete(type);
-  };
-}
+export function useEventStream({
+  baseUrl,
+  topics,
+  wallet,
+  onEvent,
+  onResync,
+}: EventStreamOptions): void {
+  const lastEventIdRef = useRef<number | null>(null);
+  const onEventRef = useRef(onEvent);
+  const onResyncRef = useRef(onResync);
 
-/** Current stream health — hooks use this to decide their fallback interval. */
-export function isHealthy(): boolean {
-  return isStreamHealthy;
-}
+  onEventRef.current = onEvent;
+  onResyncRef.current = onResync;
 
-// --- Leader logic ---
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (topics && topics.length > 0) params.set('topics', topics.join(','));
+    if (wallet) params.set('wallet', wallet);
+    const query = params.toString();
+    const url = `${baseUrl}/stream${query ? `?${query}` : ''}`;
 
-function buildStreamUrl(topics: string[], wallet?: string): string {
-  const params = new URLSearchParams();
-  if (topics.length > 0) params.set('topics', topics.join(','));
-  if (wallet) params.set('wallet', wallet);
-  return `${STREAM_URL}?${params.toString()}`;
-}
+    let source: EventSource | null = null;
+    let closed = false;
 
-let lastEventId: number | null = null;
+    const connect = () => {
+      if (closed) return;
+      // EventSource cannot set headers, so pass the cursor as a query param;
+      // the server also accepts the standard Last-Event-ID header.
+      const cursor = lastEventIdRef.current;
+      const target = cursor !== null ? `${url}${query ? '&' : '?'}lastEventId=${cursor}` : url;
+      source = new EventSource(target);
 
-function connectLeader(wallet?: string): void {
-  const url = buildStreamUrl([], wallet);
-  let source: EventSource;
-  let heartbeatTimer: ReturnType<typeof setTimeout>;
+      source.onmessage = (message) => {
+        const id = Number(message.lastEventId);
+        if (Number.isInteger(id) && id > 0) {
+          lastEventIdRef.current = id;
+        }
+        try {
+          onEventRef.current(JSON.parse(message.data));
+        } catch {
+          // Ignore malformed payloads rather than tearing down the stream.
+        }
+      };
 
-  function scheduleReconnect(delayMs: number): void {
-    isStreamHealthy = false;
-    broadcastHealthStatus(false);
-    setTimeout(() => connectLeader(wallet), delayMs);
-  }
+      source.addEventListener('resync', (raw) => {
+        let reason = 'gap_too_large';
+        try {
+          const parsed = JSON.parse((raw as MessageEvent).data);
+          if (parsed && typeof parsed.reason === 'string') reason = parsed.reason;
+        } catch {
+          // Fall back to the default reason.
+        }
+        // The server could not replay the gap; refetch through REST.
+        for (const key of RESYNC_KEYS) {
+          void mutate(key);
+        }
+        onResyncRef.current?.(reason);
+      });
 
-  function resetHeartbeatTimer(): void {
-    clearTimeout(heartbeatTimer);
-    heartbeatTimer = setTimeout(() => {
-      console.warn('[eventStream] heartbeat timeout — reconnecting');
-      source.close();
-      scheduleReconnect(1_000);
-    }, HEARTBEAT_TIMEOUT_MS);
-  }
+      source.onerror = () => {
+        // Let EventSource retry automatically; the cursor is preserved so the
+        // next connection replays from the last delivered id.
+      };
+    };
 
-  const headers: Record<string, string> = {};
-  if (lastEventId !== null) {
-    headers['Last-Event-ID'] = String(lastEventId);
-  }
+    connect();
 
-  // EventSource doesn't support custom headers natively; we use the URL
-  // for Last-Event-ID fallback via query param as a polyfill for proxies
-  // that strip the header, but prefer the standard header via a thin fetch
-  // polyfill if available.
-  source = new EventSource(
-    lastEventId !== null ? `${url}&lastEventId=${lastEventId}` : url,
-  );
-
-  source.onopen = () => {
-    isStreamHealthy = true;
-    broadcastHealthStatus(true);
-    resetHeartbeatTimer();
-  };
-
-  source.onmessage = (e: MessageEvent) => {
-    resetHeartbeatTimer();
-    try {
-      const data = JSON.parse(e.data) as StreamEvent;
-      if (typeof data.id === 'number') lastEventId = data.id;
-      dispatch(data);
-      broadcastEvent(data);
-    } catch {
-      // malformed event — ignore
-    }
-  };
-
-  // Named event types (the indexer sends `event: <type>` frames)
-  const eventTypes = [
-    'player_registered',
-    'milestone_approved',
-    'milestone_revoked',
-    'scout_subscribed',
-    'player_contacted',
-    'trial_offer_logged',
-    'fees_withdrawn',
-  ] as const;
-
-  for (const type of eventTypes) {
-    source.addEventListener(type, (e: Event) => {
-      const msgEvent = e as MessageEvent;
-      resetHeartbeatTimer();
-      try {
-        const data = JSON.parse(msgEvent.data) as StreamEvent;
-        if (typeof data.id === 'number') lastEventId = data.id;
-        dispatch(data);
-        broadcastEvent(data);
-      } catch {
-        // malformed event — ignore
-      }
-    });
-  }
-
-  source.onerror = () => {
-    clearTimeout(heartbeatTimer);
-    source.close();
-    scheduleReconnect(3_000);
-  };
-}
-
-// --- BroadcastChannel (follower receives from leader) ---
-
-let channel: BroadcastChannel | null = null;
-
-type ChannelMessage =
-  | { type: 'event'; payload: StreamEvent }
-  | { type: 'health'; healthy: boolean };
-
-function broadcastEvent(event: StreamEvent): void {
-  channel?.postMessage({
-    type: 'event',
-    payload: event,
-  } satisfies ChannelMessage);
-}
-
-function broadcastHealthStatus(healthy: boolean): void {
-  channel?.postMessage({ type: 'health', healthy } satisfies ChannelMessage);
-}
-
-function setupFollower(): void {
-  channel?.addEventListener('message', (e: MessageEvent<ChannelMessage>) => {
-    const msg = e.data;
-    if (msg.type === 'event') {
-      dispatch(msg.payload);
-    } else if (msg.type === 'health') {
-      isStreamHealthy = msg.healthy;
-    }
-  });
-}
-
-// --- Initialization ---
-
-let initialized = false;
-
-/**
- * Call once at app startup (e.g. in a top-level useEffect in a provider).
- * Safe to call multiple times — subsequent calls are no-ops.
- *
- * @param wallet  optional wallet address to filter events server-side.
- */
-export function initEventStream(wallet?: string): void {
-  if (initialized) return;
-  initialized = true;
-
-  if (typeof window === 'undefined') return; // SSR guard
-
-  channel = new BroadcastChannel(CHANNEL_NAME);
-  setupFollower();
-
-  // Try to acquire the leader lock. The callback runs only for the tab that
-  // wins. Other tabs stay in follower mode (setupFollower handles them).
-  if ('locks' in navigator) {
-    navigator.locks.request(LOCK_NAME, { mode: 'exclusive' }, async () => {
-      connectLeader(wallet);
-      // Hold the lock indefinitely (returning never releases it).
-      return new Promise<void>(() => {});
-    });
-  } else {
-    // Fallback for browsers without Web Locks (very rare): every tab connects.
-    connectLeader(wallet);
-  }
-}
-
-/** Reset state — for tests only. */
-export function _resetEventStream(): void {
-  initialized = false;
-  isStreamHealthy = false;
-  lastEventId = null;
-  handlers.clear();
-  channel?.close();
-  channel = null;
+    return () => {
+      closed = true;
+      source?.close();
+    };
+  }, [baseUrl, topics?.join(','), wallet]);
 }
