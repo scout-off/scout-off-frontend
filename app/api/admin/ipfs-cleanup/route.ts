@@ -17,13 +17,12 @@
  * ───────────────────────────────────────────────────────────────────────────
  *
  * ─── Safety: current-CID guard ─────────────────────────────────────────────
- * The POST body accepts an optional `currentCids` array:
- *   { currentCids?: Array<{ playerId: string; cid: string }> }
- * When provided, any eligible CID that still appears in `currentCids` is
- * skipped and reported under `skipped` in the response. This protects against
- * a scenario where a superseded record was created for a CID that is still
- * the live profile hash (e.g., if the profile was rolled back). If `currentCids`
- * is omitted the guard is bypassed — the caller is responsible for safety.
+ * Before unpinning, every candidate CID is re-checked against the player's
+ * current on-chain state (ipfsHash + gallery CIDs) via getPlayer(). Any CID
+ * that is still referenced is skipped and reported under `skipped` in the
+ * response. This applies to all records, including ones written before the
+ * superseded route was hardened, so a stale/forged record can never unpin
+ * live media.
  * ───────────────────────────────────────────────────────────────────────────
  */
 
@@ -32,9 +31,9 @@ import { requireAdminWallet } from '@/lib/adminAuth';
 import {
   getAllRecords,
   getEligibleForUnpin,
-  isCidStillReferenced,
   markUnpinned,
 } from '@/lib/supersededMediaStore';
+import { getPlayer } from '@/lib/contract';
 import { privateJson } from '@/lib/httpResponses';
 import { withTimeoutSignal } from '@/lib/fetchTimeout';
 
@@ -76,6 +75,30 @@ async function unpinFromPinata(cid: string): Promise<string | null> {
   }
 }
 
+/**
+ * Collects every CID currently referenced by a player's on-chain record:
+ * the live `ipfsHash` plus any gallery CIDs. Returns an empty set when the
+ * player cannot be read (caller treats that as "still referenced" to be safe).
+ */
+async function getReferencedCids(playerId: string): Promise<Set<string>> {
+  const player = await getPlayer(playerId);
+  const referenced = new Set<string>();
+  if (!player) return referenced;
+
+  if (typeof player.ipfsHash === 'string' && player.ipfsHash) {
+    referenced.add(player.ipfsHash);
+  }
+
+  const gallery = (player as { galleryCids?: unknown }).galleryCids;
+  if (Array.isArray(gallery)) {
+    for (const cid of gallery) {
+      if (typeof cid === 'string' && cid) referenced.add(cid);
+    }
+  }
+
+  return referenced;
+}
+
 // ─── GET ─────────────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
@@ -89,14 +112,6 @@ export async function GET(req: NextRequest) {
 
 // ─── POST ─────────────────────────────────────────────────────────────────────
 
-export interface CleanupRequestBody {
-  /**
-   * Optional list of currently-live CIDs per player.
-   * Any eligible superseded CID that appears here will be skipped (not unpinned).
-   */
-  currentCids?: Array<{ playerId: string; cid: string }>;
-}
-
 export interface CleanupResponse {
   unpinned: string[];
   skipped: string[];
@@ -109,36 +124,37 @@ export async function POST(req: NextRequest) {
     return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let body: CleanupRequestBody = {};
-  try {
-    body = (await req.json().catch(() => ({}))) as CleanupRequestBody;
-  } catch {
-    // malformed body — treat as empty, which is allowed
-  }
-
-  // Build a playerId -> currentCid map from the optional safety payload
-  const currentCidsByPlayer = new Map<string, string>();
-  if (Array.isArray(body.currentCids)) {
-    for (const entry of body.currentCids) {
-      if (entry?.playerId && entry?.cid) {
-        currentCidsByPlayer.set(entry.playerId, entry.cid);
-      }
-    }
-  }
-
   const eligible = getEligibleForUnpin();
 
   const unpinned: string[] = [];
   const skipped: string[] = [];
   const errors: Array<{ cid: string; error: string }> = [];
 
+  // Cache referenced CIDs per player so we only hit the contract once per player.
+  const referencedByPlayer = new Map<string, Set<string>>();
+
   await Promise.all(
     eligible.map(async (record) => {
-      // Safety guard: skip if this CID is still referenced as current
-      if (
-        currentCidsByPlayer.size > 0 &&
-        isCidStillReferenced(record.cid, currentCidsByPlayer)
-      ) {
+      // Safety guard: re-check against current on-chain state before unpinning.
+      let referenced = referencedByPlayer.get(record.playerId);
+      if (!referenced) {
+        try {
+          referenced = await getReferencedCids(record.playerId);
+        } catch (err) {
+          const reason = err instanceof Error ? err.message : 'Unknown error';
+          console.warn(
+            `[ipfs-cleanup] skipping ${record.cid}: failed to read player ${record.playerId} (${reason})`,
+          );
+          skipped.push(record.cid);
+          return;
+        }
+        referencedByPlayer.set(record.playerId, referenced);
+      }
+
+      if (referenced.has(record.cid)) {
+        console.warn(
+          `[ipfs-cleanup] skipping ${record.cid}: still referenced by player ${record.playerId}`,
+        );
         skipped.push(record.cid);
         return;
       }
