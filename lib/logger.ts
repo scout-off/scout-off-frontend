@@ -76,7 +76,9 @@ function emit(
   message: string,
   fields?: LogFields,
 ): void {
+  // Caller fields are spread first so they cannot override the core fields.
   const line = JSON.stringify({
+    ...redactFields(fields),
     timestamp: new Date().toISOString(),
     level,
     requestId,
@@ -84,7 +86,6 @@ function emit(
     spanId,
     route,
     message,
-    ...redactFields(fields),
   });
 
   if (level === 'error') console.error(line);
