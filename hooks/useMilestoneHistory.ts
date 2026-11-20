@@ -38,7 +38,7 @@ export function milestonesKey(playerID: string | null): string | null {
  * Call after any write operation that changes a player's milestone list.
  */
 export function invalidateMilestonesCache(playerID: string): Promise<void> {
-  return globalMutate(milestonesKey(playerID)) as Promise<void>;
+  return globalMutate(milestonesKey(playerID));
 }
 
 export function useMilestoneHistory(playerID: string | null) {
@@ -58,7 +58,7 @@ export function useMilestoneHistory(playerID: string | null) {
   );
 
   const refetch = useCallback(() => {
-    if (playerID) mutate(undefined, { revalidate: true });
+    if (playerID) void mutate(undefined, { revalidate: true });
   }, [playerID, mutate]);
 
   const isLoading = isValidating && !milestones;

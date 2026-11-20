@@ -32,7 +32,9 @@ describe('recentlyViewedClient', () => {
     it('GETs /api/recently-viewed and parses entries', async () => {
       mockFetchWithRetry.mockResolvedValue(response([entry]));
       await expect(fetchRecentlyViewed()).resolves.toEqual([entry]);
-      expect(mockFetchWithRetry).toHaveBeenCalledWith('/api/recently-viewed');
+      expect(mockFetchWithRetry).toHaveBeenCalledWith('/api/recently-viewed', {
+        headers: { 'Content-Type': 'application/json' },
+      });
     });
 
     it('throws on a non-2xx response', async () => {

@@ -78,7 +78,7 @@ export function useOnboardingSync(wallet: string | null) {
   // Load the current wallet's queued submission (if any) on mount / wallet change.
   useEffect(() => {
     setLoaded(false);
-    refresh();
+    void refresh();
   }, [refresh]);
 
   /**
@@ -175,12 +175,13 @@ export function useOnboardingSync(wallet: string | null) {
           type: 'TRY_ONBOARDING_SYNC',
         });
       } else {
-        retryNow();
+        void retryNow();
       }
     };
 
-    window.addEventListener('online', handleOnline);
-    return () => window.removeEventListener('online', handleOnline);
+    const onOnline = () => void handleOnline();
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
   }, [retryNow]);
 
   // React to the service worker announcing an onboarding sync outcome
@@ -197,7 +198,7 @@ export function useOnboardingSync(wallet: string | null) {
           data?.type === 'ONBOARDING_SYNC_FAILED') &&
         data.wallet === walletRef.current
       ) {
-        refresh();
+        void refresh();
       }
     };
 

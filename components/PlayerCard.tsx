@@ -145,9 +145,11 @@ function PlayerCard({
   );
 
   return (
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the whole card is a focusable click target with Enter/Space handled in handleKeyDown; role="link" would be invalid because it contains the compare button.
     <div
       role="article"
       aria-label={cardLabel}
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the card is keyboard-operable (see handleKeyDown), so it must be focusable.
       tabIndex={0}
       onClick={navigate}
       onKeyDown={handleKeyDown}

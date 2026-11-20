@@ -27,8 +27,8 @@ export function useAdminContractState() {
     Promise.all([getValidators(), getPlatformFees(), getContractPaused()])
       .then(([v, f, p]) => {
         setValidators(v);
-        setFees(f as number);
-        setPaused(p as boolean);
+        setFees(f);
+        setPaused(p);
       })
       .catch(() => {
         setFetchError(true);

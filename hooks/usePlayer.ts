@@ -20,7 +20,7 @@ export function playerKey(walletOrId: string | null): string | null {
  * Call after any write operation that mutates player state.
  */
 export function invalidatePlayerCache(walletOrId: string): Promise<void> {
-  return globalMutate(playerKey(walletOrId)) as Promise<void>;
+  return globalMutate(playerKey(walletOrId));
 }
 
 /**
@@ -56,7 +56,7 @@ export function usePlayer(
    * the submitted data while waiting for on-chain finality.
    */
   const optimisticUpdate = (optimisticPlayer: Player) => {
-    mutate(optimisticPlayer, { revalidate: false });
+    void mutate(optimisticPlayer, { revalidate: false });
   };
 
   /**

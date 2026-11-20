@@ -1051,5 +1051,13 @@
       "copied": "Copié !",
       "showMore": "Afficher plus ({count} restants)"
     }
+  },
+  "session": {
+    "expiringSoonTitle": "Session bientôt expirée",
+    "expiringSoonMessage": "Votre session expire dans {minutes} minutes.",
+    "dismiss": "Ignorer",
+    "reauthenticate": "Renouveler la session",
+    "renewedSuccess": "Session renouvelée avec succès.",
+    "renewFailed": "Échec du renouvellement de la session."
   }
 }

@@ -42,7 +42,7 @@ export function useSavedSearches(scoutWallet: string | null) {
   const save = useCallback(
     async (name: string, filter: PlayerFilter) => {
       await saveSearch(name, filter);
-      mutate();
+      void mutate();
     },
     [mutate],
   );
@@ -52,7 +52,7 @@ export function useSavedSearches(scoutWallet: string | null) {
       const currentEntry = (data ?? []).find((e) => e.id === id);
       try {
         await renameSavedSearch(id, newName, currentEntry?.version);
-        mutate();
+        void mutate();
       } catch (err) {
         if (
           err instanceof SavedSearchConflictError ||
@@ -65,7 +65,7 @@ export function useSavedSearches(scoutWallet: string | null) {
             action: {
               label: 'Reload',
               onClick: () => {
-                mutate();
+                void mutate();
               },
             },
           });
@@ -81,7 +81,7 @@ export function useSavedSearches(scoutWallet: string | null) {
     async (entry: SavedSearch) => {
       try {
         const updated = await markSavedSearchViewed(entry.id, entry.version);
-        mutate(
+        void mutate(
           (current) =>
             (current ?? []).map((e) => (e.id === updated.id ? updated : e)),
           false,
@@ -91,7 +91,7 @@ export function useSavedSearches(scoutWallet: string | null) {
           err instanceof SavedSearchConflictError ||
           (err as { name?: string })?.name === 'SavedSearchConflictError'
         ) {
-          mutate();
+          void mutate();
           return;
         }
         throw err;
@@ -106,12 +106,12 @@ export function useSavedSearches(scoutWallet: string | null) {
         id: entry.id,
         message: 'Saved search removed',
         onOptimisticRemove: () =>
-          mutate(
+          void mutate(
             (current) => (current ?? []).filter((e) => e.id !== entry.id),
             false,
           ),
         onRestore: () =>
-          mutate((current) => [entry, ...(current ?? [])], false),
+          void mutate((current) => [entry, ...(current ?? [])], false),
         onCommit: async () => {
           try {
             await removeSavedSearch(entry.id, entry.version);
@@ -127,13 +127,13 @@ export function useSavedSearches(scoutWallet: string | null) {
                 action: {
                   label: 'Reload',
                   onClick: () => {
-                    mutate();
+                    void mutate();
                   },
                 },
               });
             }
           } finally {
-            mutate();
+            void mutate();
           }
         },
       });

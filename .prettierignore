@@ -14,3 +14,4 @@ pnpm-lock.yaml
 .vscode
 public/sw.js
 public/workbox-*.js
+lib/generated

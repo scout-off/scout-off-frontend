@@ -42,3 +42,7 @@
 *.mp4 binary
 *.mov binary
 *.zip binary
+
+# Generated from openapi/scout-off-api.yaml by `npm run generate:api` (#1708)
+lib/generated/apiTypes.ts linguist-generated=true
+lib/generated/apiClient.ts linguist-generated=true

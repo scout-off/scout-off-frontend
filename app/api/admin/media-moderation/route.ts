@@ -54,8 +54,7 @@ export async function POST(req: NextRequest) {
   const cid = body?.cid;
   const decision = body?.decision;
   const reason = typeof body?.reason === 'string' ? body.reason.trim() : '';
-  const playerId =
-    typeof body?.playerId === 'string' ? (body.playerId as string) : null;
+  const playerId = typeof body?.playerId === 'string' ? body.playerId : null;
 
   if (!isValidMediaCid(cid)) {
     return privateJson({ error: 'Invalid cid' }, { status: 400 });

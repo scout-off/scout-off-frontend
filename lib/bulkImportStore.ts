@@ -121,7 +121,7 @@ export async function getOrCreateSession(
     const query = index.getAll(fileHash);
 
     query.onsuccess = () => {
-      const results = query.result as any[];
+      const results = query.result;
       if (results.length > 0) {
         // Resume existing session
         const existingSession = results[0];
@@ -176,7 +176,7 @@ export async function updateRowStatus(
     const getRequest = store.get(sessionId);
 
     getRequest.onsuccess = () => {
-      const session = getRequest.result as any;
+      const session = getRequest.result;
       if (!session) {
         reject(new Error(`Session ${sessionId} not found`));
         return;
@@ -214,7 +214,7 @@ export async function getSessionRows(
     const getRequest = store.get(sessionId);
 
     getRequest.onsuccess = () => {
-      const session = getRequest.result as any;
+      const session = getRequest.result;
       if (!session) {
         resolve(new Map());
         return;

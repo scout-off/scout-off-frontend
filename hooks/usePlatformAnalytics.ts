@@ -159,7 +159,7 @@ export function usePlatformAnalytics() {
   );
 
   const refetch = useCallback(() => {
-    mutate(undefined, { revalidate: true });
+    void mutate(undefined, { revalidate: true });
   }, [mutate]);
 
   return {

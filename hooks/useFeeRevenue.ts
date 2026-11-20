@@ -40,7 +40,7 @@ export function useFeeRevenue() {
   const cache = useIndexerEventCache();
 
   const refetch = useCallback(() => {
-    mutate(INDEXER_CACHE_KEY, undefined, { revalidate: true });
+    void mutate(INDEXER_CACHE_KEY, undefined, { revalidate: true });
   }, []);
 
   if (cache.loading) {

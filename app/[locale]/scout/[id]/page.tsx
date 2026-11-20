@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { useTranslations } from 'next-intl';
+import type { Locale } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
 import type { Scout } from '@/types';
 import { fetchScoutProfile } from '@/lib/api';
@@ -17,7 +18,7 @@ type PageProps = {
 export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const params = await props.params;
   const t = await getTranslations({
-    locale: params.locale,
+    locale: params.locale as Locale,
     namespace: 'scout.profile',
   });
   return { title: t('meta_title'), description: t('meta_description') };

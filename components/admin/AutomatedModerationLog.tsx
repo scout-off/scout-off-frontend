@@ -146,8 +146,14 @@ export default function AutomatedModerationLog() {
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-400">Filter severity:</label>
+          <label
+            htmlFor="moderation-filter-severity"
+            className="text-sm text-gray-400"
+          >
+            Filter severity:
+          </label>
           <select
+            id="moderation-filter-severity"
             value={filter}
             onChange={(e) => setFilter(e.target.value as typeof filter)}
             className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-green"
@@ -160,8 +166,14 @@ export default function AutomatedModerationLog() {
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-400">Filter user:</label>
+          <label
+            htmlFor="moderation-filter-user"
+            className="text-sm text-gray-400"
+          >
+            Filter user:
+          </label>
           <input
+            id="moderation-filter-user"
             type="text"
             value={filterUserId}
             onChange={(e) => setFilterUserId(e.target.value)}

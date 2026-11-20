@@ -495,11 +495,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   // Run on mount and on every tab-refocus (visibilitychange → visible).
   useEffect(() => {
-    restoreSession();
+    void restoreSession();
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        restoreSession();
+        void restoreSession();
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -563,7 +563,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     };
 
     const intervalId = setInterval(
-      reconcileWithServer,
+      () => void reconcileWithServer(),
       RECONCILIATION_INTERVAL_MS,
     );
     return () => clearInterval(intervalId);
@@ -680,7 +680,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         setSessionExpiry(expiresAt);
         setStoredSession(pk, provider, CURRENT_NETWORK_TYPE);
         setShowWalletModal(false);
-        clearUserCaches();
+        void clearUserCaches();
 
         // Remember this address for account switcher
         addRememberedAddress({
@@ -778,9 +778,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     // logout — see lib/contactDetailsCache.ts. The explicit purge below is
     // belt-and-suspenders on top of this blanket wipe: it also cancels any
     // pending auto-purge timers, which the blanket mutate alone wouldn't do.
-    mutate(() => true, undefined, { revalidate: false });
-    purgeAllContactDetails();
-    clearUserCaches();
+    void mutate(() => true, undefined, { revalidate: false });
+    void purgeAllContactDetails();
+    void clearUserCaches();
 
     // Cross-tab propagation: writing then removing a localStorage key fires
     // the browser's native `storage` event in every other same-origin tab.
@@ -807,9 +807,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         NETWORK,
       );
       const tx = TransactionBuilder.fromXDR(signedXdr, NETWORK);
-      const result = await rpc.sendTransaction(
-        tx as Parameters<typeof rpc.sendTransaction>[0],
-      );
+      const result = await rpc.sendTransaction(tx);
       return (result as { hash: string }).hash;
     },
     [publicKey, walletProvider],

@@ -585,7 +585,7 @@ export async function getMilestoneHistoryBatch(
     const entries = await Promise.all(
       uniqueIds.map(async (id) => [id, await getMilestoneHistory(id)] as const),
     );
-    return Object.fromEntries(entries) as Record<string, Milestone[]>;
+    return Object.fromEntries(entries);
   }
 }
 

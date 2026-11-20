@@ -89,7 +89,7 @@ export function useApprovedPlayers(validatorAddress: string | null) {
   );
 
   const refetch = useCallback(() => {
-    if (validatorAddress) mutate(undefined, { revalidate: true });
+    if (validatorAddress) void mutate(undefined, { revalidate: true });
   }, [validatorAddress, mutate]);
 
   return {

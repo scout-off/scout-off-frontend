@@ -22,7 +22,7 @@ const VALIDATORS_KEY = 'contract:validators';
 export function invalidateValidatorCache(): Promise<void> {
   return globalMutate(VALIDATORS_KEY, undefined, {
     revalidate: false,
-  }) as Promise<void>;
+  });
 }
 
 export function useValidator(walletAddress?: string | null) {
@@ -39,7 +39,7 @@ export function useValidator(walletAddress?: string | null) {
    */
   const { data: validators, isLoading: checking } = useSWR<ValidatorInfo[]>(
     VALIDATORS_KEY,
-    () => getValidators() as Promise<ValidatorInfo[]>,
+    () => getValidators(),
     {
       dedupingInterval: 60_000,
       revalidateOnFocus: false,

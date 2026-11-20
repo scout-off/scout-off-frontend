@@ -58,7 +58,7 @@ export function useContactFeeQuote(
   }, [feeXlm, asset, t]);
 
   useEffect(() => {
-    if (enabled) refresh();
+    if (enabled) void refresh();
   }, [enabled, refresh]);
 
   useEffect(() => {

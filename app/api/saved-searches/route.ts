@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const entry = store.add(scoutWallet, sanitizedName, filter as PlayerFilter);
+    const entry = store.add(scoutWallet, sanitizedName, filter);
     return privateJson(entry, { status: 201 });
   } catch (err) {
     log.error('Failed to save search', {

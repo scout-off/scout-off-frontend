@@ -21,7 +21,7 @@ export function scoutProfileKey(scoutId: string | null): string | null {
  * Call after any write operation that changes scout state.
  */
 export function invalidateScoutProfileCache(scoutId: string): Promise<void> {
-  return globalMutate(scoutProfileKey(scoutId)) as Promise<void>;
+  return globalMutate(scoutProfileKey(scoutId));
 }
 
 export interface UseScoutProfileReturn {

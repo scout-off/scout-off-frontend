@@ -124,6 +124,7 @@ function EvidenceThumbnail({
   }
   if (mimeType.startsWith('video/')) {
     return (
+      // eslint-disable-next-line jsx-a11y/media-has-caption -- user-uploaded dispute evidence has no caption track to attach.
       <video
         src={url}
         controls

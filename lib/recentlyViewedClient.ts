@@ -1,12 +1,24 @@
 import type { RecentlyViewedEntry } from '@/types';
 import { fetchWithRetry, fetchWithTimeout } from '@/lib/fetchWithRetry';
+import * as api from '@/lib/generated/apiClient';
 
-/** Client for app/api/recently-viewed — same-origin, cookie-authenticated. */
+/**
+ * Client for app/api/recently-viewed — same-origin, cookie-authenticated.
+ * Thin wrapper over the generated client (lib/generated/apiClient.ts, #1708).
+ */
+
+/** Keeps this client's historical error messages for non-2xx responses. */
+function failWith(message: string) {
+  return (err: unknown): never => {
+    if (err instanceof api.ApiError) throw new Error(message);
+    throw err;
+  };
+}
 
 export async function fetchRecentlyViewed(): Promise<RecentlyViewedEntry[]> {
-  const res = await fetchWithRetry('/api/recently-viewed');
-  if (!res.ok) throw new Error('Failed to fetch recently viewed');
-  return res.json();
+  return api
+    .getRecentlyViewed({ fetcher: fetchWithRetry })
+    .catch(failWith('Failed to fetch recently viewed'));
 }
 
 /**
@@ -20,23 +32,16 @@ export async function recordView(
   playerId: string,
   viewedAt: number,
 ): Promise<RecentlyViewedEntry> {
-  const res = await fetchWithTimeout('/api/recently-viewed', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ playerId, viewedAt }),
-  });
-  if (!res.ok) throw new Error('Failed to record view');
-  return res.json();
+  return api
+    .recordRecentlyViewed(playerId, viewedAt, { fetcher: fetchWithTimeout })
+    .catch(failWith('Failed to record view'));
 }
 
 /**
  * Removes a recently viewed entry. Returns true if removed successfully.
  */
 export async function removeView(id: number): Promise<void> {
-  const res = await fetchWithTimeout('/api/recently-viewed', {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id }),
-  });
-  if (!res.ok) throw new Error('Failed to remove view');
+  await api
+    .removeRecentlyViewed(id, { fetcher: fetchWithTimeout })
+    .catch(failWith('Failed to remove view'));
 }
