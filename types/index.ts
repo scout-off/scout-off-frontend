@@ -1,3 +1,14 @@
+// Off-chain backend payload types live in the server (issue #1713), so the
+// API and this client share one definition instead of drifting apart.
+export type {
+  Academy,
+  AcademyMember,
+  MilestoneSubmission,
+  ReferralCode,
+  ReferralOverview,
+  TopReferrer,
+} from '../server/src/types/api';
+
 // ── Progress ──────────────────────────────────────────────────────────────────
 export type ProgressLevel = 0 | 1 | 2 | 3;
 
@@ -81,61 +92,7 @@ export interface ValidatorInfo {
   addedBy: string;
 }
 
-/**
- * An off-chain milestone claim awaiting a validator's on-chain approval
- * (issues #567, #568). Distinct from {@link Milestone}, which only exists
- * once a validator has already approved one.
- */
-export interface MilestoneSubmission {
-  id: string;
-  playerId: string;
-  playerName: string | null;
-  description: string;
-  evidenceUrl: string | null;
-  validatorWallet: string;
-  submittedBy: string;
-  status: 'pending' | 'approved' | 'rejected';
-  createdAt: number;
-  decidedAt: number | null;
-  txHash: string | null;
-}
-
 // ── Academy ──────────────────────────────────────────────────────────────────
-/**
- * An off-chain grouping of validator wallets under one institutional
- * identity (e.g. a football academy with several coaching staff). This is
- * purely an off-chain overlay — each member wallet must still be
- * individually authorized on-chain via `add_validator` for its milestone
- * approvals to be valid. See docs/academy-validator-model.md.
- */
-export interface Academy {
-  id: string;
-  name: string;
-  /** Stellar public key of the wallet that owns/manages this academy record. */
-  ownerWallet: string;
-  createdAt: number;
-  members: AcademyMember[];
-  /**
-   * Optional milestone-approval quorum (issue #1185): the minimum number of
-   * this academy's distinct member wallets that must each endorse a
-   * milestone before it's shown as "academy-verified" in the UI. `null`
-   * (the default) means no quorum is configured — behaves identically to
-   * before this feature existed. Purely an off-chain display/workflow
-   * setting; never affects on-chain `approve_milestone` authorization,
-   * which stays single-signer regardless of this value.
-   */
-  quorum: number | null;
-}
-
-/** One wallet registered as a signer under an {@link Academy}. */
-export interface AcademyMember {
-  wallet: string;
-  academyId: string;
-  addedAt: number;
-  /** Stellar public key of the admin who registered this wallet under the academy. */
-  addedBy: string;
-}
-
 /**
  * One academy's total approved-milestone count across its member wallets
  * for a given time range (issue #1172 — see docs/academy-validator-model.md,
@@ -210,29 +167,9 @@ export interface TrialOfferDetails {
 }
 
 // ── Referral / Invite ─────────────────────────────────────────────────────────
-export interface ReferralCode {
-  code: string;
-  scoutWallet: string;
-  createdAt: number;
-  usedBy: string | null;
-  usedAt: number | null;
-}
-
 export interface ReferralStats {
   totalCodes: number;
   successfulReferrals: number;
-}
-
-export interface TopReferrer {
-  scoutWallet: string;
-  totalCodes: number;
-  successfulReferrals: number;
-}
-
-export interface ReferralOverview {
-  totalCodes: number;
-  totalSuccessfulReferrals: number;
-  topReferrers: TopReferrer[];
 }
 
 // ── Fraud / abuse detection ────────────────────────────────────────────────────

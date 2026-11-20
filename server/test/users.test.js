@@ -11,11 +11,11 @@ const tmpDbPath = path.join(
 process.env.DB_PATH = tmpDbPath;
 process.env.BACKEND_SERVICE_TOKEN = 'test-service-token';
 
-const createApp = require('../src/app');
-const db = require('../src/db');
+const createApp = require('../dist/app');
+const db = require('../dist/db');
 
-const WALLET = 'GUSER';
-const OTHER = 'GOTHER';
+const WALLET = 'GC7L2EHTP6SNMFZSMHEIBU6RVHECSPMDZ5NW7TQVD43UGUQA6YZIJOEX';
+const OTHER = 'GACEP5PRW5WU7IARARCIYAAXFE3RX37QXLCLHX4NI2Z2C47PMAESEZJB';
 
 let server;
 let baseUrl;

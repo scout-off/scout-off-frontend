@@ -5,7 +5,7 @@ import { privateJson } from '@/lib/httpResponses';
 import { runDependencyChecks, type DependencyCheck } from '@/lib/healthChecks';
 
 // Proxies the indexer's and backend API's own /health endpoints server-side
-// (see packages/indexer/src/server.ts's handleHealth, server/src/app.js's
+// (see packages/indexer/src/server.ts's handleHealth, server/src/app.ts's
 // `GET /health`) so the browser never has to reach either origin directly —
 // avoids CORS config on those services and keeps NEXT_PUBLIC_* base URLs
 // out of a second round of client-side fetches. Used by the admin System

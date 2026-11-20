@@ -1,4 +1,4 @@
-const db = require('./db');
+import db from './db';
 
 /**
  * Wallet-scoped export and deletion for every backend table holding
@@ -22,7 +22,7 @@ const db = require('./db');
  * - sponsorship_waitlist is keyed by email, not wallet — see
  *   deleteWaitlistEmail.
  */
-const ANONYMIZED = 'deleted-user';
+export const ANONYMIZED = 'deleted-user';
 
 const q = {
   referralsOwned: db.prepare(
@@ -76,7 +76,7 @@ const q = {
   ),
 };
 
-function exportWalletData(wallet) {
+export function exportWalletData(wallet: string) {
   return {
     referralCodes: q.referralsOwned.all(wallet),
     referralRedemptions: q.referralsRedeemed.all(wallet),
@@ -88,7 +88,7 @@ function exportWalletData(wallet) {
   };
 }
 
-const deleteWalletData = db.transaction((wallet) => {
+export const deleteWalletData = db.transaction((wallet: string) => {
   const removed = {
     referralCodes: q.deleteUnusedReferrals.run(wallet).changes,
     academyMembership: q.deleteMembership.run(wallet).changes,
@@ -106,7 +106,7 @@ const deleteWalletData = db.transaction((wallet) => {
   return { removed, anonymized };
 });
 
-function normalizeEmail(email) {
+function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
@@ -115,18 +115,10 @@ function normalizeEmail(email) {
  * wallet, so they cannot be reached from the wallet-scoped paths above.
  * The caller must have verified ownership of `email` first.
  */
-function exportWaitlistEmail(email) {
+export function exportWaitlistEmail(email: string) {
   return q.waitlistByEmail.get(normalizeEmail(email)) ?? null;
 }
 
-function deleteWaitlistEmail(email) {
+export function deleteWaitlistEmail(email: string): number {
   return q.deleteWaitlistEmail.run(normalizeEmail(email)).changes;
 }
-
-module.exports = {
-  ANONYMIZED,
-  exportWalletData,
-  deleteWalletData,
-  exportWaitlistEmail,
-  deleteWaitlistEmail,
-};

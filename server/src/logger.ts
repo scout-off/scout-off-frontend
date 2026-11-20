@@ -1,4 +1,24 @@
-const crypto = require('crypto');
+import crypto from 'crypto';
+import type { Request } from 'express';
+
+type Fields = Record<string, unknown>;
+type Level = 'info' | 'warn' | 'error';
+
+export interface TraceContext {
+  traceId: string;
+  parentSpanId: string;
+  sampled: boolean;
+}
+
+export interface RequestLogger {
+  requestId: string;
+  traceId: string;
+  spanId: string;
+  outboundTraceparent: () => string;
+  info: (message: string, fields?: Fields) => void;
+  warn: (message: string, fields?: Fields) => void;
+  error: (message: string, fields?: Fields) => void;
+}
 
 /**
  * Request-scoped structured logging for the off-chain backend (issue #707).
@@ -13,8 +33,8 @@ const crypto = require('crypto');
  * on the response so an upstream proxy can confirm it was received.
  */
 
-const REQUEST_ID_HEADER = 'x-request-id';
-const TRACEPARENT_HEADER = 'traceparent';
+export const REQUEST_ID_HEADER = 'x-request-id';
+export const TRACEPARENT_HEADER = 'traceparent';
 
 // W3C traceparent format: 00-<32hex>-<16hex>-<2hex>
 const TRACEPARENT_RE =
@@ -25,16 +45,16 @@ const SENSITIVE_KEY_PATTERN =
 
 const REDACTED = '[REDACTED]';
 
-function redactFields(fields) {
+function redactFields(fields?: Fields): Fields | undefined {
   if (!fields) return undefined;
-  const redacted = {};
+  const redacted: Fields = {};
   for (const [key, value] of Object.entries(fields)) {
     redacted[key] = SENSITIVE_KEY_PATTERN.test(key) ? REDACTED : value;
   }
   return redacted;
 }
 
-function generateHex(bytes) {
+function generateHex(bytes: number): string {
   return crypto.randomBytes(bytes).toString('hex');
 }
 
@@ -42,7 +62,7 @@ function generateHex(bytes) {
  * Parses an incoming `traceparent` header. Returns { traceId, parentSpanId,
  * sampled } on success, or null when the value is absent or malformed.
  */
-function parseTraceparent(value) {
+function parseTraceparent(value: string | undefined): TraceContext | null {
   if (!value) return null;
   const m = TRACEPARENT_RE.exec(value.trim());
   if (!m) return null;
@@ -57,22 +77,26 @@ function parseTraceparent(value) {
 }
 
 /** Builds a child traceparent: same traceId, fresh spanId. */
-function makeChildTraceparent(ctx) {
+export function makeChildTraceparent(ctx: TraceContext): string {
   const childSpanId = generateHex(8);
   const flags = ctx.sampled ? '01' : '00';
   return `00-${ctx.traceId}-${childSpanId}-${flags}`;
 }
 
-function getOrCreateRequestId(req) {
-  return req.headers[REQUEST_ID_HEADER] || crypto.randomUUID();
+export function getOrCreateRequestId(req: Request): string {
+  const given = req.headers[REQUEST_ID_HEADER];
+  return (typeof given === 'string' && given) || crypto.randomUUID();
 }
 
 /**
  * Resolves a W3C trace context from the incoming request headers, or mints a
  * fresh root context when the `traceparent` header is absent/malformed.
  */
-function getOrCreateTraceContext(req) {
-  const incoming = parseTraceparent(req.headers[TRACEPARENT_HEADER]);
+export function getOrCreateTraceContext(req: Request): TraceContext {
+  const header = req.headers[TRACEPARENT_HEADER];
+  const incoming = parseTraceparent(
+    typeof header === 'string' ? header : undefined,
+  );
   if (incoming) return incoming;
   return {
     traceId: generateHex(16),
@@ -81,7 +105,15 @@ function getOrCreateTraceContext(req) {
   };
 }
 
-function emit(level, requestId, traceId, spanId, route, message, fields) {
+function emit(
+  level: Level,
+  requestId: string,
+  traceId: string,
+  spanId: string,
+  route: string,
+  message: string,
+  fields?: Fields,
+): void {
   const line = JSON.stringify({
     timestamp: new Date().toISOString(),
     level,
@@ -98,7 +130,7 @@ function emit(level, requestId, traceId, spanId, route, message, fields) {
   else console.log(line);
 }
 
-function createRequestLogger(req) {
+export function createRequestLogger(req: Request): RequestLogger {
   const requestId = getOrCreateRequestId(req);
   const traceCtx = getOrCreateTraceContext(req);
   const route = req.originalUrl ? req.originalUrl.split('?')[0] : req.path;
@@ -141,12 +173,3 @@ function createRequestLogger(req) {
       ),
   };
 }
-
-module.exports = {
-  REQUEST_ID_HEADER,
-  TRACEPARENT_HEADER,
-  getOrCreateRequestId,
-  getOrCreateTraceContext,
-  makeChildTraceparent,
-  createRequestLogger,
-};

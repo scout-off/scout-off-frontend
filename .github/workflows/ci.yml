@@ -262,6 +262,13 @@ jobs:
 
       - run: npm ci
 
+      - name: Typecheck backend
+        run: npm run typecheck
+
+      - name: Build backend
+        # Tests run against the compiled output in dist/.
+        run: npm run build
+
       - name: Test backend
         # Node 22+ treats --test args as globs, so a bare directory no longer
         # expands to the files inside it.

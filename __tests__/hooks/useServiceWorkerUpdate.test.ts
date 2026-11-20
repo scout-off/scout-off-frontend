@@ -27,7 +27,7 @@ describe('useServiceWorkerUpdate', () => {
   const originalReload = window.location.reload;
 
   beforeEach(() => {
-    delete (window as any).workbox;
+    delete (window as any).serwist;
     Object.defineProperty(window, 'location', {
       value: { ...window.location, reload: jest.fn() },
       writable: true,
@@ -41,14 +41,14 @@ describe('useServiceWorkerUpdate', () => {
     });
   });
 
-  it('stays false when window.workbox is not present', () => {
+  it('stays false when window.serwist is not present', () => {
     const { result } = renderHook(() => useServiceWorkerUpdate());
     expect(result.current.updateAvailable).toBe(false);
   });
 
-  it('sets updateAvailable when workbox emits a waiting event', () => {
+  it('sets updateAvailable when serwist emits a waiting event', () => {
     const workbox = createMockWorkbox();
-    (window as any).workbox = workbox;
+    (window as any).serwist = workbox;
 
     const { result } = renderHook(() => useServiceWorkerUpdate());
     expect(result.current.updateAvailable).toBe(false);
@@ -62,7 +62,7 @@ describe('useServiceWorkerUpdate', () => {
 
   it('dismiss hides the prompt without messaging the service worker', () => {
     const workbox = createMockWorkbox();
-    (window as any).workbox = workbox;
+    (window as any).serwist = workbox;
 
     const { result } = renderHook(() => useServiceWorkerUpdate());
 
@@ -81,7 +81,7 @@ describe('useServiceWorkerUpdate', () => {
 
   it('reload sends SKIP_WAITING and reloads the page once controlling fires', () => {
     const workbox = createMockWorkbox();
-    (window as any).workbox = workbox;
+    (window as any).serwist = workbox;
 
     const { result } = renderHook(() => useServiceWorkerUpdate());
 
@@ -99,7 +99,7 @@ describe('useServiceWorkerUpdate', () => {
 
   it('does not reload on a controlling event unless reload() was called first', () => {
     const workbox = createMockWorkbox();
-    (window as any).workbox = workbox;
+    (window as any).serwist = workbox;
 
     renderHook(() => useServiceWorkerUpdate());
 
@@ -112,7 +112,7 @@ describe('useServiceWorkerUpdate', () => {
 
   it('removes listeners on unmount', () => {
     const workbox = createMockWorkbox();
-    (window as any).workbox = workbox;
+    (window as any).serwist = workbox;
 
     const { unmount } = renderHook(() => useServiceWorkerUpdate());
     unmount();

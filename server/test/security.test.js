@@ -15,7 +15,7 @@ process.env.CORS_ORIGIN_PATTERN =
 process.env.RATE_LIMIT_MAX = '1000';
 process.env.RATE_LIMIT_WRITE_MAX = '3';
 
-const createApp = require('../src/app');
+const createApp = require('../dist/app');
 
 let server;
 let baseUrl;

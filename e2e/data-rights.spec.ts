@@ -127,6 +127,17 @@ interface ExportShape {
     recentlyViewed: { playerId: string }[];
     backend?: unknown;
   };
+  onChain: {
+    publicLedgerData: boolean;
+    accountExplorerUrl: string;
+    player: { status: 'ok' | 'unavailable' };
+    milestones: { status: 'ok' | 'unavailable' };
+    subscription: { status: 'ok' | 'unavailable' };
+    events: Record<
+      'asPlayer' | 'asValidator' | 'asScout',
+      { status: 'ok' | 'unavailable' }
+    >;
+  };
   onChainExcluded: { explanation: string; explorerUrl: string };
 }
 
@@ -163,6 +174,19 @@ test.describe('personal data export', () => {
       expect(Number.isNaN(Date.parse(data.exportedAt))).toBe(false);
       expect(data.onChainExcluded.explanation).toMatch(/blockchain/i);
       expect(data.onChainExcluded.explorerUrl).toContain(owner.publicKey);
+
+      // On-chain snapshot (issue #1715): always present; each part is either
+      // collected or explicitly unavailable (e.g. no RPC/indexer in CI).
+      expect(data.onChain.publicLedgerData).toBe(true);
+      expect(data.onChain.accountExplorerUrl).toContain(owner.publicKey);
+      for (const part of [
+        data.onChain.player,
+        data.onChain.milestones,
+        data.onChain.subscription,
+        ...Object.values(data.onChain.events),
+      ]) {
+        expect(['ok', 'unavailable']).toContain(part.status);
+      }
 
       // Seeded data is present.
       expect(data.sections.watchlist.map((w) => w.playerId)).toContain(

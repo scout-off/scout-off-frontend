@@ -1,6 +1,6 @@
 /**
  * Server-side Cloudflare Turnstile verification for Next.js API routes —
- * the counterpart of server/src/middleware/turnstile.js. When
+ * the counterpart of server/src/middleware/turnstile.ts. When
  * TURNSTILE_SECRET_KEY is unset the check is skipped, matching the
  * project's "leave blank to disable" convention (see ReferralPanel).
  */

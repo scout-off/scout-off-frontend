@@ -1,6 +1,6 @@
-const fs = require('fs');
-const path = require('path');
-const Database = require('better-sqlite3');
+import fs from 'fs';
+import path from 'path';
+import Database from 'better-sqlite3';
 
 const DB_PATH =
   process.env.DB_PATH ?? path.join(__dirname, '..', 'data', 'scout-off.db');
@@ -97,9 +97,11 @@ db.exec(`
 // column — this repo has no migration-versioning framework on the server
 // side (unlike the Next app's lib/sqliteMigrations.ts), so the guard is
 // inlined here instead.
-const academyColumns = db.prepare('PRAGMA table_info(academies)').all();
+const academyColumns = db.prepare('PRAGMA table_info(academies)').all() as {
+  name: string;
+}[];
 if (!academyColumns.some((c) => c.name === 'quorum')) {
   db.exec('ALTER TABLE academies ADD COLUMN quorum INTEGER');
 }
 
-module.exports = db;
+export = db;

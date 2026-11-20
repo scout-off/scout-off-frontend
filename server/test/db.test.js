@@ -9,11 +9,11 @@ const tmpDir = fs.mkdtempSync(
 );
 process.env.DB_PATH = path.join(tmpDir, 'nested', 'test.db');
 
-const dbModulePath = require.resolve('../src/db');
+const dbModulePath = require.resolve('../dist/db');
 
 function loadDb() {
   delete require.cache[dbModulePath];
-  return require('../src/db');
+  return require('../dist/db');
 }
 
 function tableNames(db) {

@@ -10,8 +10,8 @@ const tmpDbPath = path.join(
 );
 process.env.DB_PATH = tmpDbPath;
 
-const createApp = require('../src/app');
-const milestoneSubmissionService = require('../src/milestoneSubmissionService');
+const createApp = require('../dist/app');
+const milestoneSubmissionService = require('../dist/milestoneSubmissionService');
 
 let server;
 let baseUrl;
@@ -43,8 +43,8 @@ const validBody = {
   playerName: 'Ada',
   description: 'Scored a hat-trick',
   evidenceUrl: 'https://example.com/clip',
-  validatorWallet: 'GVALIDATOR_A',
-  submittedBy: 'GPLAYER_1',
+  validatorWallet: 'GAFQHU6AJVT4SWCB4L2BQQ6LDERANZKUBWKEWMD4ZI57TPTFVWSWYYEX',
+  submittedBy: 'GCST3S6Q5Z2RV5I7PQI4AMIBCRXGFMJYTAYMHKDVWNOZVNWQRIVQPYFR',
 };
 
 test('POST /milestone-submissions rejects missing required fields', async () => {
@@ -52,7 +52,10 @@ test('POST /milestone-submissions rejects missing required fields', async () => 
     playerId: 'player-1',
   });
   assert.equal(res.status, 400);
-  assert.match(res.body.error, /required/);
+  assert.equal(res.body.error.code, 'VALIDATION_FAILED');
+  const paths = res.body.error.details.map((d) => d.path);
+  assert.ok(paths.includes('body.description'));
+  assert.ok(paths.includes('body.validatorWallet'));
 });
 
 test('POST /milestone-submissions creates a pending submission', async () => {
@@ -60,14 +63,17 @@ test('POST /milestone-submissions creates a pending submission', async () => {
   assert.equal(res.status, 201);
   assert.equal(res.body.status, 'pending');
   assert.equal(res.body.playerId, 'player-1');
-  assert.equal(res.body.validatorWallet, 'GVALIDATOR_A');
+  assert.equal(
+    res.body.validatorWallet,
+    'GAFQHU6AJVT4SWCB4L2BQQ6LDERANZKUBWKEWMD4ZI57TPTFVWSWYYEX',
+  );
   assert.ok(res.body.id);
 });
 
 test('GET /milestone-submissions/validator/:wallet lists pending by default', async () => {
   const res = await request(
     'GET',
-    '/milestone-submissions/validator/GVALIDATOR_A',
+    '/milestone-submissions/validator/GAFQHU6AJVT4SWCB4L2BQQ6LDERANZKUBWKEWMD4ZI57TPTFVWSWYYEX',
   );
   assert.equal(res.status, 200);
   assert.ok(res.body.length >= 1);
@@ -77,7 +83,7 @@ test('GET /milestone-submissions/validator/:wallet lists pending by default', as
 test('GET /milestone-submissions/validator/:wallet rejects an invalid status filter', async () => {
   const res = await request(
     'GET',
-    '/milestone-submissions/validator/GVALIDATOR_A?status=bogus',
+    '/milestone-submissions/validator/GAFQHU6AJVT4SWCB4L2BQQ6LDERANZKUBWKEWMD4ZI57TPTFVWSWYYEX?status=bogus',
   );
   assert.equal(res.status, 400);
 });
@@ -104,24 +110,24 @@ test('PATCH /milestone-submissions/:id returns 404 for an unknown id', async () 
 test('PATCH /milestone-submissions/:id records the decision and filters by status', async () => {
   const created = await request('POST', '/milestone-submissions', {
     ...validBody,
-    validatorWallet: 'GVALIDATOR_B',
+    validatorWallet: 'GCHIMRQHESFSACX647SY5UEPMJA5XBIVK7FIJYU4LQ7QPHBD5W4GZXXI',
   });
   const res = await request(
     'PATCH',
     `/milestone-submissions/${created.body.id}`,
     {
       status: 'approved',
-      txHash: 'abc123',
+      txHash: 'a'.repeat(64),
     },
   );
   assert.equal(res.status, 200);
   assert.equal(res.body.status, 'approved');
-  assert.equal(res.body.txHash, 'abc123');
+  assert.equal(res.body.txHash, 'a'.repeat(64));
   assert.ok(res.body.decidedAt);
 
   const approved = await request(
     'GET',
-    '/milestone-submissions/validator/GVALIDATOR_B?status=approved',
+    '/milestone-submissions/validator/GCHIMRQHESFSACX647SY5UEPMJA5XBIVK7FIJYU4LQ7QPHBD5W4GZXXI?status=approved',
   );
   assert.deepEqual(
     approved.body.map((s) => s.id),
@@ -129,7 +135,7 @@ test('PATCH /milestone-submissions/:id records the decision and filters by statu
   );
   const pending = await request(
     'GET',
-    '/milestone-submissions/validator/GVALIDATOR_B',
+    '/milestone-submissions/validator/GCHIMRQHESFSACX647SY5UEPMJA5XBIVK7FIJYU4LQ7QPHBD5W4GZXXI',
   );
   assert.equal(pending.body.length, 0);
 });
@@ -145,15 +151,17 @@ test('milestoneSubmissionService.createSubmission defaults optional fields to nu
   const submission = milestoneSubmissionService.createSubmission({
     playerId: 'player-2',
     description: 'Clean sheet',
-    validatorWallet: 'GVALIDATOR_C',
-    submittedBy: 'GPLAYER_2',
+    validatorWallet: 'GB7O6AP6G4RSSRYQSFRTNQPZZFTH35VFKNFGYKOPKRUIVQNS6G3OO3EA',
+    submittedBy: 'GCUSCC3ALZFZWQGWVQHNRQV25S2AZNOW4T6C4C4ORPIO633E7WXLFRDD',
   });
   assert.equal(submission.playerName, null);
   assert.equal(submission.evidenceUrl, null);
   assert.equal(submission.txHash, null);
   assert.deepEqual(
     milestoneSubmissionService
-      .listForValidator('GVALIDATOR_C')
+      .listForValidator(
+        'GB7O6AP6G4RSSRYQSFRTNQPZZFTH35VFKNFGYKOPKRUIVQNS6G3OO3EA',
+      )
       .map((s) => s.id),
     [submission.id],
   );

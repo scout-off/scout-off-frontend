@@ -78,3 +78,29 @@ explicit, reviewed retention policy — it should not fall out of a generic
 persisted-cache change made for an unrelated reason. `lib/contactDetailsCache.ts`
 is a small, deliberately narrow module for exactly this reason: change it
 in one place, and anyone touching it later has to read this file first.
+
+## On-chain vs off-chain data in the data export
+
+`GET /api/data-export` (built by `lib/offChainDataCollection.ts`) returns two
+kinds of data, and they follow different rules:
+
+- **Off-chain data** (`sections`): records ScoutOff stores in its own
+  databases (watchlist, saved searches, sessions, backend referrals and
+  academies, and so on). These are covered by a data-deletion request.
+- **On-chain data** (`onChain`, issue #1715): a read-only copy of what the
+  contract and indexer hold for the wallet: the player record, milestones
+  (with validator, timestamp and, when the indexer recorded it, the tx hash),
+  the scout subscription, and indexed events where the wallet is the player,
+  validator or scout. Every event carries an explorer link (testnet or
+  mainnet via `lib/network.ts`), so it can be verified independently.
+  **This data lives on the public Stellar ledger and cannot be modified or
+  deleted by anyone, including ScoutOff.** A deletion request does not
+  touch it.
+
+The on-chain snapshot is best-effort. When the RPC node or the indexer
+cannot be reached, the affected part reads
+`{ "status": "unavailable", "reason": "…" }` and the rest of the export is
+still returned. Indexer reads are paginated and capped at 500 events per
+group; a capped group has `truncated: true` and a note pointing to the
+account explorer link for the full history. The export route's
+`POLICIES.dataExport` rate limit bounds the extra RPC and indexer load.

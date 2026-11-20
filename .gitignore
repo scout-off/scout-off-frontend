@@ -12,11 +12,9 @@ pnpm-lock.yaml
 .husky/_
 /.git
 .vscode
+# Serwist build output (generated from worker/sw.ts)
 public/sw.js
-public/workbox-*.js
-# next-pwa regenerates sourcemaps adjacent to workbox output on local builds
 public/sw.js.map
-public/workbox-*.js.map
 
 .env.local
 .env*.local

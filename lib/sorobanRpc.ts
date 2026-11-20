@@ -3,7 +3,7 @@
  * already-signed transaction envelope.
  *
  * Deliberately does not use @stellar/stellar-sdk: this module is shared by
- * the main thread *and* the background-sync service worker (worker/index.js
+ * the main thread *and* the background-sync service worker (worker/sw.ts
  * imports it directly), and pulling the full SDK into a service worker
  * bundle is unnecessary weight for a single JSON-RPC call this simple —
  * `sendTransaction` just POSTs `{ transaction: <base64 XDR> }` and reads

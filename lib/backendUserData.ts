@@ -6,7 +6,7 @@ import {
 
 /**
  * Server-only client for the Express backend's wallet-scoped export and
- * deletion endpoints (server/src/routes/users.js, issue #1352). Authenticates
+ * deletion endpoints (server/src/routes/users.ts, issue #1352). Authenticates
  * with a service credential plus the wallet already verified from the
  * session cookie — never call this from the browser.
  */

@@ -2,7 +2,7 @@
  * Structured JSON logger for the indexer (issue #1519).
  *
  * Aligns to the shared log-line schema used by the Next.js app
- * (lib/logger.ts) and the Express backend (server/src/logger.js) so that
+ * (lib/logger.ts) and the Express backend (server/src/logger.ts) so that
  * log-aggregator queries written for one service work for the others without
  * field-name translation.
  *
@@ -148,7 +148,7 @@ export const logger = {
  * Creates a scoped logger that stamps every line with an optional
  * `requestId` and `route` so lines from the same indexer pipeline run can
  * be correlated in a log aggregator — mirrors `createRequestLogger` in
- * lib/logger.ts and server/src/logger.js.
+ * lib/logger.ts and server/src/logger.ts.
  */
 export function createScopedLogger(scope: {
   requestId?: string;

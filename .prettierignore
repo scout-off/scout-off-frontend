@@ -13,4 +13,3 @@ pnpm-lock.yaml
 .gitignore
 .vscode
 public/sw.js
-public/workbox-*.js

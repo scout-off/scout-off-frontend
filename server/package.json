@@ -3,10 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "description": "Off-chain data API for scout-off (referrals today; chat history and comments next) — the Node.js API depicted in the root README architecture diagram.",
-  "main": "src/index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "node --watch src/index.js",
+    "build": "tsc -p .",
+    "typecheck": "tsc --noEmit -p .",
+    "start": "node dist/index.js",
+    "dev": "tsc -p . && node --watch dist/index.js",
+    "pretest": "npm run build",
     "test": "node --test 'test/**/*.test.js'"
   },
   "dependencies": {
@@ -16,6 +19,14 @@
     "express-rate-limit": "^8.7.0",
     "helmet": "^8.3.0",
     "rate-limit-redis": "^6.0.1",
-    "redis": "^6.2.1"
+    "redis": "^6.2.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.25",
+    "@types/node": "^22.20.5",
+    "typescript": "^5.9.3"
   }
 }

@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-interface WorkboxLike {
+/** The subset of @serwist/window's `Serwist` this hook uses. */
+interface SerwistLike {
   addEventListener: (
     type: 'waiting' | 'controlling',
     listener: () => void,
@@ -16,7 +17,7 @@ interface WorkboxLike {
 
 declare global {
   interface Window {
-    workbox?: WorkboxLike;
+    serwist?: SerwistLike;
   }
 }
 
@@ -27,9 +28,10 @@ interface UseServiceWorkerUpdateResult {
 }
 
 /**
- * Surfaces next-pwa's `window.workbox` (workbox-window) lifecycle events so
- * the UI can prompt the user to reload once a new service worker is waiting
- * to activate. Relies on `skipWaiting: false` in next.config.js — otherwise
+ * Surfaces Serwist's `window.serwist` (@serwist/window, injected by
+ * @serwist/next) lifecycle events so the UI can prompt the user to reload
+ * once a new service worker is waiting to activate. Relies on
+ * `skipWaiting: false` in worker/sw.ts — otherwise
  * every update activates silently and never reaches the "waiting" state.
  */
 export function useServiceWorkerUpdate(): UseServiceWorkerUpdateResult {
@@ -37,8 +39,8 @@ export function useServiceWorkerUpdate(): UseServiceWorkerUpdateResult {
   const reloadRequested = useRef(false);
 
   useEffect(() => {
-    const workbox = window.workbox;
-    if (!workbox) return;
+    const serwist = window.serwist;
+    if (!serwist) return;
 
     const handleWaiting = () => setUpdateAvailable(true);
     const handleControlling = () => {
@@ -47,20 +49,20 @@ export function useServiceWorkerUpdate(): UseServiceWorkerUpdateResult {
       }
     };
 
-    workbox.addEventListener('waiting', handleWaiting);
-    workbox.addEventListener('controlling', handleControlling);
+    serwist.addEventListener('waiting', handleWaiting);
+    serwist.addEventListener('controlling', handleControlling);
 
     return () => {
-      workbox.removeEventListener('waiting', handleWaiting);
-      workbox.removeEventListener('controlling', handleControlling);
+      serwist.removeEventListener('waiting', handleWaiting);
+      serwist.removeEventListener('controlling', handleControlling);
     };
   }, []);
 
   const reload = useCallback(() => {
-    const workbox = window.workbox;
-    if (!workbox) return;
+    const serwist = window.serwist;
+    if (!serwist) return;
     reloadRequested.current = true;
-    workbox.messageSkipWaiting();
+    serwist.messageSkipWaiting();
   }, []);
 
   const dismiss = useCallback(() => {

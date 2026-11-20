@@ -29,3 +29,6 @@ export const getExplorerTxUrl = (hash: string): string =>
 
 export const getExplorerAccountUrl = (account: string): string =>
   `https://stellar.expert/explorer/${explorerNetwork()}/account/${account}`;
+
+export const getExplorerLedgerUrl = (ledger: number): string =>
+  `https://stellar.expert/explorer/${explorerNetwork()}/ledger/${ledger}`;

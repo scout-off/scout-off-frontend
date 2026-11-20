@@ -7,6 +7,15 @@ import { createSessionToken } from '@/lib/session';
 import { SessionStore } from '@/lib/sessionStore';
 import { __resetForTests } from '@/lib/chunkedUploadStore';
 
+// The on-chain snapshot (issue #1715) is covered by
+// onChainDataCollection.test.ts; keep these tests off the network.
+jest.mock('@/lib/onChainDataCollection', () => ({
+  collectOnChainData: jest.fn().mockResolvedValue({
+    publicLedgerData: true,
+    player: { status: 'unavailable', reason: 'RPC unreachable' },
+  }),
+}));
+
 const WALLET = 'GEXPORT0000000000000000000000000000000000000000000000000000000';
 const OTHER = 'GOTHER000000000000000000000000000000000000000000000000000000000';
 
@@ -66,5 +75,10 @@ describe('GET /api/data-export', () => {
     ).toEqual(['PLAYER-1']);
     expect(body.sections.notificationReadIds).toEqual([7]);
     expect(body.onChainExcluded.explorerUrl).toContain(WALLET);
+    // An unreachable RPC yields a partial export, not a 500.
+    expect(body.onChain.player).toEqual({
+      status: 'unavailable',
+      reason: 'RPC unreachable',
+    });
   });
 });

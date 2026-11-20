@@ -41,7 +41,7 @@ resulting design:
   while the audit log is open — not applicable here, since the whole point
   is running _without_ an admin's session open.
 - **This is a Next.js app deployed on Vercel** (see `next.config.js`,
-  `next-pwa`, `@vercel/analytics`), which supports **Vercel Cron Jobs** —
+  `@serwist/next`, `@vercel/analytics`), which supports **Vercel Cron Jobs** —
   a scheduled HTTP GET against an API route, no extra infrastructure to
   stand up. That's the mechanism picked here: `vercel.json`'s `crons` entry
   hits `GET /api/cron/fraud-flags` hourly (`0 * * * *`). Hourly was chosen

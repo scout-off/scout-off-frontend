@@ -15,8 +15,9 @@ export const runtime = 'nodejs';
  * `Content-Disposition: attachment` and `Cache-Control: private, no-store`, so the
  * payload is never cached or retrievable by anyone without the session.
  *
- * On-chain data is explicitly excluded and explained in the payload's
- * `onChainExcluded` section (with a block-explorer link).
+ * A best-effort snapshot of the wallet's public on-chain data is included
+ * in the payload's `onChain` section (issue #1715); RPC or indexer failures
+ * mark the affected part `unavailable` instead of failing the export.
  */
 export async function GET(req: NextRequest) {
   const wallet = getSessionWallet(req);

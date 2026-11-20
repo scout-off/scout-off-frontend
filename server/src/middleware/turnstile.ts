@@ -1,3 +1,5 @@
+import type { NextFunction, Request, Response } from 'express';
+
 const VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 
 /**
@@ -7,7 +9,11 @@ const VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
  * skipped entirely — same "leave blank to disable" convention the rest of
  * this project uses for optional third-party integrations.
  */
-async function verifyTurnstile(req, res, next) {
+async function verifyTurnstile(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
   const secret = process.env.TURNSTILE_SECRET_KEY;
   if (!secret) {
     return next();
@@ -23,7 +29,11 @@ async function verifyTurnstile(req, res, next) {
 
   try {
     const params = new URLSearchParams({ secret, response: token });
-    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim();
+    const forwarded = req.headers['x-forwarded-for'];
+    const ip =
+      typeof forwarded === 'string'
+        ? forwarded.split(',')[0]?.trim()
+        : undefined;
     if (ip) params.set('remoteip', ip);
 
     const verifyRes = await fetch(VERIFY_URL, {
@@ -31,7 +41,7 @@ async function verifyTurnstile(req, res, next) {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: params,
     });
-    const result = await verifyRes.json();
+    const result = (await verifyRes.json()) as { success?: boolean };
 
     if (!result.success) {
       return res.status(400).json({
@@ -51,4 +61,4 @@ async function verifyTurnstile(req, res, next) {
   }
 }
 
-module.exports = verifyTurnstile;
+export default verifyTurnstile;

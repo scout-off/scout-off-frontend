@@ -23,7 +23,7 @@ describe('logger (shared schema — issue #1519)', () => {
 
   // ── Shared-schema field names ────────────────────────────────────────────
 
-  describe('shared JSON schema — aligned to lib/logger.ts and server/src/logger.js', () => {
+  describe('shared JSON schema — aligned to lib/logger.ts and server/src/logger.ts', () => {
     test('emits `timestamp` (not `ts`) as an ISO-8601 string', () => {
       logger.info('test message');
 
