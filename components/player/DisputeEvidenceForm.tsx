@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { uploadToIPFS } from '@/lib/ipfs';
 import type { AddEvidenceParams } from '@/lib/disputesClient';
+import Textarea from '@/components/ui/Textarea';
 
 const ALLOWED_TYPES = [
   'image/jpeg',
@@ -162,38 +163,23 @@ export default function DisputeEvidenceForm({
       </div>
 
       {/* Optional note */}
-      <div>
-        <label
-          htmlFor="evidence-note"
-          className="mb-1 block text-xs font-medium text-gray-400"
-        >
-          {t('note_label')}{' '}
-          <span className="text-gray-500">
-            {t('note_hint', {
-              kind: isValidatorResponse ? 'response' : 'context',
-            })}
-          </span>
-        </label>
-        <textarea
-          id="evidence-note"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          maxLength={2000}
-          rows={3}
-          placeholder={
-            isValidatorResponse
-              ? t('placeholder_validator')
-              : t('placeholder_player')
-          }
-          disabled={uploading || disabled}
-          className="w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2
-            text-sm text-white placeholder-gray-500 focus:border-brand-green
-            focus:outline-none disabled:opacity-50"
-        />
-        <p className="mt-0.5 text-right text-xs text-gray-600">
-          {note.length}/2000
-        </p>
-      </div>
+      <Textarea
+        id="evidence-note"
+        label={t('note_label')}
+        hint={t('note_hint', {
+          kind: isValidatorResponse ? 'response' : 'context',
+        })}
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        maxLength={2000}
+        rows={3}
+        placeholder={
+          isValidatorResponse
+            ? t('placeholder_validator')
+            : t('placeholder_player')
+        }
+        disabled={uploading || disabled}
+      />
 
       {submitError && (
         <p role="alert" className="text-xs text-red-400">

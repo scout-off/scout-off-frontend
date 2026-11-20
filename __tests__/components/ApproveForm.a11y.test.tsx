@@ -91,7 +91,7 @@ describe('ApproveForm – accessibility', () => {
 
     it('associates the Milestone Description label with its textarea', () => {
       renderComponent();
-      const label = screen.getByText('Milestone Description');
+      const label = screen.getByText(/^Milestone Description/);
       const textarea = screen.getByPlaceholderText(
         /Describe the player's achievement/i,
       );
@@ -101,7 +101,7 @@ describe('ApproveForm – accessibility', () => {
 
     it('associates the Evidence URL label with its input', () => {
       renderComponent();
-      const label = screen.getByText('Evidence URL');
+      const label = screen.getByText(/^Evidence URL/);
       const input = screen.getByPlaceholderText('https://example.com/evidence');
       expect(label).toHaveAttribute('for', 'approve-evidence-url');
       expect(input).toHaveAttribute('id', 'approve-evidence-url');
@@ -125,8 +125,8 @@ describe('ApproveForm – accessibility', () => {
       );
       fireEvent.change(urlInput, { target: { value: 'invalid-url' } });
       const describedById = urlInput.getAttribute('aria-describedby');
-      expect(describedById).toBe('approve-url-error');
-      const errorEl = document.getElementById('approve-url-error');
+      expect(describedById).toBe('approve-evidence-url-error');
+      const errorEl = document.getElementById('approve-evidence-url-error');
       expect(errorEl).toBeTruthy();
       expect(errorEl).toHaveTextContent(
         'Evidence URL must be a valid http/https URL',
@@ -139,7 +139,7 @@ describe('ApproveForm – accessibility', () => {
         'https://example.com/evidence',
       );
       fireEvent.change(urlInput, { target: { value: 'invalid-url' } });
-      const errorEl = document.getElementById('approve-url-error');
+      const errorEl = document.getElementById('approve-evidence-url-error');
       expect(errorEl).toHaveAttribute('role', 'alert');
     });
 

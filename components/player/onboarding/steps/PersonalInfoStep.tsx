@@ -1,6 +1,7 @@
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
+import Textarea from '@/components/ui/Textarea';
 import { AFRICAN_REGIONS } from '@/lib/regions';
 import { FOOTBALL_POSITIONS } from '@/lib/positions';
 import type { WizardData } from '../wizardState';
@@ -155,24 +156,17 @@ export default function PersonalInfoStep({
         ))}
       </Select>
 
-      <div className="space-y-1">
-        <label
-          htmlFor="wizard-bio"
-          className="block text-sm font-medium text-gray-300"
-        >
-          Bio
-        </label>
-        <textarea
-          id="wizard-bio"
-          name="bio"
-          value={data.bio}
-          onChange={onChange}
-          className="input resize-none"
-          rows={3}
-          placeholder="Tell us about yourself (optional)"
-          autoComplete="off"
-        />
-      </div>
+      <Textarea
+        id="wizard-bio"
+        label="Bio"
+        name="bio"
+        value={data.bio}
+        onChange={onChange}
+        className="resize-none"
+        rows={3}
+        placeholder="Tell us about yourself (optional)"
+        autoComplete="off"
+      />
 
       <Button
         type="button"

@@ -16,6 +16,8 @@ import {
 import { PROGRESS_LABELS } from '@/types';
 import type { Player } from '@/types';
 import TransactionStatus, { TxStatus } from '@/components/ui/TransactionStatus';
+import Input from '@/components/ui/Input';
+import Textarea from '@/components/ui/Textarea';
 
 interface ApproveFormProps {
   onSuccess: () => void;
@@ -299,45 +301,26 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
         </div>
       )}
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor="approve-description" className="text-xs text-gray-400">
-          Milestone Description
-        </label>
-        <textarea
-          id="approve-description"
-          className="input min-h-[80px] resize-y"
-          placeholder="Describe the player's achievement"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          required
-        />
-      </div>
+      <Textarea
+        id="approve-description"
+        label="Milestone Description"
+        className="min-h-[80px] resize-y"
+        placeholder="Describe the player's achievement"
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        required
+      />
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor="approve-evidence-url" className="text-xs text-gray-400">
-          Evidence URL
-        </label>
-        <input
-          ref={evidenceUrlRef}
-          id="approve-evidence-url"
-          className="input"
-          placeholder="https://example.com/evidence"
-          value={evidenceUrl}
-          onChange={(e) => handleUrlChange(e.target.value)}
-          required
-          aria-invalid={urlError ? true : undefined}
-          aria-describedby={urlError ? 'approve-url-error' : undefined}
-        />
-        {urlError && (
-          <p
-            id="approve-url-error"
-            role="alert"
-            className="text-red-400 text-xs"
-          >
-            {urlError}
-          </p>
-        )}
-      </div>
+      <Input
+        ref={evidenceUrlRef}
+        id="approve-evidence-url"
+        label="Evidence URL"
+        placeholder="https://example.com/evidence"
+        value={evidenceUrl}
+        onChange={(e) => handleUrlChange(e.target.value)}
+        required
+        error={urlError || undefined}
+      />
 
       <TransactionStatus
         status={txStatus}
