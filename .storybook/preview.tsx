@@ -1,15 +1,33 @@
 import type { Preview, Decorator } from '@storybook/react';
 import { NextIntlClientProvider } from 'next-intl';
-import messages from '../messages/en.json';
+import en from '../messages/en.json';
+import fr from '../messages/fr.json';
+import sw from '../messages/sw.json';
 import './tailwind.css';
 
+const MESSAGES = { en, fr, sw } as const;
+type StoryLocale = keyof typeof MESSAGES;
+
 // Primitives in components/ui read their accessible labels from the
-// `common` namespace (#1342), so every story needs an intl provider.
-const withIntl: Decorator = (Story) => (
-  <NextIntlClientProvider locale="en" messages={messages} timeZone="UTC">
-    <Story />
-  </NextIntlClientProvider>
-);
+// `common` namespace (#1342), so every story needs an intl provider. The
+// locale comes from the "Locale" toolbar global, which the visual
+// regression suite sets per project (`&globals=locale:fr`) to catch
+// overflow from longer French and Swahili strings (#1704).
+const withIntl: Decorator = (Story, context) => {
+  const locale: StoryLocale =
+    (context.globals.locale as StoryLocale) in MESSAGES
+      ? (context.globals.locale as StoryLocale)
+      : 'en';
+  return (
+    <NextIntlClientProvider
+      locale={locale}
+      messages={MESSAGES[locale]}
+      timeZone="UTC"
+    >
+      <Story />
+    </NextIntlClientProvider>
+  );
+};
 
 // Toggles the same `.dark` class app/layout.tsx applies to <html>, so
 // components using dark: variants (Issue #547 audit) render with the
@@ -36,6 +54,20 @@ const withTheme: Decorator = (Story, context) => {
 const preview: Preview = {
   decorators: [withTheme, withIntl],
   globalTypes: {
+    locale: {
+      description: 'Translation locale',
+      defaultValue: 'en',
+      toolbar: {
+        title: 'Locale',
+        icon: 'globe',
+        items: [
+          { value: 'en', title: 'English' },
+          { value: 'fr', title: 'Français' },
+          { value: 'sw', title: 'Kiswahili' },
+        ],
+        dynamicTitle: true,
+      },
+    },
     theme: {
       description: 'Light/dark theme',
       defaultValue: 'dark',

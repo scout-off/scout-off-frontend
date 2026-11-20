@@ -3,6 +3,12 @@ import { defineConfig, devices } from '@playwright/test';
 // Matches the fixed port in the `storybook` npm script (storybook dev -p 6006).
 const BASE_URL = 'http://127.0.0.1:6006';
 
+const ALL_LOCALES = ['en', 'fr', 'sw'];
+const VISUAL_LOCALES = (process.env.VISUAL_LOCALES ?? ALL_LOCALES.join(','))
+  .split(',')
+  .map((l) => l.trim())
+  .filter((l) => ALL_LOCALES.includes(l));
+
 // Self-hosted visual regression for Storybook (Issue #539). Runs against the
 // Storybook dev server directly (no static build/serve step needed) and
 // screenshots every story via Playwright's built-in `toHaveScreenshot`
@@ -36,7 +42,27 @@ export default defineConfig({
     // usage can crash mid-run there, so fall back to disk-backed shared memory.
     launchOptions: { args: ['--disable-dev-shm-usage'] },
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  // One desktop and one 375px-wide mobile project per locale (#1704): French
+  // and Swahili strings run 20–40% longer than English, so truncation and
+  // wrapping bugs only show up when the same stories render in those locales.
+  // The spec reads `metadata.locale` and sets Storybook's locale global.
+  // Baselines are per project (Playwright's default `{-projectName}` suffix).
+  // VISUAL_LOCALES=en (comma-separated) limits a run to a subset of locales.
+  projects: VISUAL_LOCALES.flatMap((locale) => [
+    {
+      name: `visual-${locale}`,
+      metadata: { locale },
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: `visual-${locale}-mobile`,
+      metadata: { locale },
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 375, height: 812 },
+      },
+    },
+  ]),
   webServer: {
     command: 'npm run storybook -- --ci --quiet',
     url: BASE_URL,
