@@ -11,6 +11,15 @@ const PAGE_HEIGHT = 841.89;
 const MARGIN = 50;
 
 /**
+ * Unicode replacement character (U+FFFD). Substituted for any codepoint that
+ * the embedded font cannot encode, so drawText never throws on exotic glyphs.
+ * pdf-lib's standard (WinAnsi) fonts throw on non-Latin-1 input; the embedded
+ * Noto Sans covers the full Latin, Latin-Extended, and IPA ranges but a
+ * replacement glyph is still the safest fallback for truly unsupported input.
+ */
+const REPLACEMENT_CHAR = '\uFFFD';
+
+/**
  * Above this milestone count, `generatePlayerCvPdf` is a large enough job
  * that a caller should warn the user before starting rather than let the
  * "Generating…" state run silently (issue #1011) — pagination itself
@@ -135,26 +144,89 @@ async function resolveValidatorNames(
 }
 
 /**
+ * Fetches one of the Noto Sans TTF files from public/fonts/ lazily (only
+ * during CV export, never in a route's initial JS). Falls back to a
+ * relative path when window.location is not available (e.g. unit tests that
+ * mock fetch).
+ */
+async function fetchFontBytes(filename: string): Promise<Uint8Array> {
+  const base =
+    typeof window !== 'undefined' ? window.location.origin : 'http://localhost';
+  const response = await fetch(`${base}/fonts/${filename}`);
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch font ${filename}: ${response.status} ${response.statusText}`,
+    );
+  }
+  return new Uint8Array(await response.arrayBuffer());
+}
+
+/**
+ * Sanitises a string so that every codepoint is representable by the given
+ * embedded font. Any glyph the font cannot encode is replaced with
+ * REPLACEMENT_CHAR (U+FFFD) rather than letting pdf-lib throw. This matters
+ * for the small number of glyphs outside Noto Sans's Latin + Latin-Extended
+ * coverage (e.g. emoji, CJK).
+ *
+ * pdf-lib's `PDFFont.encodeText` will throw on an unsupported codepoint, so
+ * we test each character individually and substitute.
+ */
+function safeText(text: string, font: PDFFont): string {
+  return Array.from(text)
+    .map((ch) => {
+      try {
+        font.encodeText(ch);
+        return ch;
+      } catch {
+        return REPLACEMENT_CHAR;
+      }
+    })
+    .join('');
+}
+
+/**
  * Generates a one-or-more-page CV PDF for a player: vitals, progress level,
  * stats, and a chronological milestone list with resolved validator names.
  * Runs entirely client-side via a dynamically-imported pdf-lib so the
  * library stays out of the main bundle.
+ *
+ * Uses embedded Noto Sans (OFL-licensed, subsetted) instead of pdf-lib's
+ * built-in Helvetica so that player names and places containing Yoruba,
+ * Hausa, Akan, Ewe, and other Latin-Extended glyphs render correctly
+ * instead of throwing a WinAnsi encoding error.
  */
 export async function generatePlayerCvPdf(
   player: Player,
   milestones: Milestone[],
   verification?: CvVerification,
 ): Promise<Uint8Array> {
-  const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
+  // Dynamic imports keep pdf-lib and fontkit out of every route's initial JS.
+  const [{ PDFDocument, rgb }, fontkit] = await Promise.all([
+    import('pdf-lib'),
+    import('@pdf-lib/fontkit'),
+  ]);
+
   const validatorNames = await resolveValidatorNames(milestones);
 
   const doc = await PDFDocument.create();
+  // Register fontkit so embedFont(..., { subset: true }) is available.
+  doc.registerFontkit(fontkit.default ?? fontkit);
+
   if (verification) {
     doc.setSubject(`ScoutOff verification token: ${verification.token}`);
     doc.setKeywords([verification.token, verification.contentHash]);
   }
-  const font = await doc.embedFont(StandardFonts.Helvetica);
-  const boldFont = await doc.embedFont(StandardFonts.HelveticaBold);
+
+  // Fetch both font weights in parallel — lazy, same-origin, cached by the
+  // browser after the first export. subset:true instructs fontkit to include
+  // only the codepoints actually used in this document, keeping PDF size small.
+  const [regularBytes, boldBytes] = await Promise.all([
+    fetchFontBytes('NotoSans-Regular.ttf'),
+    fetchFontBytes('NotoSans-Bold.ttf'),
+  ]);
+
+  const font = await doc.embedFont(regularBytes, { subset: true });
+  const boldFont = await doc.embedFont(boldBytes, { subset: true });
 
   const INK = rgb(0.07, 0.09, 0.15);
   const MUTED = rgb(0.42, 0.45, 0.5);
@@ -179,14 +251,20 @@ export async function generatePlayerCvPdf(
       gapAfter?: number;
     } = {},
   ) {
+    const activeFont = opts.font ?? font;
     const size = opts.size ?? 11;
     const gapAfter = opts.gapAfter ?? 4;
     ensureSpace(size + gapAfter);
-    page.drawText(text, {
+    // Sanitise through safeText so unsupported glyphs become U+FFFD rather
+    // than throwing. This is the last line of defence: Noto Sans covers all
+    // expected input, but safeText ensures any truly unrepresentable glyph
+    // (e.g. emoji entered in a milestone description) degrades gracefully.
+    const safe = safeText(text, activeFont);
+    page.drawText(safe, {
       x: MARGIN,
       y,
       size,
-      font: opts.font ?? font,
+      font: activeFont,
       color: opts.color ?? INK,
     });
     y -= size + gapAfter;
@@ -264,14 +342,17 @@ export async function generatePlayerCvPdf(
     });
     const qrImage = await doc.embedPng(qrDataUrl);
     page.drawImage(qrImage, { x: MARGIN, y: y - 52, width: 52, height: 52 });
-    page.drawText('Verify this CV', {
+    // Verification section uses direct page.drawText (not the drawText helper)
+    // because it positions elements absolutely relative to `y` rather than
+    // flowing down the page. safeText is applied explicitly here too.
+    page.drawText(safeText('Verify this CV', boldFont), {
       x: MARGIN + 62,
       y: y - 14,
       size: 9,
       font: boldFont,
       color: INK,
     });
-    page.drawText(verification.url, {
+    page.drawText(safeText(verification.url, font), {
       x: MARGIN + 62,
       y: y - 30,
       size: 7,
@@ -279,7 +360,7 @@ export async function generatePlayerCvPdf(
       color: MUTED,
       maxWidth: PAGE_WIDTH - MARGIN * 2 - 62,
     });
-    page.drawText(`Token: ${verification.token.slice(0, 24)}…`, {
+    page.drawText(safeText(`Token: ${verification.token.slice(0, 24)}…`, font), {
       x: MARGIN + 62,
       y: y - 44,
       size: 7,

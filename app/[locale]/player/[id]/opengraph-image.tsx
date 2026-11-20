@@ -2,11 +2,20 @@ import { ImageResponse } from 'next/og';
 import { fetchPlayerProfile } from '@/lib/api';
 import { getProgressBadgeLabel } from '@/lib/progress';
 import type { Player } from '@/types';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 
 // axios (via fetchPlayerProfile) relies on server-only env vars and Node
 // networking, so this route runs on the Node.js runtime rather than the
 // edge default for next/og image routes.
 export const runtime = 'nodejs';
+
+type OgFont = {
+  name: string;
+  data: ArrayBuffer;
+  weight?: 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;
+  style?: 'normal' | 'italic';
+};
 
 export const alt = 'ScoutOff Player Profile';
 export const size = { width: 1200, height: 630 };
@@ -33,8 +42,20 @@ export default async function Image({ params }: { params: { id: string } }) {
     player = null;
   }
 
+  // Noto Sans covers Latin Extended and African-language glyphs the default
+  // system font misses. Both weights are loaded for every render; Satori
+  // picks the right one based on fontWeight in the JSX styles.
+  const [regularBytes, boldBytes] = await Promise.all([
+    readFile(path.join(process.cwd(), 'public/fonts/NotoSans-Regular.ttf')),
+    readFile(path.join(process.cwd(), 'public/fonts/NotoSans-Bold.ttf')),
+  ]);
+  const ogFonts: OgFont[] = [
+    { name: 'Noto Sans', data: regularBytes.buffer as ArrayBuffer, weight: 400, style: 'normal' },
+    { name: 'Noto Sans', data: boldBytes.buffer as ArrayBuffer, weight: 700, style: 'normal' },
+  ];
+
   if (!player) {
-    return fallbackImage();
+    return fallbackImage(ogFonts);
   }
 
   const badgeColor =
@@ -54,7 +75,7 @@ export default async function Image({ params }: { params: { id: string } }) {
         justifyContent: 'space-between',
         padding: '64px',
         background: GRADIENT,
-        fontFamily: 'sans-serif',
+        fontFamily: 'Noto Sans',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -133,11 +154,11 @@ export default async function Image({ params }: { params: { id: string } }) {
         </div>
       </div>
     </div>,
-    { width: size.width, height: size.height },
+    { width: size.width, height: size.height, fonts: ogFonts },
   );
 }
 
-function fallbackImage() {
+function fallbackImage(fonts: OgFont[]) {
   return new ImageResponse(
     <div
       style={{
@@ -148,6 +169,7 @@ function fallbackImage() {
         alignItems: 'center',
         justifyContent: 'center',
         background: GRADIENT,
+        fontFamily: 'Noto Sans',
       }}
     >
       <div
@@ -181,6 +203,6 @@ function fallbackImage() {
         Verified Player Profiles
       </div>
     </div>,
-    { width: size.width, height: size.height },
+    { width: size.width, height: size.height, fonts },
   );
 }
