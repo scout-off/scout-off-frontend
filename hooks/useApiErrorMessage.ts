@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, type Messages } from 'next-intl';
 import { parseApiError } from '@/lib/apiErrorCodes';
 
 /**
@@ -12,8 +12,11 @@ export function useApiErrorMessage(): (body: unknown) => string {
   return useCallback(
     (body: unknown) => {
       const parsed = parseApiError(body);
-      if (parsed && t.has(parsed.code)) {
-        return t(parsed.code, parsed.params);
+      // Codes come from the server, so `t.has` is the runtime guard that
+      // narrows them to keys of the `apiErrors` namespace.
+      const code = parsed?.code as keyof Messages['apiErrors'] | undefined;
+      if (code && t.has(code)) {
+        return t(code, parsed?.params);
       }
       return t('UNKNOWN');
     },

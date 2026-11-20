@@ -184,7 +184,7 @@ export async function fetchGatewayStream(
         'Could not verify the upload against the IPFS gateway. Please try again.',
       );
     }
-    return streamFromWebReadable(res.body as ReadableStream<Uint8Array>);
+    return streamFromWebReadable(res.body);
   } catch (err) {
     if (err instanceof UploadVerificationError) throw err;
     throw new UploadVerificationError(

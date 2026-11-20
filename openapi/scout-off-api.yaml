@@ -93,15 +93,19 @@ components:
     # Watchlist
     WatchlistEntry:
       type: object
-      required: [id, playerId, createdAt]
+      required: [id, scoutWallet, playerId, createdAt]
       properties:
         id:
           type: integer
+        scoutWallet:
+          type: string
         playerId:
           type: string
         createdAt:
-          type: string
-          format: date-time
+          type: integer
+          description: Unix epoch milliseconds.
+        version:
+          type: integer
 
     WatchlistResponse:
       type: array
@@ -116,17 +120,22 @@ components:
 
     SavedSearch:
       type: object
-      required: [id, name, filter, createdAt, version]
+      required: [id, scoutWallet, name, filter, createdAt, lastViewedAt]
       properties:
         id:
           type: integer
+        scoutWallet:
+          type: string
         name:
           type: string
         filter:
           $ref: '#/components/schemas/PlayerFilter'
         createdAt:
-          type: string
-          format: date-time
+          type: integer
+          description: Unix epoch milliseconds.
+        lastViewedAt:
+          type: integer
+          description: Unix epoch milliseconds when the search results were last opened.
         version:
           type: integer
 
@@ -138,13 +147,26 @@ components:
     # Recently viewed
     RecentlyViewedEntry:
       type: object
-      required: [playerId, viewedAt]
+      required: [id, playerId, name, position, viewedAt]
       properties:
+        id:
+          type: integer
         playerId:
           type: string
-        viewedAt:
+        name:
           type: string
-          format: date-time
+        position:
+          type: string
+        viewedAt:
+          type: integer
+          description: Unix epoch milliseconds.
+
+    SuccessResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
 
     # Notifications
     NotificationIds:
@@ -330,6 +352,15 @@ components:
           format: date-time
 
   # ── Reusable responses ────────────────────────────────────────────────────
+  parameters:
+    IfMatch:
+      name: If-Match
+      in: header
+      required: false
+      description: Expected version as a quoted ETag (e.g. `"3"`); a mismatch returns 409.
+      schema:
+        type: string
+
   responses:
     Unauthorized:
       description: Not authenticated.
@@ -370,6 +401,21 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorBody'
+
+    SavedSearchConflict:
+      description: Version conflict; the body carries the current saved search.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error:
+                type: string
+              current:
+                $ref: '#/components/schemas/SavedSearch'
+              currentVersion:
+                type: integer
 
 security:
   - sessionCookie: []
@@ -610,8 +656,12 @@ paths:
                 id:
                   type: integer
       responses:
-        '204':
+        '200':
           description: Removed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -669,20 +719,25 @@ paths:
 
     patch:
       operationId: renameSavedSearch
-      summary: Rename an existing saved search
+      summary: Rename a saved search or mark it viewed
       tags: [saved-searches]
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [id, name]
+              required: [id]
+              description: At least one of `name` or `markViewed` is required.
               properties:
                 id:
                   type: integer
                 name:
                   type: string
+                markViewed:
+                  type: boolean
       responses:
         '200':
           description: Updated.
@@ -697,16 +752,14 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
-          description: Version conflict.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
+          $ref: '#/components/responses/SavedSearchConflict'
 
     delete:
       operationId: deleteSavedSearch
       summary: Delete a saved search
       tags: [saved-searches]
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
       requestBody:
         required: true
         content:
@@ -718,12 +771,18 @@ paths:
                 id:
                   type: integer
       responses:
-        '204':
+        '200':
           description: Deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/SavedSearchConflict'
 
   # ── Recently viewed ──────────────────────────────────────────────────────────
   /recently-viewed:
@@ -759,15 +818,50 @@ paths:
               properties:
                 playerId:
                   type: string
+                viewedAt:
+                  type: integer
+                  description: Unix epoch milliseconds; defaults to now.
       responses:
-        '204':
+        '201':
           description: Recorded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecentlyViewedEntry'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '429':
           $ref: '#/components/responses/TooManyRequests'
+
+    delete:
+      operationId: removeRecentlyViewed
+      summary: Remove a recently viewed entry by id
+      tags: [recently-viewed]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id:
+                  type: integer
+      responses:
+        '200':
+          description: Removed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   # ── Notifications ────────────────────────────────────────────────────────────
   /notifications/read:

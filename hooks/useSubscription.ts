@@ -29,7 +29,7 @@ export function subscriptionKey(publicKey: string | null): string | null {
  * Call after any write that changes subscription state.
  */
 export function invalidateSubscriptionCache(publicKey: string): Promise<void> {
-  return globalMutate(subscriptionKey(publicKey)) as Promise<void>;
+  return globalMutate(subscriptionKey(publicKey));
 }
 
 /**

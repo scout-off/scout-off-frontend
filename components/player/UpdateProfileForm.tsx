@@ -122,9 +122,9 @@ export default function UpdateProfileForm({
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">
+          <p className="block text-sm font-medium text-gray-300 mb-1">
             Current Media CID
-          </label>
+          </p>
           <a
             href={ipfsMediaUrl}
             target="_blank"

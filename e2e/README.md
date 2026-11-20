@@ -8,15 +8,16 @@ file.
 
 ## Specs
 
-| Spec                                                    | What it covers                                                                                                                                                   |
-| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `landing-page.spec.ts`                                  | Smoke test for the home page: hero heading visible, Player/Scout Dashboard nav links present, Scout Dashboard navigates to `/en/scout`. No wallet mock required. |
-| `wallet-connect-registration.spec.ts`                   | Freighter connect + optional real testnet player registration (see below).                                                                                       |
-| `player-registration.spec.ts`                           | Player registration with mocked Soroban RPC.                                                                                                                     |
-| `scout-pay-to-contact.spec.ts`                          | Scout pay-to-contact flow.                                                                                                                                       |
-| `validator-milestones.spec.ts`                          | Validator milestone approve/revoke.                                                                                                                              |
-| `admin-access.spec.ts` / `admin-fee-withdrawal.spec.ts` | Admin gated flows.                                                                                                                                               |
-| `session-lifecycle.spec.ts`                             | SEP-10 login → refresh → revoke lifecycle, across tabs and browser contexts (see below).                                                                         |
+| Spec                                                    | What it covers                                                                                                                                                                                                                                                                                                            |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `landing-page.spec.ts`                                  | Smoke test for the home page: hero heading visible, Player/Scout Dashboard nav links present, Scout Dashboard navigates to `/en/scout`. No wallet mock required.                                                                                                                                                          |
+| `wallet-connect-registration.spec.ts`                   | Freighter connect + optional real testnet player registration (see below).                                                                                                                                                                                                                                                |
+| `player-registration.spec.ts`                           | Player registration with mocked Soroban RPC.                                                                                                                                                                                                                                                                              |
+| `scout-pay-to-contact.spec.ts`                          | Scout pay-to-contact flow.                                                                                                                                                                                                                                                                                                |
+| `validator-milestones.spec.ts`                          | Validator milestone approve/revoke.                                                                                                                                                                                                                                                                                       |
+| `admin-access.spec.ts` / `admin-fee-withdrawal.spec.ts` | Admin gated flows.                                                                                                                                                                                                                                                                                                        |
+| `session-lifecycle.spec.ts`                             | SEP-10 login → refresh → revoke lifecycle, across tabs and browser contexts (see below).                                                                                                                                                                                                                                  |
+| `i18n-smoke.spec.ts`                                    | Condensed fr and sw runs of landing → wallet connect → player registration, scout search → profile → pay-to-contact modal, and the validator queue. Fails on raw message keys in visible text, next-intl `MISSING_MESSAGE` / `FORMATTING_ERROR` / `INVALID_MESSAGE` console errors, or a wrong `<html lang>` (see below). |
 
 ## Running
 
@@ -40,6 +41,16 @@ if you already have `npm run dev` running on that port it'll be reused.
 Each run gets its own session registry (`SESSIONS_DB_PATH` under the system
 temp dir, keyed by PID) so specs that count or revoke sessions start from an
 empty table instead of inheriting `data/sessions.db` rows from a previous run.
+
+## i18n smoke spec (#1710)
+
+`i18n-smoke.spec.ts` runs a few critical flows in `fr` and `sw` only to check that they render correctly in those locales. The full flows stay in their own English specs. After each step it checks that:
+
+- `<html lang>` matches the locale.
+- No visible text node matches `/^[a-z_]+(\.[a-z_]+)+$/`. next-intl renders a missing key as its `namespace.key` path, and `i18n/request.ts` does not fall back to English, so a key removed from `messages/fr.json` shows up here.
+- The console has no next-intl `MISSING_MESSAGE`, `FORMATTING_ERROR` or `INVALID_MESSAGE` errors. A missing ICU argument, for example, logs `FORMATTING_ERROR`.
+
+Run it alone with `npx playwright test e2e/i18n-smoke.spec.ts`.
 
 ## Session lifecycle specs (#1299)
 

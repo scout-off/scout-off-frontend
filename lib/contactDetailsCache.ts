@@ -58,7 +58,7 @@ function scheduleAutoPurge(key: string): void {
     key,
     setTimeout(() => {
       purgeTimers.delete(key);
-      globalMutate(key, undefined, { revalidate: false });
+      void globalMutate(key, undefined, { revalidate: false });
     }, CONTACT_DETAILS_TTL_MS),
   );
 }
@@ -75,9 +75,7 @@ export function cacheContactDetails(
   details: ContactDetails,
 ): Promise<ContactDetails | undefined> {
   scheduleAutoPurge(key);
-  return globalMutate(key, details, { revalidate: false }) as Promise<
-    ContactDetails | undefined
-  >;
+  return globalMutate<ContactDetails>(key, details, { revalidate: false });
 }
 
 /** Immediately purges a single cached contact-details entry. */
@@ -87,7 +85,7 @@ export function purgeContactDetails(key: string): Promise<void> {
     clearTimeout(timer);
     purgeTimers.delete(key);
   }
-  return globalMutate(key, undefined, { revalidate: false }) as Promise<void>;
+  return globalMutate(key, undefined, { revalidate: false });
 }
 
 /**

@@ -99,10 +99,7 @@ export async function DELETE(req: NextRequest) {
   }
 
   try {
-    const removed = RecentlyViewedStore.getInstance().remove(
-      scoutWallet,
-      id as number,
-    );
+    const removed = RecentlyViewedStore.getInstance().remove(scoutWallet, id);
     if (!removed) {
       return privateJson(
         { error: 'Recently viewed entry not found' },

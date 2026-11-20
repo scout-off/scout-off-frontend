@@ -40,8 +40,8 @@ export async function POST(
 
   const body = await req.json().catch(() => ({}));
   const rawReason =
-    body && typeof body === 'object' && typeof (body as any).reason === 'string'
-      ? (body as any).reason.trim() || undefined
+    body && typeof body === 'object' && typeof body.reason === 'string'
+      ? body.reason.trim() || undefined
       : undefined;
 
   if (rawReason !== undefined) {

@@ -152,6 +152,7 @@ export default function Modal({
   if (!isOpen) return null;
 
   return (
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- click-outside-to-close is a mouse convenience; keyboard users close with Escape (handled above) or the close button.
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
       onClick={onClose}
@@ -160,6 +161,7 @@ export default function Modal({
         aria-hidden="true"
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
       />
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- onClick only stops propagation so clicks inside the dialog don't reach the backdrop's close handler. */}
       <div
         ref={dialogRef}
         role="dialog"

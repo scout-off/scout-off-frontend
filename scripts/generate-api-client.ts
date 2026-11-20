@@ -130,28 +130,54 @@ type AdminAuditQueryResult =
   components['schemas']['AdminAuditQueryResult'];
 type XlmRateResponse =
   components['schemas']['XlmRateResponse'];
+type SuccessResponse =
+  components['schemas']['SuccessResponse'];
 
 // ── Base fetch helper ─────────────────────────────────────────────────────────
+
+/** A fetch-compatible function, e.g. lib/fetchWithRetry's helpers. */
+export type ApiFetcher = (input: string, init?: RequestInit) => Promise<Response>;
+
+/** Per-call options for the operations that accept them. */
+export interface ApiRequestOptions {
+  /** Defaults to the global \`fetch\`. */
+  fetcher?: ApiFetcher;
+  /** Extra request headers, e.g. \`If-Match\`. */
+  headers?: Record<string, string>;
+}
+
+/** Thrown for any non-2xx response; \`body\` is the parsed JSON error body. */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly body: unknown,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
 
 async function apiFetch<T>(
   path: string,
   init: RequestInit = {},
+  opts: ApiRequestOptions = {},
 ): Promise<T> {
-  const res = await fetch(path, {
+  const res = await (opts.fetcher ?? fetch)(path, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
       ...(init.headers ?? {}),
+      ...(opts.headers ?? {}),
     },
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
-    const err = new Error(
+    throw new ApiError(
       typeof body?.error === 'string' ? body.error : \`API error \${res.status}\`,
-    ) as Error & { status: number; body: unknown };
-    err.status = res.status;
-    err.body = body;
-    throw err;
+      res.status,
+      body,
+    );
   }
   // 204 No Content
   if (res.status === 204) return undefined as unknown as T;
@@ -202,73 +228,125 @@ export function searchPlayers(name: string): Promise<PlayerSearchResult> {
 // ── Watchlist ─────────────────────────────────────────────────────────────────
 
 /** GET /api/watchlist */
-export function getWatchlist(): Promise<WatchlistResponse> {
-  return apiFetch<WatchlistResponse>('/api/watchlist');
+export function getWatchlist(opts?: ApiRequestOptions): Promise<WatchlistResponse> {
+  return apiFetch<WatchlistResponse>('/api/watchlist', {}, opts);
 }
 
 /** POST /api/watchlist */
-export function addToWatchlist(playerId: string): Promise<WatchlistEntry> {
-  return apiFetch<WatchlistEntry>('/api/watchlist', {
-    method: 'POST',
-    body: JSON.stringify({ playerId }),
-  });
+export function addToWatchlist(
+  playerId: string,
+  opts?: ApiRequestOptions,
+): Promise<WatchlistEntry> {
+  return apiFetch<WatchlistEntry>(
+    '/api/watchlist',
+    { method: 'POST', body: JSON.stringify({ playerId }) },
+    opts,
+  );
 }
 
 /** DELETE /api/watchlist */
-export function removeFromWatchlist(id: number): Promise<void> {
-  return apiFetch<void>('/api/watchlist', {
-    method: 'DELETE',
-    body: JSON.stringify({ id }),
-  });
+export function removeFromWatchlist(
+  id: number,
+  opts?: ApiRequestOptions,
+): Promise<SuccessResponse> {
+  return apiFetch<SuccessResponse>(
+    '/api/watchlist',
+    { method: 'DELETE', body: JSON.stringify({ id }) },
+    opts,
+  );
 }
 
 // ── Saved searches ────────────────────────────────────────────────────────────
 
 /** GET /api/saved-searches */
-export function listSavedSearches(): Promise<SavedSearchListResponse> {
-  return apiFetch<SavedSearchListResponse>('/api/saved-searches');
+export function listSavedSearches(
+  opts?: ApiRequestOptions,
+): Promise<SavedSearchListResponse> {
+  return apiFetch<SavedSearchListResponse>('/api/saved-searches', {}, opts);
 }
 
 /** POST /api/saved-searches */
 export function createSavedSearch(
   name: string,
   filter: PlayerFilter,
+  opts?: ApiRequestOptions,
 ): Promise<SavedSearch> {
-  return apiFetch<SavedSearch>('/api/saved-searches', {
-    method: 'POST',
-    body: JSON.stringify({ name, filter }),
-  });
+  return apiFetch<SavedSearch>(
+    '/api/saved-searches',
+    { method: 'POST', body: JSON.stringify({ name, filter }) },
+    opts,
+  );
 }
 
-/** PATCH /api/saved-searches */
-export function renameSavedSearch(id: number, name: string): Promise<SavedSearch> {
-  return apiFetch<SavedSearch>('/api/saved-searches', {
-    method: 'PATCH',
-    body: JSON.stringify({ id, name }),
-  });
+/** PATCH /api/saved-searches (rename) */
+export function renameSavedSearch(
+  id: number,
+  name: string,
+  opts?: ApiRequestOptions,
+): Promise<SavedSearch> {
+  return apiFetch<SavedSearch>(
+    '/api/saved-searches',
+    { method: 'PATCH', body: JSON.stringify({ id, name }) },
+    opts,
+  );
+}
+
+/** PATCH /api/saved-searches (mark viewed) */
+export function markSavedSearchViewed(
+  id: number,
+  opts?: ApiRequestOptions,
+): Promise<SavedSearch> {
+  return apiFetch<SavedSearch>(
+    '/api/saved-searches',
+    { method: 'PATCH', body: JSON.stringify({ id, markViewed: true }) },
+    opts,
+  );
 }
 
 /** DELETE /api/saved-searches */
-export function deleteSavedSearch(id: number): Promise<void> {
-  return apiFetch<void>('/api/saved-searches', {
-    method: 'DELETE',
-    body: JSON.stringify({ id }),
-  });
+export function deleteSavedSearch(
+  id: number,
+  opts?: ApiRequestOptions,
+): Promise<SuccessResponse> {
+  return apiFetch<SuccessResponse>(
+    '/api/saved-searches',
+    { method: 'DELETE', body: JSON.stringify({ id }) },
+    opts,
+  );
 }
 
 // ── Recently viewed ───────────────────────────────────────────────────────────
 
 /** GET /api/recently-viewed */
-export function getRecentlyViewed(): Promise<RecentlyViewedEntry[]> {
-  return apiFetch<RecentlyViewedEntry[]>('/api/recently-viewed');
+export function getRecentlyViewed(
+  opts?: ApiRequestOptions,
+): Promise<RecentlyViewedEntry[]> {
+  return apiFetch<RecentlyViewedEntry[]>('/api/recently-viewed', {}, opts);
 }
 
 /** POST /api/recently-viewed */
-export function recordRecentlyViewed(playerId: string): Promise<void> {
-  return apiFetch<void>('/api/recently-viewed', {
-    method: 'POST',
-    body: JSON.stringify({ playerId }),
-  });
+export function recordRecentlyViewed(
+  playerId: string,
+  viewedAt?: number,
+  opts?: ApiRequestOptions,
+): Promise<RecentlyViewedEntry> {
+  return apiFetch<RecentlyViewedEntry>(
+    '/api/recently-viewed',
+    { method: 'POST', body: JSON.stringify({ playerId, viewedAt }) },
+    opts,
+  );
+}
+
+/** DELETE /api/recently-viewed */
+export function removeRecentlyViewed(
+  id: number,
+  opts?: ApiRequestOptions,
+): Promise<SuccessResponse> {
+  return apiFetch<SuccessResponse>(
+    '/api/recently-viewed',
+    { method: 'DELETE', body: JSON.stringify({ id }) },
+    opts,
+  );
 }
 
 // ── Notifications ─────────────────────────────────────────────────────────────

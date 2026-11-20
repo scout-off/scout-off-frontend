@@ -46,7 +46,7 @@ export function useWatchlist(scoutWallet: string | null) {
   const add = useCallback(
     async (playerId: string) => {
       await addToWatchlist(playerId);
-      mutate();
+      void mutate();
     },
     [mutate],
   );
@@ -57,17 +57,17 @@ export function useWatchlist(scoutWallet: string | null) {
         id: entry.id,
         message: 'Removed from watchlist',
         onOptimisticRemove: () =>
-          mutate(
+          void mutate(
             (current) => (current ?? []).filter((e) => e.id !== entry.id),
             false,
           ),
         onRestore: () =>
-          mutate((current) => [entry, ...(current ?? [])], false),
+          void mutate((current) => [entry, ...(current ?? [])], false),
         onCommit: async () => {
           try {
             await removeFromWatchlist(entry.id);
           } finally {
-            mutate();
+            void mutate();
           }
         },
       });

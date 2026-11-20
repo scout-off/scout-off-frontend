@@ -131,7 +131,7 @@ export async function fetchWithRetry(
     // Build a fresh per-attempt signal so the timeout clock resets on retry.
     const signal =
       timeoutMs > 0
-        ? buildSignal(timeoutMs, init?.signal as AbortSignal | undefined)
+        ? buildSignal(timeoutMs, init?.signal)
         : (init?.signal ?? undefined);
 
     try {
@@ -213,7 +213,7 @@ export async function fetchWithTimeout(
 ): Promise<Response> {
   const signal =
     timeoutMs > 0
-      ? buildSignal(timeoutMs, init?.signal as AbortSignal | undefined)
+      ? buildSignal(timeoutMs, init?.signal)
       : (init?.signal ?? undefined);
   return fetch(url, { ...init, signal });
 }

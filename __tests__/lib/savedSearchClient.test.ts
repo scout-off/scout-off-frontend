@@ -41,7 +41,9 @@ describe('savedSearchClient', () => {
     it('GETs the list through fetchWithRetry', async () => {
       mockFetchWithRetry.mockResolvedValue(response([SEARCH]));
       await expect(fetchSavedSearches()).resolves.toEqual([SEARCH]);
-      expect(mockFetchWithRetry).toHaveBeenCalledWith('/api/saved-searches');
+      expect(mockFetchWithRetry).toHaveBeenCalledWith('/api/saved-searches', {
+        headers: { 'Content-Type': 'application/json' },
+      });
     });
 
     it('throws on a non-2xx response', async () => {

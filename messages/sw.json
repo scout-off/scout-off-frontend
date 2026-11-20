@@ -1051,5 +1051,13 @@
       "copied": "Imenakiliwa!",
       "showMore": "Onyesha zaidi ({count} zimebaki)"
     }
+  },
+  "session": {
+    "expiringSoonTitle": "Kipindi Kinaisha Muda Hivi Karibuni",
+    "expiringSoonMessage": "Kipindi chako kitaisha baada ya dakika {minutes}.",
+    "dismiss": "Funga",
+    "reauthenticate": "Sasisha Kipindi",
+    "renewedSuccess": "Kipindi kimesasishwa kikamilifu.",
+    "renewFailed": "Imeshindwa kusasisha kipindi."
   }
 }

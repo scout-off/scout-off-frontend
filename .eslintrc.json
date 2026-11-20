@@ -1,5 +1,6 @@
 {
-  "extends": "next",
+  "ignorePatterns": ["lib/generated/"],
+  "extends": ["next/core-web-vitals"],
   "rules": {
     "react/jsx-no-target-blank": [
       "error",
@@ -22,6 +23,55 @@
           "error",
           {
             "allow": ["warn", "error"]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "lib/**/*.{ts,tsx}",
+        "hooks/**/*.{ts,tsx}",
+        "context/**/*.{ts,tsx}",
+        "app/api/**/*.ts"
+      ],
+      "excludedFiles": ["**/__tests__/**", "**/*.test.*", "**/*.stories.*"],
+      "extends": ["plugin:@typescript-eslint/recommended-type-checked"],
+      "parserOptions": {
+        "projectService": true
+      },
+      "rules": {
+        "@typescript-eslint/no-floating-promises": "error",
+        "@typescript-eslint/no-misused-promises": "error",
+        "@typescript-eslint/await-thenable": "error",
+        "@typescript-eslint/no-unnecessary-type-assertion": "error",
+        "@typescript-eslint/no-unsafe-assignment": "warn",
+        "@typescript-eslint/no-unsafe-member-access": "warn",
+        "@typescript-eslint/no-unsafe-return": "warn",
+        "@typescript-eslint/no-unsafe-argument": "warn",
+        "@typescript-eslint/no-unsafe-call": "warn",
+        "@typescript-eslint/require-await": "warn",
+        "@typescript-eslint/no-unused-vars": "warn",
+        "@typescript-eslint/prefer-promise-reject-errors": "warn",
+        "@typescript-eslint/no-explicit-any": "warn",
+        "@typescript-eslint/no-base-to-string": "warn",
+        "@typescript-eslint/no-redundant-type-constituents": "warn",
+        "@typescript-eslint/unbound-method": "warn",
+        "@typescript-eslint/no-unsafe-enum-comparison": "warn",
+        "@typescript-eslint/restrict-template-expressions": "warn",
+        "@typescript-eslint/only-throw-error": "warn",
+        "@typescript-eslint/no-require-imports": "warn",
+        "prefer-const": "warn"
+      }
+    },
+    {
+      "files": ["components/**", "app/**"],
+      "extends": ["plugin:jsx-a11y/recommended"],
+      "excludedFiles": ["**/*.stories.*"],
+      "rules": {
+        "jsx-a11y/label-has-associated-control": [
+          "error",
+          {
+            "depth": 3
           }
         ]
       }

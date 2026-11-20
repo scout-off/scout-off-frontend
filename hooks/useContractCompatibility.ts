@@ -18,7 +18,7 @@ export function useContractCompatibility() {
 
   useEffect(() => {
     let cancelled = false;
-    import('@/lib/contract').then(({ checkContractCompatibility }) =>
+    void import('@/lib/contract').then(({ checkContractCompatibility }) =>
       checkContractCompatibility().then((result) => {
         if (!cancelled) setData(result);
       }),

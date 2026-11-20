@@ -33,7 +33,7 @@ const LEADERBOARD_KEY = 'validator-leaderboard';
 async function fetchLeaderboard(
   range: ValidatorLeaderboardRange,
 ): Promise<LeaderboardEntry[]> {
-  const validators = (await getValidators()) as ValidatorInfo[];
+  const validators = await getValidators();
   const bounds = getValidatorLeaderboardRange(range);
 
   const entries = await Promise.all(

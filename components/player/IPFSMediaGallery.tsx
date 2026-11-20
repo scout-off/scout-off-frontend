@@ -232,6 +232,7 @@ function IPFSMediaItem({ cid }: IPFSMediaItemProps) {
         ref={containerRef}
         className="aspect-video bg-gray-800 rounded-xl overflow-hidden relative"
       >
+        {/* eslint-disable-next-line jsx-a11y/media-has-caption -- player-uploaded highlight videos on IPFS have no caption track to attach. */}
         <video
           ref={videoRef}
           className="w-full h-full object-cover"

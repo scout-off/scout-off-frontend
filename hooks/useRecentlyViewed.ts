@@ -91,7 +91,7 @@ export function useRecentlyViewed() {
       if (isAuthenticated) {
         try {
           await recordView(entry.playerId, entry.viewedAt);
-          mutateServer();
+          void mutateServer();
         } catch {
           // If server recording fails, fall back to localStorage
           setLocalEntries((prev) => {
@@ -118,7 +118,7 @@ export function useRecentlyViewed() {
       if (isAuthenticated) {
         try {
           await removeView(entry.id);
-          mutateServer();
+          void mutateServer();
         } catch {
           // If removal fails, still remove from local cache
           setLocalEntries((prev) =>

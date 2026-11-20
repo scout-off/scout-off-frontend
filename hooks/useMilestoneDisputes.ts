@@ -34,7 +34,7 @@ export function useMilestoneDisputes(wallet: string | null) {
   const file = useCallback(
     async (params: CreateDisputeParams) => {
       const dispute = await createDispute(params);
-      mutate((current) => [dispute, ...(current ?? [])], false);
+      void mutate((current) => [dispute, ...(current ?? [])], false);
       return dispute;
     },
     [mutate],

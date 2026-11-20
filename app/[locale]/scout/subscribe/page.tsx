@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useLocale, useTranslations } from 'next-intl';
+import { useLocale, useTranslations, type Messages } from 'next-intl';
 import Button from '@/components/ui/Button';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import RedirectReasonBanner from '@/components/ui/RedirectReasonBanner';
@@ -26,21 +26,35 @@ import type { Locale } from '@/lib/locales';
 
 // Copy lives in messages/*.json under scout.subscribe.tiers.<tier>
 // (title, description, features.<featureKey>).
+// Only the tiers listed here have a description and feature list in messages.
+type PlanTier = Exclude<SubscriptionTier, 'elite'>;
+type FeatureKey = {
+  [T in PlanTier]: `tiers.${T}.features.${keyof Messages['scout']['subscribe']['tiers'][T]['features'] & string}`;
+}[PlanTier];
+
 const TIERS: Array<{
-  tier: SubscriptionTier;
+  tier: PlanTier;
   priceXlm: number;
-  featureKeys: string[];
+  featureKeys: FeatureKey[];
   recommended?: boolean;
 }> = [
   {
     tier: 'basic',
     priceXlm: TIER_FEES_XLM.basic,
-    featureKeys: ['browse', 'connect', 'pay_to_contact'],
+    featureKeys: [
+      'tiers.basic.features.browse',
+      'tiers.basic.features.connect',
+      'tiers.basic.features.pay_to_contact',
+    ],
   },
   {
     tier: 'pro',
     priceXlm: TIER_FEES_XLM.pro,
-    featureKeys: ['all_basic', 'priority_discovery', 'faster_contact'],
+    featureKeys: [
+      'tiers.pro.features.all_basic',
+      'tiers.pro.features.priority_discovery',
+      'tiers.pro.features.faster_contact',
+    ],
     recommended: true,
   },
 ];
@@ -444,7 +458,7 @@ function SubscribeContent() {
                     className="flex gap-3 text-sm text-gray-300"
                   >
                     <span className="mt-1 h-2.5 w-2.5 rounded-full bg-brand-green" />
-                    {t(`tiers.${plan.tier}.features.${featureKey}`)}
+                    {t(featureKey)}
                   </li>
                 ))}
               </ul>

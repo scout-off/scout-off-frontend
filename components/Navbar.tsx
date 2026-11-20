@@ -15,11 +15,14 @@ import { LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE } from '@/lib/locales';
 import SessionMismatchWarning from './SessionMismatchWarning';
 
 const NAV_LINKS = [
-  { href: '/scout', labelKey: 'nav.scout_dashboard' },
-  { href: '/player', labelKey: 'nav.player_dashboard' },
+  { href: '/scout', labelKey: 'nav.scout_dashboard' as const },
+  { href: '/player', labelKey: 'nav.player_dashboard' as const },
 ];
 
-const SPONSORSHIP_LINK = { href: '/sponsorship', labelKey: 'nav.sponsorship' };
+const SPONSORSHIP_LINK = {
+  href: '/sponsorship',
+  labelKey: 'nav.sponsorship' as const,
+};
 
 export default function Navbar() {
   const { isPaused } = useContractStatus();
