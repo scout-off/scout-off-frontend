@@ -15,6 +15,7 @@
  */
 
 import type { Player, Milestone } from '@/types';
+import { downloadBlob } from './download';
 
 export interface DataExportPayload {
   /** Schema version — bump when adding/removing fields. */
@@ -115,17 +116,9 @@ export function downloadExportPayload(
   const blob = new Blob([JSON.stringify(payload, null, 2)], {
     type: 'application/json',
   });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download =
+  downloadBlob(
+    blob,
     filename ??
-    `scoutoff-export-${payload.playerId}-${new Date().toISOString().split('T')[0]}.json`;
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
-  // Small delay before releasing the blob URL so the browser can start
-  // the download. Revoking immediately is safe in modern browsers, but
-  // the timeout avoids edge cases where the download is interrupted.
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+      `scoutoff-export-${payload.playerId}-${new Date().toISOString().split('T')[0]}.json`,
+  );
 }

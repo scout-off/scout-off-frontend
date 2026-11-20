@@ -5,6 +5,7 @@ import { getProgressLabel } from '@/lib/progress';
 import { fetchAcademyForWallet } from '@/lib/api';
 import { buildCvContent, hashCvContent } from '@/lib/cvVerification';
 import { fetchWithTimeout } from '@/lib/fetchWithRetry';
+import { downloadBlob } from './download';
 
 const PAGE_WIDTH = 595.28; // A4, points
 const PAGE_HEIGHT = 841.89;
@@ -303,12 +304,5 @@ export function downloadPlayerCvPdf(
   playerName: string,
 ): void {
   const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = buildCvFilename(playerName);
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  downloadBlob(blob, buildCvFilename(playerName));
 }

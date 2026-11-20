@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { fetchScoutContacts } from '@/lib/api';
 import { buildScoutContactsCsv } from '@/lib/scoutContactsCsv';
 import { useToast } from '@/components/ui/Toast';
+import { downloadCsv } from '@/lib/download';
 
 /**
  * Issue #555: exports the scout's contacted players as a CSV generated
@@ -28,15 +29,10 @@ export default function ExportContactsCsvButton({
       const csv = buildScoutContactsCsv(
         Array.isArray(contacts) ? contacts : [],
       );
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `contacted-players-${new Date().toISOString().slice(0, 10)}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      downloadCsv(
+        csv,
+        `contacted-players-${new Date().toISOString().slice(0, 10)}.csv`,
+      );
     } catch {
       show({ message: t('error'), variant: 'error' });
     } finally {

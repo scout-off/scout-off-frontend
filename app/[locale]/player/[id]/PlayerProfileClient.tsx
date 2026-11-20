@@ -29,6 +29,7 @@ import TruncatedAddress from '@/components/ui/TruncatedAddress';
 import { useToast } from '@/components/ui/Toast';
 import { ARCHIVED_ENTRY_MESSAGE } from '@/lib/errors';
 import type { Player } from '@/types';
+import { downloadBlob } from '@/lib/download';
 
 /**
  * Interactive player profile. Rendered by the server component in page.tsx
@@ -159,12 +160,7 @@ export default function PlayerProfileClient({
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: 'application/json',
     });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `player-${player!.id}-milestones.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(blob, `player-${player!.id}-milestones.json`);
   }
 
   async function handleExportCv() {
