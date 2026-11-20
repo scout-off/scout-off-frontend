@@ -45,20 +45,31 @@ services:
     # Graceful shutdown waits up to 10 s for the in-flight poll batch.
     stop_signal: SIGTERM
     stop_grace_period: 15s
+    # Only the main API port is published to the host.
+    # The metrics port (9091) is intentionally not published — reachable
+    # only by services on the internal Docker network (e.g. Prometheus).
     ports:
       - '3001:3001'
     environment:
       PORT: 3001
-      # The indexer's event-polling loop isn't wired up yet (see the
-      # companion "turn packages/indexer into a real npm package" issue) —
-      # these point it at mock-rpc for when that lands, but today this
-      # container just serves /health and /metrics.
+      # Serve /metrics on a separate internal port so the main API port
+      # never exposes operational data.
+      METRICS_PORT: 9091
+      # Uncomment to require bearer-token auth when METRICS_PORT is not used:
+      # METRICS_BEARER_TOKEN: change-me
       SOROBAN_RPC_URL: http://mock-rpc:8000
       CONTRACT_ID: ${NEXT_PUBLIC_CONTRACT_ID:-CBQHNAXSI55GX2GN6D67GK7BHVPSLJUGZQEU7WJ5LKR5PNUCGLIMAO4K}
       NETWORK_PASSPHRASE: 'Test SDF Network ; September 2015'
     depends_on:
       mock-rpc:
         condition: service_healthy
+
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    # Prometheus scrapes the indexer on its internal metrics port.
+    # No host port is published for Prometheus in production.
 
   frontend:
     build:
@@ -86,6 +97,7 @@ services:
       # browser bundle only ever sees NEXT_PUBLIC_API_URL above. See
       # lib/api.ts.
       API_URL_INTERNAL: http://mock-api:4000
+      INDEXER_API_URL_INTERNAL: http://indexer:3001
     depends_on:
       mock-rpc:
         condition: service_healthy

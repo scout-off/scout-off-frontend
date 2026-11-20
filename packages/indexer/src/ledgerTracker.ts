@@ -44,7 +44,7 @@ export function getLastLedgerInfo(): LedgerInfo {
   return { ...state };
 }
 
-/** Returns networkLedger - lastLedger (0 if unknown). */
+/** Returns networkLedger - lastLedger (0 if either is unknown). */
 export function getLedgerLag(): number {
   if (state.networkLedger === 0 || state.lastLedger === 0) return 0;
   return Math.max(0, state.networkLedger - state.lastLedger);
