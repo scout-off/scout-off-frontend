@@ -284,3 +284,71 @@ export const MobileViewport: Story = {
     },
   },
 };
+
+// ── Best-value highlighting (issue #1721) ────────────────────────────────────
+
+const tiePlayers: Player[] = [
+  basePlayer({
+    id: 'tie_001',
+    vitals: {
+      name: 'Kwame Asante',
+      age: 20,
+      position: 'ST',
+      region: 'West Africa',
+      nationality: 'Ghanaian',
+    },
+    progressLevel: 2,
+    stats: { goals: 12, assists: 5, appearances: 25 },
+  }),
+  basePlayer({
+    id: 'tie_002',
+    vitals: {
+      name: 'Amina Waweru',
+      age: 18,
+      position: 'CM',
+      region: 'East Africa',
+      nationality: 'Kenyan',
+    },
+    progressLevel: 2,
+    stats: { goals: 12, assists: 9, appearances: 25 },
+  }),
+  basePlayer({
+    id: 'tie_003',
+    vitals: {
+      name: 'Tendai Moyo',
+      age: 19,
+      position: 'GK',
+      region: 'Southern Africa',
+      nationality: 'Zimbabwean',
+    },
+    progressLevel: 1,
+    stats: { goals: 0, assists: 2, appearances: 30, clean_sheets: 11 },
+  }),
+  basePlayer({
+    id: 'tie_004',
+    vitals: {
+      name: 'Youssef Benali',
+      age: 21,
+      position: 'RW',
+      region: 'North Africa',
+      nationality: 'Moroccan',
+    },
+    progressLevel: 3,
+    stats: { goals: 7, assists: 9, appearances: 30 },
+  }),
+];
+
+/** Two players tied on goals, appearances, and progress level: both marked best. */
+export const TwoPlayersWithTies: Story = {
+  args: { players: tiePlayers.slice(0, 2) },
+};
+
+/** Three players with ties; clean sheets (one value only) get no leader. */
+export const ThreePlayersWithTies: Story = {
+  args: { players: tiePlayers.slice(0, 3) },
+};
+
+/** Four players with ties on assists and appearances. */
+export const FourPlayersWithTies: Story = {
+  args: { players: tiePlayers },
+};

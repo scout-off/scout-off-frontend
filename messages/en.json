@@ -945,7 +945,13 @@
       "progress_label": "{name} – Progress level",
       "milestones": "Milestones",
       "milestones_label": "{name} – Milestones",
-      "milestone_count": "{count, plural, one {# milestone} other {# milestones}}"
+      "milestone_count": "{count, plural, one {# milestone} other {# milestones}}",
+      "name": "Name",
+      "best": "best",
+      "copy_link": "Copy link",
+      "link_copied": "Comparison link copied",
+      "link_copy_failed": "Couldn't copy the link. Copy it manually: {url}",
+      "download_csv": "Download CSV"
     },
     "profile": {
       "title": "Scout Profile",

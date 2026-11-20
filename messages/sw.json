@@ -945,7 +945,13 @@
       "progress_label": "{name} – Kiwango cha maendeleo",
       "milestones": "Hatua",
       "milestones_label": "{name} – Hatua",
-      "milestone_count": "{count, plural, one {hatua #} other {hatua #}}"
+      "milestone_count": "{count, plural, one {hatua #} other {hatua #}}",
+      "name": "Jina",
+      "best": "bora zaidi",
+      "copy_link": "Nakili kiungo",
+      "link_copied": "Kiungo cha ulinganisho kimenakiliwa",
+      "link_copy_failed": "Imeshindwa kunakili kiungo. Kinakili mwenyewe: {url}",
+      "download_csv": "Pakua CSV"
     },
     "profile": {
       "title": "Wasifu wa skauti",

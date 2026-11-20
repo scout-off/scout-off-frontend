@@ -328,4 +328,28 @@ describe('PlayerCompareView', () => {
 
     expect(container.querySelector('img')).not.toBeInTheDocument();
   });
+
+  it('marks the best value per row with an icon and hidden text, including ties', () => {
+    const players = [
+      makePlayer({
+        progressLevel: 2,
+        stats: { goals: 9, assists: 1, appearances: 30 },
+      }),
+      makePlayer({
+        progressLevel: 2,
+        stats: { goals: 4, assists: 1, appearances: 30 },
+      }),
+      makePlayer({ progressLevel: 1, stats: undefined }),
+    ];
+    render(<PlayerCompareView players={players} />);
+
+    const [first, second, third] = screen.getAllByRole('group');
+    // goals (lead) + assists, appearances, progress (ties)
+    expect(within(first).getAllByTestId('compare-best')).toHaveLength(4);
+    // assists, appearances, progress (ties)
+    expect(within(second).getAllByTestId('compare-best')).toHaveLength(3);
+    // missing stats and lower values are never best
+    expect(within(third).queryAllByTestId('compare-best')).toHaveLength(0);
+    expect(within(first).getAllByText('best')).toHaveLength(4);
+  });
 });

@@ -10,6 +10,8 @@ import ProgressBar from '@/components/ProgressBar';
 import MilestoneTimeline from '@/components/player/MilestoneTimeline';
 import Badge from '@/components/ui/Badge';
 import Tooltip from '@/components/ui/Tooltip';
+import { Trophy } from 'lucide-react';
+import { findAllLeaders, type CompareMetricKey } from '@/lib/playerCompare';
 
 const LEVEL_VARIANT: Record<number, 'level0' | 'level1' | 'level2' | 'level3'> =
   {
@@ -23,13 +25,34 @@ const POSITION_LABEL: Record<string, string> = Object.fromEntries(
   FOOTBALL_POSITIONS.map(({ value, label }) => [value, label]),
 );
 
-function CompareColumn({ player }: { player: Player }) {
+/** Best-in-row cue: icon plus visually hidden text, so it doesn't rely on colour (WCAG 1.4.1). */
+function BestMark({ label }: { label: string }) {
+  return (
+    <span
+      className="ml-1 inline-flex items-center text-amber-400"
+      data-testid="compare-best"
+    >
+      <Trophy className="w-3.5 h-3.5" aria-hidden="true" />
+      <span className="sr-only">{label}</span>
+    </span>
+  );
+}
+
+function CompareColumn({
+  player,
+  leaders,
+}: {
+  player: Player;
+  leaders: Record<CompareMetricKey, Set<string>>;
+}) {
   const levelLabel = getProgressLabel(player.progressLevel);
   const nameId = `compare-col-name-${player.id}`;
   const t = useTranslations('scout.compare');
   // Stat labels are shared with PlayerStatsCard.
   const ts = useTranslations('stats');
   const name = player.vitals.name;
+  const best = (key: CompareMetricKey) =>
+    leaders[key].has(player.id) ? <BestMark label={t('best')} /> : null;
 
   return (
     // Each column is a labelled group (not a landmark) so screen-reader users
@@ -106,7 +129,10 @@ function CompareColumn({ player }: { player: Player }) {
             {player.stats.goals !== undefined && (
               <>
                 <dt className="text-gray-400">{ts('goals')}</dt>
-                <dd className="text-white text-right">{player.stats.goals}</dd>
+                <dd className="text-white text-right">
+                  {player.stats.goals}
+                  {best('goals')}
+                </dd>
               </>
             )}
             {player.stats.assists !== undefined && (
@@ -114,6 +140,7 @@ function CompareColumn({ player }: { player: Player }) {
                 <dt className="text-gray-400">{ts('assists')}</dt>
                 <dd className="text-white text-right">
                   {player.stats.assists}
+                  {best('assists')}
                 </dd>
               </>
             )}
@@ -122,6 +149,7 @@ function CompareColumn({ player }: { player: Player }) {
                 <dt className="text-gray-400">{ts('appearances')}</dt>
                 <dd className="text-white text-right">
                   {player.stats.appearances}
+                  {best('appearances')}
                 </dd>
               </>
             )}
@@ -130,6 +158,7 @@ function CompareColumn({ player }: { player: Player }) {
                 <dt className="text-gray-400">{ts('clean_sheets')}</dt>
                 <dd className="text-white text-right">
                   {player.stats.clean_sheets}
+                  {best('clean_sheets')}
                 </dd>
               </>
             )}
@@ -141,6 +170,7 @@ function CompareColumn({ player }: { player: Player }) {
       <section aria-label={t('progress_label', { name })}>
         <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
           {t('progress')}
+          {best('progressLevel')}
         </h4>
         <ProgressBar level={player.progressLevel} />
       </section>
@@ -168,10 +198,11 @@ interface PlayerCompareViewProps {
 }
 
 export default function PlayerCompareView({ players }: PlayerCompareViewProps) {
+  const leaders = findAllLeaders(players);
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {players.map((player) => (
-        <CompareColumn key={player.id} player={player} />
+        <CompareColumn key={player.id} player={player} leaders={leaders} />
       ))}
     </div>
   );

@@ -9,6 +9,7 @@ import {
 } from '@/lib/adminAudit';
 import TruncatedAddress from '@/components/ui/TruncatedAddress';
 import EmptyState from '@/components/ui/EmptyState';
+import DataTable from '@/components/ui/DataTable';
 import { useLocale } from 'next-intl';
 
 const STROOPS_PER_XLM = 10_000_000;
@@ -219,57 +220,72 @@ export default function AdminAuditLog() {
                 No reconciliation runs recorded yet.
               </p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                  <thead>
-                    <tr className="text-gray-400 text-xs uppercase tracking-wide border-b border-gray-800">
-                      <th className="py-2 pr-4">Checked at</th>
-                      <th className="py-2 pr-4">Mismatches</th>
-                      <th className="py-2 pr-4">New</th>
-                      <th className="py-2 pr-4">Types</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-800">
-                    {reconciliationHistory.map((run) => {
+              <DataTable
+                caption="Reconciliation history"
+                captionHidden
+                sortParam="reconciliationSort"
+                rows={reconciliationHistory}
+                rowKey={(run) => run.id}
+                headerRowClassName="text-gray-400 text-xs uppercase tracking-wide border-b border-gray-800"
+                rowClassName="border-b border-gray-800"
+                columns={[
+                  {
+                    key: 'checkedAt',
+                    header: 'Checked at',
+                    sortable: true,
+                    headerClassName: 'py-2 pr-4',
+                    cellClassName: 'py-2 pr-4 text-gray-400 whitespace-nowrap',
+                    render: (run) =>
+                      new Date(run.checkedAt * 1000).toLocaleString(locale),
+                  },
+                  {
+                    key: 'mismatches',
+                    header: 'Mismatches',
+                    sortable: true,
+                    sortValue: (run) => run.mismatches.length,
+                    headerClassName: 'py-2 pr-4',
+                    cellClassName: 'py-2 pr-4',
+                    render: (run) => (
+                      <span
+                        className={
+                          run.mismatches.length > 0
+                            ? 'text-red-400 font-medium'
+                            : 'text-brand-green'
+                        }
+                      >
+                        {run.mismatches.length}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: 'newMismatchCount',
+                    header: 'New',
+                    sortable: true,
+                    headerClassName: 'py-2 pr-4',
+                    cellClassName: 'py-2 pr-4 text-gray-400',
+                    render: (run) =>
+                      run.newMismatchCount > 0 ? (
+                        <span className="text-amber-400 font-medium">
+                          {run.newMismatchCount}
+                        </span>
+                      ) : (
+                        0
+                      ),
+                  },
+                  {
+                    key: 'types',
+                    header: 'Types',
+                    headerClassName: 'py-2 pr-4',
+                    cellClassName: 'py-2 pr-4 text-gray-500',
+                    render: (run) => {
                       const kinds = Array.from(
                         new Set(run.mismatches.map((m) => m.kind)),
                       );
-                      return (
-                        <tr key={run.id}>
-                          <td className="py-2 pr-4 text-gray-400 whitespace-nowrap">
-                            {new Date(run.checkedAt * 1000).toLocaleString(
-                              locale,
-                            )}
-                          </td>
-                          <td className="py-2 pr-4">
-                            <span
-                              className={
-                                run.mismatches.length > 0
-                                  ? 'text-red-400 font-medium'
-                                  : 'text-brand-green'
-                              }
-                            >
-                              {run.mismatches.length}
-                            </span>
-                          </td>
-                          <td className="py-2 pr-4 text-gray-400">
-                            {run.newMismatchCount > 0 ? (
-                              <span className="text-amber-400 font-medium">
-                                {run.newMismatchCount}
-                              </span>
-                            ) : (
-                              0
-                            )}
-                          </td>
-                          <td className="py-2 pr-4 text-gray-500">
-                            {kinds.length > 0 ? kinds.join(', ') : '—'}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                      return kinds.length > 0 ? kinds.join(', ') : '—';
+                    },
+                  },
+                ]}
+              />
             )}
           </div>
         )}
@@ -287,65 +303,99 @@ export default function AdminAuditLog() {
           description="Validator add/remove, fee withdrawal, and pause/unpause actions will appear here."
         />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead>
-              <tr className="text-gray-400 text-xs uppercase tracking-wide border-b border-gray-800">
-                <th className="py-2 pr-4">Time</th>
-                <th className="py-2 pr-4">Action</th>
-                <th className="py-2 pr-4">Admin</th>
-                <th className="py-2 pr-4">Target</th>
-                <th className="py-2 pr-4">Amount</th>
-                <th className="py-2 pr-4">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-800">
-              {entries.map((entry) => (
-                <tr key={entry.id}>
-                  <td className="py-2 pr-4 text-gray-400 whitespace-nowrap">
-                    {new Date(entry.timestamp * 1000).toLocaleString(locale)}
-                  </td>
-                  <td className="py-2 pr-4 text-gray-200">
-                    {ADMIN_AUDIT_ACTION_LABELS[entry.actionType]}
-                  </td>
-                  <td className="py-2 pr-4 font-mono">
+        <div>
+          <DataTable
+            caption="Admin actions"
+            captionHidden
+            sortParam="auditSort"
+            // Cursor-paginated: sort client-side only once every page is loaded.
+            sortingEnabled={nextCursor === null}
+            rows={entries}
+            rowKey={(entry) => entry.id}
+            headerRowClassName="text-gray-400 text-xs uppercase tracking-wide border-b border-gray-800"
+            rowClassName="border-b border-gray-800"
+            columns={[
+              {
+                key: 'timestamp',
+                header: 'Time',
+                sortable: true,
+                headerClassName: 'py-2 pr-4',
+                cellClassName: 'py-2 pr-4 text-gray-400 whitespace-nowrap',
+                render: (entry) =>
+                  new Date(entry.timestamp * 1000).toLocaleString(locale),
+              },
+              {
+                key: 'actionType',
+                header: 'Action',
+                sortable: true,
+                sortValue: (entry) =>
+                  ADMIN_AUDIT_ACTION_LABELS[entry.actionType],
+                headerClassName: 'py-2 pr-4',
+                cellClassName: 'py-2 pr-4 text-gray-200',
+                render: (entry) => ADMIN_AUDIT_ACTION_LABELS[entry.actionType],
+              },
+              {
+                key: 'adminWallet',
+                header: 'Admin',
+                sortable: true,
+                headerClassName: 'py-2 pr-4',
+                cellClassName: 'py-2 pr-4 font-mono',
+                render: (entry) => (
+                  <TruncatedAddress
+                    address={entry.adminWallet}
+                    className="text-gray-400"
+                  />
+                ),
+              },
+              {
+                key: 'target',
+                header: 'Target',
+                sortable: true,
+                headerClassName: 'py-2 pr-4',
+                cellClassName: 'py-2 pr-4 font-mono',
+                render: (entry) =>
+                  entry.target ? (
                     <TruncatedAddress
-                      address={entry.adminWallet}
+                      address={entry.target}
                       className="text-gray-400"
                     />
-                  </td>
-                  <td className="py-2 pr-4 font-mono">
-                    {entry.target ? (
-                      <TruncatedAddress
-                        address={entry.target}
-                        className="text-gray-400"
-                      />
-                    ) : (
-                      <span className="text-gray-600">—</span>
-                    )}
-                  </td>
-                  <td className="py-2 pr-4 text-gray-400">
-                    {entry.amountStroops !== null
-                      ? `${(entry.amountStroops / STROOPS_PER_XLM).toFixed(2)} XLM`
-                      : '—'}
-                  </td>
-                  <td className="py-2 pr-4">
-                    <span
-                      className={
-                        entry.status === 'failed'
-                          ? 'text-red-400'
-                          : entry.status === 'confirmed'
-                            ? 'text-brand-green'
-                            : 'text-gray-400'
-                      }
-                    >
-                      {entry.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  ) : (
+                    <span className="text-gray-600">—</span>
+                  ),
+              },
+              {
+                key: 'amountStroops',
+                header: 'Amount',
+                sortable: true,
+                headerClassName: 'py-2 pr-4',
+                cellClassName: 'py-2 pr-4 text-gray-400',
+                render: (entry) =>
+                  entry.amountStroops !== null
+                    ? `${(entry.amountStroops / STROOPS_PER_XLM).toFixed(2)} XLM`
+                    : '—',
+              },
+              {
+                key: 'status',
+                header: 'Status',
+                sortable: true,
+                headerClassName: 'py-2 pr-4',
+                cellClassName: 'py-2 pr-4',
+                render: (entry) => (
+                  <span
+                    className={
+                      entry.status === 'failed'
+                        ? 'text-red-400'
+                        : entry.status === 'confirmed'
+                          ? 'text-brand-green'
+                          : 'text-gray-400'
+                    }
+                  >
+                    {entry.status}
+                  </span>
+                ),
+              },
+            ]}
+          />
           {nextCursor !== null && (
             <div className="border-t border-gray-800 px-4 py-3">
               <button
