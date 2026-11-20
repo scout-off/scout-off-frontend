@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useWallet } from '@/hooks/useWallet';
 import { useNotificationPreferences } from '@/hooks/useNotificationPreferences';
+import { useSavedSearchAlertPreferences } from '@/hooks/useSavedSearchAlertPreferences';
+import Select from '@/components/ui/Select';
 import type { NotificationPreferences } from '@/types';
 
 // `messageKey` indexes `notifications.preferences.<messageKey>_label` and
@@ -58,15 +60,29 @@ export default function NotificationPreferencesPanel() {
   const { preferences, loading, update } = useNotificationPreferences(
     isAuthenticated ? publicKey : null,
   );
-  const [saving, setSaving] = useState<keyof NotificationPreferences | null>(
-    null,
+  const savedSearchAlerts = useSavedSearchAlertPreferences(
+    isAuthenticated ? publicKey : null,
   );
+  const [saving, setSaving] = useState<
+    keyof NotificationPreferences | 'savedSearchMatches' | null
+  >(null);
   const t = useTranslations('notifications.preferences');
 
   async function toggle(key: keyof NotificationPreferences) {
     setSaving(key);
     try {
       await update({ ...preferences, [key]: !preferences[key] });
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  async function updateSavedSearchAlerts(
+    next: typeof savedSearchAlerts.preferences,
+  ) {
+    setSaving('savedSearchMatches');
+    try {
+      await savedSearchAlerts.update(next);
     } finally {
       setSaving(null);
     }
@@ -100,8 +116,50 @@ export default function NotificationPreferencesPanel() {
             </li>
           );
         })}
+        <li className="flex flex-col gap-3 py-3">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-white">
+                {t('saved_search_matches_label')}
+              </p>
+              <p className="text-xs text-gray-400">
+                {t('saved_search_matches_description')}
+              </p>
+            </div>
+            <Toggle
+              checked={savedSearchAlerts.preferences.enabled}
+              onChange={() =>
+                updateSavedSearchAlerts({
+                  ...savedSearchAlerts.preferences,
+                  enabled: !savedSearchAlerts.preferences.enabled,
+                })
+              }
+              label={t('saved_search_matches_label')}
+            />
+          </div>
+          {savedSearchAlerts.preferences.enabled && (
+            <Select
+              id="saved-search-alert-delivery"
+              label={t('saved_search_delivery_label')}
+              value={savedSearchAlerts.preferences.delivery}
+              onChange={(e) =>
+                updateSavedSearchAlerts({
+                  ...savedSearchAlerts.preferences,
+                  delivery: e.target.value === 'daily' ? 'daily' : 'instant',
+                })
+              }
+            >
+              <option value="instant">
+                {t('saved_search_delivery_instant')}
+              </option>
+              <option value="daily">{t('saved_search_delivery_daily')}</option>
+            </Select>
+          )}
+        </li>
       </ul>
-      {loading && <p className="pt-3 text-xs text-gray-500">{t('loading')}</p>}
+      {(loading || savedSearchAlerts.loading) && (
+        <p className="pt-3 text-xs text-gray-500">{t('loading')}</p>
+      )}
       {saving && (
         <p className="pt-3 text-xs text-gray-500" role="status">
           {t('saving')}

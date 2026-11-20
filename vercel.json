@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/prune-data",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/saved-search-alerts",
+      "schedule": "15 * * * *"
     }
   ]
 }

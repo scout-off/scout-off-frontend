@@ -4,6 +4,7 @@ import useSWRInfinite from 'swr/infinite';
 import { mutate as globalMutate } from 'swr';
 import { listPlayers, type ListPlayersResponse } from '@/lib/indexerClient';
 import type { Player, PlayerFilter } from '@/types';
+import { matchesSavedSearch } from '@/lib/savedSearchMatch';
 
 /**
  * Page size for discovery fetches. The indexer's GET /players caps `limit`
@@ -99,12 +100,13 @@ export function useInfinitePlayers(
           cursor,
           limit: PLAYERS_PAGE_SIZE,
         });
-        // Filter out archived profiles — same client-side exclusion the old
-        // contract fetcher applied (the indexer doesn't know about the
-        // off-chain archive flag, so this is a no-op for its rows today).
+        // Re-apply the filter with the shared saved-search matcher (it also
+        // drops archived profiles, which the indexer doesn't know about), so
+        // dashboard results and saved-search alerts (issue #1705) can't
+        // diverge. A no-op for rows the indexer already filtered correctly.
         return {
           ...page,
-          players: page.players.filter((p) => !p.archived),
+          players: page.players.filter((p) => matchesSavedSearch(p, filter!)),
         };
       },
       {

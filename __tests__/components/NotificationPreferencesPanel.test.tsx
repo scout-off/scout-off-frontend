@@ -14,6 +14,15 @@ jest.mock('@/hooks/useNotificationPreferences', () => ({
   useNotificationPreferences: jest.fn(),
 }));
 
+const mockSavedSearchAlerts = {
+  preferences: { enabled: true, delivery: 'instant' },
+  loading: false,
+  update: jest.fn(),
+};
+jest.mock('@/hooks/useSavedSearchAlertPreferences', () => ({
+  useSavedSearchAlertPreferences: () => mockSavedSearchAlerts,
+}));
+
 const mockUseWallet = useWallet as jest.Mock;
 const mockUseNotificationPreferences = useNotificationPreferences as jest.Mock;
 
@@ -83,6 +92,54 @@ describe('NotificationPreferencesPanel', () => {
     expect(update).toHaveBeenCalledWith({
       milestoneApprovals: true,
       contactUnlocks: false,
+    });
+  });
+
+  describe('saved search matches (issue #1705)', () => {
+    beforeEach(() => {
+      mockUseWallet.mockReturnValue({
+        publicKey: 'GSCOUT',
+        isAuthenticated: true,
+      });
+      mockUseNotificationPreferences.mockReturnValue({
+        preferences: { milestoneApprovals: true, contactUnlocks: true },
+        loading: false,
+        update: jest.fn(),
+      });
+      mockSavedSearchAlerts.preferences = {
+        enabled: true,
+        delivery: 'instant',
+      };
+      mockSavedSearchAlerts.update = jest.fn().mockResolvedValue(undefined);
+    });
+
+    it('toggles the saved search matches category off', async () => {
+      const user = userEvent.setup();
+      render(<NotificationPreferencesPanel />);
+
+      await user.click(
+        screen.getByRole('switch', { name: 'Saved search matches' }),
+      );
+
+      expect(mockSavedSearchAlerts.update).toHaveBeenCalledWith({
+        enabled: false,
+        delivery: 'instant',
+      });
+    });
+
+    it('switches delivery to a daily digest', async () => {
+      const user = userEvent.setup();
+      render(<NotificationPreferencesPanel />);
+
+      await user.selectOptions(
+        screen.getByRole('combobox', { name: 'Delivery' }),
+        'daily',
+      );
+
+      expect(mockSavedSearchAlerts.update).toHaveBeenCalledWith({
+        enabled: true,
+        delivery: 'daily',
+      });
     });
   });
 });

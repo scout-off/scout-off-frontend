@@ -1,5 +1,8 @@
 /** Client for app/api/notification-preferences — same-origin, cookie-authenticated. */
-import type { NotificationPreferences } from '@/types';
+import type {
+  NotificationPreferences,
+  SavedSearchAlertPreferences,
+} from '@/types';
 import { registerHandler, OfflineQueueConflictError } from '@/lib/offlineQueue';
 import { fetchWithRetry, fetchWithTimeout } from '@/lib/fetchWithRetry';
 
@@ -103,3 +106,27 @@ registerHandler(UPDATE_NOTIFICATION_PREFERENCES_ACTION, async (action) => {
     action.baseVersion,
   );
 });
+
+const SAVED_SEARCH_ALERTS_URL =
+  '/api/notification-preferences/saved-search-alerts';
+
+/** The `saved_search_matches` preference (issue #1705). */
+export async function fetchSavedSearchAlertPreferences(): Promise<SavedSearchAlertPreferences> {
+  const res = await fetchWithRetry(SAVED_SEARCH_ALERTS_URL);
+  if (!res.ok)
+    throw new Error('Failed to fetch saved-search alert preferences');
+  return res.json();
+}
+
+export async function updateSavedSearchAlertPreferences(
+  preferences: SavedSearchAlertPreferences,
+): Promise<SavedSearchAlertPreferences> {
+  const res = await fetchWithTimeout(SAVED_SEARCH_ALERTS_URL, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(preferences),
+  });
+  if (!res.ok)
+    throw new Error('Failed to update saved-search alert preferences');
+  return res.json();
+}

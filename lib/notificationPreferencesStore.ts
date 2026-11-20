@@ -11,13 +11,23 @@
 import type Database from 'better-sqlite3';
 import { openSqliteDb } from './sqliteDb';
 import { DEFAULT_NOTIFICATION_PREFERENCES } from './notificationPreferencesClient';
-import type { NotificationPreferences } from '@/types';
+import type {
+  NotificationPreferences,
+  SavedSearchAlertPreferences,
+} from '@/types';
+import { DEFAULT_SAVED_SEARCH_ALERT_PREFERENCES } from './savedSearchAlertDefaults';
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS notification_preferences (
   wallet TEXT PRIMARY KEY,
   milestone_approvals INTEGER NOT NULL DEFAULT 1,
   contact_unlocks INTEGER NOT NULL DEFAULT 1,
+  updated_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS saved_search_alert_preferences (
+  wallet TEXT PRIMARY KEY,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  delivery TEXT NOT NULL DEFAULT 'instant',
   updated_at INTEGER NOT NULL
 );
 `;
@@ -189,10 +199,49 @@ export class NotificationPreferencesStore {
   }
 
   /** Removes the preferences row for wallet. Returns the number of rows removed. */
+  /** The `saved_search_matches` category: on/off plus instant vs daily digest. */
+  getSavedSearchAlerts(wallet: string): SavedSearchAlertPreferences {
+    const row = this.db
+      .prepare(
+        'SELECT enabled, delivery FROM saved_search_alert_preferences WHERE wallet = ?',
+      )
+      .get(wallet) as { enabled: number; delivery: string } | undefined;
+    if (!row) return { ...DEFAULT_SAVED_SEARCH_ALERT_PREFERENCES };
+    return {
+      enabled: row.enabled === 1,
+      delivery: row.delivery === 'daily' ? 'daily' : 'instant',
+    };
+  }
+
+  setSavedSearchAlerts(
+    wallet: string,
+    preferences: SavedSearchAlertPreferences,
+  ): SavedSearchAlertPreferences {
+    this.db
+      .prepare(
+        `INSERT INTO saved_search_alert_preferences (wallet, enabled, delivery, updated_at)
+         VALUES (@wallet, @enabled, @delivery, @updated_at)
+         ON CONFLICT(wallet) DO UPDATE SET
+           enabled = excluded.enabled,
+           delivery = excluded.delivery,
+           updated_at = excluded.updated_at`,
+      )
+      .run({
+        wallet,
+        enabled: preferences.enabled ? 1 : 0,
+        delivery: preferences.delivery,
+        updated_at: Date.now(),
+      });
+    return this.getSavedSearchAlerts(wallet);
+  }
+
   clearForWallet(wallet: string): number {
     const result = this.db
       .prepare('DELETE FROM notification_preferences WHERE wallet = ?')
       .run(wallet);
-    return result.changes;
+    const alertPrefs = this.db
+      .prepare('DELETE FROM saved_search_alert_preferences WHERE wallet = ?')
+      .run(wallet);
+    return result.changes + alertPrefs.changes;
   }
 }
