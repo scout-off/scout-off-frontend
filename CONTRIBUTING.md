@@ -15,7 +15,7 @@ The typical contribution workflow is:
 
 ## Local Development Setup
 
-> For a complete end-to-end guide covering contracts, backend, and wallet setup, see [DEVELOPMENT.md](DEVELOPMENT.md).
+> For a complete end-to-end guide covering contracts, backend, and wallet setup, see [docs/development/](docs/development/README.md).
 
 > **Optional:** This repository includes a [devcontainer configuration](.devcontainer/devcontainer.json) for VS Code and GitHub Codespaces. When opened in a devcontainer, the correct Node.js version and all dependencies are set up automatically. See [Developing inside a Container](https://code.visualstudio.com/docs/devcontainers/containers) to learn more.
 

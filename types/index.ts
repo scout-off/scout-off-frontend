@@ -317,6 +317,10 @@ export interface WatchlistEntry {
   scoutWallet: string;
   playerId: string;
   createdAt: number; // Unix ms
+  /** Private scout note (plain text, never shown to players). */
+  note: string;
+  tags: string[];
+  updatedAt: number | null; // Unix ms
 }
 
 export interface SavedSearch {

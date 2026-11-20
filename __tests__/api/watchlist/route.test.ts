@@ -1,5 +1,6 @@
 /** @jest-environment node */
-import { GET, POST, DELETE } from '@/app/api/watchlist/route';
+import { GET, POST, DELETE, PATCH } from '@/app/api/watchlist/route';
+import { _resetRateLimitStoreForTests } from '@/lib/rateLimit';
 import { NextRequest } from 'next/server';
 import { WatchlistStore } from '@/lib/watchlistStore';
 import { createSessionToken } from '@/lib/session';
@@ -259,5 +260,107 @@ describe('POST /api/watchlist address validation and normalization', () => {
     const entries = await listRes.json();
     expect(entries).toHaveLength(1);
     expect(entries[0].playerId).toBe(addrUpper);
+  });
+});
+
+describe('PATCH /api/watchlist (notes and tags, #1716)', () => {
+  const OTHER_SCOUT = 'GOTHER000000000000000000000000000000000000000000000000';
+
+  beforeEach(() => _resetRateLimitStoreForTests());
+
+  async function addEntry(scout = SCOUT) {
+    const res = await POST(
+      makeRequest('http://localhost/api/watchlist', {
+        method: 'POST',
+        cookie: scout,
+        body: { playerId: PLAYER_A },
+      }),
+    );
+    return (await res.json()).id as number;
+  }
+
+  function patch(body: unknown, cookie: string | null = SCOUT) {
+    return PATCH(
+      makeRequest('http://localhost/api/watchlist', {
+        method: 'PATCH',
+        cookie: cookie ?? undefined,
+        body,
+      }),
+    );
+  }
+
+  it('returns 401 without a session cookie', async () => {
+    const res = await patch({ id: 1, note: '', tags: [] }, null);
+    expect(res.status).toBe(401);
+  });
+
+  it('adds, persists, and clears a note and tags', async () => {
+    const id = await addEntry();
+    const res = await patch({
+      id,
+      note: 'strong left foot',
+      tags: ['shortlist', ' contacted ', 'shortlist'],
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.note).toBe('strong left foot');
+    expect(body.tags).toEqual(['shortlist', 'contacted']);
+
+    const list = await (
+      await GET(
+        makeRequest('http://localhost/api/watchlist', { cookie: SCOUT }),
+      )
+    ).json();
+    expect(list[0].note).toBe('strong left foot');
+    expect(list[0].tags).toEqual(['shortlist', 'contacted']);
+
+    const cleared = await (await patch({ id, note: '', tags: [] })).json();
+    expect(cleared.note).toBe('');
+    expect(cleared.tags).toEqual([]);
+  });
+
+  it('strips HTML from notes on output', async () => {
+    const id = await addEntry();
+    const body = await (
+      await patch({ id, note: '<b>hi</b><script>x</script>', tags: [] })
+    ).json();
+    expect(body.note).not.toContain('<');
+  });
+
+  it.each([
+    ['note too long', { note: 'a'.repeat(1001), tags: [] }],
+    [
+      'too many tags',
+      { note: '', tags: Array.from({ length: 11 }, (_, i) => `t${i}`) },
+    ],
+    ['tag too long', { note: '', tags: ['a'.repeat(33)] }],
+    ['empty tag', { note: '', tags: ['  '] }],
+    ['tags not an array', { note: '', tags: 'x' }],
+  ])('returns 400 when %s', async (_label, payload) => {
+    const id = await addEntry();
+    const res = await patch({ id, ...payload });
+    expect(res.status).toBe(400);
+  });
+
+  it("does not let another scout read or edit a scout's notes", async () => {
+    const id = await addEntry();
+    await patch({ id, note: 'private', tags: ['secret'] });
+
+    const res = await patch({ id, note: 'hijack', tags: [] }, OTHER_SCOUT);
+    expect(res.status).toBe(404);
+
+    const otherList = await (
+      await GET(
+        makeRequest('http://localhost/api/watchlist', { cookie: OTHER_SCOUT }),
+      )
+    ).json();
+    expect(otherList).toEqual([]);
+
+    const ownList = await (
+      await GET(
+        makeRequest('http://localhost/api/watchlist', { cookie: SCOUT }),
+      )
+    ).json();
+    expect(ownList[0].note).toBe('private');
   });
 });

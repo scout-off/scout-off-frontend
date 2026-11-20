@@ -46,15 +46,33 @@ RUN npm run build
 FROM node:20-alpine
 
 WORKDIR /app
-ENV NODE_ENV=production
+ENV NODE_ENV=production \
+    PORT=3000 \
+    HOSTNAME=0.0.0.0
 
-COPY --from=build /app/public ./public
-COPY --from=build /app/.next ./.next
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/next.config.js ./next.config.js
-COPY --from=build /app/next-sitemap.config.js ./next-sitemap.config.js
+# tini as PID 1 forwards SIGTERM to node so the server shuts down gracefully.
+RUN apk add --no-cache tini
+
+# Standalone output (next.config.js `output: 'standalone'`) bundles only the
+# traced runtime dependencies, so the full node_modules isn't copied. The
+# sitemap config is only used by `postbuild`, so it isn't needed at runtime.
+COPY --from=build --chown=node:node /app/.next/standalone ./
+COPY --from=build --chown=node:node /app/.next/static ./.next/static
+COPY --from=build --chown=node:node /app/public ./public
+
+# SQLite stores default to /app/data (lib/sqliteDb.ts); make it writable by
+# the unprivileged runtime user.
+RUN mkdir -p /app/data && chown node:node /app/data
+
+USER node
 
 EXPOSE 3000
 
-CMD ["npm", "start"]
+STOPSIGNAL SIGTERM
+
+# Process-only liveness check — see app/api/healthz/route.ts.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget --spider -q http://127.0.0.1:3000/api/healthz || exit 1
+
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["node", "server.js"]

@@ -391,5 +391,19 @@
     "accept": "Accepter",
     "decline": "Refuser",
     "privacy_link": "Politique de confidentialité"
+  },
+  "watchlist_notes": {
+    "edit": "Modifier la note et les tags",
+    "no_note": "Aucune note privée pour l'instant.",
+    "note_label": "Note privée (visible uniquement par vous)",
+    "note_counter": "{count}/{max}",
+    "tag_placeholder": "Ajoutez un tag et appuyez sur Entrée",
+    "remove_tag": "Supprimer le tag {tag}",
+    "save": "Enregistrer",
+    "clear": "Effacer",
+    "cancel": "Annuler",
+    "save_error": "Impossible d'enregistrer. Vérifiez les limites et réessayez.",
+    "filter_label": "Filtrer par tag",
+    "filter_all": "Tous les tags"
   }
 }

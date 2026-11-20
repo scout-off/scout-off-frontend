@@ -3,6 +3,11 @@
  * Compares keys across all messages/*.json locale files and fails if any
  * key present in one locale is missing from another, to catch untranslated
  * strings before merge.
+ *
+ * Also reports (without failing) per-locale human-review coverage from
+ * i18n/review-status.json and ICU plural categories that the locale does not
+ * use (issue #1719). The report is appended to the GitHub Actions job
+ * summary when GITHUB_STEP_SUMMARY is set.
  */
 const fs = require('fs');
 const path = require('path');
@@ -31,7 +36,56 @@ function flattenKeys(obj, prefix = '') {
   });
 }
 
-module.exports = { flattenKeys };
+/**
+ * Returns `{ reviewed, total, percent }` for a locale. Keys absent from the
+ * status map count as machine-translated.
+ *
+ * @param {string[]} keys
+ * @param {Record<string, { status: string }>} [statusMap]
+ */
+function reviewCoverage(keys, statusMap = {}) {
+  const reviewed = keys.filter(
+    (k) => statusMap[k] && statusMap[k].status === 'reviewed',
+  ).length;
+  const total = keys.length;
+  const percent = total === 0 ? 100 : (reviewed / total) * 100;
+  return { reviewed, total, percent };
+}
+
+/**
+ * Lists ICU plural selectors in `message` whose categories are not used by
+ * `locale` (per Intl.PluralRules). Exact matches (`=0`) are always valid.
+ *
+ * @param {string} message
+ * @param {string} locale
+ * @returns {string[]}
+ */
+function invalidPluralCategories(message, locale) {
+  if (typeof message !== 'string' || !message.includes('plural')) return [];
+  const allowed = new Set(
+    new Intl.PluralRules(locale).resolvedOptions().pluralCategories,
+  );
+  const invalid = [];
+  const pluralRe = /\{\s*\w+\s*,\s*plural\s*,([^]*?)\}\s*\}/g;
+  let m;
+  while ((m = pluralRe.exec(message)) !== null) {
+    const selectorRe = /(?:^|\})\s*(=?\w+)\s*\{/g;
+    let s;
+    while ((s = selectorRe.exec(m[1])) !== null) {
+      const cat = s[1];
+      if (!cat.startsWith('=') && !allowed.has(cat)) invalid.push(cat);
+    }
+  }
+  return invalid;
+}
+
+function getPath(obj, dotted) {
+  return dotted
+    .split('.')
+    .reduce((o, k) => (o && typeof o === 'object' ? o[k] : undefined), obj);
+}
+
+module.exports = { flattenKeys, reviewCoverage, invalidPluralCategories };
 
 if (require.main === module) {
   const localeFiles = fs
@@ -39,12 +93,60 @@ if (require.main === module) {
     .filter((f) => f.endsWith('.json'));
 
   const keysByLocale = {};
+  const contentByLocale = {};
   for (const file of localeFiles) {
     const locale = path.basename(file, '.json');
     const content = JSON.parse(
       fs.readFileSync(path.join(messagesDir, file), 'utf8'),
     );
+    contentByLocale[locale] = content;
     keysByLocale[locale] = new Set(flattenKeys(content));
+  }
+
+  // Review coverage + plural sanity report — informational, never fails.
+  const reviewStatusPath = path.join(
+    __dirname,
+    '..',
+    'i18n',
+    'review-status.json',
+  );
+  const reviewStatus = fs.existsSync(reviewStatusPath)
+    ? JSON.parse(fs.readFileSync(reviewStatusPath, 'utf8'))
+    : {};
+  const report = [
+    '### Translation review coverage',
+    '',
+    '| Locale | Reviewed | Total | Coverage |',
+    '| --- | --- | --- | --- |',
+  ];
+  for (const locale of Object.keys(keysByLocale).sort()) {
+    if (locale === 'en') continue; // source locale
+    const keys = [...keysByLocale[locale]];
+    const { reviewed, total, percent } = reviewCoverage(
+      keys,
+      reviewStatus[locale],
+    );
+    report.push(
+      `| ${locale} | ${reviewed} | ${total} | ${percent.toFixed(1)}% |`,
+    );
+    for (const key of keys) {
+      const bad = invalidPluralCategories(
+        getPath(contentByLocale[locale], key),
+        locale,
+      );
+      if (bad.length > 0) {
+        console.warn(
+          `Warning: "${key}" in ${locale} uses plural categories not used by ${locale}: ${bad.join(', ')}`,
+        );
+      }
+    }
+  }
+  console.log(report.join('\n') + '\n');
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    fs.appendFileSync(
+      process.env.GITHUB_STEP_SUMMARY,
+      report.join('\n') + '\n',
+    );
   }
 
   const allKeys = new Set(

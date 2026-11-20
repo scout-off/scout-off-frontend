@@ -33,3 +33,17 @@ export async function removeFromWatchlist(id: number): Promise<void> {
   });
   if (!res.ok) throw new Error('Failed to remove from watchlist');
 }
+
+export async function updateWatchlistNotes(
+  id: number,
+  note: string,
+  tags: string[],
+): Promise<WatchlistEntry> {
+  const res = await fetch('/api/watchlist', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, note, tags }),
+  });
+  if (!res.ok) throw new Error('Failed to update watchlist entry');
+  return res.json();
+}

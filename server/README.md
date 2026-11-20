@@ -31,7 +31,7 @@ database file at `DB_PATH` (default `server/data/scout-off.db`) on first
 run — the `data/` directory is gitignored, same as the frontend's `.data/`.
 
 Point the frontend at it by setting `NEXT_PUBLIC_API_URL=http://localhost:4000`
-in the frontend's `.env.local` (see the root `DEVELOPMENT.md`).
+in the frontend's `.env.local` (see `docs/development/setup.md`).
 
 ## Running tests
 

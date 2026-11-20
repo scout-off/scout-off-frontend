@@ -307,7 +307,7 @@ icon-maskable-512x512.png
 
 ## References
 
-- **Icon Generation Guide**: See `ICON_GUIDE.md`
+- **Icon Generation Guide**: See `docs/guides/ICON_GUIDE.md`
 - **Manifest Spec**: [MDN Web App Manifest Icons](https://developer.mozilla.org/en-US/docs/Web/Manifest/icons)
 - **PWA Guidelines**: [web.dev: Web App Manifest](https://web.dev/add-web-app-manifest/)
 - **Android Adaptive Icons**: [Android Developer Guide](https://developer.android.com/guide/topics/ui/look-and-feel/icon_design_adaptive)

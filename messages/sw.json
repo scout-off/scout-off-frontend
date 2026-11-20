@@ -391,5 +391,19 @@
     "accept": "Kubali",
     "decline": "Kataa",
     "privacy_link": "Sera ya Faragha"
+  },
+  "watchlist_notes": {
+    "edit": "Hariri maelezo na lebo",
+    "no_note": "Bado hakuna maelezo binafsi.",
+    "note_label": "Maelezo binafsi (unayaona wewe pekee)",
+    "note_counter": "{count}/{max}",
+    "tag_placeholder": "Ongeza lebo kisha bonyeza Enter",
+    "remove_tag": "Ondoa lebo {tag}",
+    "save": "Hifadhi",
+    "clear": "Futa",
+    "cancel": "Ghairi",
+    "save_error": "Imeshindwa kuhifadhi. Angalia vikomo kisha ujaribu tena.",
+    "filter_label": "Chuja kwa lebo",
+    "filter_all": "Lebo zote"
   }
 }

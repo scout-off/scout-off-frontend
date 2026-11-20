@@ -61,6 +61,16 @@ const withPWA = require('next-pwa')({
 });
 
 const nextConfig = {
+  // Issue #1717: emit a self-contained server (.next/standalone) so the
+  // production Docker image ships only traced dependencies, not the full
+  // node_modules. better-sqlite3's native binding is loaded via `bindings`,
+  // so include it explicitly to guarantee it lands in the standalone output.
+  output: 'standalone',
+  experimental: {
+    outputFileTracingIncludes: {
+      '/**/*': ['./node_modules/better-sqlite3/build/Release/*.node'],
+    },
+  },
   typescript: {
     // `next build` runs its own project-wide type check by default, but this
     // repo's CI only gates on `npm run lint` / `npm run test` (see

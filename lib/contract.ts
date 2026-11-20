@@ -124,7 +124,7 @@ async function captureContractError(
 //      contract ABI.
 //   2. If the contract exposes a version bump of its own (e.g. a new
 //      `get_contract_version` return value), the two should move together.
-//   3. See "Contract Version Compatibility" in DEVELOPMENT.md for the
+//   3. See "Contract Version Compatibility" in docs/development/ for the
 //      end-to-end migration checklist.
 
 /** Contract ABI/interface version this file's `build*`/`simulateTx` calls target. */

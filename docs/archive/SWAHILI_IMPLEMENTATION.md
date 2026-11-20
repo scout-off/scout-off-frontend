@@ -1,5 +1,7 @@
 # Swahili Locale Implementation - Verification Report
 
+> **Archived.** Translation review status is now tracked per key in [`i18n/review-status.json`](../../i18n/review-status.json) (`machine` | `reviewed`, with optional `reviewer` and `date`). `node scripts/check-locale-keys.js` reports per-locale review coverage in the CI job summary. To record a native-speaker review, set the key's entry to `{ "status": "reviewed", "reviewer": "<name>", "date": "YYYY-MM-DD" }`.
+
 ## ✅ Completed Tasks
 
 ### 1. Locale Files Created

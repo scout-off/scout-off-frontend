@@ -39,6 +39,9 @@ const ENTRY: WatchlistEntry = {
   scoutWallet: 'GSCOUT',
   playerId: 'player-1',
   createdAt: 0,
+  note: '',
+  tags: [],
+  updatedAt: null,
 };
 
 let show: jest.Mock;
