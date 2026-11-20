@@ -1,20 +1,27 @@
 'use client';
 
-import { InputHTMLAttributes, forwardRef } from 'react';
+import { InputHTMLAttributes, forwardRef, useId } from 'react';
+import { FieldProps, mergeDescribedBy } from './fieldProps';
 
-export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  id: string;
-  label: string;
-  error?: string;
-  hint?: string;
-}
+export interface InputProps
+  extends
+    Omit<InputHTMLAttributes<HTMLInputElement>, 'id' | 'required'>,
+    FieldProps {}
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ id, label, error, hint, className = '', ...props }, ref) => {
+  (
+    { id: idProp, label, error, hint, required, className = '', ...props },
+    ref,
+  ) => {
+    const generatedId = useId();
+    const id = idProp ?? generatedId;
     const hintId = hint ? `${id}-hint` : undefined;
     const errorId = error ? `${id}-error` : undefined;
-    const describedBy =
-      [hintId, errorId].filter(Boolean).join(' ') || undefined;
+    const describedBy = mergeDescribedBy(
+      props['aria-describedby'],
+      hintId,
+      errorId,
+    );
 
     return (
       <div className="space-y-1">
@@ -23,14 +30,17 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           className="block text-sm font-medium text-gray-700 dark:text-gray-300"
         >
           {label}
+          {required && <span className="sr-only"> (required)</span>}
         </label>
         <input
           ref={ref}
           id={id}
           className={`input${error ? ' border-red-500' : ''}${className ? ` ${className}` : ''}`}
-          aria-describedby={describedBy}
-          aria-invalid={error ? true : undefined}
+          required={required}
           {...props}
+          aria-required={required || undefined}
+          aria-describedby={describedBy}
+          aria-invalid={error ? true : props['aria-invalid']}
         />
         {hint && (
           <p id={hintId} className="text-sm text-gray-500 dark:text-gray-400">
