@@ -1,0 +1,15 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: scoutoff_indexer
+    # Scrape the internal metrics port directly — not through the public API.
+    static_configs:
+      - targets: ['indexer:9091']
+    # If METRICS_PORT is not used and METRICS_BEARER_TOKEN is set instead,
+    # uncomment the block below and replace <token> with the actual value
+    # (or use a Prometheus secrets file).
+    #
+    # authorization:
+    #   credentials: <token>
