@@ -4,7 +4,7 @@ import Select from '@/components/ui/Select';
 describe('Select', () => {
   it('renders with a list of options', () => {
     render(
-      <Select>
+      <Select label="Field">
         <option value="a">Option A</option>
         <option value="b">Option B</option>
       </Select>,
@@ -17,7 +17,7 @@ describe('Select', () => {
   it('fires onChange with the selected value when an option is chosen', () => {
     const onChange = jest.fn();
     render(
-      <Select onChange={onChange}>
+      <Select label="Field" onChange={onChange}>
         <option value="a">Option A</option>
         <option value="b">Option B</option>
       </Select>,
@@ -28,7 +28,7 @@ describe('Select', () => {
 
   it('shows a default placeholder option', () => {
     render(
-      <Select>
+      <Select label="Field">
         <option value="">Select one</option>
         <option value="a">Option A</option>
       </Select>,
@@ -38,7 +38,7 @@ describe('Select', () => {
 
   it('renders in disabled state when disabled prop is true', () => {
     render(
-      <Select disabled>
+      <Select label="Field" disabled>
         <option value="a">Option A</option>
       </Select>,
     );
@@ -47,7 +47,7 @@ describe('Select', () => {
 
   it('renders with correct id for accessibility', () => {
     render(
-      <Select id="region-select">
+      <Select label="Field" id="region-select">
         <option value="a">Option A</option>
       </Select>,
     );
@@ -56,7 +56,7 @@ describe('Select', () => {
 
   it('renders with aria-label for accessibility', () => {
     render(
-      <Select aria-label="Region">
+      <Select label="Field" aria-label="Region">
         <option value="a">Option A</option>
       </Select>,
     );
