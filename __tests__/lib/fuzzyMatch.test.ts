@@ -1,4 +1,5 @@
 import {
+  normalizeForSearch,
   fuzzyScore,
   levenshteinDistance,
   rankByFuzzyMatch,
@@ -71,5 +72,38 @@ describe('rankByFuzzyMatch', () => {
   it('drops candidates below the similarity threshold', () => {
     const ranked = rankByFuzzyMatch(players, 'zzzzz', (p) => p.name);
     expect(ranked).toEqual([]);
+  });
+});
+
+describe('token-aware, diacritic-insensitive matching', () => {
+  it('normalizes diacritics and punctuation', () => {
+    expect(normalizeForSearch("  N'Golo  Kanté ")).toBe('ngolo kante');
+    expect(normalizeForSearch('Ọlá Bello')).toBe('ola bello');
+    expect(normalizeForSearch('Jean-Pierre')).toBe('jean pierre');
+  });
+
+  it.each([
+    ['Adebyo', 'Adebayo Okafor'],
+    ['kante', "N'Golo Kanté"],
+    ['ola', 'Ọlá Bello'],
+  ])('matches %s against %s', (query, name) => {
+    expect(rankByFuzzyMatch([{ name }], query, (p) => p.name)).toHaveLength(1);
+  });
+
+  it('keeps exact and substring matches ahead of token matches', () => {
+    const names = ['Diallo Amara', 'Amara Dialo', 'Amara Diallo Jr'];
+    const ranked = rankByFuzzyMatch(names, 'Amara Diallo', (n) => n);
+    expect(ranked[0]).toBe('Amara Diallo Jr');
+    expect(fuzzyScore('Diallo Amara', 'Amara Diallo')).toBeLessThan(0.9);
+  });
+
+  it('ranks 5,000 candidates within budget', () => {
+    const names = Array.from(
+      { length: 5000 },
+      (_, i) => `Player${i} Surname${i % 97} Ọlá`,
+    );
+    const start = performance.now();
+    rankByFuzzyMatch(names, 'Surnme12 ola', (n) => n);
+    expect(performance.now() - start).toBeLessThan(500);
   });
 });

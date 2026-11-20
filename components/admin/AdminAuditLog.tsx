@@ -10,6 +10,7 @@ import {
 import TruncatedAddress from '@/components/ui/TruncatedAddress';
 import EmptyState from '@/components/ui/EmptyState';
 import { useLocale } from 'next-intl';
+import { downloadCsv } from '@/lib/download';
 
 const STROOPS_PER_XLM = 10_000_000;
 
@@ -17,18 +18,6 @@ function toUnixSeconds(dateInputValue: string): number | undefined {
   if (!dateInputValue) return undefined;
   const ms = new Date(dateInputValue).getTime();
   return Number.isFinite(ms) ? Math.floor(ms / 1000) : undefined;
-}
-
-function downloadCsv(content: string, filename: string) {
-  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
 }
 
 /**
