@@ -1,6 +1,8 @@
-import Link from "next/link";
+import { setRequestLocale } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
 
-export default function HomePage() {
+export default function HomePage({ params }: { params: { locale: string } }) {
+  setRequestLocale(params.locale);
   return (
     <section className="flex flex-col items-center text-center gap-8 py-20">
       <h1 className="text-5xl font-bold text-white leading-tight">

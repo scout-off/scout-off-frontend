@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import type { Player } from "@/types";
 import { PROGRESS_LABELS } from "@/types";
 import ProgressBar from "./ProgressBar";

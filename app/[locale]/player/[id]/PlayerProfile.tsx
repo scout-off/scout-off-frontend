@@ -1,37 +1,34 @@
 "use client";
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useState } from "react";
 import { useWallet } from "@/hooks/useWallet";
 import ProgressBar from "@/components/ProgressBar";
-import { getPlayer } from "@/lib/contract";
 import { buildPayToContact } from "@/lib/contract";
 import { ipfsUrl } from "@/lib/ipfs";
 import type { Player } from "@/types";
 
-export default function PlayerProfile() {
-  const { id } = useParams<{ id: string }>();
+// Client half of the player profile: the parent server component fetches the
+// player during SSR (and calls `notFound()` for a missing id, yielding a real
+// 404), then hands the data here. Only the wallet/pay interaction stays client.
+export default function PlayerProfile({
+  player,
+  playerId,
+}: {
+  player: Player;
+  playerId: string;
+}) {
   const { publicKey, signAndSubmit } = useWallet();
-  const [player, setPlayer] = useState<Player | null>(null);
-  const [loading, setLoading] = useState(true);
   const [contacting, setContacting] = useState(false);
-
-  useEffect(() => {
-    getPlayer(id).then(setPlayer).finally(() => setLoading(false));
-  }, [id]);
 
   async function handleContact() {
     if (!publicKey) return;
     setContacting(true);
     try {
-      const xdr = await buildPayToContact(publicKey, id);
+      const xdr = await buildPayToContact(publicKey, playerId);
       await signAndSubmit(xdr);
     } finally {
       setContacting(false);
     }
   }
-
-  if (loading) return <p className="text-center text-gray-400 mt-20">Loading…</p>;
-  if (!player) return <p className="text-center text-gray-400 mt-20">Player not found.</p>;
 
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-8">

@@ -18,4 +18,5 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run test
+      - run: npm run test:locales
       - run: node scripts/validate-env.js

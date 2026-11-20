@@ -1,0 +1,9 @@
+{
+  "not_found": {
+    "title": "Page Not Found — ScoutOff",
+    "heading": "Page not found",
+    "body": "The page you are looking for does not exist or may have been moved.",
+    "backToHome": "Back to home",
+    "browsePlayers": "Browse players"
+  }
+}
