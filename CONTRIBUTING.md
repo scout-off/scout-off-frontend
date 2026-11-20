@@ -304,6 +304,17 @@ For example, changes to `app/api/auth/`, `lib/contract.ts`, or `packages/indexer
 will automatically request a review from the relevant team. No manual reviewer
 assignment is needed — GitHub applies CODEOWNERS rules on PR creation.
 
+## Release Changelog
+
+`content/changelog.md` feeds the public `/[locale]/changelog` page. At release time, draft the new entry from conventional commits instead of writing it by hand:
+
+```bash
+node scripts/draft-changelog.mjs --dry-run                       # preview the entry
+node scripts/draft-changelog.mjs --title "November release"      # write it to content/changelog.md
+```
+
+The script reads commits since the last tag (or since the newest entry's date, or `--since <ref>`), maps `feat` → Added, `perf`/`refactor` → Improved and `fix` → Fixed, and skips `chore`, `ci`, `test`, `docs`, `build` and dependency bumps. The result is a draft: edit it so every item is user-facing, drop internal refactors, then commit it with the release. The changelog is English only; translated changelogs would be a follow-up.
+
 ## Security Guidelines
 
 - Never commit secrets, private keys, API tokens, or credentials.

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import DataTable from '@/components/ui/DataTable';
 
 interface AutomatedModerationEntry {
   id: string;
@@ -200,58 +201,78 @@ export default function AutomatedModerationLog() {
       )}
 
       {!loading && !error && filteredEntries.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-gray-700">
-                <th className="py-2 pr-4 font-medium text-gray-400">Time</th>
-                <th className="py-2 pr-4 font-medium text-gray-400">
-                  Severity
-                </th>
-                <th className="py-2 pr-4 font-medium text-gray-400">Rule</th>
-                <th className="py-2 pr-4 font-medium text-gray-400">User</th>
-                <th className="py-2 pr-4 font-medium text-gray-400">Thread</th>
-                <th className="py-2 font-medium text-gray-400">Context</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredEntries.map((entry) => {
+        <DataTable
+          caption="Automated moderation entries"
+          captionHidden
+          sortParam="moderationSort"
+          // Cursor-paginated: sort client-side only once every page is loaded.
+          sortingEnabled={nextCursor === null}
+          rows={filteredEntries}
+          rowKey={(entry) => entry.id}
+          className="w-full text-left text-sm"
+          columns={[
+            {
+              key: 'timestamp',
+              header: 'Time',
+              sortable: true,
+              render: (entry) => formatDate(entry.timestamp),
+            },
+            {
+              key: 'severity',
+              header: 'Severity',
+              sortable: true,
+              sortValue: (entry) =>
+                (entry.data?.severity as string | undefined) ?? null,
+              cellClassName: 'py-2 pr-4',
+              render: (entry) => {
                 const severity = entry.data?.severity as string | undefined;
                 return (
-                  <tr
-                    key={entry.id}
-                    className="border-b border-gray-700/50 hover:bg-gray-800/50"
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${getSeverityColor(severity)}`}
                   >
-                    <td className="py-2 pr-4 text-gray-300">
-                      {formatDate(entry.timestamp)}
-                    </td>
-                    <td className="py-2 pr-4">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${getSeverityColor(severity)}`}
-                      >
-                        {getSeverityLabel(severity)}
-                      </span>
-                    </td>
-                    <td className="py-2 pr-4 text-gray-200 font-medium">
-                      {(entry.data?.rule as string | undefined) ?? 'Unknown'}
-                    </td>
-                    <td className="py-2 pr-4 text-gray-300 font-mono">
-                      {entry.data?.userId as string | undefined}
-                    </td>
-                    <td className="py-2 pr-4 text-gray-300 font-mono">
-                      {entry.target ?? '-'}
-                    </td>
-                    <td className="py-2 text-gray-300">
-                      <pre className="text-xs text-gray-400 overflow-x-auto whitespace-pre-wrap max-w-md">
-                        {JSON.stringify(entry.data?.context ?? {}, null, 2)}
-                      </pre>
-                    </td>
-                  </tr>
+                    {getSeverityLabel(severity)}
+                  </span>
                 );
-              })}
-            </tbody>
-          </table>
-        </div>
+              },
+            },
+            {
+              key: 'rule',
+              header: 'Rule',
+              sortable: true,
+              sortValue: (entry) =>
+                (entry.data?.rule as string | undefined) ?? null,
+              cellClassName: 'py-2 pr-4 text-gray-200 font-medium',
+              render: (entry) =>
+                (entry.data?.rule as string | undefined) ?? 'Unknown',
+            },
+            {
+              key: 'user',
+              header: 'User',
+              sortable: true,
+              sortValue: (entry) =>
+                (entry.data?.userId as string | undefined) ?? null,
+              cellClassName: 'py-2 pr-4 text-gray-300 font-mono',
+              render: (entry) => entry.data?.userId as string | undefined,
+            },
+            {
+              key: 'target',
+              header: 'Thread',
+              cellClassName: 'py-2 pr-4 text-gray-300 font-mono',
+              render: (entry) => entry.target ?? '-',
+            },
+            {
+              key: 'context',
+              header: 'Context',
+              headerClassName: 'py-2 font-medium text-gray-400',
+              cellClassName: 'py-2 text-gray-300',
+              render: (entry) => (
+                <pre className="text-xs text-gray-400 overflow-x-auto whitespace-pre-wrap max-w-md">
+                  {JSON.stringify(entry.data?.context ?? {}, null, 2)}
+                </pre>
+              ),
+            },
+          ]}
+        />
       )}
 
       {!loading && nextCursor !== null && (

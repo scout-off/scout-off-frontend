@@ -945,7 +945,13 @@
       "progress_label": "{name} – Niveau de progression",
       "milestones": "Jalons",
       "milestones_label": "{name} – Jalons",
-      "milestone_count": "{count, plural, one {# jalon} other {# jalons}}"
+      "milestone_count": "{count, plural, one {# jalon} other {# jalons}}",
+      "name": "Nom",
+      "best": "meilleur",
+      "copy_link": "Copier le lien",
+      "link_copied": "Lien de comparaison copié",
+      "link_copy_failed": "Impossible de copier le lien. Copiez-le manuellement : {url}",
+      "download_csv": "Télécharger le CSV"
     },
     "profile": {
       "title": "Profil du recruteur",

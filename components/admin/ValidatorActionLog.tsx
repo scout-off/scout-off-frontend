@@ -5,6 +5,7 @@ import { useValidatorActionLog } from '@/hooks/useValidatorActionLog';
 import { buildValidatorActionLogCsv } from '@/lib/validatorActionLogCsv';
 import TruncatedAddress from '@/components/ui/TruncatedAddress';
 import EmptyState from '@/components/ui/EmptyState';
+import DataTable from '@/components/ui/DataTable';
 import DataFreshnessBadge from '@/components/ui/DataFreshnessBadge';
 import { useLocale } from 'next-intl';
 
@@ -134,57 +135,77 @@ export default function ValidatorActionLog() {
           description="Milestone approvals and revocations will appear here as validators act on players."
         />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead>
-              <tr className="text-gray-400 text-xs uppercase tracking-wide border-b border-gray-800">
-                <th className="py-2 pr-4">Time</th>
-                <th className="py-2 pr-4">Action</th>
-                <th className="py-2 pr-4">Validator</th>
-                <th className="py-2 pr-4">Player</th>
-                <th className="py-2 pr-4">Milestone</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-800">
-              {entries.map((entry) => (
-                <tr key={entry.id}>
-                  <td className="py-2 pr-4 text-gray-400 whitespace-nowrap">
-                    {new Date(entry.timestamp * 1000).toLocaleString(locale)}
-                  </td>
-                  <td className="py-2 pr-4">
-                    <span
-                      className={
-                        entry.action === 'revoked'
-                          ? 'text-red-400'
-                          : 'text-brand-green'
-                      }
-                    >
-                      {ACTION_LABELS[entry.action]}
-                    </span>
-                  </td>
-                  <td className="py-2 pr-4 font-mono">
-                    {entry.validator ? (
-                      <TruncatedAddress
-                        address={entry.validator}
-                        className="text-gray-400"
-                      />
-                    ) : (
-                      <span className="text-gray-600">—</span>
-                    )}
-                  </td>
-                  <td className="py-2 pr-4 text-gray-300 truncate max-w-[10rem]">
-                    {entry.playerId ?? <span className="text-gray-600">—</span>}
-                  </td>
-                  <td className="py-2 pr-4 text-gray-300 truncate max-w-[10rem]">
-                    {entry.milestoneId ?? (
-                      <span className="text-gray-600">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          caption="Validator actions"
+          captionHidden
+          sortParam="validatorSort"
+          rows={entries}
+          rowKey={(entry) => entry.id}
+          headerRowClassName="text-gray-400 text-xs uppercase tracking-wide border-b border-gray-800"
+          rowClassName="border-b border-gray-800"
+          columns={[
+            {
+              key: 'timestamp',
+              header: 'Time',
+              sortable: true,
+              headerClassName: 'py-2 pr-4',
+              cellClassName: 'py-2 pr-4 text-gray-400 whitespace-nowrap',
+              render: (entry) =>
+                new Date(entry.timestamp * 1000).toLocaleString(locale),
+            },
+            {
+              key: 'action',
+              header: 'Action',
+              sortable: true,
+              headerClassName: 'py-2 pr-4',
+              cellClassName: 'py-2 pr-4',
+              render: (entry) => (
+                <span
+                  className={
+                    entry.action === 'revoked'
+                      ? 'text-red-400'
+                      : 'text-brand-green'
+                  }
+                >
+                  {ACTION_LABELS[entry.action]}
+                </span>
+              ),
+            },
+            {
+              key: 'validator',
+              header: 'Validator',
+              sortable: true,
+              headerClassName: 'py-2 pr-4',
+              cellClassName: 'py-2 pr-4 font-mono',
+              render: (entry) =>
+                entry.validator ? (
+                  <TruncatedAddress
+                    address={entry.validator}
+                    className="text-gray-400"
+                  />
+                ) : (
+                  <span className="text-gray-600">—</span>
+                ),
+            },
+            {
+              key: 'playerId',
+              header: 'Player',
+              sortable: true,
+              headerClassName: 'py-2 pr-4',
+              cellClassName: 'py-2 pr-4 text-gray-300 truncate max-w-[10rem]',
+              render: (entry) =>
+                entry.playerId ?? <span className="text-gray-600">—</span>,
+            },
+            {
+              key: 'milestoneId',
+              header: 'Milestone',
+              headerClassName: 'py-2 pr-4',
+              cellClassName: 'py-2 pr-4 text-gray-300 truncate max-w-[10rem]',
+              render: (entry) =>
+                entry.milestoneId ?? <span className="text-gray-600">—</span>,
+            },
+          ]}
+        />
       )}
     </section>
   );
