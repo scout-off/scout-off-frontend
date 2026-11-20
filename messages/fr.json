@@ -900,7 +900,12 @@
       "milestone_approvals_label": "Validations de jalons",
       "milestone_approvals_description": "M’avertir lorsqu’un validateur approuve l’un de mes jalons.",
       "contact_unlocks_label": "Déblocages de contact",
-      "contact_unlocks_description": "M’avertir lorsque je débloque les coordonnées d’un joueur."
+      "contact_unlocks_description": "M’avertir lorsque je débloque les coordonnées d’un joueur.",
+      "saved_search_matches_label": "Correspondances des recherches enregistrées",
+      "saved_search_matches_description": "M’avertir lorsqu’un joueur nouvellement inscrit ou vérifié correspond à l’une de mes recherches enregistrées.",
+      "saved_search_delivery_label": "Envoi",
+      "saved_search_delivery_instant": "Immédiatement",
+      "saved_search_delivery_daily": "Résumé quotidien"
     },
     "push": {
       "unsupported": "Les notifications push ne sont pas prises en charge par ce navigateur.",

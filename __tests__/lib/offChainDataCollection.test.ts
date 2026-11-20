@@ -21,6 +21,7 @@ import { RecentlyViewedStore } from '@/lib/recentlyViewedStore';
 import { SessionStore } from '@/lib/sessionStore';
 import { MilestoneEndorsementStore } from '@/lib/milestoneEndorsementStore';
 import { UploadTrackingStore } from '@/lib/uploadTrackingStore';
+import { SavedSearchAlertStore } from '@/lib/savedSearchAlertStore';
 import type { PlayerFilter } from '@/types';
 
 const WALLET = 'GEXPORT0000000000000000000000000000000000000000000000000000000';
@@ -36,6 +37,7 @@ function resetAll(): void {
   SessionStore.resetInstance();
   MilestoneEndorsementStore.resetInstance();
   UploadTrackingStore.resetInstance();
+  SavedSearchAlertStore.resetInstance();
   __resetForTests();
 }
 
@@ -182,7 +184,7 @@ describe('wallet-keyed stores added in #1351', () => {
     seed();
     const data = await collectUserData(WALLET);
 
-    expect(data.schemaVersion).toBe(2);
+    expect(data.schemaVersion).toBe(3);
     expect(data.sections.recentlyViewed).toHaveLength(1);
     expect(data.sections.sessions.map((s) => s.id)).toEqual(['s1']);
     expect(data.sections.milestoneEndorsements).toHaveLength(1);
@@ -224,5 +226,57 @@ describe('store registry guard (#1351)', () => {
     Object.values(EXEMPT_STORES).forEach((reason) =>
       expect(reason.length).toBeGreaterThan(0),
     );
+  });
+});
+
+describe('saved-search alerts (issue #1705)', () => {
+  function seed(): void {
+    const alerts = SavedSearchAlertStore.getInstance();
+    alerts.record({
+      scoutWallet: WALLET,
+      searchId: 1,
+      searchName: 'Strikers',
+      playerId: 'player-1',
+      eventId: 10,
+      filter: { position: 'ST' },
+    });
+    alerts.record({
+      scoutWallet: OTHER,
+      searchId: 2,
+      searchName: 'Other',
+      playerId: 'player-1',
+      eventId: 10,
+      filter: {},
+    });
+    NotificationPreferencesStore.getInstance().setSavedSearchAlerts(WALLET, {
+      enabled: true,
+      delivery: 'daily',
+    });
+  }
+
+  it('exports the wallet’s alerts and alert preferences', async () => {
+    seed();
+    const data = await collectUserData(WALLET);
+    expect(data.sections.savedSearchAlerts).toHaveLength(1);
+    expect(data.sections.savedSearchAlerts[0].playerId).toBe('player-1');
+    expect(data.sections.savedSearchAlertPreferences).toEqual({
+      enabled: true,
+      delivery: 'daily',
+    });
+  });
+
+  it('deletes the wallet’s alerts and alert preferences only', async () => {
+    seed();
+    const { removed } = await deleteUserData(WALLET);
+    expect(removed.savedSearchAlerts).toBe(1);
+    expect(SavedSearchAlertStore.getInstance().listForWallet(WALLET)).toEqual(
+      [],
+    );
+    expect(
+      SavedSearchAlertStore.getInstance().listForWallet(OTHER),
+    ).toHaveLength(1);
+    expect(
+      NotificationPreferencesStore.getInstance().getSavedSearchAlerts(WALLET),
+    ).toEqual({ enabled: true, delivery: 'instant' });
   });
 });

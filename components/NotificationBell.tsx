@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Bell } from 'lucide-react';
+import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import { useWallet } from '@/hooks/useWallet';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -19,31 +20,46 @@ function NotificationItem({
   onRead: (id: number) => void;
 }) {
   const locale = useLocale() as Locale;
+  const className =
+    'w-full text-left px-4 py-3 flex gap-2.5 hover:bg-gray-800/60 transition';
+  const handleClick = () => !notification.read && onRead(notification.id);
+  const content = (
+    <>
+      <span
+        aria-hidden="true"
+        className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+          notification.read ? 'bg-transparent' : 'bg-brand-green'
+        }`}
+      />
+      <span className="flex flex-col gap-0.5 min-w-0">
+        <span className="text-sm font-medium text-white">
+          {notification.title}
+        </span>
+        <span className="text-xs text-gray-400 break-words">
+          {notification.message}
+        </span>
+        <span className="text-[11px] text-gray-500">
+          {formatRelativeTime(notification.createdAt * 1000, locale)}
+        </span>
+      </span>
+    </>
+  );
   return (
     <li>
-      <button
-        type="button"
-        onClick={() => !notification.read && onRead(notification.id)}
-        className="w-full text-left px-4 py-3 flex gap-2.5 hover:bg-gray-800/60 transition"
-      >
-        <span
-          aria-hidden="true"
-          className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
-            notification.read ? 'bg-transparent' : 'bg-brand-green'
-          }`}
-        />
-        <span className="flex flex-col gap-0.5 min-w-0">
-          <span className="text-sm font-medium text-white">
-            {notification.title}
-          </span>
-          <span className="text-xs text-gray-400 break-words">
-            {notification.message}
-          </span>
-          <span className="text-[11px] text-gray-500">
-            {formatRelativeTime(notification.createdAt * 1000, locale)}
-          </span>
-        </span>
-      </button>
+      {notification.href ? (
+        // Saved-search alerts link to the dashboard with the search applied.
+        <Link
+          href={notification.href}
+          onClick={handleClick}
+          className={className}
+        >
+          {content}
+        </Link>
+      ) : (
+        <button type="button" onClick={handleClick} className={className}>
+          {content}
+        </button>
+      )}
     </li>
   );
 }

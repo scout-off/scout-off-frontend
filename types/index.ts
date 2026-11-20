@@ -338,7 +338,10 @@ export interface SavedSearch {
  * only the two event types that map to something a player or scout would
  * actually want to be notified about.
  */
-export type NotificationCategory = 'milestone_approval' | 'contact_unlock';
+export type NotificationCategory =
+  | 'milestone_approval'
+  | 'contact_unlock'
+  | 'saved_search_match';
 
 export interface Notification {
   /** The underlying indexer event's id — globally unique, used as the read-state key. */
@@ -349,6 +352,8 @@ export interface Notification {
   createdAt: number; // Unix seconds, from the source event's ledger close time
   read: boolean;
   playerId: string | null;
+  /** Where clicking the notification should take the user, if anywhere. */
+  href?: string;
 }
 
 /**
@@ -359,6 +364,16 @@ export interface NotificationPreferences {
   milestoneApprovals: boolean;
   contactUnlocks: boolean;
   version?: number;
+}
+
+/**
+ * The `saved_search_matches` notification category (issue #1705): alerts
+ * when a newly registered or newly levelled-up player matches one of the
+ * scout's saved searches. `daily` batches alerts into one digest a day.
+ */
+export interface SavedSearchAlertPreferences {
+  enabled: boolean;
+  delivery: 'instant' | 'daily';
 }
 
 // ── Milestone Disputes ────────────────────────────────────────────────────────

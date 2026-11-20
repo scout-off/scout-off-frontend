@@ -9,6 +9,7 @@ const meta: Meta<typeof Select> = {
   argTypes: {
     label: { control: 'text' },
     error: { control: 'text' },
+    hint: { control: 'text' },
     disabled: { control: 'boolean' },
   },
 };
@@ -27,15 +28,18 @@ const Options = () => (
 
 export const Default: Story = {
   render: () => (
-    <Select>
+    <Select label="Subscription Tier">
       <Options />
     </Select>
   ),
 };
 
-export const WithLabel: Story = {
+export const WithHint: Story = {
   render: () => (
-    <Select label="Subscription Tier">
+    <Select
+      label="Subscription Tier"
+      hint="You can change your tier at any time."
+    >
       <Options />
     </Select>
   ),

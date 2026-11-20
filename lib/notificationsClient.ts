@@ -1,4 +1,5 @@
 /** Client for app/api/notifications/read — same-origin, cookie-authenticated. */
+import type { Notification } from '@/types';
 import { fetchWithRetry, fetchWithTimeout } from '@/lib/fetchWithRetry';
 
 export async function fetchReadNotificationIds(): Promise<number[]> {
@@ -21,4 +22,14 @@ export async function markNotificationsRead(ids: number[]): Promise<void> {
     body: JSON.stringify({ ids }),
   });
   if (!res.ok) throw new Error('Failed to mark notifications read');
+}
+
+/** Delivered saved-search match alerts as notification entries (issue #1705). */
+export async function fetchSavedSearchAlertNotifications(): Promise<
+  Omit<Notification, 'read'>[]
+> {
+  const res = await fetchWithRetry('/api/saved-searches/alerts');
+  if (!res.ok) throw new Error('Failed to fetch saved-search alerts');
+  const { notifications } = await res.json();
+  return notifications as Omit<Notification, 'read'>[];
 }

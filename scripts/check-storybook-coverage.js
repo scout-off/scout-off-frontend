@@ -81,6 +81,14 @@ const DIRS = [
     exempt: new Set([]),
   },
   {
+    dir: path.join(ROOT, 'components', 'academy', 'bulk-import'),
+    label: 'components/academy/bulk-import',
+    warnOnly: false,
+    // The container wires the wallet, contract and IndexedDB store; its
+    // presentational steps carry the stories.
+    exempt: new Set(['BulkPlayerImport.tsx']),
+  },
+  {
     dir: path.join(ROOT, 'components', 'admin'),
     label: 'components/admin',
     warnOnly: true, // warn-only until coverage gap closed (issue #1524)

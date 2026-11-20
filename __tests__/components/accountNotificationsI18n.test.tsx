@@ -30,6 +30,14 @@ jest.mock('@/hooks/useNotifications', () => ({
     markAllRead: jest.fn(),
   }),
 }));
+jest.mock('@/hooks/useSavedSearchAlertPreferences', () => ({
+  useSavedSearchAlertPreferences: () => ({
+    preferences: { enabled: true, delivery: 'instant' },
+    loading: false,
+    update: jest.fn(),
+  }),
+}));
+
 jest.mock('@/hooks/useNotificationPreferences', () => ({
   useNotificationPreferences: () => ({
     preferences: { milestoneApprovals: true, contactUnlocks: false },

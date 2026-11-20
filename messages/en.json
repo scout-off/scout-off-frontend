@@ -900,7 +900,12 @@
       "milestone_approvals_label": "Milestone approvals",
       "milestone_approvals_description": "Notify me when a validator approves one of my milestones.",
       "contact_unlocks_label": "Contact unlocks",
-      "contact_unlocks_description": "Notify me when I unlock a player’s contact details."
+      "contact_unlocks_description": "Notify me when I unlock a player’s contact details.",
+      "saved_search_matches_label": "Saved search matches",
+      "saved_search_matches_description": "Notify me when a newly registered or newly verified player matches one of my saved searches.",
+      "saved_search_delivery_label": "Delivery",
+      "saved_search_delivery_instant": "Instantly",
+      "saved_search_delivery_daily": "Daily digest"
     },
     "push": {
       "unsupported": "Push notifications aren’t supported in this browser.",

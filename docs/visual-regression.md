@@ -23,7 +23,8 @@ check works, and how to review and approve visual changes.
   run time and screenshots every story it finds — new stories get visual
   coverage automatically, without editing the spec.
 - Baselines live alongside the spec in
-  `e2e/visual/storybook.visual.spec.ts-snapshots/`, one PNG per story.
+  `e2e/visual/storybook.visual.spec.ts-snapshots/`, one PNG per story per
+  project (see [Locales and viewports](#locales-and-viewports)).
 - The `visual-regression` GitHub Actions workflow
   (`.github/workflows/visual-regression.yml`) runs the check on every push
   and PR against `main`, inside the same `mcr.microsoft.com/playwright`
@@ -51,6 +52,51 @@ docker run --rm -v "$PWD:/work" -w /work mcr.microsoft.com/playwright:v1.61.1-no
 
 (Keep the image tag in sync with the `@playwright/test` version in
 `package.json` and with `.github/workflows/visual-regression.yml`.)
+
+## Locales and viewports
+
+French and Swahili strings are often 20–40% longer than English, so
+truncation and wrapping bugs only show up when a story renders in those
+locales. `playwright.visual.config.ts` therefore defines one desktop and one
+mobile (375px wide) project per locale:
+
+| Project            | Locale | Viewport       |
+| ------------------ | ------ | -------------- |
+| `visual-en`        | en     | Desktop Chrome |
+| `visual-en-mobile` | en     | 375 × 812      |
+| `visual-fr`        | fr     | Desktop Chrome |
+| `visual-fr-mobile` | fr     | 375 × 812      |
+| `visual-sw`        | sw     | Desktop Chrome |
+| `visual-sw-mobile` | sw     | 375 × 812      |
+
+Each project passes its locale to Storybook as the `locale` global
+(`&globals=locale:fr`), which `.storybook/preview.tsx` uses to pick the
+`messages/<locale>.json` catalogue. The same "Locale" toolbar item lets you
+check a story by hand in `npm run storybook`.
+
+Baselines are stored per project through Playwright's default snapshot
+suffix, e.g. `ui-button--primary-visual-fr-mobile-linux.png`.
+
+To update baselines for a single locale or viewport, pass `--project`:
+
+```bash
+# Only French, desktop and mobile
+npx playwright test --config=playwright.visual.config.ts \
+  --project=visual-fr --project=visual-fr-mobile --update-snapshots
+```
+
+Or limit a whole run to some locales with `VISUAL_LOCALES`
+(comma-separated, defaults to `en,fr,sw`), for example to keep CI time down
+on PRs that don't touch `messages/`, `components/` or `app/`:
+
+```bash
+VISUAL_LOCALES=en npm run test:visual
+```
+
+When a French or Swahili screenshot shows text overflowing its container,
+fix the component (`truncate` plus a `title` or tooltip, `min-w-0` on flex
+children, or allowing the text to wrap) rather than shortening the
+translation.
 
 ## Reviewing and approving a change
 
