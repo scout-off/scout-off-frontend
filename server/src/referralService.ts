@@ -1,4 +1,13 @@
-const db = require('./db');
+import db from './db';
+import type { ReferralCode, ReferralOverview, TopReferrer } from './types/api';
+
+interface ReferralRow {
+  code: string;
+  scout_wallet: string;
+  created_at: number;
+  used_by: string | null;
+  used_at: number | null;
+}
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const CODE_BODY_LENGTH = 6;
@@ -16,11 +25,13 @@ const insertCode = db.prepare(
   `INSERT INTO referral_codes (code, scout_wallet, created_at, used_by, used_at)
    VALUES (@code, @scoutWallet, @createdAt, NULL, NULL)`,
 );
-const findByCode = db.prepare(`SELECT * FROM referral_codes WHERE code = ?`);
-const findByScout = db.prepare(
+const findByCode = db.prepare<[string], ReferralRow>(
+  `SELECT * FROM referral_codes WHERE code = ?`,
+);
+const findByScout = db.prepare<[string], ReferralRow>(
   `SELECT * FROM referral_codes WHERE scout_wallet = ? ORDER BY created_at DESC`,
 );
-const countRedeemedByScout = db.prepare(
+const countRedeemedByScout = db.prepare<[string], { count: number }>(
   `SELECT COUNT(*) AS count FROM referral_codes
    WHERE scout_wallet = ? AND used_by IS NOT NULL`,
 );
@@ -29,7 +40,7 @@ const markRedeemed = db.prepare(
    WHERE code = @code AND used_by IS NULL`,
 );
 
-function toReferral(row) {
+function toReferral(row: ReferralRow): ReferralCode {
   return {
     code: row.code,
     scoutWallet: row.scout_wallet,
@@ -44,8 +55,8 @@ function toReferral(row) {
  * collision. Mirrors the collision-retry loop from the file-based
  * implementation this service replaces (lib/referralStore.ts).
  */
-function generateCode(scoutWallet) {
-  let code;
+export function generateCode(scoutWallet: string): ReferralCode {
+  let code: string | undefined;
   for (let attempt = 0; attempt < MAX_GENERATE_ATTEMPTS; attempt++) {
     code = randomCode();
     if (!findByCode.get(code)) break;
@@ -60,21 +71,21 @@ function generateCode(scoutWallet) {
   return { code, scoutWallet, createdAt, usedBy: null, usedAt: null };
 }
 
-function getCodesByScout(scoutWallet) {
+export function getCodesByScout(scoutWallet: string): ReferralCode[] {
   return findByScout.all(scoutWallet).map(toReferral);
 }
 
-function getReferralCount(scoutWallet) {
-  return countRedeemedByScout.get(scoutWallet).count;
+export function getReferralCount(scoutWallet: string): number {
+  return countRedeemedByScout.get(scoutWallet)?.count ?? 0;
 }
 
 /** Every referral code across every scout wallet, for cross-wallet fraud analysis. */
-function getAllCodes() {
+export function getAllCodes(): ReferralCode[] {
   return allCodes.all().map(toReferral);
 }
 
 /** Redeems a code on behalf of `usedBy`; rejects self-redemption. */
-function redeemCode(code, usedBy) {
+export function redeemCode(code: string, usedBy: string): boolean {
   const existing = findByCode.get(code);
   if (!existing || existing.used_by !== null) return false;
   if (existing.scout_wallet === usedBy) return false;
@@ -86,13 +97,13 @@ function redeemCode(code, usedBy) {
 
 const TOP_REFERRERS_LIMIT = 10;
 
-const allCodes = db.prepare(`SELECT * FROM referral_codes`);
+const allCodes = db.prepare<[], ReferralRow>(`SELECT * FROM referral_codes`);
 
 /** Platform-wide referral totals and the top referrers by successful referrals. */
-function getReferralOverview() {
+export function getReferralOverview(): ReferralOverview {
   const codes = allCodes.all().map(toReferral);
 
-  const byScout = new Map();
+  const byScout = new Map<string, Omit<TopReferrer, 'scoutWallet'>>();
   for (const c of codes) {
     const entry = byScout.get(c.scoutWallet) ?? {
       totalCodes: 0,
@@ -118,12 +129,3 @@ function getReferralOverview() {
     topReferrers,
   };
 }
-
-module.exports = {
-  generateCode,
-  getCodesByScout,
-  getReferralCount,
-  getAllCodes,
-  redeemCode,
-  getReferralOverview,
-};

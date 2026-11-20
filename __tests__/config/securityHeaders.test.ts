@@ -10,7 +10,10 @@ jest.mock('@sentry/nextjs', () => ({
   withSentryConfig: (config: unknown) => config,
 }));
 jest.mock('@next/bundle-analyzer', () => () => (config: unknown) => config);
-jest.mock('next-pwa', () => () => (config: unknown) => config);
+jest.mock('@serwist/next', () => ({
+  __esModule: true,
+  default: () => (config: unknown) => config,
+}));
 
 type Header = { key: string; value: string };
 

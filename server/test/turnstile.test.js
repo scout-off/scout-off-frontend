@@ -11,7 +11,7 @@ const tmpDbPath = path.join(
 process.env.DB_PATH = tmpDbPath;
 process.env.TURNSTILE_SECRET_KEY = 'test-secret';
 
-const createApp = require('../src/app');
+const createApp = require('../dist/app');
 
 let server;
 let baseUrl;
@@ -43,7 +43,9 @@ async function post(pathname, body) {
 }
 
 test('POST /referrals/generate rejects a missing turnstile token with a clear error', async () => {
-  const res = await post('/referrals/generate', { scoutWallet: 'GSCOUT_X' });
+  const res = await post('/referrals/generate', {
+    scoutWallet: 'GCTG2P7DRCSYJN24HMJM2Z6NOWBQHTJNJIC57PVF65WNHCYX5Y56OB7R',
+  });
   assert.equal(res.status, 400);
   assert.match(res.body.error, /challenge/i);
 });
@@ -57,7 +59,7 @@ test('POST /referrals/generate rejects a failed turnstile verification', async (
   };
 
   const res = await post('/referrals/generate', {
-    scoutWallet: 'GSCOUT_Y',
+    scoutWallet: 'GAT43VL3TKWDUTXQIK6EGO6UMR5YKZMIZKWM4TS7KYAWYY56PS7MERAN',
     turnstileToken: 'bad-token',
   });
   assert.equal(res.status, 400);
@@ -73,9 +75,12 @@ test('POST /referrals/generate succeeds when turnstile verification passes', asy
   };
 
   const res = await post('/referrals/generate', {
-    scoutWallet: 'GSCOUT_Z',
+    scoutWallet: 'GDB3V2LHLQR5NDH4TUY3LKWIW2SQWFAT4JXM3GVUS5G4ED4PG6MC5GDB',
     turnstileToken: 'good-token',
   });
   assert.equal(res.status, 201);
-  assert.equal(res.body.scoutWallet, 'GSCOUT_Z');
+  assert.equal(
+    res.body.scoutWallet,
+    'GDB3V2LHLQR5NDH4TUY3LKWIW2SQWFAT4JXM3GVUS5G4ED4PG6MC5GDB',
+  );
 });

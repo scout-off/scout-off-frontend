@@ -11,8 +11,8 @@ const tmpDbPath = path.join(
 process.env.DB_PATH = tmpDbPath;
 delete process.env.TURNSTILE_SECRET_KEY;
 
-const createApp = require('../src/app');
-const sponsorshipService = require('../src/sponsorshipService');
+const createApp = require('../dist/app');
+const sponsorshipService = require('../dist/sponsorshipService');
 
 let server;
 let baseUrl;
@@ -46,13 +46,15 @@ async function post(body) {
 test('POST /sponsorship/waitlist rejects an invalid email', async () => {
   const res = await post({ email: 'not-an-email' });
   assert.equal(res.status, 400);
-  assert.match(res.body.error, /email/i);
+  assert.equal(res.body.error.code, 'VALIDATION_FAILED');
+  assert.equal(res.body.error.details[0].path, 'body.email');
 });
 
 test('POST /sponsorship/waitlist rejects an unknown interestType', async () => {
   const res = await post({ email: 'a@example.com', interestType: 'whale' });
   assert.equal(res.status, 400);
-  assert.match(res.body.error, /interestType/);
+  assert.equal(res.body.error.code, 'VALIDATION_FAILED');
+  assert.equal(res.body.error.details[0].path, 'body.interestType');
 });
 
 test('POST /sponsorship/waitlist signs up a new email', async () => {

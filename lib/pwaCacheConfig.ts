@@ -1,5 +1,6 @@
 /**
- * Single source of truth for next-pwa `runtimeCaching` entries for this app.
+ * Single source of truth for the service worker's runtime caching rules.
+ * worker/sw.ts translates these entries into Serwist routes (issue #1712).
  *
  * Static, rarely-changing assets (icons, fonts) use CacheFirst with long TTLs.
  * Public, non-personal API endpoints (e.g., content-addressed /api/media/* and
@@ -93,8 +94,6 @@ export const tunedRuntimeCaching: RuntimeCachingEntry[] = [
   {
     urlPattern: /\/api\/.*/i,
     handler: 'NetworkOnly',
-    // next-pwa's `fallbacks` (next.config.js) reads `options.precacheFallback`
-    // on every entry and crashes the build when `options` is missing.
     options: {},
   },
 ];

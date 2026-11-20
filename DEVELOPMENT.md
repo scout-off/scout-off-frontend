@@ -385,8 +385,6 @@ break every commit even when nothing is wrong with the code.
    .env.*.local
    public/sw.js
    public/sw.js.map
-   public/workbox-*.js
-   public/workbox-*.js.map
    ```
 
 2. If a new generated file shows up that Prettier can't parse, append
@@ -403,7 +401,8 @@ still shows the old, broken UI after a normal refresh. The network
 panel shows `ServiceWorker` (not `Memory cache`) as the initiator for
 `/_next/static/chunks/*` requests.
 
-**Root cause:** Next.js's `next-pwa` plugin keeps serving the
+**Root cause:** The Serwist service worker (`worker/sw.ts`, built into
+`public/sw.js` by `@serwist/next`) keeps serving the
 previous build from the service worker's `precache` until the user
 explicitly accepts the new version. This is by design — silent
 `skipWaiting()` would interrupt in-flight requests on every deploy.
@@ -411,17 +410,26 @@ explicitly accepts the new version. This is by design — silent
 **Solution:**
 
 1. The `ServiceWorkerUpdateBanner` component surfaces a polite prompt
-   once `window.workbox`'s `waiting` event fires. Reload via that
+   once `window.serwist`'s `waiting` event fires. Reload via that
    banner's button, **not** a regular refresh.
 2. If the banner doesn't appear (e.g. you're on a tab that's been
    idle across the deploy), do a one-time workaround:
    DevTools → Application → Service Workers → **Unregister**, then
    hard-reload (`Ctrl+Shift+R` or `Cmd+Shift+R`).
-3. For local development you can opt out of the service worker
-   entirely by editing `next.config.js`'s `pwa` block — comment out
-   or disable the plugin, restart `npm run dev`, and the public
-   bundle will be served from the regular Next.js dev cache. Don't
-   ship that config change: it's local-only.
+3. `npm run dev` never registers a service worker: Serwist is
+   disabled when `NODE_ENV=development` (see `withSerwist` in
+   `next.config.js`). To test PWA behaviour locally, run
+   `npm run build && npm start`.
+
+**How the service worker is built (issue #1712):** `@serwist/next`
+compiles `worker/sw.ts` with webpack into `public/sw.js` on every
+production build (the output is gitignored). That one entry holds
+precaching, the runtime caching rules from `lib/pwaCacheConfig.ts`, the
+`/offline.html` fallback for failed navigations, onboarding and validator
+approval background sync, the offline-queue relay
+(`public/sw-offline-queue.js`, loaded via Serwist's `importScripts`),
+per-user cache clearing on wallet switch, and Web Push. `worker/sw.ts` is
+typechecked with `npx tsc --noEmit -p worker` (webworker lib).
 
 ### Error 6: `validate-pr-bodies` CI step fails on a docs-only PR
 

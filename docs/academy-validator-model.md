@@ -2,7 +2,7 @@
 
 Design notes for how several validator wallets can act on behalf of one
 academy/organization identity (issue #663), implemented in
-`server/src/academyService.js` + `server/src/routes/academies.js`,
+`server/src/academyService.ts` + `server/src/routes/academies.ts`,
 `lib/api.ts`'s academy functions, `components/admin/AcademyManager.tsx`,
 and `components/player/ValidatorChip.tsx`.
 
@@ -188,7 +188,7 @@ sharing a range don't each trigger a fresh query.
 
 **Historical-attribution limitation:** `academy_members` has no
 `removed_at`/tombstone — `removeMember` hard-deletes the row (see
-`server/src/academyService.js`, `server/src/db.js`). This rollup uses each
+`server/src/academyService.ts`, `server/src/db.ts`). This rollup uses each
 current member's `added_at` as a lower bound, so it correctly excludes
 approvals from **before** a wallet joined its academy — it is not the naive
 "current member list x all-time approvals" the previous section warned
@@ -222,7 +222,7 @@ philosophy (**on-chain untouched, richer semantics layered off-chain**)
 rather than introducing a new authorization pattern.
 
 **Configuration.** An academy record now carries an optional `quorum`
-column (`server/src/db.js`, `PATCH /academies/:id/quorum` via
+column (`server/src/db.ts`, `PATCH /academies/:id/quorum` via
 `app/api/admin/academies/[id]/quorum/route.ts`, same super-admin gate as
 every other academy-admin action) — the minimum number of that academy's
 distinct member wallets that must each endorse a milestone before it's

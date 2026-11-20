@@ -15,8 +15,7 @@ jobs:
       # Gate on high/critical findings that have a non-breaking fix available.
       # Next.js 14.x has no patched release for several current advisories
       # (upstream only shipped fixes on 15.5.x / 16.x — a separate upgrade PR).
-      # Transitive sharp (bundled by next) and the next-pwa → workbox chain
-      # likewise lack non-breaking upgrades. Those are allowlisted below so
+      # Transitive sharp (bundled by next) likewise lacks a non-breaking upgrade. Those are allowlisted below so
       # the audit job stays actionable for everything else.
       - name: Run npm audit (high/critical, allowlisted unfixable)
         run: |
@@ -35,11 +34,12 @@ jobs:
           const ALLOWLIST = new Set([
             'next',
             'sharp',
-            'next-pwa',
-            'workbox-webpack-plugin',
-            'workbox-build',
-            'rollup-plugin-terser',
-            'serialize-javascript', // pulled only via next-pwa → workbox until PWA stack is replaced
+            // Build-time only (glob/zod advisories in Serwist's build tooling,
+            // nothing shipped to clients). Fixed in @serwist/next 9.5.15 —
+            // drop these once the pinned version is bumped.
+            '@serwist/next',
+            '@serwist/build',
+            '@serwist/webpack-plugin',
             '@storybook/nextjs',
             'image-size', // storybook/next image pipeline; no non-breaking fix
             '@lhci/cli',

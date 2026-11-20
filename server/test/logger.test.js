@@ -14,8 +14,8 @@ const {
   createRequestLogger,
   getOrCreateRequestId,
   REQUEST_ID_HEADER,
-} = require('../src/logger');
-const createApp = require('../src/app');
+} = require('../dist/logger');
+const createApp = require('../dist/app');
 
 test.after(() => {
   fs.rmSync(path.dirname(tmpDbPath), { recursive: true, force: true });

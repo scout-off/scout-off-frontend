@@ -1,6 +1,9 @@
-const cors = require('cors');
-const helmet = require('helmet');
-const { rateLimit } = require('express-rate-limit');
+import cors from 'cors';
+import helmet from 'helmet';
+import { rateLimit } from 'express-rate-limit';
+import type { Request } from 'express';
+import { RedisStore } from 'rate-limit-redis';
+import { createClient } from 'redis';
 
 // Baseline HTTP hardening (issue #1335): security headers, CORS allow-list
 // and per-IP rate limits, all driven by environment variables.
@@ -12,7 +15,7 @@ const TURNSTILE_ROUTES = new Set([
   '/sponsorship/waitlist',
 ]);
 
-function intFromEnv(name, fallback) {
+function intFromEnv(name: string, fallback: number): number {
   const value = Number.parseInt(process.env[name] ?? '', 10);
   return Number.isFinite(value) && value >= 0 ? value : fallback;
 }
@@ -22,7 +25,7 @@ function intFromEnv(name, fallback) {
  * at HTML documents and would only get in the way of a JSON API consumed
  * cross-origin, so they're off; everything else helmet sets stays on.
  */
-function securityHeaders() {
+export function securityHeaders() {
   return helmet({
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
@@ -35,10 +38,10 @@ function securityHeaders() {
  * optional regex for preview deployments (e.g. `^https://scout-off-.*\.vercel\.app$`).
  * CORS_ORIGIN (single origin) is still honored for backward compatibility.
  */
-function corsMiddleware() {
+export function corsMiddleware() {
   const origins = new Set(
     [process.env.CORS_ORIGINS, process.env.CORS_ORIGIN]
-      .filter(Boolean)
+      .filter((value): value is string => Boolean(value))
       .flatMap((value) => value.split(','))
       .map((origin) => origin.trim())
       .filter(Boolean),
@@ -58,13 +61,11 @@ function corsMiddleware() {
   });
 }
 
-let redisClient;
+let redisClient: ReturnType<typeof createClient> | undefined;
 
-function createStore(prefix) {
+function createStore(prefix: string) {
   if (!process.env.REDIS_URL) return undefined; // express-rate-limit's MemoryStore
-  const { RedisStore } = require('rate-limit-redis');
   if (!redisClient) {
-    const { createClient } = require('redis');
     redisClient = createClient({ url: process.env.REDIS_URL });
     redisClient.on('error', (err) =>
       console.error('Rate-limit Redis error:', err.message),
@@ -73,11 +74,15 @@ function createStore(prefix) {
   }
   return new RedisStore({
     prefix: `rl:${prefix}:`,
-    sendCommand: (...args) => redisClient.sendCommand(args),
+    sendCommand: (...args: string[]) => redisClient!.sendCommand(args),
   });
 }
 
-function limiter(prefix, max, skip) {
+function limiter(
+  prefix: string,
+  max: number,
+  skip?: (req: Request) => boolean,
+) {
   return rateLimit({
     windowMs: intFromEnv('RATE_LIMIT_WINDOW_MS', 60_000),
     limit: max,
@@ -90,7 +95,7 @@ function limiter(prefix, max, skip) {
 }
 
 /** Global, write-route and Turnstile-route limiters, applied in that order. */
-function rateLimiters() {
+export function rateLimiters() {
   return [
     limiter('all', intFromEnv('RATE_LIMIT_MAX', 300)),
     limiter(
@@ -105,5 +110,3 @@ function rateLimiters() {
     ),
   ];
 }
-
-module.exports = { securityHeaders, corsMiddleware, rateLimiters };

@@ -1,12 +1,15 @@
-const express = require('express');
-const referralService = require('../referralService');
-const verifyTurnstile = require('../middleware/turnstile');
+import express from 'express';
+import * as referralService from '../referralService';
+import verifyTurnstile from '../middleware/turnstile';
+import { validate } from '../middleware/validate';
+import {
+  generateReferralBody,
+  redeemReferralBody,
+  walletParams,
+} from '../schemas';
+import type { GenerateReferralBody, RedeemReferralBody } from '../types/api';
 
 const router = express.Router();
-
-function isNonEmptyString(value) {
-  return typeof value === 'string' && value.trim().length > 0;
-}
 
 // POST /referrals/generate
 // Body: { scoutWallet: string, turnstileToken?: string }
@@ -14,24 +17,25 @@ function isNonEmptyString(value) {
 // Unauthenticated — a connected wallet address costs nothing to obtain, so
 // this endpoint is gated behind a Turnstile challenge to deter bulk/bot
 // code generation (see issue #626).
-router.post('/generate', verifyTurnstile, (req, res) => {
-  const { scoutWallet } = req.body ?? {};
-  if (!isNonEmptyString(scoutWallet)) {
-    return res.status(400).json({ error: 'scoutWallet is required' });
-  }
-
-  const referral = referralService.generateCode(scoutWallet);
-  return res.status(201).json(referral);
-});
+router.post(
+  '/generate',
+  validate({ body: generateReferralBody }),
+  verifyTurnstile,
+  (req, res) => {
+    const { scoutWallet } = req.body as GenerateReferralBody;
+    const referral = referralService.generateCode(scoutWallet);
+    return res.status(201).json(referral);
+  },
+);
 
 // GET /referrals/scout/:wallet
-router.get('/scout/:wallet', (req, res) => {
+router.get('/scout/:wallet', validate({ params: walletParams }), (req, res) => {
   const codes = referralService.getCodesByScout(req.params.wallet);
   return res.json(codes);
 });
 
 // GET /referrals/count/:wallet
-router.get('/count/:wallet', (req, res) => {
+router.get('/count/:wallet', validate({ params: walletParams }), (req, res) => {
   const wallet = req.params.wallet;
   const codes = referralService.getCodesByScout(wallet);
   const successfulReferrals = referralService.getReferralCount(wallet);
@@ -50,11 +54,8 @@ router.get('/all', (req, res) => {
 
 // POST /referrals/redeem
 // Body: { code: string, usedBy: string }
-router.post('/redeem', (req, res) => {
-  const { code, usedBy } = req.body ?? {};
-  if (!isNonEmptyString(code) || !isNonEmptyString(usedBy)) {
-    return res.status(400).json({ error: 'code and usedBy are required' });
-  }
+router.post('/redeem', validate({ body: redeemReferralBody }), (req, res) => {
+  const { code, usedBy } = req.body as RedeemReferralBody;
 
   const ok = referralService.redeemCode(code, usedBy);
   if (!ok) {
@@ -64,4 +65,4 @@ router.post('/redeem', (req, res) => {
   return res.json({ success: true });
 });
 
-module.exports = router;
+export default router;

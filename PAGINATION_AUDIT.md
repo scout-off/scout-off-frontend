@@ -90,7 +90,7 @@ export function useValidatorPendingQueue(validatorAddress: string | null) {
 - **Response format:** `MilestoneSubmission[]` (flat array)
 - **Backend implementation:**
   ```javascript
-  // server/src/milestoneSubmissionService.js
+  // server/src/milestoneSubmissionService.ts
   function listForValidator(validatorWallet, status = 'pending') {
     return listByValidatorAndStatus
       .all(validatorWallet, status) // SELECT * FROM milestone_submissions...
@@ -151,7 +151,7 @@ The inconsistency means:
 **Implementation:**
 
 ```typescript
-// Backend: server/src/routes/milestoneSubmissions.js
+// Backend: server/src/routes/milestoneSubmissions.ts
 router.get('/validator/:wallet', (req, res) => {
   const status = req.query.status ?? 'pending';
   const limit = Math.min(Number(req.query.limit) || 50, 200);
@@ -245,8 +245,8 @@ export const fetchPendingMilestoneSubmissions = (
   - `lib/indexerClient.ts` (`fetchValidatorEvents`)
 
 - **Backend:**
-  - `server/src/routes/milestoneSubmissions.js`
-  - `server/src/milestoneSubmissionService.js`
+  - `server/src/routes/milestoneSubmissions.ts`
+  - `server/src/milestoneSubmissionService.ts`
 
 - **Indexer:**
   - `packages/indexer/src/server.ts`

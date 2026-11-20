@@ -32,7 +32,8 @@ The legacy `/chat/:roomId` routes are retired and must not be implemented.
 - Express for HTTP routing
 - SQLite (via `better-sqlite3`) for storage — a real, transactional,
   file-backed database instead of hand-rolled JSON-file persistence
-- Plain Node.js, no build step — run directly with `node`
+- TypeScript (`strict`), compiled with `tsc` from `src/` to `dist/`
+- Request validation with [zod](https://zod.dev) schemas in `src/schemas/`
 
 ## Running locally
 
@@ -40,7 +41,9 @@ The legacy `/chat/:roomId` routes are retired and must not be implemented.
 cd server
 npm install
 cp .env.example .env   # adjust PORT / CORS_ORIGINS / DB_PATH if needed
-npm start              # or `npm run dev` for auto-restart on file changes
+npm run build          # compile src/ to dist/
+npm start              # runs dist/index.js; `npm run dev` rebuilds and auto-restarts
+npm run typecheck      # tsc --noEmit
 ```
 
 The server listens on `PORT` (default `4000`) and creates its SQLite
@@ -70,7 +73,7 @@ a JSON API) and no `X-Powered-By`. The rest is configured through env vars
 ## Running tests
 
 ```bash
-npm test
+npm test   # builds first (pretest), then runs the tests against dist/
 ```
 
 Uses Node's built-in test runner (`node --test`) against an ephemeral
@@ -106,12 +109,42 @@ for unexpected failures).
 This is the pattern future off-chain data (chat history, comments — see the
 root README diagram) should follow rather than reinventing bespoke storage:
 
-1. Add a table (and any indexes) to `src/db.js`.
-2. Add a `src/<feature>Service.js` module with the business logic, built on
-   prepared statements against `better-sqlite3`.
-3. Add a `src/routes/<feature>.js` Express router and mount it in `src/app.js`.
-4. Add typed helpers to the frontend's `lib/api.ts` using the shared `api`
+1. Add a table (and any indexes) to `src/db.ts`.
+2. Add a `src/<feature>Service.ts` module with the business logic, built on
+   typed prepared statements against `better-sqlite3`.
+3. Add request/response types to `src/types/api.ts` (the frontend re-exports
+   them from `types/index.ts`, so both sides share one definition) and zod
+   schemas to `src/schemas/`.
+4. Add a `src/routes/<feature>.ts` Express router that runs every body,
+   params and query through `validate()` (`src/middleware/validate.ts`), and
+   mount it in `src/app.ts`.
+5. Add typed helpers to the frontend's `lib/api.ts` using the shared `api`
    axios instance — no local Next.js API routes reading/writing files.
+
+## Request validation
+
+Every route with a body, params or query validates it against a zod schema
+(`src/schemas/`). Write-route bodies reject unknown properties, Stellar
+addresses are checked including their StrKey checksum, and malformed JSON
+is a client error. Any failure returns:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "Invalid request",
+    "details": [
+      {
+        "path": "body.ownerWallet",
+        "message": "must be a valid Stellar account address"
+      }
+    ]
+  }
+}
+```
+
+`VALIDATION_FAILED` is listed in the frontend's `lib/apiErrorCodes.ts`, so
+`parseApiError` maps it to a translated message.
 
 ## Known limitations / follow-ups
 

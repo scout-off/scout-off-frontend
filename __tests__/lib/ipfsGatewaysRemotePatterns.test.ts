@@ -7,9 +7,11 @@ type RemotePattern = { protocol?: string; hostname: string };
 function loadRemotePatterns(): RemotePattern[] {
   let patterns: RemotePattern[] = [];
   jest.isolateModules(() => {
-    jest.doMock('next-pwa', () => () => (config: unknown) => config, {
-      virtual: true,
-    });
+    jest.doMock(
+      '@serwist/next',
+      () => ({ __esModule: true, default: () => (config: unknown) => config }),
+      { virtual: true },
+    );
     jest.doMock(
       '@next/bundle-analyzer',
       () => () => (config: unknown) => config,

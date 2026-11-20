@@ -23,6 +23,8 @@ export const ApiErrorCode = {
   QUERY_TOO_LONG: 'QUERY_TOO_LONG',
   FIELD_TOO_LONG: 'FIELD_TOO_LONG',
   INVALID_FIELD_VALUE: 'INVALID_FIELD_VALUE',
+  /** Off-chain backend schema validation failure (issue #1714). */
+  VALIDATION_FAILED: 'VALIDATION_FAILED',
 
   // ── Resource not found ────────────────────────────────────────────────────
   NOT_FOUND: 'NOT_FOUND',

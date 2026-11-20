@@ -2,7 +2,7 @@
  * Milestone submissions API helpers (issue #1516, issues #567/#568).
  *
  * Off-chain queue of milestone claims awaiting validator review.
- * See server/src/db.js for the schema.
+ * See server/src/db.ts for the schema.
  */
 import { backendClient as api } from './playersApi';
 import type { MilestoneSubmission } from '@/types';
