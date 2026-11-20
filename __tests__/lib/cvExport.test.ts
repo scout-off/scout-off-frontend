@@ -5,6 +5,8 @@ jest.mock('@/lib/api', () => ({
     mockFetchAcademyForWallet(...args),
 }));
 
+import fs from 'node:fs';
+import path from 'node:path';
 import { PDFDocument } from 'pdf-lib';
 import {
   buildCvFilename,
@@ -12,6 +14,40 @@ import {
   downloadPlayerCvPdf,
 } from '@/lib/cvExport';
 import type { Player, Milestone } from '@/types';
+
+// ── Font fetch mock ──────────────────────────────────────────────────────────
+// generatePlayerCvPdf fetches Noto Sans TTFs from /fonts/ at runtime.
+// In Jest (jsdom) there is no HTTP server, so we intercept fetch and return
+// the actual font bytes from public/fonts/ so the full embed+subset path runs.
+// We do NOT use `new Response(...)` because jsdom does not polyfill the Fetch
+// API's Response constructor — instead we return a minimal duck-typed object
+// that satisfies the .ok / .arrayBuffer() contract fetchFontBytes uses.
+const FONTS_DIR = path.resolve(__dirname, '../../public/fonts');
+
+const originalFetch = global.fetch;
+beforeAll(() => {
+  global.fetch = jest.fn(async (input: RequestInfo | URL) => {
+    const url = typeof input === 'string' ? input : input.toString();
+    const match = url.match(/\/fonts\/(NotoSans-[^?]+\.ttf)$/);
+    if (match) {
+      const bytes = fs.readFileSync(path.join(FONTS_DIR, match[1]));
+      // Return a minimal duck-typed response. We use Uint8Array (not
+      // ArrayBuffer) because pdf-lib's validator reads byteLength directly
+      // and jsdom's ArrayBuffer handling can produce NaN there.
+      const u8 = new Uint8Array(bytes);
+      return {
+        ok: true,
+        status: 200,
+        arrayBuffer: async () => u8.buffer,
+      } as unknown as Response;
+    }
+    return originalFetch(input as RequestInfo);
+  }) as typeof fetch;
+});
+
+afterAll(() => {
+  global.fetch = originalFetch;
+});
 
 const PLAYER: Player = {
   id: 'player-1',
@@ -195,6 +231,66 @@ describe('generatePlayerCvPdf', () => {
     const loaded = await PDFDocument.load(bytes);
     expect(loaded.getPageCount()).toBeGreaterThan(1);
     expect(mockFetchAcademyForWallet).toHaveBeenCalledTimes(40);
+  });
+
+  // ── Acceptance criteria: Unicode / African-language names (issue #XXXX) ──
+
+  it('exports a CV for a player with Yoruba/Hausa name and region without throwing', async () => {
+    // Adébáyọ̀ Ọlọ́rọ̀ contains Yoruba characters in Latin Extended Additional
+    // (ọ U+1ECD, ẹ U+1EB9) which WinAnsi (Helvetica) cannot encode.
+    // Ɗanbatta contains a Hausa implosive (Ɗ U+0189) from Latin Extended-B.
+    const unicodePlayer: Player = {
+      ...PLAYER,
+      vitals: {
+        ...PLAYER.vitals,
+        name: 'Adébáyọ̀ Ọlọ́rọ̀',
+        region: 'Ɗanbatta',
+        nationality: 'NG',
+      },
+    };
+    const unicodeMilestones: Milestone[] = [
+      {
+        id: 'm1',
+        description: 'Scored in Ọṣogbo derby — ẹ gba bọọlu',
+        evidenceHash: 'QmEvidence1',
+        validator: 'GVALIDATOR1',
+        timestamp: 1_700_000_200,
+      },
+    ];
+
+    // Must not throw even though WinAnsi cannot represent these characters.
+    await expect(
+      generatePlayerCvPdf(unicodePlayer, unicodeMilestones),
+    ).resolves.toBeInstanceOf(Uint8Array);
+  });
+
+  it('produces a valid loadable PDF for a Unicode player', async () => {
+    const unicodePlayer: Player = {
+      ...PLAYER,
+      vitals: {
+        ...PLAYER.vitals,
+        name: 'Adébáyọ̀ Ọlọ́rọ̀',
+        region: 'Ɗanbatta',
+        nationality: 'NG',
+      },
+    };
+
+    const bytes = await generatePlayerCvPdf(unicodePlayer, []);
+    const loaded = await PDFDocument.load(bytes);
+    expect(loaded.getPageCount()).toBeGreaterThanOrEqual(1);
+  });
+
+  it('replaces truly unsupported glyphs with the replacement character rather than throwing', async () => {
+    // Emoji are outside every Latin/IPA font's coverage — a good stress test
+    // for the safeText fallback. The PDF must still be generated.
+    const emojiPlayer: Player = {
+      ...PLAYER,
+      vitals: { ...PLAYER.vitals, name: 'Player 🌍 Test' },
+    };
+
+    const bytes = await generatePlayerCvPdf(emojiPlayer, []);
+    expect(bytes).toBeInstanceOf(Uint8Array);
+    expect(bytes.length).toBeGreaterThan(0);
   });
 });
 

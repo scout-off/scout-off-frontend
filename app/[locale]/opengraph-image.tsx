@@ -1,5 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { getTranslations } from 'next-intl/server';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 
 // Raster (PNG) Open Graph image for every page under [locale] that doesn't
 // define its own. Facebook, LinkedIn, X, WhatsApp and Slack don't render SVG
@@ -15,6 +17,14 @@ export default async function Image({
 }) {
   const t = await getTranslations({ locale: params.locale, namespace: 'meta' });
 
+  // Noto Sans covers Latin Extended and African-language glyphs that the
+  // default system font misses. Reading from public/fonts/ keeps this
+  // same-origin and avoids a network round-trip at render time.
+  const [regularBytes, boldBytes] = await Promise.all([
+    readFile(path.join(process.cwd(), 'public/fonts/NotoSans-Regular.ttf')),
+    readFile(path.join(process.cwd(), 'public/fonts/NotoSans-Bold.ttf')),
+  ]);
+
   return new ImageResponse(
     <div
       style={{
@@ -25,7 +35,7 @@ export default async function Image({
         justifyContent: 'center',
         padding: '80px',
         background: 'linear-gradient(135deg, #0f172a 0%, #0a0f1e 100%)',
-        fontFamily: 'sans-serif',
+        fontFamily: 'Noto Sans',
       }}
     >
       <div
@@ -50,6 +60,12 @@ export default async function Image({
         {t('title').replace(/^ScoutOff — /, '')}
       </div>
     </div>,
-    size,
+    {
+      ...size,
+      fonts: [
+        { name: 'Noto Sans', data: regularBytes.buffer as ArrayBuffer, weight: 400, style: 'normal' },
+        { name: 'Noto Sans', data: boldBytes.buffer as ArrayBuffer, weight: 800, style: 'normal' },
+      ],
+    },
   );
 }

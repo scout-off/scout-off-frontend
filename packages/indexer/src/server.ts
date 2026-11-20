@@ -93,6 +93,25 @@ function isPollerRunning(): boolean {
   return poller?.isRunning() ?? false;
 }
 
+/**
+ * Returns true when the request is authorised to access /metrics.
+ * If no token is configured, all requests are allowed.
+ * If a token is configured, the request must supply "Authorization: Bearer <token>".
+ * The comparison is constant-time to prevent timing attacks.
+ */
+export function isMetricsAuthorised(req: http.IncomingMessage): boolean {
+  if (!METRICS_BEARER_TOKEN) return true;
+
+  const authHeader = req.headers['authorization'] ?? '';
+  if (!authHeader.startsWith('Bearer ')) return false;
+
+  const supplied = authHeader.slice('Bearer '.length);
+  const key = crypto.randomBytes(32);
+  const a = crypto.createHmac('sha256', key).update(supplied).digest();
+  const b = crypto.createHmac('sha256', key).update(METRICS_BEARER_TOKEN).digest();
+  return crypto.timingSafeEqual(a, b);
+}
+
 async function handleHealth(res: http.ServerResponse): Promise<void> {
   const role = getRole();
   const now = Date.now();
@@ -140,46 +159,64 @@ async function handleHealth(res: http.ServerResponse): Promise<void> {
   });
 }
 
-function handleMetrics(res: http.ServerResponse): void {
+function handleMetrics(req: http.IncomingMessage, res: http.ServerResponse): void {
+  if (!isMetricsAuthorised(req)) {
+    res.writeHead(401, {
+      'WWW-Authenticate': 'Bearer realm="indexer-metrics"',
+      'Content-Type': 'text/plain',
+    });
+    res.end('Unauthorized');
+    return;
+  }
+
+  // Content negotiation: Accept: application/json → JSON snapshot.
+  const accept = req.headers['accept'] ?? '';
+  if (accept.includes('application/json')) {
+    const snap = IndexerMetrics.getInstance().snapshot();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(snap));
+    return;
+  }
+
   const snap = IndexerMetrics.getInstance().snapshot();
   const lag = getLedgerLag();
 
   const lines: string[] = [
-    '# HELP indexer_events_total Total events processed by type',
-    '# TYPE indexer_events_total counter',
+    '# HELP scoutoff_indexer_events_total Total events processed by type',
+    '# TYPE scoutoff_indexer_events_total counter',
     ...Object.entries(snap.eventCounts).map(
-      ([type, count]) => `indexer_events_total{type="${type}"} ${count}`,
+      ([type, count]) => `scoutoff_indexer_events_total{type="${type}"} ${count}`,
     ),
-    '# HELP indexer_unknown_events_total Total events with an unknown topic or contract version',
-    '# TYPE indexer_unknown_events_total counter',
-    `indexer_unknown_events_total ${snap.unknownEvents}`,
-    '# HELP indexer_processed_total Total events processed (all types)',
-    '# TYPE indexer_processed_total counter',
-    `indexer_processed_total ${snap.totalProcessed}`,
-    '# HELP indexer_errors_total Total processing failures',
-    '# TYPE indexer_errors_total counter',
-    `indexer_errors_total ${snap.totalFailures}`,
-    '# HELP indexer_error_rate_percent Failure rate as a percentage',
-    '# TYPE indexer_error_rate_percent gauge',
-    `indexer_error_rate_percent ${snap.errorRatePercent.toFixed(4)}`,
-    '# HELP indexer_latency_avg_ms Processing latency EMA in milliseconds',
-    '# TYPE indexer_latency_avg_ms gauge',
-    `indexer_latency_avg_ms ${snap.latencyAvgMs.toFixed(4)}`,
-    '# HELP indexer_latency_p95_ms Processing latency p95 in milliseconds (sliding window)',
-    '# TYPE indexer_latency_p95_ms gauge',
-    `indexer_latency_p95_ms ${snap.latencyP95Ms.toFixed(4)}`,
-    '# HELP indexer_ledger_lag Difference between network ledger and last indexed ledger',
-    '# TYPE indexer_ledger_lag gauge',
-    `indexer_ledger_lag ${lag}`,
-    '# HELP indexer_healthy 1 if indexer is healthy, 0 otherwise',
-    '# TYPE indexer_healthy gauge',
-    `indexer_healthy ${snap.isHealthy ? 1 : 0}`,
-    '# HELP indexer_poller_running 1 if the event poller is running, 0 otherwise',
-    '# TYPE indexer_poller_running gauge',
-    `indexer_poller_running ${isPollerRunning() ? 1 : 0}`,
-    '# HELP indexer_is_leader 1 if this replica holds the polling leader lock, 0 otherwise',
-    '# TYPE indexer_is_leader gauge',
-    `indexer_is_leader ${getRole() === 'leader' ? 1 : 0}`,
+    '# HELP scoutoff_indexer_unknown_events_total Total events with an unknown topic or contract version',
+    '# TYPE scoutoff_indexer_unknown_events_total counter',
+    `scoutoff_indexer_unknown_events_total ${snap.unknownEvents}`,
+    '# HELP scoutoff_indexer_processed_total Total events processed (all types)',
+    '# TYPE scoutoff_indexer_processed_total counter',
+    `scoutoff_indexer_processed_total ${snap.totalProcessed}`,
+    '# HELP scoutoff_indexer_errors_total Total processing failures',
+    '# TYPE scoutoff_indexer_errors_total counter',
+    `scoutoff_indexer_errors_total ${snap.totalFailures}`,
+    '# HELP scoutoff_indexer_error_rate_percent Failure rate as a percentage',
+    '# TYPE scoutoff_indexer_error_rate_percent gauge',
+    `scoutoff_indexer_error_rate_percent ${snap.errorRatePercent.toFixed(4)}`,
+    '# HELP scoutoff_indexer_latency_avg_ms Processing latency EMA in milliseconds',
+    '# TYPE scoutoff_indexer_latency_avg_ms gauge',
+    `scoutoff_indexer_latency_avg_ms ${snap.latencyAvgMs.toFixed(4)}`,
+    '# HELP scoutoff_indexer_latency_p95_ms Processing latency p95 in milliseconds (sliding window)',
+    '# TYPE scoutoff_indexer_latency_p95_ms gauge',
+    `scoutoff_indexer_latency_p95_ms ${snap.latencyP95Ms.toFixed(4)}`,
+    '# HELP scoutoff_indexer_ledger_lag Difference between network ledger and last indexed ledger',
+    '# TYPE scoutoff_indexer_ledger_lag gauge',
+    `scoutoff_indexer_ledger_lag ${lag}`,
+    '# HELP scoutoff_indexer_healthy 1 if indexer is healthy, 0 otherwise',
+    '# TYPE scoutoff_indexer_healthy gauge',
+    `scoutoff_indexer_healthy ${snap.isHealthy ? 1 : 0}`,
+    '# HELP scoutoff_indexer_poller_running 1 if the event poller is running, 0 otherwise',
+    '# TYPE scoutoff_indexer_poller_running gauge',
+    `scoutoff_indexer_poller_running ${isPollerRunning() ? 1 : 0}`,
+    '# HELP scoutoff_indexer_is_leader 1 if this replica holds the polling leader lock, 0 otherwise',
+    '# TYPE scoutoff_indexer_is_leader gauge',
+    `scoutoff_indexer_is_leader ${getRole() === 'leader' ? 1 : 0}`,
   ];
 
   res.writeHead(200, {
@@ -670,7 +707,12 @@ function route(
       return handleHealth(res);
     }
     if (req.method === 'GET' && url.pathname === '/metrics') {
-      return handleMetrics(res);
+      if (METRICS_PORT !== null) {
+        res.writeHead(404);
+        res.end('Not Found');
+        return;
+      }
+      return handleMetrics(req, res);
     }
     if (req.method === 'GET' && url.pathname === '/events') {
       return handleEventsQuery(url, res);
@@ -722,6 +764,19 @@ export const server = http.createServer(
   },
 );
 
+// Separate internal metrics server, started only when METRICS_PORT is set.
+// Not published to the host network in docker-compose — Prometheus scrapes it
+// on the internal Docker network.
+export const metricsServer: http.Server | null = METRICS_PORT
+  ? http.createServer((req, res) => {
+      if (req.method === 'GET' && req.url === '/metrics') {
+        return handleMetrics(req, res);
+      }
+      res.writeHead(404);
+      res.end('Not Found');
+    })
+  : null;
+
 /**
  * Graceful shutdown (issue #1333): stop accepting connections, end SSE
  * responses, let the in-flight poll batch finish, then close the store.
@@ -760,6 +815,11 @@ export async function startServer(): Promise<void> {
     logger.info(`Indexer server listening on port ${PORT}`);
   });
 
+  if (metricsServer && METRICS_PORT) {
+    metricsServer.listen(METRICS_PORT, () => {
+      logger.info(`Indexer metrics server listening on internal port ${METRICS_PORT}`);
+    });
+  }
   // The poller needs SOROBAN_RPC_URL/CONTRACT_ID; a config error here is a
   // deploy-time misconfiguration, not a reason to bring the whole process
   // (and /health, which is useful for diagnosing exactly this) down.
