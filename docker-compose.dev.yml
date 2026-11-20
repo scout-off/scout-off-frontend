@@ -1,0 +1,18 @@
+version: '3.9'
+
+# Development overrides — extends docker-compose.yml.
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  indexer:
+    environment:
+      - PORT=3001
+      # In development the metrics port is published for local scraping / curl.
+      - METRICS_PORT=9091
+    ports:
+      - '3001:3001'
+      - '9091:9091'   # expose metrics port to localhost only in dev
+
+  prometheus:
+    ports:
+      - '9090:9090'   # Prometheus UI accessible from host in dev
