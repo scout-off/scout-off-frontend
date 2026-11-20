@@ -1,127 +1,145 @@
+/**
+ * Issue #1070 — hook test coverage suite.
+ * Tests for useValidatorActionLog (hooks/useValidatorActionLog.ts), which reads
+ * a validator's own approve/revoke action history.
+ */
+import { renderHook, act } from '@testing-library/react';
 import React from 'react';
-import { act, renderHook, waitFor } from '@testing-library/react';
 import { SWRConfig } from 'swr';
+
+jest.mock('@/lib/api', () => ({
+  fetchValidatorActionLog: jest.fn(),
+}));
+
+import { fetchValidatorActionLog } from '@/lib/api';
 import { useValidatorActionLog } from '@/hooks/useValidatorActionLog';
-import { fetchEvents, type IndexedEvent } from '@/lib/indexerClient';
+import type { ValidatorActionLogEntry } from '@/types';
 
-jest.mock('@/lib/indexerClient', () => ({ fetchEvents: jest.fn() }));
+const mockFetch = fetchValidatorActionLog as jest.Mock;
 
-const mockFetchEvents = fetchEvents as jest.MockedFunction<typeof fetchEvents>;
+const VALIDATOR = 'GVALIDATORWALLETABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCD';
+
+const ENTRY: ValidatorActionLogEntry = {
+  id: 'action-1',
+  validator: VALIDATOR,
+  action: 'approve',
+  playerId: 'player-1',
+  timestamp: 1_900_000_000,
+};
 
 function wrapper({ children }: { children: React.ReactNode }) {
   return React.createElement(
     SWRConfig,
-    { value: { provider: () => new Map(), dedupingInterval: 0 } },
+    { value: { provider: () => new Map(), shouldRetryOnError: false } },
     children,
   );
 }
 
-function event(
-  id: number,
-  type: 'milestone_approved' | 'milestone_revoked',
-  timestamp: number,
-  validator: string | null,
-  milestoneId?: unknown,
-): IndexedEvent {
-  return {
-    id,
-    type,
-    timestamp,
-    validator,
-    playerId: `p${id}`,
-    data: milestoneId === undefined ? {} : { milestone_id: milestoneId },
-  } as unknown as IndexedEvent;
-}
+beforeEach(() => {
+  jest.resetAllMocks();
+  mockFetch.mockResolvedValue({ entries: [ENTRY], nextCursor: null });
+});
 
-const APPROVED = [
-  event(1, 'milestone_approved', 100, 'GVAL_B', 'm1'),
-  event(2, 'milestone_approved', 300, 'GVAL_A', 7),
-];
-const REVOKED = [event(3, 'milestone_revoked', 200, null)];
-
-function mockPages(pages: Record<string, IndexedEvent[][]>) {
-  mockFetchEvents.mockImplementation(async ({ type, before }) => {
-    const list = pages[type as string] ?? [[]];
-    const index = before === undefined ? 0 : before;
-    return {
-      events: list[index] ?? [],
-      nextCursor: index + 1 < list.length ? index + 1 : null,
-    } as Awaited<ReturnType<typeof fetchEvents>>;
-  });
-}
-
-beforeEach(() => mockFetchEvents.mockReset());
-
-describe('useValidatorActionLog', () => {
-  it('merges approvals and revocations newest-first across pages', async () => {
-    mockPages({
-      milestone_approved: [[APPROVED[0]], [APPROVED[1]]],
-      milestone_revoked: [REVOKED],
+describe('useValidatorActionLog — happy path', () => {
+  it('returns the action log for a validator address', async () => {
+    const { result } = renderHook(() => useValidatorActionLog(VALIDATOR), {
+      wrapper,
     });
 
-    const { result } = renderHook(() => useValidatorActionLog(), { wrapper });
-    expect(result.current.loading).toBe(true);
-    await waitFor(() => expect(result.current.entries).toHaveLength(3));
-
-    expect(result.current.entries).toEqual([
-      {
-        id: 'milestone_approved-2',
-        timestamp: 300,
-        validator: 'GVAL_A',
-        playerId: 'p2',
-        // Non-string milestone ids are dropped rather than coerced.
-        milestoneId: null,
-        action: 'approved',
-      },
-      {
-        id: 'milestone_revoked-3',
-        timestamp: 200,
-        validator: null,
-        playerId: 'p3',
-        milestoneId: null,
-        action: 'revoked',
-      },
-      {
-        id: 'milestone_approved-1',
-        timestamp: 100,
-        validator: 'GVAL_B',
-        playerId: 'p1',
-        milestoneId: 'm1',
-        action: 'approved',
-      },
-    ]);
-    expect(result.current.validators).toEqual(['GVAL_A', 'GVAL_B']);
-    expect(result.current.loading).toBe(false);
-    expect(result.current.error).toBeNull();
-  });
-
-  it('filters by time range and validator', async () => {
-    mockPages({
-      milestone_approved: [APPROVED],
-      milestone_revoked: [REVOKED],
-    });
-    const { result } = renderHook(() => useValidatorActionLog(), { wrapper });
-    await waitFor(() => expect(result.current.entries).toHaveLength(3));
-
-    act(() => result.current.setFilter({ from: 150, to: 250 }));
-    expect(result.current.entries.map((e) => e.timestamp)).toEqual([200]);
-
-    act(() => result.current.setFilter({ validator: 'GVAL_B' }));
-    expect(result.current.entries.map((e) => e.id)).toEqual([
-      'milestone_approved-1',
-    ]);
-  });
-
-  it('exposes fetch errors and refetches on demand', async () => {
-    mockFetchEvents.mockRejectedValue(new Error('indexer down'));
-    const { result } = renderHook(() => useValidatorActionLog(), { wrapper });
-    await waitFor(() => expect(result.current.error).toBe('indexer down'));
-    expect(result.current.entries).toEqual([]);
-
-    mockPages({ milestone_approved: [APPROVED], milestone_revoked: [[]] });
     await act(async () => {
-      await result.current.refetch();
+      await Promise.resolve();
+      await Promise.resolve();
     });
-    await waitFor(() => expect(result.current.entries).toHaveLength(2));
+
+    expect(mockFetch).toHaveBeenCalledWith(VALIDATOR, undefined);
+    expect(result.current.entries).toEqual([ENTRY]);
+    expect(result.current.error).toBeNull();
+    expect(result.current.loading).toBe(false);
+  });
+});
+
+describe('useValidatorActionLog — pagination', () => {
+  it('passes the cursor through and exposes the next cursor', async () => {
+    mockFetch.mockResolvedValue({ entries: [ENTRY], nextCursor: 'cursor-2' });
+
+    const { result } = renderHook(
+      () => useValidatorActionLog(VALIDATOR, 'cursor-1'),
+      { wrapper },
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockFetch).toHaveBeenCalledWith(VALIDATOR, 'cursor-1');
+    expect(result.current.nextCursor).toBe('cursor-2');
+  });
+});
+
+describe('useValidatorActionLog — loading state', () => {
+  it('loading is true while the fetch is in-flight', async () => {
+    let resolveFetch: (value: {
+      entries: ValidatorActionLogEntry[];
+      nextCursor: string | null;
+    }) => void = () => {};
+    mockFetch.mockImplementation(
+      () =>
+        new Promise<{ entries: ValidatorActionLogEntry[]; nextCursor: string | null }>(
+          (resolve) => (resolveFetch = resolve),
+        ),
+    );
+
+    const { result } = renderHook(() => useValidatorActionLog(VALIDATOR), {
+      wrapper,
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.loading).toBe(true);
+
+    await act(async () => {
+      resolveFetch({ entries: [ENTRY], nextCursor: null });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.loading).toBe(false);
+    expect(result.current.entries).toEqual([ENTRY]);
+  });
+
+  it('does not fetch when validator address is null', async () => {
+    const { result } = renderHook(() => useValidatorActionLog(null), {
+      wrapper,
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(result.current.entries).toEqual([]);
+    expect(result.current.loading).toBe(false);
+  });
+});
+
+describe('useValidatorActionLog — error state', () => {
+  it('returns the error message when the fetch fails', async () => {
+    mockFetch.mockRejectedValue(new Error('Action log unavailable'));
+
+    const { result } = renderHook(() => useValidatorActionLog(VALIDATOR), {
+      wrapper,
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.entries).toEqual([]);
+    expect(result.current.error).toBe('Action log unavailable');
+    expect(result.current.loading).toBe(false);
   });
 });
