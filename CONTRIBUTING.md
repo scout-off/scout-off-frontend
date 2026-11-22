@@ -273,6 +273,15 @@ git push --no-verify
 
 Do not use `--no-verify` for PRs targeting `main`.
 
+## Internationalization (i18n)
+
+All user-facing text must come from the locale files in `messages/` (`en.json`, `fr.json`, `sw.json`), never hard-coded in JSX.
+
+- **Adding a string:** add the key to all three locale files, then use `useTranslations('<namespace>')` in client components or `getTranslations` in server components. This includes headings, table headers, `placeholder`, `aria-label`, `title`, `alt`, empty states, toasts and confirmation dialogs.
+- **Checks:** `node scripts/check-locale-keys.js` verifies key and ICU placeholder parity and warns about French/Swahili values that are identical to English. `node scripts/check-hardcoded-strings.js` lists literal JSX text and literal `placeholder`/`aria-label`/`title`/`alt` attributes in `app/` and `components/`. Both run in the CI `lint` job; the hard-coded string check is in warning mode for now and reports its count in the job summary.
+- **When to use the allowlist:** add a key to `scripts/i18n-identical-allowlist.json` (with a short reason) only when the translation is legitimately identical to English, such as brand names, proper nouns ("Telegram"), language endonyms or loanwords that are the same in that language ("Notifications" in French). Do not use it to skip translating.
+- **Legitimate literals in JSX** (technical identifiers, symbols): add an `// i18n-ignore` comment on the same line.
+
 ## Pull Request Checklist
 
 - [ ] Tests pass locally

@@ -1,5 +1,6 @@
 'use client';
 import dynamic from 'next/dynamic';
+import { useTranslations } from 'next-intl';
 
 const FraudFlagsPanel = dynamic(
   () => import('@/components/admin/FraudFlagsPanel'),
@@ -13,9 +14,10 @@ const FraudFlagsPanel = dynamic(
 
 /** /admin/fraud — flagged activity. */
 export default function AdminFraudPage() {
+  const t = useTranslations('admin.pages');
   return (
     <div className="max-w-3xl flex flex-col gap-8">
-      <h1 className="text-3xl font-bold text-white">Fraud Flags</h1>
+      <h1 className="text-3xl font-bold text-white">{t('fraud')}</h1>
       <FraudFlagsPanel />
     </div>
   );

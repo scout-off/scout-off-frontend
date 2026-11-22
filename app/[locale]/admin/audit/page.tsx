@@ -1,5 +1,6 @@
 'use client';
 import dynamic from 'next/dynamic';
+import { useTranslations } from 'next-intl';
 
 const AdminAuditLog = dynamic(
   () => import('@/components/admin/AdminAuditLog'),
@@ -23,9 +24,10 @@ const ValidatorActionLog = dynamic(
 
 /** /admin/audit — admin and validator action logs. */
 export default function AdminAuditPage() {
+  const t = useTranslations('admin.pages');
   return (
     <div className="max-w-3xl flex flex-col gap-8">
-      <h1 className="text-3xl font-bold text-white">Audit Log</h1>
+      <h1 className="text-3xl font-bold text-white">{t('audit')}</h1>
       <AdminAuditLog />
       <ValidatorActionLog />
     </div>

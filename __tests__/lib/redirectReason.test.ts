@@ -1,4 +1,8 @@
-import { REDIRECT_REASONS, isRedirectReason } from '@/lib/redirectReason';
+import {
+  REDIRECT_REASONS,
+  getSafeReturnTo,
+  isRedirectReason,
+} from '@/lib/redirectReason';
 
 describe('REDIRECT_REASONS', () => {
   it('contains the wallet-required reason', () => {
@@ -49,5 +53,32 @@ describe('isRedirectReason', () => {
       const message: string = REDIRECT_REASONS[raw];
       expect(typeof message).toBe('string');
     }
+  });
+});
+
+describe('getSafeReturnTo', () => {
+  const origin = 'https://scoutoff.app';
+
+  it('accepts same-origin paths and preserves the query string', () => {
+    expect(getSafeReturnTo('/fr/validator', origin)).toBe('/fr/validator');
+    expect(getSafeReturnTo('/fr/scout/compare?ids=1,2&ref=x', origin)).toBe(
+      '/fr/scout/compare?ids=1,2&ref=x',
+    );
+  });
+
+  it.each([
+    '//evil.com',
+    'https://evil.com',
+    '/\\evil.com',
+    'javascript:alert(1)',
+    'evil.com',
+    '',
+  ])('rejects %p', (value) => {
+    expect(getSafeReturnTo(value, origin)).toBeNull();
+  });
+
+  it('rejects non-string values', () => {
+    expect(getSafeReturnTo(undefined, origin)).toBeNull();
+    expect(getSafeReturnTo(['/fr'], origin)).toBeNull();
   });
 });

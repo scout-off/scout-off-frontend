@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
 import { useToast } from '@/components/ui/Toast';
+import { useTranslations } from 'next-intl';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import AdminNav from './AdminNav';
 
@@ -21,17 +22,18 @@ export default function AdminShell({
   const { publicKey } = useWallet();
   const router = useRouter();
   const { show } = useToast();
+  const t = useTranslations('admin');
 
   useEffect(() => {
     if (!publicKey) return;
     if (publicKey !== ADMIN_ADDRESS) {
       show({
-        message: 'Unauthorized: admin wallet required.',
+        message: t('unauthorized_message'),
         variant: 'error',
       });
       router.replace('/');
     }
-  }, [publicKey, router, show]);
+  }, [publicKey, router, show, t]);
 
   if (!publicKey || publicKey !== ADMIN_ADDRESS) return null;
 
