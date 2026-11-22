@@ -273,6 +273,15 @@ git push --no-verify
 
 Do not use `--no-verify` for PRs targeting `main`.
 
+## Translations (i18n)
+
+All user-facing text lives in `messages/en.json`, `messages/fr.json`, and `messages/sw.json`. Do not hard-code English in JSX.
+
+- **Adding a string:** add the key to all three locale files (same key path, same ICU placeholders), then read it with `useTranslations('<namespace>')` in client components or `getTranslations` in server components. This covers JSX text and the `placeholder`, `aria-label`, `title`, and `alt` attributes.
+- **Lint:** `i18next/no-literal-string` (see `.eslintrc.json`) flags hard-coded strings in `app/` and `components/`. It is a warning for now; `node scripts/report-i18n-literals.js` prints the current inventory, and CI writes the count to the job summary.
+- **Locale check:** `node scripts/check-locale-keys.js` fails on missing keys or mismatched placeholders, and warns when a French or Swahili value is identical to English (likely untranslated).
+- **Allowlist:** if a value really should be identical in every locale (brand names, product names like "Telegram", language endonyms, words that are the same in French), add its key and a short reason to `scripts/i18n-identical-allowlist.json`. Do not use it to silence missing translations.
+
 ## Pull Request Checklist
 
 - [ ] Tests pass locally

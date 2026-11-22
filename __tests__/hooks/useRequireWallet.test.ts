@@ -4,9 +4,17 @@ import { REDIRECT_REASONS } from '@/lib/redirectReason';
 
 const mockReplace = jest.fn();
 
+let mockPathname = '/fr/validator';
+let mockSearch = '';
+
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ replace: mockReplace }),
+  usePathname: () => mockPathname,
+  useSearchParams: () => new URLSearchParams(mockSearch),
 }));
+
+const EXPECTED_REDIRECT =
+  '/en/?reason=wallet-required&returnTo=' + encodeURIComponent('/fr/validator');
 
 const mockWalletContext = {
   isAuthenticated: false,
@@ -26,11 +34,24 @@ describe('useRequireWallet', () => {
     mockWalletContext.isConnecting = false;
     mockWalletContext.isRestoringSession = false;
     mockWalletContext.publicKey = null;
+    mockPathname = '/fr/validator';
+    mockSearch = '';
+  });
+
+  it('preserves the destination path and query string in returnTo (#1696)', () => {
+    mockPathname = '/fr/scout/compare';
+    mockSearch = 'ids=a,b&ref=xyz';
+    renderHook(() => useRequireWallet());
+    const url = new URL(mockReplace.mock.calls[0][0], 'http://localhost');
+    expect(url.pathname).toBe('/en/');
+    expect(url.searchParams.get('returnTo')).toBe(
+      '/fr/scout/compare?ids=a%2Cb&ref=xyz',
+    );
   });
 
   it('redirects to home with a reason when unauthenticated and not connecting', () => {
     renderHook(() => useRequireWallet());
-    expect(mockReplace).toHaveBeenCalledWith('/?reason=wallet-required');
+    expect(mockReplace).toHaveBeenCalledWith(EXPECTED_REDIRECT);
   });
 
   it('does not redirect when authenticated', () => {
@@ -47,7 +68,7 @@ describe('useRequireWallet', () => {
 
   it('uses router.replace (not push) to prevent back-navigation', () => {
     renderHook(() => useRequireWallet());
-    expect(mockReplace).toHaveBeenCalledWith('/?reason=wallet-required');
+    expect(mockReplace).toHaveBeenCalledWith(EXPECTED_REDIRECT);
     expect(mockReplace).not.toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),

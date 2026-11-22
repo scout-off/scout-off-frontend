@@ -25,6 +25,46 @@
           }
         ]
       }
+    },
+    {
+      "files": ["app/**/*.tsx", "components/**/*.tsx"],
+      "excludedFiles": [
+        "app/api/**",
+        "**/*.stories.tsx",
+        "**/__tests__/**",
+        "**/*.test.tsx"
+      ],
+      "rules": {
+        "i18next/no-literal-string": [
+          "warn",
+          {
+            "mode": "jsx-only",
+            "jsx-attributes": {
+              "include": ["placeholder", "aria-label", "title", "alt"]
+            },
+            "callees": {
+              "exclude": [
+                "i18n(ext)?",
+                "t",
+                "t[a-z]?",
+                "t[a-z]?\\.rich",
+                "require",
+                "addEventListener",
+                "removeEventListener",
+                "postMessage",
+                "getElementById",
+                "dispatch",
+                "commit",
+                "includes",
+                "indexOf",
+                "endsWith",
+                "startsWith"
+              ]
+            }
+          }
+        ]
+      }
     }
-  ]
+  ],
+  "plugins": ["i18next"]
 }

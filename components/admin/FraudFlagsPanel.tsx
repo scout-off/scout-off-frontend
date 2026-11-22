@@ -10,7 +10,9 @@ import EmptyState from '@/components/ui/EmptyState';
 import TruncatedAddress from '@/components/ui/TruncatedAddress';
 import { useToast } from '@/components/ui/Toast';
 import type { FraudFlag, FraudFlagSeverity, FraudThrottle } from '@/types';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import type { Locale } from '@/lib/locales';
+import { formatDateTime, formatNumber } from '@/lib/localeFormat';
 
 const SEVERITY_STYLES: Record<FraudFlagSeverity, string> = {
   high: 'border-red-500 bg-red-950/30 text-red-400',
@@ -18,18 +20,13 @@ const SEVERITY_STYLES: Record<FraudFlagSeverity, string> = {
   low: 'border-gray-600 bg-gray-900 text-gray-400',
 };
 
-const CATEGORY_LABELS: Record<FraudFlag['category'], string> = {
-  referral: 'Referral',
-  pay_to_contact: 'Pay-to-Contact',
-  validator: 'Validator',
-};
-
 function SeverityBadge({ severity }: { severity: FraudFlagSeverity }) {
+  const tf = useTranslations('admin.fraud');
   return (
     <span
       className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium uppercase tracking-wide ${SEVERITY_STYLES[severity]}`}
     >
-      {severity}
+      {tf(`severity.${severity}`)}
     </span>
   );
 }
@@ -47,6 +44,7 @@ function FlagCard({
 }) {
   const [showDismissForm, setShowDismissForm] = useState(false);
   const [note, setNote] = useState('');
+  const tf = useTranslations('admin.fraud');
 
   return (
     <li className="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-3">
@@ -54,7 +52,7 @@ function FlagCard({
         <div className="flex items-center gap-2 flex-wrap">
           <SeverityBadge severity={flag.severity} />
           <span className="text-xs text-gray-400 uppercase tracking-wide">
-            {CATEGORY_LABELS[flag.category]}
+            {tf(`categories.${flag.category}`)}
           </span>
           <span className="text-xs text-gray-600 font-mono">
             {flag.heuristic}
@@ -68,7 +66,7 @@ function FlagCard({
                 onClick={() => onRemoveValidator(flag.wallets[0])}
                 className="text-xs font-medium rounded-md border border-red-700 px-3 py-1 text-red-400 hover:bg-red-950/40"
               >
-                Remove validator
+                {tf('remove_validator')}
               </button>
             )}
             <button
@@ -77,7 +75,7 @@ function FlagCard({
               onClick={() => setShowDismissForm(true)}
               className="text-xs font-medium rounded-md border border-gray-700 px-3 py-1 text-gray-200 hover:bg-gray-800 disabled:opacity-50"
             >
-              Dismiss
+              {tf('dismiss')}
             </button>
           </div>
         )}
@@ -97,7 +95,7 @@ function FlagCard({
 
       <details className="text-xs text-gray-400">
         <summary className="cursor-pointer select-none hover:text-gray-300">
-          Evidence
+          {tf('evidence')}
         </summary>
         <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
           {Object.entries(flag.evidence).map(([key, value]) => (
@@ -117,13 +115,13 @@ function FlagCard({
             className="text-xs text-gray-400"
             htmlFor={`dismiss-note-${flag.id}`}
           >
-            Reviewed and not actually abuse — optional note
+            {tf('dismiss_note_label')}
           </label>
           <textarea
             id={`dismiss-note-${flag.id}`}
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="e.g. reviewed history, this is a legitimate low-usage scout"
+            placeholder={tf('dismiss_note_placeholder')}
             rows={2}
             className="w-full rounded-md border border-gray-700 bg-gray-950 px-2 py-1 text-xs text-gray-200 placeholder:text-gray-600"
           />
@@ -137,7 +135,7 @@ function FlagCard({
               }}
               className="text-xs font-medium rounded-md border border-gray-700 px-3 py-1 text-gray-400 hover:bg-gray-800 disabled:opacity-50"
             >
-              Cancel
+              {tf('cancel')}
             </button>
             <button
               type="button"
@@ -145,7 +143,7 @@ function FlagCard({
               onClick={() => onDismiss(flag, note)}
               className="text-xs font-medium rounded-md border border-gray-700 px-3 py-1 text-gray-200 hover:bg-gray-800 disabled:opacity-50"
             >
-              {dismissing ? 'Dismissing…' : 'Confirm dismiss'}
+              {dismissing ? tf('dismissing') : tf('confirm_dismiss')}
             </button>
           </div>
         </div>
@@ -163,7 +161,8 @@ function ThrottleCard({
   onLift: (id: number) => void;
   lifting: boolean;
 }) {
-  const locale = useLocale();
+  const locale = useLocale() as Locale;
+  const tf = useTranslations('admin.fraud');
   const isActive = throttle.status === 'throttled';
   return (
     <li className="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-3">
@@ -176,7 +175,7 @@ function ThrottleCard({
                 : 'border-gray-600 bg-gray-900 text-gray-400'
             }`}
           >
-            {isActive ? 'Throttled' : 'Lifted'}
+            {isActive ? tf('throttled') : tf('lifted')}
           </span>
           <span className="text-xs text-gray-600 font-mono">
             {throttle.heuristic}
@@ -189,7 +188,7 @@ function ThrottleCard({
             onClick={() => onLift(throttle.id)}
             className="text-xs font-medium rounded-md border border-gray-700 px-3 py-1 text-gray-200 hover:bg-gray-800 disabled:opacity-50"
           >
-            {lifting ? 'Lifting…' : 'Lift throttle'}
+            {lifting ? tf('lifting') : tf('lift_throttle')}
           </button>
         )}
       </div>
@@ -197,12 +196,17 @@ function ThrottleCard({
       <TruncatedAddress address={throttle.wallet} className="text-gray-400" />
       <p className="text-sm text-gray-200">{throttle.reason}</p>
       <p className="text-xs text-gray-500">
-        Throttled {new Date(throttle.throttledAt).toLocaleString(locale)}
+        {tf('throttled_at', {
+          date: formatDateTime(new Date(throttle.throttledAt), locale),
+        })}
         {throttle.liftedAt && (
           <>
-            {' · Lifted '}
-            {new Date(throttle.liftedAt).toLocaleString(locale)}
-            {throttle.liftedBy && ` by ${throttle.liftedBy}`}
+            {' · '}
+            {tf('lifted_at', {
+              date: formatDateTime(new Date(throttle.liftedAt), locale),
+            })}
+            {throttle.liftedBy &&
+              ` ${tf('lifted_by', { wallet: throttle.liftedBy })}`}
             {throttle.liftReason && `: "${throttle.liftReason}"`}
           </>
         )}
@@ -229,7 +233,8 @@ export default function FraudFlagsPanel({
   /** Opens the admin's existing confirm-and-sign remove-validator flow. */
   onRemoveValidator?: (address: string) => void;
 } = {}) {
-  const locale = useLocale();
+  const locale = useLocale() as Locale;
+  const tf = useTranslations('admin.fraud');
   const [flags, setFlags] = useState<FraudFlag[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [evaluatedAt, setEvaluatedAt] = useState<number | null>(null);
@@ -311,10 +316,10 @@ export default function FraudFlagsPanel({
     setLiftingId(id);
     try {
       await liftFraudThrottle(id);
-      showToast({ message: 'Throttle lifted.', variant: 'success' });
+      showToast({ message: tf('throttle_lifted'), variant: 'success' });
       loadThrottles();
     } catch {
-      showToast({ message: 'Failed to lift throttle.', variant: 'error' });
+      showToast({ message: tf('lift_failed'), variant: 'error' });
     } finally {
       setLiftingId(null);
     }
@@ -331,10 +336,10 @@ export default function FraudFlagsPanel({
     setDismissingId(flag.id);
     try {
       await dismissFraudFlag(flag, note.trim() || undefined);
-      showToast({ message: 'Flag dismissed.', variant: 'success' });
+      showToast({ message: tf('flag_dismissed'), variant: 'success' });
       setFlags((prev) => prev.filter((f) => f.id !== flag.id));
     } catch {
-      showToast({ message: 'Failed to dismiss flag.', variant: 'error' });
+      showToast({ message: tf('dismiss_failed'), variant: 'error' });
     } finally {
       setDismissingId(null);
     }
@@ -348,24 +353,30 @@ export default function FraudFlagsPanel({
       <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-white">
-              Flagged Activity
-            </h2>
-            <p className="text-sm text-gray-400 mt-1">
-              Suspicious referral and pay-to-contact patterns detected across
-              all wallets. Alert-only — review and investigate manually.
-            </p>
+            <h2 className="text-lg font-semibold text-white">{tf('title')}</h2>
+            <p className="text-sm text-gray-400 mt-1">{tf('description')}</p>
             {evaluatedAt !== null && (
               <p className="text-xs text-gray-500 mt-2">
-                As of {new Date(evaluatedAt).toLocaleString(locale)}
+                {tf('as_of', {
+                  date: formatDateTime(new Date(evaluatedAt), locale),
+                })}
                 {runStats && (
                   <>
                     {runStats.eventsProcessed !== undefined &&
                       runStats.eventsProcessed > 0 &&
-                      ` · ${runStats.eventsProcessed} events processed`}
+                      ` · ${tf('events_processed', { count: runStats.eventsProcessed })}`}
                     {runStats.durationMs !== undefined &&
                       runStats.durationMs > 0 &&
-                      ` in ${(runStats.durationMs / 1000).toFixed(1)}s`}
+                      ` ${tf('duration', {
+                        value: formatNumber(
+                          runStats.durationMs / 1000,
+                          locale,
+                          {
+                            minimumFractionDigits: 1,
+                            maximumFractionDigits: 1,
+                          },
+                        ),
+                      })}`}
                   </>
                 )}
               </p>
@@ -378,18 +389,20 @@ export default function FraudFlagsPanel({
             className="shrink-0 rounded-md border border-gray-700 bg-gray-900 px-3 py-1.5 text-xs font-medium text-gray-200 transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading
-              ? 'Refreshing…'
+              ? tf('refreshing')
               : refreshCooldownMs > 0
-                ? `Refresh (${Math.ceil(refreshCooldownMs / 1000)}s)`
-                : 'Refresh'}
+                ? tf('refresh_cooldown', {
+                    seconds: Math.ceil(refreshCooldownMs / 1000),
+                  })
+                : tf('refresh')}
           </button>
         </div>
 
         {loading ? (
-          <p className="text-sm text-gray-400">Loading…</p>
+          <p className="text-sm text-gray-400">{tf('loading')}</p>
         ) : error ? (
           <p role="alert" className="text-sm text-red-400">
-            Failed to load flagged activity.
+            {tf('load_failed')}
           </p>
         ) : (
           <>
@@ -410,15 +423,14 @@ export default function FraudFlagsPanel({
                 role="alert"
                 className="text-xs text-red-400 bg-red-950/30 border border-red-800 rounded-md px-3 py-2"
               >
-                High-severity validator activity detected — a validator key may
-                be compromised. Review the validator flags below.
+                {tf('validator_alert')}
               </p>
             )}
 
             {flags.length === 0 ? (
               <EmptyState
-                title="No flags"
-                description="No suspicious referral, pay-to-contact or validator patterns detected."
+                title={tf('empty_title')}
+                description={tf('empty_description')}
               />
             ) : (
               <ul className="flex flex-col gap-3">
@@ -460,14 +472,15 @@ function ThrottlesSection({
   liftingId: number | null;
   onLift: (id: number) => void;
 }) {
+  const tf = useTranslations('admin.fraud');
   return (
     <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
       <div>
-        <h2 className="text-lg font-semibold text-white">Wallet Throttles</h2>
+        <h2 className="text-lg font-semibold text-white">
+          {tf('throttles_title')}
+        </h2>
         <p className="text-sm text-gray-400 mt-1">
-          Wallets automatically blocked from further redemptions and
-          pay-to-contact by a high-confidence fraud heuristic. Throttles never
-          expire on their own — only an explicit lift below clears one.
+          {tf('throttles_description')}
         </p>
       </div>
 
@@ -487,7 +500,7 @@ function ThrottlesSection({
       {liftedThrottles.length > 0 && (
         <details className="text-xs text-gray-400">
           <summary className="cursor-pointer select-none hover:text-gray-300">
-            Lift history ({liftedThrottles.length})
+            {tf('lift_history', { count: liftedThrottles.length })}
           </summary>
           <ul className="flex flex-col gap-3 mt-3">
             {liftedThrottles.map((t) => (

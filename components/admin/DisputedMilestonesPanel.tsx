@@ -16,37 +16,36 @@ import type {
   DisputeEvent,
   DisputeWithEvents,
 } from '@/types';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import type { Locale } from '@/lib/locales';
+import { formatDate, formatDateTime } from '@/lib/localeFormat';
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 
-const STATUS_STYLES: Record<string, { label: string; classes: string }> = {
+const STATUS_STYLES: Record<string, { classes: string }> = {
   pending: {
-    label: 'Awaiting validator',
     classes: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
   },
   under_review: {
-    label: 'Under review',
     classes: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
   },
   escalated: {
-    label: 'Escalated',
     classes: 'bg-red-500/15 text-red-400 border-red-500/30',
   },
   upheld: {
-    label: 'Upheld',
     classes: 'bg-gray-500/15 text-gray-400 border-gray-500/30',
   },
   reversed: {
-    label: 'Reversed',
     classes: 'bg-green-500/15 text-green-400 border-green-500/30',
   },
 };
 
 function StatusBadge({ status }: { status: string }) {
-  const s = STATUS_STYLES[status] ?? {
-    label: status,
-    classes: 'bg-gray-700 text-gray-300',
+  const t = useTranslations('admin.disputes.statuses');
+  const known = status in STATUS_STYLES;
+  const s = {
+    label: known ? t(status) : status,
+    classes: STATUS_STYLES[status]?.classes ?? 'bg-gray-700 text-gray-300',
   };
   return (
     <span
@@ -78,24 +77,14 @@ function eventIcon(type: DisputeEvent['type']): string {
   }
 }
 
-function eventLabel(type: DisputeEvent['type']): string {
-  switch (type) {
-    case 'opened':
-      return 'Dispute filed';
-    case 'evidence_added':
-      return 'Evidence added';
-    case 'validator_response':
-      return 'Validator response';
-    case 'admin_note':
-      return 'Admin note';
-    case 'decided':
-      return 'Decision recorded';
-    case 'escalated':
-      return 'Escalated (no response)';
-    default:
-      return type;
-  }
-}
+const EVENT_TYPES = new Set([
+  'opened',
+  'evidence_added',
+  'validator_response',
+  'admin_note',
+  'decided',
+  'escalated',
+]);
 
 // ── IPFS evidence thumbnail ───────────────────────────────────────────────────
 
@@ -109,6 +98,7 @@ function EvidenceThumbnail({
   const gateway =
     process.env.NEXT_PUBLIC_IPFS_GATEWAY ?? 'https://gateway.pinata.cloud/ipfs';
   const url = `${gateway}/${cid}`;
+  const t = useTranslations('admin.disputes');
 
   if (mimeType.startsWith('image/')) {
     return (
@@ -116,7 +106,7 @@ function EvidenceThumbnail({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={url}
-          alt="Evidence"
+          alt={t('evidence_alt')}
           className="mt-2 max-h-40 rounded-lg border border-gray-700 object-cover"
         />
       </a>
@@ -138,7 +128,7 @@ function EvidenceThumbnail({
       rel="noopener noreferrer"
       className="mt-2 inline-flex items-center gap-1 text-xs text-brand-green underline"
     >
-      📄 View file (IPFS)
+      {t('view_file')}
     </a>
   );
 }
@@ -146,9 +136,10 @@ function EvidenceThumbnail({
 // ── Timeline ──────────────────────────────────────────────────────────────────
 
 function DisputeTimeline({ events }: { events: DisputeEvent[] }) {
-  const locale = useLocale();
+  const locale = useLocale() as Locale;
+  const t = useTranslations('admin.disputes');
   if (events.length === 0) {
-    return <p className="text-xs text-gray-500 italic">No events yet.</p>;
+    return <p className="text-xs text-gray-500 italic">{t('no_events')}</p>;
   }
   return (
     <ol className="relative border-l border-gray-700 pl-4 flex flex-col gap-4">
@@ -161,7 +152,7 @@ function DisputeTimeline({ events }: { events: DisputeEvent[] }) {
 
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <span className="font-medium text-gray-200">
-              {eventLabel(ev.type)}
+              {EVENT_TYPES.has(ev.type) ? t(`events.${ev.type}`) : ev.type}
             </span>
             <span className="text-gray-500">·</span>
             <TruncatedAddress
@@ -170,13 +161,7 @@ function DisputeTimeline({ events }: { events: DisputeEvent[] }) {
             />
             <span className="text-gray-500">·</span>
             <time className="text-gray-600">
-              {new Date(ev.createdAt).toLocaleString(locale, {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
+              {formatDateTime(new Date(ev.createdAt), locale)}
             </time>
           </div>
 
@@ -206,6 +191,7 @@ function AdminNoteForm({
 }) {
   const { submitEvidence } = useDisputeDetail(disputeId);
   const [open, setOpen] = useState(false);
+  const t = useTranslations('admin.disputes');
 
   if (!open) {
     return (
@@ -214,13 +200,13 @@ function AdminNoteForm({
         onClick={() => setOpen(true)}
         className="text-xs text-gray-400 underline hover:text-white"
       >
-        + Add admin note / evidence
+        {t('add_note')}
       </button>
     );
   }
   return (
     <DisputeEvidenceForm
-      submitLabel="Save note"
+      submitLabel={t('save_note')}
       onSubmit={async (params) => {
         await submitEvidence(params);
         onAdded();
@@ -253,6 +239,7 @@ function DecisionForm({
   const [confirming, setConfirming] = useState<PendingAction>(null);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const t = useTranslations('admin.disputes');
 
   async function handleConfirm() {
     if (!confirming) return;
@@ -260,7 +247,7 @@ function DecisionForm({
     setError(null);
     try {
       if (confirming === 'reversed') {
-        if (!publicKey) throw new Error('Wallet not connected');
+        if (!publicKey) throw new Error(t('wallet_not_connected'));
         const xdr = await buildRevokeMilestone(
           publicKey,
           dispute.playerId,
@@ -290,11 +277,11 @@ function DecisionForm({
 
   return (
     <div className="flex flex-col gap-2 border-t border-gray-800 pt-3 mt-1">
-      <p className="text-xs font-medium text-gray-400">Admin decision</p>
+      <p className="text-xs font-medium text-gray-400">{t('admin_decision')}</p>
       <textarea
         value={note}
         onChange={(e) => setNote(e.target.value)}
-        placeholder="Optional resolution note…"
+        placeholder={t('resolution_placeholder')}
         rows={2}
         className="w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2
           text-xs text-white placeholder-gray-500 focus:border-brand-green
@@ -313,7 +300,7 @@ function DecisionForm({
           className="rounded-lg border border-gray-700 px-3 py-1.5 text-xs font-medium
             text-gray-300 hover:bg-gray-800 transition"
         >
-          Uphold decision
+          {t('uphold_decision')}
         </button>
         <button
           type="button"
@@ -322,7 +309,7 @@ function DecisionForm({
           className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5
             text-xs font-medium text-red-400 hover:bg-red-500/20 transition"
         >
-          Reverse &amp; revoke milestone
+          {t('reverse_revoke')}
         </button>
       </div>
 
@@ -332,14 +319,12 @@ function DecisionForm({
         onCancel={() => setConfirming(null)}
         loading={working}
         title={
-          confirming === 'reversed' ? 'Reverse milestone' : 'Uphold decision'
+          confirming === 'reversed' ? t('reverse_title') : t('uphold_decision')
         }
         message={
-          confirming === 'reversed'
-            ? 'This will submit an on-chain revoke_milestone transaction (requires your wallet to be an authorized validator) and mark the dispute as reversed. This cannot be undone.'
-            : 'This closes the dispute without changing the milestone. The original decision stands.'
+          confirming === 'reversed' ? t('reverse_message') : t('uphold_message')
         }
-        confirmLabel={confirming === 'reversed' ? 'Reverse' : 'Uphold'}
+        confirmLabel={confirming === 'reversed' ? t('reverse') : t('uphold')}
       />
     </div>
   );
@@ -361,7 +346,8 @@ function DisputeCard({
     },
   ) => Promise<MilestoneDispute>;
 }) {
-  const locale = useLocale();
+  const locale = useLocale() as Locale;
+  const t = useTranslations('admin.disputes');
   const [expanded, setExpanded] = useState(false);
   const {
     dispute,
@@ -392,22 +378,17 @@ function DisputeCard({
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <TruncatedAddress address={summary.playerWallet} />
             <span>·</span>
-            <time>
-              {new Date(summary.createdAt).toLocaleDateString(locale, {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-              })}
-            </time>
+            <time>{formatDate(new Date(summary.createdAt), locale)}</time>
             {summary.status === 'pending' && (
               <>
                 <span>·</span>
                 <span className="text-amber-400/80">
-                  Deadline{' '}
-                  {new Date(summary.responseDeadline).toLocaleDateString(
-                    undefined,
-                    { month: 'short', day: 'numeric' },
-                  )}
+                  {t('deadline', {
+                    date: formatDate(
+                      new Date(summary.responseDeadline),
+                      locale,
+                    ),
+                  })}
                 </span>
               </>
             )}
@@ -425,7 +406,7 @@ function DisputeCard({
           {/* Claim */}
           <div>
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
-              Player claim
+              {t('player_claim')}
             </p>
             <p className="text-sm text-gray-200">{summary.reason}</p>
           </div>
@@ -433,14 +414,14 @@ function DisputeCard({
           {/* Parties */}
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div>
-              <p className="text-gray-500 mb-0.5">Player</p>
+              <p className="text-gray-500 mb-0.5">{t('player')}</p>
               <TruncatedAddress
                 address={summary.playerWallet}
                 className="text-gray-300"
               />
             </div>
             <div>
-              <p className="text-gray-500 mb-0.5">Validator</p>
+              <p className="text-gray-500 mb-0.5">{t('validator')}</p>
               <TruncatedAddress
                 address={summary.validatorWallet}
                 className="text-gray-300"
@@ -451,11 +432,11 @@ function DisputeCard({
           {/* Event timeline */}
           <div>
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-              Timeline
+              {t('timeline')}
             </p>
             {detailLoading ? (
               <p className="text-xs text-gray-500 animate-pulse">
-                Loading timeline…
+                {t('loading_timeline')}
               </p>
             ) : dispute ? (
               <DisputeTimeline events={dispute.events} />
@@ -474,22 +455,20 @@ function DisputeCard({
           {!isPending && summary.decidedAt && (
             <div className="rounded-lg border border-gray-700 bg-gray-800/50 px-3 py-2 text-xs">
               <p className="text-gray-400">
-                Decided{' '}
-                <time>
-                  {new Date(summary.decidedAt).toLocaleDateString(locale, {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                  })}
-                </time>{' '}
-                by <TruncatedAddress address={summary.decidedBy ?? ''} />
+                {t.rich('decided_by', {
+                  date: formatDate(new Date(summary.decidedAt), locale),
+                  time: (chunks) => <time>{chunks}</time>,
+                  wallet: () => (
+                    <TruncatedAddress address={summary.decidedBy ?? ''} />
+                  ),
+                })}
               </p>
               {summary.resolutionNote && (
                 <p className="mt-1 text-gray-300">{summary.resolutionNote}</p>
               )}
               {summary.revokeTxHash && (
                 <p className="mt-1 text-gray-500 break-all">
-                  Revoke tx: {summary.revokeTxHash}
+                  {t('revoke_tx', { hash: summary.revokeTxHash })}
                 </p>
               )}
             </div>
@@ -503,10 +482,10 @@ function DisputeCard({
 // ── Panel ─────────────────────────────────────────────────────────────────────
 
 const STATUS_TABS = [
-  { value: undefined, label: 'All open' },
-  { value: 'pending' as const, label: 'Pending' },
-  { value: 'escalated' as const, label: 'Escalated' },
-  { value: 'under_review' as const, label: 'Under review' },
+  { value: undefined, key: 'all_open' },
+  { value: 'pending' as const, key: 'pending' },
+  { value: 'escalated' as const, key: 'escalated' },
+  { value: 'under_review' as const, key: 'under_review' },
 ] as const;
 
 /**
@@ -525,6 +504,7 @@ export default function DisputedMilestonesPanel() {
   >(undefined);
 
   const { disputes, loading, error, decide } = useDisputeQueue(activeTab);
+  const t = useTranslations('admin.disputes');
 
   return (
     <section
@@ -536,19 +516,16 @@ export default function DisputedMilestonesPanel() {
           id="disputed-milestones-heading"
           className="text-lg font-semibold text-white"
         >
-          Disputed Milestones
+          {t('title')}
         </h2>
-        <p className="text-sm text-gray-400 mt-1">
-          Each dispute shows a full evidence timeline. Validators are notified
-          and have a response window. Escalated disputes missed that window.
-        </p>
+        <p className="text-sm text-gray-400 mt-1">{t('description')}</p>
       </div>
 
       {/* Tab filter */}
       <div className="flex gap-1 border-b border-gray-800 pb-0.5">
         {STATUS_TABS.map((tab) => (
           <button
-            key={tab.label}
+            key={tab.key}
             type="button"
             onClick={() => setActiveTab(tab.value as typeof activeTab)}
             className={`px-3 py-1 text-xs rounded-t-md transition font-medium ${
@@ -557,21 +534,21 @@ export default function DisputedMilestonesPanel() {
                 : 'text-gray-500 hover:text-gray-300'
             }`}
           >
-            {tab.label}
+            {t(`tabs.${tab.key}`)}
           </button>
         ))}
       </div>
 
       {loading ? (
-        <p className="text-sm text-gray-400">Loading…</p>
+        <p className="text-sm text-gray-400">{t('loading')}</p>
       ) : error ? (
         <p role="alert" className="text-sm text-red-400">
-          Failed to load disputed milestones.
+          {t('load_failed')}
         </p>
       ) : disputes.length === 0 ? (
         <EmptyState
-          title="No disputed milestones"
-          description="Milestones flagged by players for review will appear here."
+          title={t('empty_title')}
+          description={t('empty_description')}
         />
       ) : (
         <ul className="flex flex-col gap-2">

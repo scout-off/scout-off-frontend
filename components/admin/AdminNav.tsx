@@ -1,18 +1,20 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
+/** `label` is the English fallback; the rendered text comes from `admin.pages.<key>`. */
 export const ADMIN_SECTIONS = [
-  { href: '/admin', label: 'Overview' },
-  { href: '/admin/validators', label: 'Validators' },
-  { href: '/admin/fees', label: 'Fees' },
-  { href: '/admin/academies', label: 'Academies' },
-  { href: '/admin/referrals', label: 'Referrals' },
-  { href: '/admin/audit', label: 'Audit Log' },
-  { href: '/admin/moderation', label: 'Moderation' },
-  { href: '/admin/fraud', label: 'Fraud Flags' },
-  { href: '/admin/disputes', label: 'Disputes' },
-  { href: '/admin/health', label: 'Health' },
+  { href: '/admin', key: 'overview', label: 'Overview' },
+  { href: '/admin/validators', key: 'validators', label: 'Validators' },
+  { href: '/admin/fees', key: 'fees', label: 'Fees' },
+  { href: '/admin/academies', key: 'academies', label: 'Academies' },
+  { href: '/admin/referrals', key: 'referrals', label: 'Referrals' },
+  { href: '/admin/audit', key: 'audit', label: 'Audit Log' },
+  { href: '/admin/moderation', key: 'moderation', label: 'Moderation' },
+  { href: '/admin/fraud', key: 'fraud', label: 'Fraud Flags' },
+  { href: '/admin/disputes', key: 'disputes', label: 'Disputes' },
+  { href: '/admin/health', key: 'health', label: 'Health' },
 ] as const;
 
 /** Strips an optional locale prefix (`/en/admin/fees` → `/admin/fees`). */
@@ -23,11 +25,12 @@ function toAdminPath(pathname: string): string {
 
 export default function AdminNav() {
   const current = toAdminPath(usePathname() ?? '');
+  const t = useTranslations('admin.pages');
 
   return (
-    <nav aria-label="Admin sections" className="md:w-48 shrink-0">
+    <nav aria-label={t('nav_label')} className="md:w-48 shrink-0">
       <ul className="flex md:flex-col gap-1 overflow-x-auto">
-        {ADMIN_SECTIONS.map(({ href, label }) => {
+        {ADMIN_SECTIONS.map(({ href, key }) => {
           const active = current === href;
           return (
             <li key={href}>
@@ -40,7 +43,7 @@ export default function AdminNav() {
                     : 'text-gray-400 hover:text-white hover:bg-gray-800/60'
                 }`}
               >
-                {label}
+                {t(key)}
               </Link>
             </li>
           );

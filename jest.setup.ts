@@ -65,6 +65,8 @@ const mockTranslatedNamespaces = [
   'saved_searches_menu',
   'scout_dashboard',
   'subscription_status_banner',
+  // Admin area (#1698).
+  'admin',
 ];
 
 // Namespaces translated after the flat stub below was written (#1340-#1342)

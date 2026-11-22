@@ -1,4 +1,8 @@
-import { REDIRECT_REASONS, isRedirectReason } from '@/lib/redirectReason';
+import {
+  REDIRECT_REASONS,
+  isRedirectReason,
+  sanitizeReturnTo,
+} from '@/lib/redirectReason';
 
 describe('REDIRECT_REASONS', () => {
   it('contains the wallet-required reason', () => {
@@ -49,5 +53,33 @@ describe('isRedirectReason', () => {
       const message: string = REDIRECT_REASONS[raw];
       expect(typeof message).toBe('string');
     }
+  });
+});
+
+describe('sanitizeReturnTo (#1696)', () => {
+  const origin = 'https://app.example.com';
+
+  it.each([
+    '//evil.com',
+    'https://evil.com',
+    '/\\evil.com',
+    'javascript:alert(1)',
+    '/javascript:alert(1)',
+    'evil.com',
+    '',
+  ])('rejects %p', (value) => {
+    expect(sanitizeReturnTo(value, origin)).toBeNull();
+  });
+
+  it('rejects non-string values', () => {
+    expect(sanitizeReturnTo(undefined, origin)).toBeNull();
+    expect(sanitizeReturnTo(['/fr/validator'], origin)).toBeNull();
+  });
+
+  it('accepts same-origin paths and preserves the query string', () => {
+    expect(sanitizeReturnTo('/fr/validator', origin)).toBe('/fr/validator');
+    expect(sanitizeReturnTo('/fr/scout/compare?ids=1,2&ref=x', origin)).toBe(
+      '/fr/scout/compare?ids=1,2&ref=x',
+    );
   });
 });

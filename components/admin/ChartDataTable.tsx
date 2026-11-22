@@ -1,6 +1,7 @@
 'use client';
 
 import { useId, useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 export interface ChartDataColumn<T> {
   header: string;
@@ -24,6 +25,7 @@ export default function ChartDataTable<T>({
 }) {
   const [open, setOpen] = useState(false);
   const tableId = useId();
+  const t = useTranslations('admin.charts');
 
   return (
     <div className="flex flex-col gap-2">
@@ -34,7 +36,7 @@ export default function ChartDataTable<T>({
         onClick={() => setOpen((v) => !v)}
         className="self-start text-xs text-gray-300 underline hover:text-white"
       >
-        {open ? 'Hide table' : 'Show as table'}
+        {open ? t('hide_table') : t('show_table')}
       </button>
       {open && (
         <div className="overflow-x-auto">

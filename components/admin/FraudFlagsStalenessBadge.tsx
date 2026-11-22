@@ -1,6 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import { fetchFraudFlagsStatus } from '@/lib/api';
+import type { Locale } from '@/lib/locales';
+import { formatNumber, formatRelativeTime } from '@/lib/localeFormat';
 
 /**
  * Minimal proactive-surfacing mechanism for issue #1007, absent any
@@ -14,15 +17,9 @@ import { fetchFraudFlagsStatus } from '@/lib/api';
  */
 const STALE_THRESHOLD_MS = 6 * 60 * 60 * 1000; // 6 hours
 
-function formatAge(ms: number): string {
-  const minutes = Math.round(ms / 60000);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 48) return `${hours}h ago`;
-  return `${Math.round(hours / 24)}d ago`;
-}
-
 export default function FraudFlagsStalenessBadge() {
+  const t = useTranslations('admin.fraud_badge');
+  const locale = useLocale() as Locale;
   const [status, setStatus] = useState<{
     evaluatedAt: number | null;
     highSeverityCount: number;
@@ -59,21 +56,27 @@ export default function FraudFlagsStalenessBadge() {
 
   const durationSec =
     status.durationMs !== undefined && status.durationMs > 0
-      ? `${(status.durationMs / 1000).toFixed(1)}s`
+      ? t('duration', {
+          value: formatNumber(status.durationMs / 1000, locale, {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+          }),
+        })
       : null;
 
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${style}`}
-      title="Fraud flag evaluation status"
+      title={t('title')}
     >
-      Fraud flags: {formatAge(age)}
-      {hasHighSeverity && ` · ${status.highSeverityCount} high`}
+      {t('label', { age: formatRelativeTime(status.evaluatedAt, locale) })}
+      {hasHighSeverity &&
+        ` · ${t('high', { count: status.highSeverityCount })}`}
       {status.eventsProcessed !== undefined &&
         status.eventsProcessed > 0 &&
-        ` · ${status.eventsProcessed} events`}
+        ` · ${t('events', { count: status.eventsProcessed })}`}
       {durationSec && ` (${durationSec})`}
-      {stale && ' · stale'}
+      {stale && ` · ${t('stale')}`}
     </span>
   );
 }

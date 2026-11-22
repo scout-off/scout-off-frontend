@@ -7,12 +7,13 @@ import { useToast } from '@/components/ui/Toast';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import { getMediaProxyUrl } from '@/lib/mediaUrl';
 import {
-  MEDIA_REPORT_REASON_LABELS,
   type MediaDenylistEntry,
   type MediaModerationQueueItem,
   type MediaReportReason,
 } from '@/lib/mediaModeration';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import type { Locale } from '@/lib/locales';
+import { formatDateTime } from '@/lib/localeFormat';
 
 const ADMIN_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_ADDRESS;
 
@@ -21,6 +22,7 @@ type Decision = 'approve' | 'deny' | 'reinstate';
 /** Blurred by default so moderators aren't exposed to abusive media until they choose to look. */
 function BlurredPreview({ cid }: { cid: string }) {
   const [revealed, setRevealed] = useState(false);
+  const t = useTranslations('admin.media_moderation');
   const isVideo = cid.endsWith('.mp4') || cid.endsWith('.webm');
   const src = getMediaProxyUrl(cid);
   const mediaClass = `h-full w-full object-cover transition ${revealed ? '' : 'blur-xl'}`;
@@ -31,21 +33,24 @@ function BlurredPreview({ cid }: { cid: string }) {
         <video src={src} className={mediaClass} controls={revealed} muted />
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt={`Reported media ${cid}`} className={mediaClass} />
+        <img src={src} alt={t('preview_alt', { cid })} className={mediaClass} />
       )}
       <button
         type="button"
         onClick={() => setRevealed((r) => !r)}
         className="absolute bottom-2 left-2 rounded bg-black/70 px-2 py-1 text-xs text-white"
       >
-        {revealed ? 'Blur' : 'Reveal'}
+        {revealed ? t('blur') : t('reveal')}
       </button>
     </div>
   );
 }
 
 function MediaModerationContent() {
-  const locale = useLocale();
+  const locale = useLocale() as Locale;
+  const t = useTranslations('admin');
+  const tm = useTranslations('admin.media_moderation');
+  const tr = useTranslations('player_profile.media_report.reasons');
   const { publicKey } = useWallet();
   const router = useRouter();
   const { show } = useToast();
@@ -68,25 +73,27 @@ function MediaModerationContent() {
       setDenylist(data.denylist);
     } catch (err) {
       show({
-        message: `Failed to load moderation queue: ${err instanceof Error ? err.message : 'error'}`,
+        message: tm('load_failed', {
+          error: err instanceof Error ? err.message : 'error',
+        }),
         variant: 'error',
       });
     } finally {
       setLoading(false);
     }
-  }, [show]);
+  }, [show, tm]);
 
   // Gate: redirect non-admin wallets, mirroring app/[locale]/admin/page.tsx.
   useEffect(() => {
     if (!publicKey) return;
     if (publicKey !== ADMIN_ADDRESS) {
       show({
-        message: 'Unauthorized: admin wallet required.',
+        message: t('unauthorized_message'),
         variant: 'error',
       });
       router.replace('/');
     }
-  }, [publicKey, router, show]);
+  }, [publicKey, router, show, t]);
 
   useEffect(() => {
     if (publicKey === ADMIN_ADDRESS) load();
@@ -113,13 +120,13 @@ function MediaModerationContent() {
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
       show({
-        message: `Media ${decision === 'deny' ? 'denylisted' : decision === 'approve' ? 'approved' : 'reinstated'}.`,
+        message: tm(`decision_success.${decision}`),
         variant: 'success',
       });
       await load();
     } catch (err) {
       show({
-        message: err instanceof Error ? err.message : 'Decision failed',
+        message: err instanceof Error ? err.message : tm('decision_failed'),
         variant: 'error',
       });
     } finally {
@@ -132,20 +139,20 @@ function MediaModerationContent() {
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-10">
       <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold text-white">Media moderation</h1>
-        <p className="text-sm text-gray-400">
-          Denylisted media is blocked on ScoutOff surfaces only (the media proxy
-          and profile galleries). It can still be reached through public IPFS
-          gateways unless it is also unpinned and no other node pins it.
-        </p>
+        <h1 className="text-2xl font-bold text-white">
+          {t('pages.media_moderation')}
+        </h1>
+        <p className="text-sm text-gray-400">{tm('description')}</p>
       </header>
 
       <section className="flex flex-col gap-4">
         <h2 className="text-lg font-semibold text-white">
-          Pending reports {loading ? '' : `(${queue.length})`}
+          {loading
+            ? tm('pending_reports')
+            : tm('pending_reports_count', { count: queue.length })}
         </h2>
         {!loading && queue.length === 0 && (
-          <p className="text-sm text-gray-400">No media awaiting review.</p>
+          <p className="text-sm text-gray-400">{tm('empty')}</p>
         )}
         {queue.map((item) => (
           <article
@@ -158,12 +165,9 @@ function MediaModerationContent() {
                 {item.cid}
               </p>
               <p className="text-white">
-                {item.reportCount} report{item.reportCount === 1 ? '' : 's'}:{' '}
+                {tm('report_count', { count: item.reportCount })}{' '}
                 {Object.entries(item.reasons)
-                  .map(
-                    ([r, n]) =>
-                      `${MEDIA_REPORT_REASON_LABELS[r as MediaReportReason]} (${n})`,
-                  )
+                  .map(([r, n]) => `${tr(r as MediaReportReason)} (${n})`)
                   .join(', ')}
               </p>
               {item.playerId && (
@@ -171,7 +175,7 @@ function MediaModerationContent() {
                   href={`/player/${encodeURIComponent(item.playerId)}`}
                   className="text-brand-green underline"
                 >
-                  View player {item.playerId}
+                  {tm('view_player', { id: item.playerId })}
                 </Link>
               )}
               {item.details.length > 0 && (
@@ -183,8 +187,8 @@ function MediaModerationContent() {
               )}
               <input
                 type="text"
-                placeholder="Decision reason (required to deny)"
-                aria-label={`Decision reason for ${item.cid}`}
+                placeholder={tm('reason_placeholder')}
+                aria-label={tm('reason_aria', { cid: item.cid })}
                 value={reasons[item.cid] ?? ''}
                 onChange={(e) =>
                   setReasons((r) => ({ ...r, [item.cid]: e.target.value }))
@@ -199,7 +203,7 @@ function MediaModerationContent() {
                     setUnpin((u) => ({ ...u, [item.cid]: e.target.checked }))
                   }
                 />
-                Also queue for Pinata unpin (72-hour grace period)
+                {tm('unpin_label')}
               </label>
               <div className="flex gap-2">
                 <button
@@ -208,7 +212,7 @@ function MediaModerationContent() {
                   onClick={() => decide(item.cid, 'approve', item.playerId)}
                   className="rounded-lg border border-gray-600 px-3 py-1.5 text-white hover:bg-gray-800 disabled:opacity-50"
                 >
-                  Approve (keep)
+                  {tm('approve')}
                 </button>
                 <button
                   type="button"
@@ -216,7 +220,7 @@ function MediaModerationContent() {
                   onClick={() => decide(item.cid, 'deny', item.playerId)}
                   className="rounded-lg bg-red-600 px-3 py-1.5 font-medium text-white hover:bg-red-500 disabled:opacity-50"
                 >
-                  Deny (remove)
+                  {tm('deny')}
                 </button>
               </div>
             </div>
@@ -226,7 +230,7 @@ function MediaModerationContent() {
 
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold text-white">
-          Denylist ({denylist.length})
+          {tm('denylist', { count: denylist.length })}
         </h2>
         {denylist.map((entry) => (
           <div
@@ -239,7 +243,7 @@ function MediaModerationContent() {
               </p>
               <p className="text-gray-300">
                 {entry.reason} —{' '}
-                {new Date(entry.decidedAt).toLocaleString(locale)}
+                {formatDateTime(new Date(entry.decidedAt), locale)}
               </p>
             </div>
             <button
@@ -248,7 +252,7 @@ function MediaModerationContent() {
               onClick={() => decide(entry.cid, 'reinstate')}
               className="rounded-lg border border-gray-600 px-3 py-1.5 text-white hover:bg-gray-800 disabled:opacity-50"
             >
-              Reinstate
+              {tm('reinstate')}
             </button>
           </div>
         ))}

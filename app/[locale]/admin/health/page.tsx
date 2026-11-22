@@ -10,7 +10,9 @@ import type {
   SubsystemHealth,
 } from '@/app/api/admin/health/route';
 import type { DependencyCheck } from '@/lib/healthChecks';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import type { Locale } from '@/lib/locales';
+import { formatNumber } from '@/lib/localeFormat';
 
 const ADMIN_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_ADDRESS;
 
@@ -27,16 +29,6 @@ type CheckStatus =
   | 'not_configured'
   | 'loading';
 
-const STATUS_LABEL: Record<CheckStatus, string> = {
-  ok: 'Healthy',
-  starting: 'Starting',
-  degraded: 'Degraded',
-  unhealthy: 'Unhealthy',
-  unreachable: 'Unreachable',
-  not_configured: 'Not configured',
-  loading: 'Checking…',
-};
-
 const STATUS_CLASS: Record<CheckStatus, string> = {
   ok: 'text-brand-green',
   starting: 'text-gray-300',
@@ -48,13 +40,14 @@ const STATUS_CLASS: Record<CheckStatus, string> = {
 };
 
 function StatusBadge({ status }: { status: CheckStatus }) {
+  const t = useTranslations('admin.health.status');
   return (
-    <span className={`font-medium ${STATUS_CLASS[status]}`}>
-      {STATUS_LABEL[status]}
-    </span>
+    <span className={`font-medium ${STATUS_CLASS[status]}`}>{t(status)}</span>
   );
 }
 
+// English labels double as stable test ids. Product names (Redis, Pinata,
+// Soroban RPC) are shown untranslated; the rest come from admin.health.
 const DEPENDENCY_LABELS: Record<string, string> = {
   redis: 'Redis',
   pinata: 'Pinata',
@@ -62,22 +55,35 @@ const DEPENDENCY_LABELS: Record<string, string> = {
   sorobanRpc: 'Soroban RPC',
   contract: 'Contract Version',
 };
+const TRANSLATED_DEPENDENCIES = new Set(['sessionStore', 'contract']);
 
 function DependencyChecks({
   checks,
 }: {
   checks: Record<string, DependencyCheck>;
 }) {
+  const t = useTranslations('admin.health');
+  const locale = useLocale() as Locale;
   return (
     <>
       {Object.entries(checks).map(([name, check]) => (
         <HealthSection
           key={name}
-          title={DEPENDENCY_LABELS[name] ?? name}
+          testId={DEPENDENCY_LABELS[name] ?? name}
+          title={
+            TRANSLATED_DEPENDENCIES.has(name)
+              ? t(`dependencies.${name}`)
+              : (DEPENDENCY_LABELS[name] ?? name)
+          }
           status={check.status}
         >
           <p className="text-sm text-gray-400">
-            Latency: <span className="text-gray-200">{check.latencyMs} ms</span>
+            {t('latency')}{' '}
+            <span className="text-gray-200">
+              {t('latency_ms', {
+                value: formatNumber(check.latencyMs, locale),
+              })}
+            </span>
           </p>
           {check.error && <p className="text-sm text-red-400">{check.error}</p>}
           {check.status !== 'ok' && check.hint && (
@@ -95,16 +101,19 @@ function emptySubsystem(error: string): SubsystemHealth {
 
 function HealthSection({
   title,
+  testId,
   status,
   children,
 }: {
   title: string;
+  /** Stable, untranslated slug for data-testid (defaults to the title). */
+  testId?: string;
   status: CheckStatus;
   children?: React.ReactNode;
 }) {
   return (
     <section
-      data-testid={`health-section-${title.toLowerCase().replace(/\s+/g, '-')}`}
+      data-testid={`health-section-${(testId ?? title).toLowerCase().replace(/\s+/g, '-')}`}
       className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-3"
     >
       <div className="flex items-center justify-between gap-4">
@@ -117,7 +126,8 @@ function HealthSection({
 }
 
 function HealthDashboardContent() {
-  const locale = useLocale();
+  const locale = useLocale() as Locale;
+  const t = useTranslations('admin');
   const { publicKey } = useWallet();
   const router = useRouter();
   const { show } = useToast();
@@ -139,10 +149,10 @@ function HealthDashboardContent() {
     try {
       const res = await fetch('/api/admin/health', { cache: 'no-store' });
       if (res.status === 401 || res.status === 403) {
-        throw new Error('Admin session required');
+        throw new Error(t('health.session_required'));
       }
       if (!res.ok) {
-        throw new Error(`Health check request failed (HTTP ${res.status})`);
+        throw new Error(t('health.request_failed', { status: res.status }));
       }
       const data: AggregateHealthResponse = await res.json();
       setRemoteHealth(data);
@@ -151,7 +161,8 @@ function HealthDashboardContent() {
       // The aggregate route itself may be unreachable (e.g. offline, server
       // error) — that must not blank the page. Fall back to explicit
       // "unreachable" states for both remote checks and keep rendering.
-      const message = err instanceof Error ? err.message : 'Request failed';
+      const message =
+        err instanceof Error ? err.message : t('health.request_failed_generic');
       setRemoteFetchError(message);
       setRemoteHealth({
         indexer: emptySubsystem(message),
@@ -163,19 +174,19 @@ function HealthDashboardContent() {
       setRemoteLoading(false);
       setLastChecked(new Date());
     }
-  }, []);
+  }, [t]);
 
   // Gate: redirect non-admin wallets, mirroring app/[locale]/admin/page.tsx.
   useEffect(() => {
     if (!publicKey) return;
     if (publicKey !== ADMIN_ADDRESS) {
       show({
-        message: 'Unauthorized: admin wallet required.',
+        message: t('unauthorized_message'),
         variant: 'error',
       });
       router.replace('/');
     }
-  }, [publicKey, router, show]);
+  }, [publicKey, router, show, t]);
 
   useEffect(() => {
     if (publicKey !== ADMIN_ADDRESS) return;
@@ -207,36 +218,47 @@ function HealthDashboardContent() {
   return (
     <div className="max-w-3xl mx-auto flex flex-col gap-8">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold text-white">System Health</h1>
+        <h1 className="text-3xl font-bold text-white">
+          {t('pages.system_health')}
+        </h1>
         <button
           onClick={fetchRemoteHealth}
           disabled={remoteLoading}
           className="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 text-sm font-semibold hover:bg-gray-600 transition disabled:opacity-40"
         >
-          {remoteLoading ? 'Refreshing…' : 'Refresh'}
+          {remoteLoading ? t('health.refreshing') : t('health.refresh')}
         </button>
       </div>
 
       <p className="text-sm text-gray-400" data-testid="health-last-checked">
-        Last checked:{' '}
-        {lastChecked ? lastChecked.toLocaleTimeString(locale) : 'never'}
+        {t('health.last_checked')}{' '}
+        {lastChecked
+          ? lastChecked.toLocaleTimeString(locale)
+          : t('health.never')}
       </p>
 
-      <HealthSection title="Contract" status={contractStatus}>
+      <HealthSection
+        title={t('contract')}
+        testId="contract"
+        status={contractStatus}
+      >
         {contractPaused && (
           <p className="text-sm text-yellow-400">
-            The circuit breaker is engaged; on-chain transactions are disabled.
+            {t('health.circuit_breaker_engaged')}
           </p>
         )}
         {!contractLoading && !contractHealthy && (
           <p className="text-sm text-red-400">
-            The contract RPC health check is failing. See the Soroban RPC
-            endpoint configuration.
+            {t('health.contract_rpc_failing')}
           </p>
         )}
       </HealthSection>
 
-      <HealthSection title="Indexer" status={indexerStatus}>
+      <HealthSection
+        title={t('health.indexer')}
+        testId="indexer"
+        status={indexerStatus}
+      >
         {remoteHealth?.indexer.error && (
           <p className="text-sm text-red-400">{remoteHealth.indexer.error}</p>
         )}
@@ -244,7 +266,7 @@ function HealthDashboardContent() {
           <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-gray-400">
             {typeof indexerDetail.lastLedger !== 'undefined' && (
               <>
-                <dt>Last ledger</dt>
+                <dt>{t('health.last_ledger')}</dt>
                 <dd className="text-gray-200">
                   {String(indexerDetail.lastLedger)}
                 </dd>
@@ -252,15 +274,15 @@ function HealthDashboardContent() {
             )}
             {typeof indexerDetail.uptime !== 'undefined' && (
               <>
-                <dt>Uptime</dt>
+                <dt>{t('health.uptime')}</dt>
                 <dd className="text-gray-200">
-                  {String(indexerDetail.uptime)}s
+                  {t('health.seconds', { value: String(indexerDetail.uptime) })}
                 </dd>
               </>
             )}
             {typeof indexerDetail.ledgerLag !== 'undefined' && (
               <>
-                <dt>Ledger lag</dt>
+                <dt>{t('health.ledger_lag')}</dt>
                 <dd className="text-gray-200">
                   {String(indexerDetail.ledgerLag)}
                 </dd>
@@ -268,15 +290,17 @@ function HealthDashboardContent() {
             )}
             {typeof indexerDetail.pollerRunning === 'boolean' && (
               <>
-                <dt>Poller</dt>
+                <dt>{t('health.poller')}</dt>
                 <dd className="text-gray-200">
-                  {indexerDetail.pollerRunning ? 'Running' : 'Stopped'}
+                  {indexerDetail.pollerRunning
+                    ? t('health.running')
+                    : t('health.stopped')}
                 </dd>
               </>
             )}
             {typeof indexerDetail.lastError === 'string' && (
               <>
-                <dt>Last error</dt>
+                <dt>{t('health.last_error')}</dt>
                 <dd className="break-words text-red-300">
                   {indexerDetail.lastError}
                 </dd>
@@ -286,7 +310,11 @@ function HealthDashboardContent() {
         )}
       </HealthSection>
 
-      <HealthSection title="Backend API" status={backendStatus}>
+      <HealthSection
+        title={t('health.backend_api')}
+        testId="backend-api"
+        status={backendStatus}
+      >
         {remoteHealth?.backend.error && (
           <p className="text-sm text-red-400">{remoteHealth.backend.error}</p>
         )}
@@ -303,9 +331,10 @@ function HealthDashboardContent() {
 
       {remoteFetchError && (
         <p className="text-xs text-gray-400">
-          Note: the indexer and backend checks above are proxied through{' '}
-          <code>/api/admin/health</code>, which last failed with:{' '}
-          {remoteFetchError}
+          {t.rich('health.proxy_failed_note', {
+            code: (chunks) => <code>{chunks}</code>,
+            error: remoteFetchError,
+          })}
         </p>
       )}
     </div>

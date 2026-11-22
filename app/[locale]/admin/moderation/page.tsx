@@ -1,5 +1,6 @@
 'use client';
 import dynamic from 'next/dynamic';
+import { useTranslations } from 'next-intl';
 
 const AutomatedModerationLog = dynamic(
   () => import('@/components/admin/AutomatedModerationLog'),
@@ -13,9 +14,10 @@ const AutomatedModerationLog = dynamic(
 
 /** /admin/moderation — automated moderation log. */
 export default function AdminModerationPage() {
+  const t = useTranslations('admin.pages');
   return (
     <div className="max-w-3xl flex flex-col gap-8">
-      <h1 className="text-3xl font-bold text-white">Moderation</h1>
+      <h1 className="text-3xl font-bold text-white">{t('moderation')}</h1>
       <AutomatedModerationLog />
     </div>
   );

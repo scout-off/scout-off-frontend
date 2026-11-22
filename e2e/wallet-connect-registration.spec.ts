@@ -45,6 +45,26 @@ test.describe('wallet connect', () => {
   });
 });
 
+test.describe('wallet-required redirect (#1696)', () => {
+  test('returns to the protected page after connecting', async ({
+    page,
+    wallet,
+  }) => {
+    await page.goto('/fr/validator');
+    await page.waitForURL(/reason=wallet-required/);
+    const url = new URL(page.url());
+    expect(url.pathname).toMatch(/^\/fr\/?$/);
+    expect(url.searchParams.get('returnTo')).toBe('/fr/validator');
+
+    await page
+      .getByRole('button', { name: 'Connecter le portefeuille' })
+      .click();
+    await page.getByRole('button', { name: /freighter/i }).click();
+
+    await page.waitForURL('**/fr/validator');
+  });
+});
+
 test.describe('wallet connect → player registration', () => {
   test('registers a player profile end to end, including submitting the signed transaction to testnet', async ({
     page,

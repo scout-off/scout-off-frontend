@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useLocale, useTranslations } from 'next-intl';
+import type { Locale } from '@/lib/locales';
+import { formatDateTime } from '@/lib/localeFormat';
 
 interface AutomatedModerationEntry {
   id: string;
@@ -27,6 +30,8 @@ interface AuditEntry {
 }
 
 export default function AutomatedModerationLog() {
+  const t = useTranslations('admin.automated_moderation');
+  const locale = useLocale() as Locale;
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +57,7 @@ export default function AutomatedModerationLog() {
     const res = await fetch(
       `/api/admin/automated-moderation-log${query ? `?${query}` : ''}`,
     );
-    if (!res.ok) throw new Error('Failed to load entries');
+    if (!res.ok) throw new Error(t('load_failed'));
     return (await res.json()) as {
       entries?: AuditEntry[];
       nextCursor?: number | null;
@@ -67,7 +72,7 @@ export default function AutomatedModerationLog() {
       setEntries(data.entries ?? []);
       setNextCursor(data.nextCursor ?? null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load entries');
+      setError(err instanceof Error ? err.message : t('load_failed'));
     } finally {
       setLoading(false);
     }
@@ -82,7 +87,7 @@ export default function AutomatedModerationLog() {
       setEntries((prev) => [...prev, ...(data.entries ?? [])]);
       setNextCursor(data.nextCursor ?? null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load entries');
+      setError(err instanceof Error ? err.message : t('load_failed'));
     } finally {
       setLoadingMore(false);
     }
@@ -101,13 +106,11 @@ export default function AutomatedModerationLog() {
   const getSeverityLabel = (severity: string | undefined): string => {
     switch (severity) {
       case 'high':
-        return 'High';
       case 'medium':
-        return 'Medium';
       case 'low':
-        return 'Low';
+        return t(`severity.${severity}`);
       default:
-        return 'Unknown';
+        return t('unknown');
     }
   };
 
@@ -124,43 +127,37 @@ export default function AutomatedModerationLog() {
     }
   };
 
-  const formatDate = (timestamp: number): string => {
-    return new Date(timestamp * 1000).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-  };
+  const formatDate = (timestamp: number): string =>
+    formatDateTime(timestamp * 1000, locale);
 
   return (
     <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-white">
-          Automated Moderation Log
-        </h2>
-        <span className="text-sm text-gray-400">{entries.length} entries</span>
+        <h2 className="text-lg font-semibold text-white">{t('title')}</h2>
+        <span className="text-sm text-gray-400">
+          {t('entries', { count: entries.length })}
+        </span>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-400">Filter severity:</label>
+          <label className="text-sm text-gray-400">
+            {t('filter_severity')}
+          </label>
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value as typeof filter)}
             className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-green"
           >
-            <option value="all">All</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
+            <option value="all">{t('all')}</option>
+            <option value="high">{t('severity.high')}</option>
+            <option value="medium">{t('severity.medium')}</option>
+            <option value="low">{t('severity.low')}</option>
           </select>
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-400">Filter user:</label>
+          <label className="text-sm text-gray-400">{t('filter_user')}</label>
           <input
             type="text"
             value={filterUserId}
@@ -168,7 +165,7 @@ export default function AutomatedModerationLog() {
             onKeyDown={(e) => {
               if (e.key === 'Enter') loadEntries();
             }}
-            placeholder="User ID..."
+            placeholder={t('user_placeholder')}
             className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-green w-48"
           />
         </div>
@@ -177,15 +174,11 @@ export default function AutomatedModerationLog() {
           onClick={loadEntries}
           className="px-3 py-1.5 rounded-lg bg-brand-green text-black text-sm font-medium hover:opacity-90 transition"
         >
-          Refresh
+          {t('refresh')}
         </button>
       </div>
 
-      {loading && (
-        <p className="text-sm text-gray-400">
-          Loading automated moderation entries...
-        </p>
-      )}
+      {loading && <p className="text-sm text-gray-400">{t('loading')}</p>}
 
       {error && (
         <p role="alert" className="text-sm text-red-400">
@@ -194,9 +187,7 @@ export default function AutomatedModerationLog() {
       )}
 
       {!loading && !error && filteredEntries.length === 0 && (
-        <p className="text-sm text-gray-400">
-          No automated moderation entries found.
-        </p>
+        <p className="text-sm text-gray-400">{t('empty')}</p>
       )}
 
       {!loading && !error && filteredEntries.length > 0 && (
@@ -204,14 +195,24 @@ export default function AutomatedModerationLog() {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-gray-700">
-                <th className="py-2 pr-4 font-medium text-gray-400">Time</th>
                 <th className="py-2 pr-4 font-medium text-gray-400">
-                  Severity
+                  {t('time')}
                 </th>
-                <th className="py-2 pr-4 font-medium text-gray-400">Rule</th>
-                <th className="py-2 pr-4 font-medium text-gray-400">User</th>
-                <th className="py-2 pr-4 font-medium text-gray-400">Thread</th>
-                <th className="py-2 font-medium text-gray-400">Context</th>
+                <th className="py-2 pr-4 font-medium text-gray-400">
+                  {t('severity_header')}
+                </th>
+                <th className="py-2 pr-4 font-medium text-gray-400">
+                  {t('rule')}
+                </th>
+                <th className="py-2 pr-4 font-medium text-gray-400">
+                  {t('user')}
+                </th>
+                <th className="py-2 pr-4 font-medium text-gray-400">
+                  {t('thread')}
+                </th>
+                <th className="py-2 font-medium text-gray-400">
+                  {t('context')}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -233,7 +234,7 @@ export default function AutomatedModerationLog() {
                       </span>
                     </td>
                     <td className="py-2 pr-4 text-gray-200 font-medium">
-                      {(entry.data?.rule as string | undefined) ?? 'Unknown'}
+                      {(entry.data?.rule as string | undefined) ?? t('unknown')}
                     </td>
                     <td className="py-2 pr-4 text-gray-300 font-mono">
                       {entry.data?.userId as string | undefined}
@@ -260,17 +261,14 @@ export default function AutomatedModerationLog() {
           disabled={loadingMore}
           className="self-center px-3 py-1.5 rounded-lg border border-gray-700 text-sm text-white hover:bg-gray-800 transition disabled:opacity-50"
         >
-          {loadingMore ? 'Loading...' : 'Load more'}
+          {loadingMore ? t('loading_more') : t('load_more')}
         </button>
       )}
 
       <div className="flex items-center justify-between text-sm text-gray-400 pt-2 border-t border-gray-700">
-        <p>
-          Record automated moderation decisions for admin review. Missing
-          entries may indicate a connectivity issue with the chat service.
-        </p>
+        <p>{t('footer_note')}</p>
         <Link href="/admin" className="text-brand-green hover:underline">
-          Back to Admin Dashboard
+          {t('back')}
         </Link>
       </div>
     </div>

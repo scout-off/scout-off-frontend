@@ -67,6 +67,10 @@ jobs:
         run: npx jest --ci --testPathPattern='a11y'
       - run: node scripts/validate-env.js
       - run: node scripts/check-locale-keys.js
+      # Hard-coded JSX string inventory (#1697): warning mode for now; the
+      # count is written to the job summary so it can be driven down.
+      - name: i18n literal-string report
+        run: node scripts/report-i18n-literals.js
       # Storybook coverage check (issue #1524): components/ui/ is now a BLOCKING
       # gate — all primitives there must have a story (see
       # scripts/check-storybook-coverage.js). The other component directories

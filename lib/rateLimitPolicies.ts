@@ -54,6 +54,7 @@ export const POLICIES = {
     slug: 'auth-sep10',
     limit: 20,
     windowMs: 60_000,
+    onStoreError: 'local',
     message: 'Too many authentication requests. Please try again shortly.',
   },
 
@@ -63,6 +64,7 @@ export const POLICIES = {
     slug: 'auth-refresh',
     limit: 10,
     windowMs: 60_000,
+    onStoreError: 'local',
     message: 'Too many session refresh requests.',
   },
 
@@ -71,6 +73,7 @@ export const POLICIES = {
     slug: 'auth-logout-all',
     limit: 5,
     windowMs: 60_000,
+    onStoreError: 'local',
     message: 'Too many logout requests. Please wait before trying again.',
   },
 
@@ -148,6 +151,7 @@ export const POLICIES = {
     slug: 'contact-release',
     limit: 30,
     windowMs: 60_000,
+    onStoreError: 'local',
     message: 'Too many contact requests. Please try again shortly.',
   },
 
@@ -156,6 +160,7 @@ export const POLICIES = {
     slug: 'contact-vault',
     limit: 10,
     windowMs: 60_000,
+    onStoreError: 'local',
     message: 'Too many vault upload requests. Please try again shortly.',
   },
 
@@ -278,6 +283,7 @@ export async function applyRateLimit(
   const result = await checkRateLimit(`${policy.slug}:${ip}`, {
     limit: policy.limit,
     windowMs: policy.windowMs,
+    onStoreError: policy.onStoreError,
   });
 
   if (!result.limited) return null;

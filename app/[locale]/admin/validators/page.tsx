@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
 import { useWallet } from '@/hooks/useWallet';
 import { useToast } from '@/components/ui/Toast';
@@ -24,6 +25,7 @@ export default function AdminValidatorsPage() {
   const { validators, setValidators, paused, loading, fetchError, reload } =
     useAdminContractState();
   const { confirm, dialog } = useAdminConfirm();
+  const t = useTranslations('admin');
 
   const [validatorInput, setValidatorInput] = useState('');
 
@@ -39,8 +41,8 @@ export default function AdminValidatorsPage() {
     if (!publicKey) return;
     const address = validatorInput;
     confirm({
-      label: 'Add Validator',
-      message: `Add ${address} as a validator?`,
+      label: t('add_validator'),
+      message: t('validators_page.add_confirm', { address }),
       run: async () => {
         setAddTxStatus('pending');
         setAddTxHash(null);
@@ -61,7 +63,7 @@ export default function AdminValidatorsPage() {
           { address, addedAt: Date.now() / 1000, addedBy: publicKey },
         ]);
         setValidatorInput('');
-        show({ message: 'Validator added.', variant: 'success' });
+        show({ message: t('validators_page.added'), variant: 'success' });
       },
       onError: (message) => {
         setAddTxStatus('error');
@@ -73,8 +75,10 @@ export default function AdminValidatorsPage() {
   function removeValidator(address: string) {
     if (!publicKey) return;
     confirm({
-      label: 'Remove Validator',
-      message: `Remove ${address.slice(0, 4)}…${address.slice(-4)} from validators?`,
+      label: t('validators_page.remove_validator'),
+      message: t('validators_page.remove_confirm', {
+        address: `${address.slice(0, 4)}…${address.slice(-4)}`,
+      }),
       run: async () => {
         setRemoveTxStatus('pending');
         setRemoveTxHash(null);
@@ -91,7 +95,7 @@ export default function AdminValidatorsPage() {
         setRemoveTxHash(txHash);
         setRemoveTxStatus('success');
         setValidators((v) => v.filter((val) => val.address !== address));
-        show({ message: 'Validator removed.', variant: 'success' });
+        show({ message: t('validators_page.removed'), variant: 'success' });
       },
       onError: (message) => {
         setRemoveTxStatus('error');
@@ -105,17 +109,21 @@ export default function AdminValidatorsPage() {
 
   return (
     <div className="max-w-3xl flex flex-col gap-8">
-      <h1 className="text-3xl font-bold text-white">Validators</h1>
+      <h1 className="text-3xl font-bold text-white">{t('pages.validators')}</h1>
 
       <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
-        <h2 className="text-lg font-semibold text-white">Manage Validators</h2>
+        <h2 className="text-lg font-semibold text-white">
+          {t('validators_page.manage')}
+        </h2>
 
         <div className="flex flex-col gap-2">
-          <h3 className="text-sm font-medium text-gray-300">Add Validator</h3>
+          <h3 className="text-sm font-medium text-gray-300">
+            {t('add_validator')}
+          </h3>
           <div className="flex gap-3">
             <input
               className="input flex-1"
-              placeholder="Stellar public key (G...)"
+              placeholder={t('validator_placeholder')}
               value={validatorInput}
               onChange={(e) => setValidatorInput(e.target.value)}
             />
@@ -126,10 +134,10 @@ export default function AdminValidatorsPage() {
                 paused
               }
               onClick={addValidator}
-              title={paused ? 'Contract is currently paused' : undefined}
+              title={paused ? t('contract_paused_hint') : undefined}
               className="px-5 py-2 rounded-lg bg-brand-green text-black font-semibold hover:opacity-90 transition disabled:opacity-40"
             >
-              Add
+              {t('add')}
             </button>
           </div>
           <TransactionStatus
@@ -144,10 +152,10 @@ export default function AdminValidatorsPage() {
         </div>
 
         <h3 className="text-sm font-medium text-gray-300">
-          Authorized Validators ({validators.length})
+          {t('validators_page.authorized', { count: validators.length })}
         </h3>
         {validators.length === 0 ? (
-          <p className="text-sm text-gray-400">No validators authorized.</p>
+          <p className="text-sm text-gray-400">{t('no_validators')}</p>
         ) : (
           <ul className="flex flex-col gap-3">
             {validators.map((v) => (
@@ -164,10 +172,10 @@ export default function AdminValidatorsPage() {
                 <button
                   disabled={paused}
                   onClick={() => removeValidator(v.address)}
-                  title={paused ? 'Contract is currently paused' : undefined}
+                  title={paused ? t('contract_paused_hint') : undefined}
                   className="text-red-400 hover:text-red-300 transition shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  Remove
+                  {t('remove')}
                 </button>
               </li>
             ))}

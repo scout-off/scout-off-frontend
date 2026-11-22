@@ -101,7 +101,12 @@ import {
   _resetRateLimitStoreForTests,
   _getInMemoryStoreSizeForTests,
   IN_MEMORY_MAX_ENTRIES,
+  BREAKER_FAILURE_THRESHOLD,
+  BREAKER_OPEN_MS,
+  STORE_ERROR_DENY_RETRY_SEC,
+  getRateLimitStoreErrorCount,
 } from '@/lib/rateLimit';
+import { Redis } from '@upstash/redis';
 
 const { __mockBackingStores } = jest.requireMock('@upstash/redis') as {
   __mockBackingStores: Map<string, Map<string, MockEntry>>;
@@ -339,5 +344,82 @@ describe('in-memory store eviction (issue #1582)', () => {
       await checkRateLimit(`k:${i}`, longWindow);
     }
     expect(_getInMemoryStoreSizeForTests()).toBe(IN_MEMORY_MAX_ENTRIES);
+  });
+});
+
+describe('onStoreError failure modes and circuit breaker (#1699)', () => {
+  const ORIGINAL_ENV = process.env;
+  const opts = { limit: 2, windowMs: 60_000 };
+  let evalSpy: jest.SpyInstance;
+  let errorSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    process.env = {
+      ...ORIGINAL_ENV,
+      UPSTASH_REDIS_REST_URL: 'https://redis.test',
+      UPSTASH_REDIS_REST_TOKEN: 'tok',
+    };
+    _resetRateLimitStoreForTests();
+    jest.useFakeTimers();
+    evalSpy = jest
+      .spyOn(
+        Redis.prototype as unknown as { eval: () => Promise<unknown> },
+        'eval',
+      )
+      .mockRejectedValue(new Error('redis down'));
+    errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    evalSpy.mockRestore();
+    errorSpy.mockRestore();
+    jest.useRealTimers();
+    process.env = ORIGINAL_ENV;
+    _resetRateLimitStoreForTests();
+  });
+
+  it("defaults to 'allow' (fail open)", async () => {
+    for (let i = 0; i < 5; i++) {
+      expect(await checkRateLimit('k', opts)).toEqual({ limited: false });
+    }
+  });
+
+  it("'deny' rejects with a short retry", async () => {
+    expect(
+      await checkRateLimit('k', { ...opts, onStoreError: 'deny' }),
+    ).toEqual({
+      limited: true,
+      retryAfterSec: STORE_ERROR_DENY_RETRY_SEC,
+    });
+  });
+
+  it("'local' still enforces the limit via the in-memory fallback", async () => {
+    const local = { ...opts, onStoreError: 'local' as const };
+    expect((await checkRateLimit('auth:ip', local)).limited).toBe(false);
+    expect((await checkRateLimit('auth:ip', local)).limited).toBe(false);
+    expect((await checkRateLimit('auth:ip', local)).limited).toBe(true);
+  });
+
+  it('opens the breaker after repeated failures and skips Redis while open', async () => {
+    for (let i = 0; i < BREAKER_FAILURE_THRESHOLD; i++) {
+      await checkRateLimit(`k${i}`, opts);
+    }
+    expect(evalSpy).toHaveBeenCalledTimes(BREAKER_FAILURE_THRESHOLD);
+
+    await checkRateLimit('k', opts);
+    await checkRateLimit('k', opts);
+    expect(evalSpy).toHaveBeenCalledTimes(BREAKER_FAILURE_THRESHOLD);
+
+    jest.advanceTimersByTime(BREAKER_OPEN_MS + 1);
+    await checkRateLimit('k', opts);
+    expect(evalSpy).toHaveBeenCalledTimes(BREAKER_FAILURE_THRESHOLD + 1);
+  });
+
+  it('logs store failures at a bounded rate and counts them', async () => {
+    for (let i = 0; i < BREAKER_FAILURE_THRESHOLD; i++) {
+      await checkRateLimit(`k${i}`, opts);
+    }
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    expect(getRateLimitStoreErrorCount()).toBe(BREAKER_FAILURE_THRESHOLD);
   });
 });

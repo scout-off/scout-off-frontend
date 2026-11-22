@@ -18,3 +18,27 @@ export function isRedirectReason(
 ): value is RedirectReason {
   return typeof value === 'string' && value in REDIRECT_REASONS;
 }
+
+/**
+ * Validate a `returnTo` path from the query string (#1696). Only same-origin,
+ * root-relative paths are accepted, to prevent open redirects. Returns the
+ * normalized path (pathname + search + hash) or null when unsafe.
+ */
+export function sanitizeReturnTo(
+  value: string | string[] | null | undefined,
+  origin: string,
+): string | null {
+  if (typeof value !== 'string' || value.length === 0) return null;
+  if (!value.startsWith('/')) return null;
+  if (value.startsWith('//') || value.startsWith('/\\')) return null;
+  if (/[\u0000-\u001f\\]/.test(value)) return null;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(value.slice(1))) return null;
+  try {
+    const base = new URL(origin);
+    const url = new URL(value, base);
+    if (url.origin !== base.origin) return null;
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return null;
+  }
+}
