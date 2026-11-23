@@ -1,27 +1,51 @@
-import Link from "next/link";
-import { defaultLocale } from "@/i18n/routing";
+import Link from 'next/link';
+import Navbar from '@/components/Navbar';
 
 export const metadata = {
-  title: "Page Not Found — ScoutOff",
+  title: 'Page Not Found – ScoutOff',
+  description: 'The page you are looking for does not exist or has been moved.',
 };
 
-// Minimal fallback rendered for paths outside any locale (e.g. a route that the
-// next-intl middleware didn't rewrite). It owns its own <html> because it sits
-// outside the `app/[locale]` layout, and it links (and redirects) to the
-// default-locale home rather than rendering a nested locale document.
 export default function NotFound() {
-  const home = `/${defaultLocale}`;
   return (
-    <html lang={defaultLocale}>
-      <body className="bg-[#0A0F1E] text-gray-100 min-h-screen flex flex-col items-center justify-center gap-4 px-4 text-center">
-        <p className="text-6xl font-bold text-brand-green">404</p>
-        <h1 className="text-3xl font-bold text-white">Page not found</h1>
-        <p className="text-gray-400 max-w-md">
-          The page you are looking for does not exist or may have been moved.
-        </p>
-        <Link href={home} className="text-brand-green font-semibold underline">
-          Go to ScoutOff home
-        </Link>
+    <html lang="en">
+      <body className="bg-brand-dark text-white font-sans">
+        <Navbar />
+        <main className="max-w-6xl mx-auto px-4 py-8 min-h-[calc(100vh-4rem)] flex items-center justify-center">
+          <div className="text-center space-y-8">
+            <div className="flex justify-center">
+              <svg
+                className="w-32 h-32 text-brand-green opacity-50"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1}
+                  d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <div className="space-y-4">
+              <h1 className="text-8xl font-bold text-brand-green">404</h1>
+              <h2 className="text-2xl font-semibold text-white">
+                Page Not Found
+              </h2>
+              <p className="text-gray-400 max-w-md mx-auto">
+                The page you are looking for does not exist or has been moved.
+              </p>
+            </div>
+            <Link
+              href="/"
+              className="inline-block bg-brand-green text-black font-semibold px-6 py-3 rounded-lg hover:opacity-90 transition"
+            >
+              Go Home
+            </Link>
+          </div>
+        </main>
       </body>
     </html>
   );

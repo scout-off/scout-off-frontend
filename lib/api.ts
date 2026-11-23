@@ -1,29 +1,83 @@
-import axios from "axios";
+/**
+ * lib/api.ts — backward-compatible re-export facade (issue #1516).
+ *
+ * The 615-line monolith has been split into focused domain modules under
+ * lib/api/. This file re-exports everything from those modules so all
+ * existing `import … from 'lib/api'` or `import … from '@/lib/api'`
+ * call-sites continue to work without change.
+ *
+ * New code should import directly from the domain module it needs,
+ * e.g. `import { fetchAcademies } from '@/lib/api/academiesApi'`.
+ */
 
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000",
-  headers: { "Content-Type": "application/json" },
-});
+export {
+  backendClient,
+  SearchRateLimitedError,
+  fetchPlayerProfile,
+  searchPlayersByName,
+  fetchPlayerComments,
+  archivePlayerProfile,
+  unarchivePlayerProfile,
+  linkBackupWallet,
+  removeBackupWallet,
+  claimAccountWithBackupWallet,
+} from './api/playersApi';
 
-// Players
-export const fetchPlayerProfile = (playerId: string) =>
-  api.get(`/players/${playerId}`).then((r) => r.data);
+export {
+  fetchScoutProfile,
+  fetchScoutContacts,
+  fetchScoutStats,
+} from './api/scoutsApi';
+export type { ScoutStats } from './api/scoutsApi';
 
-export const fetchPlayerComments = (playerId: string) =>
-  api.get(`/players/${playerId}/comments`).then((r) => r.data);
+export { subscribeToPush, unsubscribeFromPush } from './api/pushApi';
 
-// Scouts
-export const fetchScoutProfile = (scoutId: string) =>
-  api.get(`/scouts/${scoutId}`).then((r) => r.data);
+export { fetchActivityEvents } from './api/activityApi';
+export type { ActivityEventType, ActivityEvent } from './api/activityApi';
 
-export const fetchScoutContacts = (scoutId: string) =>
-  api.get(`/scouts/${scoutId}/contacts`).then((r) => r.data);
+export { fetchValidatorMilestoneCount } from './api/validatorsApi';
 
-// Chat
-export const fetchChatHistory = (roomId: string) =>
-  api.get(`/chat/${roomId}`).then((r) => r.data);
+export {
+  generateReferralCode,
+  getReferralStats,
+  listReferralCodes,
+  fetchAllReferralCodes,
+  getReferralOverview,
+} from './api/referralsApi';
 
-export const postChatMessage = (roomId: string, message: string, sender: string) =>
-  api.post(`/chat/${roomId}`, { message, sender }).then((r) => r.data);
+export {
+  checkFraudThrottle,
+  REFERRAL_THROTTLE_MESSAGE,
+  redeemReferralCode,
+  fetchFraudFlags,
+  fetchFraudFlagsStatus,
+  fetchFraudThrottles,
+  liftFraudThrottle,
+  dismissFraudFlag,
+} from './api/fraudApi';
 
-export default api;
+export {
+  fetchAcademies,
+  fetchMyAcademies,
+  createAcademy,
+  addAcademyMember,
+  removeAcademyMember,
+  setAcademyQuorum,
+  fetchAcademyForWallet,
+  fetchMilestoneEndorsements,
+  endorseMilestone,
+  fetchAcademyMilestoneRollup,
+} from './api/academiesApi';
+
+export {
+  fetchPendingMilestoneSubmissions,
+  decideMilestoneSubmission,
+  createMilestoneSubmission,
+} from './api/milestoneSubmissionsApi';
+
+export { joinSponsorshipWaitlist } from './api/sponsorshipApi';
+export type { InterestType } from './api/sponsorshipApi';
+
+// Default export: the shared axios backend client, matching the previous
+// `export default api` so any `import api from '@/lib/api'` still works.
+export { backendClient as default } from './api/playersApi';

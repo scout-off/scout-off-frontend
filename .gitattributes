@@ -1,0 +1,44 @@
+# Normalize line endings to LF for all text files, regardless of the
+# contributor's platform or local core.autocrlf setting. This keeps Git's
+# behavior in sync with the LF convention already declared in .editorconfig.
+* text=auto eol=lf
+
+# Explicit source/text types
+*.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.html text eol=lf
+*.md text eol=lf
+*.mdx text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.sh text eol=lf
+*.txt text eol=lf
+*.env.example text eol=lf
+.editorconfig text eol=lf
+.gitattributes text eol=lf
+.gitignore text eol=lf
+
+# Binary assets — never subject to line-ending conversion
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.svg binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pdf binary
+*.mp4 binary
+*.mov binary
+*.zip binary

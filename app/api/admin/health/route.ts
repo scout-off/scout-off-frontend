@@ -1,0 +1,134 @@
+import { NextRequest } from 'next/server';
+import { requireAdminWallet } from '@/lib/adminAuth';
+import { getSessionWallet } from '@/lib/session';
+import { privateJson } from '@/lib/httpResponses';
+import { runDependencyChecks, type DependencyCheck } from '@/lib/healthChecks';
+
+// Proxies the indexer's and backend API's own /health endpoints server-side
+// (see packages/indexer/src/server.ts's handleHealth, server/src/app.js's
+// `GET /health`) so the browser never has to reach either origin directly —
+// avoids CORS config on those services and keeps NEXT_PUBLIC_* base URLs
+// out of a second round of client-side fetches. Used by the admin System
+// Health page (app/[locale]/admin/health/page.tsx). It also runs the
+// server-only dependency checks in lib/healthChecks.ts (Redis, Pinata, the
+// SQLite/session store, Soroban RPC and contract compatibility) under
+// `checks`; the page keeps using hooks/useContractHealth for pause status.
+
+const FETCH_TIMEOUT_MS = 5000;
+
+// Only these fields of a subsystem's /health payload are passed through to
+// the client (#1326) — anything else the internal service returns stays
+// server-side.
+const DETAIL_FIELDS = [
+  'status',
+  'lastLedger',
+  'ledgerLag',
+  'pollerRunning',
+  'uptime',
+] as const;
+
+function pickDetail(data: Record<string, unknown>): Record<string, unknown> {
+  const detail: Record<string, unknown> = {};
+  for (const key of DETAIL_FIELDS) {
+    if (data?.[key] !== undefined) detail[key] = data[key];
+  }
+  return detail;
+}
+
+export type SubsystemStatus =
+  | 'ok'
+  | 'starting'
+  | 'degraded'
+  | 'unhealthy'
+  | 'unreachable';
+
+const REPORTED_STATUSES: readonly SubsystemStatus[] = [
+  'starting',
+  'degraded',
+  'unhealthy',
+];
+
+export interface SubsystemHealth {
+  status: SubsystemStatus;
+  detail?: Record<string, unknown>;
+  error?: string;
+}
+
+export interface AggregateHealthResponse {
+  indexer: SubsystemHealth;
+  backend: SubsystemHealth;
+  /** Per-dependency results keyed by name (redis, pinata, sessionStore, …). */
+  checks: Record<string, DependencyCheck>;
+  checkedAt: number;
+}
+
+async function checkEndpoint(
+  baseUrl: string | undefined,
+): Promise<SubsystemHealth> {
+  if (!baseUrl) {
+    return { status: 'unreachable', error: 'Base URL not configured' };
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(`${baseUrl.replace(/\/+$/, '')}/health`, {
+      signal: controller.signal,
+      cache: 'no-store',
+    });
+
+    // The indexer answers 503 with a JSON body when it's `unhealthy`
+    // (packages/indexer/src/server.ts), so that body is still worth showing.
+    const data = await res.json().catch(() => null);
+    if (!res.ok && data?.status !== 'unhealthy') {
+      return { status: 'unreachable', error: `HTTP ${res.status}` };
+    }
+
+    const status: SubsystemStatus = REPORTED_STATUSES.includes(data?.status)
+      ? data.status
+      : 'ok';
+    return { status, detail: pickDetail(data ?? {}) };
+  } catch (err) {
+    const message =
+      err instanceof Error
+        ? err.name === 'AbortError'
+          ? 'Request timed out'
+          : err.message
+        : 'Request failed';
+    return { status: 'unreachable', error: message };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export async function GET(req: NextRequest) {
+  if (!requireAdminWallet(req)) {
+    return getSessionWallet(req)
+      ? privateJson({ error: 'Forbidden' }, { status: 403 })
+      : privateJson({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Each check is independent — a rejected/aborted fetch to one service
+  // must not affect the other (Promise.all over settled per-check results,
+  // not a throwing await chain).
+  const [indexer, backend, checks] = await Promise.all([
+    checkEndpoint(
+      process.env.INDEXER_API_URL_INTERNAL ??
+        process.env.NEXT_PUBLIC_INDEXER_API_URL,
+    ),
+    checkEndpoint(
+      process.env.API_URL_INTERNAL ?? process.env.NEXT_PUBLIC_API_URL,
+    ),
+    runDependencyChecks(),
+  ]);
+
+  const response: AggregateHealthResponse = {
+    indexer,
+    backend,
+    checks,
+    checkedAt: Date.now(),
+  };
+
+  return privateJson(response);
+}

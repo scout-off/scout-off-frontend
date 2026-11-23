@@ -1,65 +1,96 @@
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { NextIntlClientProvider } from "next-intl";
-import { getMessages, setRequestLocale } from "next-intl/server";
-import "../globals.css";
-import Navbar from "@/components/Navbar";
-import { WalletProvider } from "@/context/WalletContext";
-import { routing } from "@/i18n/routing";
+import { ReactNode } from 'react';
+import type { Metadata } from 'next';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { seoMetadata } from '@/lib/seo';
+import { locales } from '@/lib/locales';
 
-export function generateStaticParams() {
-  return routing.locales.map((locale) => ({ locale }));
+interface LocaleLayoutProps {
+  children: ReactNode;
+  params: Promise<{
+    locale: string;
+  }>;
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { locale: string };
+export function generateStaticParams() {
+  return locales.map((locale) => ({ locale }));
+}
+
+// Open Graph locale codes (language_TERRITORY) for each supported locale.
+const OG_LOCALES: Record<string, string> = {
+  en: 'en_US',
+  fr: 'fr_FR',
+  sw: 'sw_KE',
+};
+
+/**
+ * Generates locale-aware SEO metadata for all `app/[locale]/` pages.
+ *
+ * Each locale-prefixed page emits a `<link rel="canonical">` tag pointing to
+ * its own full URL (using NEXT_PUBLIC_APP_URL as the origin). This prevents
+ * search engines from treating locale variants as duplicate content.
+ *
+ * The canonical URL is constructed from the `x-pathname` request header set
+ * by the middleware so it reflects the actual page path (e.g.
+ * `/en/player/123` → `https://scoutoff.app/en/player/123`).
+ *
+ * Title, description and Open Graph / Twitter fields are translated from the
+ * `meta` namespace. The OG image comes from the sibling
+ * `opengraph-image.tsx` route and resolves against the root `metadataBase`.
+ */
+export async function generateMetadata(props: {
+  params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
+  const params = await props.params;
+
   const { locale } = params;
-  setRequestLocale(locale);
-  // `title.default` (rather than a plain string) lets child segments — e.g. the
-  // localized `not-found.tsx` — override the title with their own `generateMetadata`,
-  // while pages that don't define one still fall back to this default. The
-  // `template` is a passthrough ("%s") so an overriding title renders verbatim,
-  // e.g. "Page introuvable — ScoutOff" rather than being suffixed again.
+
+  const [seo, t] = await Promise.all([
+    seoMetadata(),
+    getTranslations({ locale, namespace: 'meta' }),
+  ]);
+  const canonical = seo.alternates?.canonical;
+  const title = t('title');
+  const description = t('description');
+
   return {
-    title: {
-      default: "ScoutOff — Decentralized Football Scouting",
-      template: "%s",
+    ...seo,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: typeof canonical === 'string' ? canonical : undefined,
+      siteName: 'ScoutOff',
+      type: 'website',
+      locale: OG_LOCALES[locale] ?? locale,
+      alternateLocale: locales
+        .filter((l) => l !== locale)
+        .map((l) => OG_LOCALES[l] ?? l),
     },
-    description:
-      "Tamper-proof player profiles and on-chain milestone verification on Stellar.",
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+    },
   };
 }
 
-export default async function LocaleLayout({
-  children,
-  params,
-}: {
-  children: React.ReactNode;
-  params: { locale: string };
-}) {
+export default async function LocaleLayout(props: LocaleLayoutProps) {
+  const params = await props.params;
+
   const { locale } = params;
 
-  // The [locale] segment acts as a catch-all, so guard against unknown values.
-  if (!(routing.locales as readonly string[]).includes(locale)) {
-    notFound();
-  }
+  const { children } = props;
 
   setRequestLocale(locale);
-  const messages = await getMessages();
 
+  // `display: contents` avoids introducing a layout box while still exposing
+  // the active locale via the lang attribute for assistive tech / WCAG 3.1.1.
+  // The root <html lang> is set separately from the pathname in app/layout.tsx
+  // and must not hard-code a single locale over this value.
   return (
-    <html lang={locale}>
-      <body>
-        <NextIntlClientProvider messages={messages}>
-          <WalletProvider>
-            <Navbar />
-            <main className="max-w-6xl mx-auto px-4 py-8">{children}</main>
-          </WalletProvider>
-        </NextIntlClientProvider>
-      </body>
-    </html>
+    <div lang={locale} className="contents" data-testid="locale-lang">
+      {children}
+    </div>
   );
 }

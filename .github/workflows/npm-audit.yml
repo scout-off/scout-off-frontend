@@ -1,0 +1,82 @@
+name: npm audit
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+      # Gate on high/critical findings that have a non-breaking fix available.
+      # Next.js 14.x has no patched release for several current advisories
+      # (upstream only shipped fixes on 15.5.x / 16.x — a separate upgrade PR).
+      # Transitive sharp (bundled by next) and the next-pwa → workbox chain
+      # likewise lack non-breaking upgrades. Those are allowlisted below so
+      # the audit job stays actionable for everything else.
+      - name: Run npm audit (high/critical, allowlisted unfixable)
+        run: |
+          set +e
+          npm audit --audit-level=high --json > audit-report.json
+          AUDIT_EXIT=$?
+          set -e
+          if [ "$AUDIT_EXIT" -eq 0 ]; then
+            echo "npm audit reported no high/critical vulnerabilities."
+            exit 0
+          fi
+          node <<'NODE'
+          const fs = require('fs');
+          const report = JSON.parse(fs.readFileSync('audit-report.json', 'utf8'));
+          // Packages with no non-breaking fix on the current Next 14 / LHCI stack.
+          const ALLOWLIST = new Set([
+            'next',
+            'sharp',
+            'next-pwa',
+            'workbox-webpack-plugin',
+            'workbox-build',
+            'rollup-plugin-terser',
+            'serialize-javascript', // pulled only via next-pwa → workbox until PWA stack is replaced
+            '@storybook/nextjs',
+            'image-size', // storybook/next image pipeline; no non-breaking fix
+            '@lhci/cli',
+            '@lhci/utils',
+            'lighthouse',
+            'puppeteer-core',
+            '@puppeteer/browsers',
+            'extract-zip', // transitive dependency of @puppeteer/browsers without upstream patch > 2.0.1
+            // The eslint-config-next → @next/eslint-plugin-next → glob chain
+            // only has a fix on eslint-config-next 16.x (a Next 15/16 major
+            // upgrade — same tracking PR as `next` itself). glob's advisory
+            // is a glob-CLI command-injection that this repo never invokes.
+            'eslint-config-next',
+            '@next/eslint-plugin-next',
+            'glob',
+          ]);
+          const vulns = report.vulnerabilities || {};
+          const blockers = Object.entries(vulns).filter(([, v]) => {
+            if (v.severity !== 'high' && v.severity !== 'critical') return false;
+            return !ALLOWLIST.has(v.name);
+          });
+          if (blockers.length === 0) {
+            const skipped = Object.entries(vulns)
+              .filter(([, v]) =>
+                (v.severity === 'high' || v.severity === 'critical') &&
+                ALLOWLIST.has(v.name),
+              )
+              .map(([name]) => name);
+            console.log(
+              'npm audit: no actionable high/critical findings after allowlist.',
+            );
+            console.log('Allowlisted (tracked for Next/PWA upgrade):', skipped.join(', '));
+            process.exit(0);
+          }
+          console.error('Actionable high/critical vulnerabilities:');
+          for (const [name, v] of blockers) {
+            console.error(`- ${name} (${v.severity})`);
+          }
+          process.exit(1);
+          NODE

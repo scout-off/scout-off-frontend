@@ -14,18 +14,20 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 export async function generateMetadata({
   params,
 }: {
-  params: { locale: string; rest: string[] };
+  params: Promise<{ locale: string; rest: string[] }>;
 }): Promise<Metadata> {
-  setRequestLocale(params.locale);
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("not_found");
   return { title: t("title") };
 }
 
-export default function CatchAllPage({
+export default async function CatchAllPage({
   params,
 }: {
-  params: { locale: string; rest: string[] };
+  params: Promise<{ locale: string; rest: string[] }>;
 }) {
-  setRequestLocale(params.locale);
+  const { locale } = await params;
+  setRequestLocale(locale);
   notFound();
 }

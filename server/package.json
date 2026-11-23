@@ -1,0 +1,21 @@
+{
+  "name": "scout-off-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Off-chain data API for scout-off (referrals today; chat history and comments next) — the Node.js API depicted in the root README architecture diagram.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test 'test/**/*.test.js'"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.7.0",
+    "helmet": "^8.3.0",
+    "rate-limit-redis": "^6.0.1",
+    "redis": "^6.2.1"
+  }
+}

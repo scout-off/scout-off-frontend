@@ -6,17 +6,548 @@ on:
   pull_request:
     branches: [main]
 
+# Placeholder envs for `npm run build` (only `npm run build` actually reads
+# these — the rest of the steps in every job are happy to ignore them).
+# Hoisted to workflow-level so the two build steps in `lint` + `build` jobs
+# don't drift; see Issue #16.
+env:
+  NEXT_PUBLIC_CONTRACT_ID: ci-placeholder
+  NEXT_PUBLIC_SOROBAN_RPC: https://soroban-testnet.stellar.org
+  NEXT_PUBLIC_HORIZON_URL: https://horizon-testnet.stellar.org
+  NEXT_PUBLIC_IPFS_GATEWAY: https://gateway.pinata.cloud/ipfs
+  NEXT_PUBLIC_API_URL: http://localhost:4000
+  NEXT_PUBLIC_APP_URL: https://scoutoff.app
+  NEXT_PUBLIC_STATUS_PAGE_URL: ''
+  NEXT_PUBLIC_ADMIN_ADDRESS: ''
+  PINATA_API_KEY: ci-placeholder
+  PINATA_SECRET: ci-placeholder
+  PLATFORM_CONTACT_FEE_XLM: '1'
+  UPSTASH_REDIS_REST_URL: ''
+  UPSTASH_REDIS_REST_TOKEN: ''
+  MEDIA_URL_SIGNING_SECRET: ''
+  API_URL_INTERNAL: ''
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: ''
+  NEXT_PUBLIC_INDEXER_API_URL: http://localhost:3001
+  NEXT_PUBLIC_DOMAIN: localhost:3000
+  NEXT_PUBLIC_SENTRY_DSN: ''
+  SENTRY_ORG: ''
+  SENTRY_PROJECT: ''
+  SENTRY_AUTH_TOKEN: ''
+  SENTRY_RELEASE: ''
+  SEP10_SERVER_KEY: ''
+  SEP10_HOME_DOMAIN: ''
+  SEP10_ALLOWED_ORIGINS: ''
+  NEXT_PUBLIC_SEP10_SERVER_ACCOUNT: ''
+  NEXT_PUBLIC_SEP10_HOME_DOMAIN: ''
+  NEXT_PUBLIC_BASE_URL: ''
+
 jobs:
-  lint-and-test:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run type-check
+      - run: npm run test
+      # Explicit, named accessibility gate: existing *.a11y.test.tsx specs
+      # (jest-axe based) already run as part of `npm run test` above, but
+      # calling them out as their own step makes the a11y gate visible in
+      # the CI UI and fails loudly/separately if a new critical/serious
+      # axe violation is introduced. New page-level a11y coverage (player,
+      # scout, validator dashboards; player public profile) should follow
+      # this same *.a11y.test.tsx convention.
+      - name: Accessibility (axe) checks
+        run: npx jest --ci --testPathPattern='a11y'
+      - run: node scripts/validate-env.js
+      - run: node scripts/check-locale-keys.js
+      # Storybook coverage check (issue #1524): components/ui/ is now a BLOCKING
+      # gate — all primitives there must have a story (see
+      # scripts/check-storybook-coverage.js). The other component directories
+      # (scout/, player/, admin/) are warn-only until their gaps are closed.
+      - name: Storybook coverage check
+        run: node scripts/check-storybook-coverage.js
+      # Issue #16: A broken Next.js build can be merged without CI catching it.
+      # The .next build cache is keyed on package-lock + this step so subsequent
+      # runs reuse it. Build-only env vars are inherited from the workflow-level
+      # `env:` block (see top of file), so this step doesn't need its own.
+      - run: npm run build
+      # Restore the .next cache to the post-test step (no-op for this job, but
+      # documents intent for the dedicated build job below).
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: .next
+          key: ${{ runner.os }}-next-build-${{ hashFiles('package-lock.json') }}
+          restore-keys: ${{ runner.os }}-next-build-
+      - name: Verify PWA icons exist
+        run: |
+          node -e "
+            const fs = require('fs');
+            const manifest = JSON.parse(fs.readFileSync('public/manifest.json', 'utf8'));
+            let missing = [];
+            for (const icon of manifest.icons) {
+              const file = 'public' + icon.src;
+              if (!fs.existsSync(file)) missing.push(file);
+            }
+            if (missing.length) { console.error('Missing icons:', missing.join(', ')); process.exit(1); }
+            console.log('All', manifest.icons.length, 'manifest icons present.');
+          "
+      - name: Guard against committed .data/ artifacts
+        run: |
+          # .gitignore was historically `.data/` (with a leading dot) — the
+          # typo has been fixed to `/data/` (lib/referralStore.ts writes
+          # to a root-anchored `data/`). Guard against any tracked files
+          # under either path so we catch drift in either direction.
+          tracked=$(git ls-files -- '.data/**' 'data/**')
+          if [ -n "$tracked" ]; then
+            echo "Tracked files found under runtime data dirs (dev-only referral store artifacts, should be gitignored):"
+            echo "$tracked"
+            exit 1
+          fi
+          echo "No tracked files under .data/ or data/."
+
+      - name: Guard against orphaned gitlinks
+        run: |
+          # Fail if any gitlink (mode 160000) exists without a .gitmodules entry.
+          # This prevents orphaned submodule references from accumulating in the index.
+          if git ls-files -s | awk '$1==160000' | grep -q .; then
+            if [ ! -f .gitmodules ]; then
+              echo "Error: gitlink(s) found without .gitmodules file"
+              git ls-files -s | awk '$1==160000'
+              exit 1
+            fi
+          fi
+          echo "No orphaned gitlinks found."
+
+      # Contract guard for `docs/pr-bodies/`. Pinned in CI so adding a body
+      # file with the wrong shape fails loudly on PR. The contract is
+      # documented in `docs/pr-bodies/README.md` and reproduced in the
+      # snippet at the end of `.github/PULL_REQUEST_TEMPLATE.md`.
+      - name: Validate docs/pr-bodies/ body-file contract
+        run: node scripts/validate-pr-bodies.js
+
+  # PR-diff-scoped guard (issue #1167): flags new/changed hooks/, lib/, or
+  # components/ files that ship without a matching __tests__/ file. Scoped
+  # to the diff against the PR's base branch rather than a full-repo scan,
+  # so it doesn't immediately fail on this repo's pre-existing test gaps —
+  # only new/changed files are checked. Only meaningful on pull_request
+  # events (a push to main has no "base" to diff against).
+  test-coverage-diff:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Check new/changed files have a matching test
+        env:
+          BASE_REF: origin/${{ github.event.pull_request.base.ref }}
+        run: node scripts/check-test-coverage-diff.js
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      # Run tests with coverage collection. Thresholds (lines: 80 %, branches: 70 %,
+      # functions: 80 %, statements: 80 %) are enforced via coverageThreshold in
+      # jest.config.js — the step fails automatically if any threshold is breached.
+      - name: Run tests with coverage
+        run: npm run test -- --coverage --ci --coverageReporters=lcov --coverageReporters=text-summary
+
+      # Upload the lcov report to Codecov for per-file drill-down and PR annotations.
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4.6.0
+        with:
+          files: ./coverage/lcov.info
+          flags: frontend
+          fail_ci_if_error: false # don't fail the build if Codecov is unreachable
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      # Also publish a summary directly to the GitHub Actions job summary page
+      # so coverage numbers are visible without leaving GitHub.
+      - name: Write coverage summary to job summary
+        if: always()
+        run: |
+          echo "## Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat coverage/coverage-summary.json 2>/dev/null \
+            | node -e "
+                const data = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+                const t = data.total;
+                console.log('Lines     : ' + t.lines.pct + '% (' + t.lines.covered + '/' + t.lines.total + ')');
+                console.log('Branches  : ' + t.branches.pct + '% (' + t.branches.covered + '/' + t.branches.total + ')');
+                console.log('Functions : ' + t.functions.pct + '% (' + t.functions.covered + '/' + t.functions.total + ')');
+                console.log('Statements: ' + t.statements.pct + '% (' + t.statements.covered + '/' + t.statements.total + ')');
+              " 2>/dev/null || echo "Coverage summary not available"
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  memory-regression:
+    # Runs the streaming-upload memory regression test (issue #1527) in CI so
+    # that a regression back to full-body buffering (which would OOM serverless
+    # functions on 100 MB+ highlight videos) fails the build immediately.
+    # NODE_OPTIONS=--expose-gc lets the test harness force a GC at each sample
+    # so it measures the *live* set instead of uncollected garbage, enabling
+    # the strict 64 MB budget (vs the 256 MB smoke-bound used without GC).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Streaming-upload memory regression (100 MB, < 64 MB peak)
+        run: npm run test:memory
+
+  indexer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # Installs both the app's and packages/indexer's dependencies via the
+      # root npm workspace (see "workspaces" in package.json) — this job
+      # otherwise never runs the Next.js app's own build/lint/test commands,
+      # so packages/indexer is built and tested independently of it.
+      - run: npm ci --no-audit --no-fund
+
+      - name: Build indexer
+        run: npm run build --workspace=packages/indexer
+
+      - name: Test indexer
+        run: npm test --workspace=packages/indexer
+
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - run: npm ci
+
+      - name: Test backend
+        # Node 22+ treats --test args as globs, so a bare directory no longer
+        # expands to the files inside it.
+        run: node --test --experimental-test-coverage 'test/**/*.test.js'
+
+  build:
+    # Standalone build job — separated from the `lint` job so its
+    # Next.js build cache can be reused and build failures don't block
+    # lint signals. Issue #16.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: .next
+          key: ${{ runner.os }}-next-build-${{ hashFiles('package-lock.json') }}
+          restore-keys: ${{ runner.os }}-next-build-
+
+      # Build-only env vars are inherited from the workflow-level `env:`
+      # block (see top of file) — no step-level env needed here either.
+      - run: npm run build
+
+  # Issue #1520: the repo ships three production Dockerfiles (frontend,
+  # packages/indexer, docker/mock-api, docker/mock-rpc) but ci.yml never
+  # built them, so they drifted (node:20-alpine while .nvmrc is 24 and
+  # package.json requires node >=24). Only contract-integration.yml ran
+  # `docker compose -f docker-compose.test.yml`, and that stack uses a
+  # third-party image rather than building from these Dockerfiles.
+  #
+  # This job builds each Dockerfile so a broken or drifted Dockerfile
+  # fails CI loudly on the PR that broke it, instead of being discovered
+  # at deploy time. We only need a successful `docker build` (not a
+  # runtime smoke test) to catch the drift class of bugs described in the
+  # issue, so the job deliberately stops short of running the images.
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      # No setup-node: the images bring their own Node (node:24-alpine,
+      # pinned to match .nvmrc). Setting up Node here would only mask a
+      # Dockerfile that pulled the wrong base image.
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Frontend Dockerfile. NEXT_PUBLIC_* vars are inlined into the
+      # client bundle at build time, so they're passed as build ARGs —
+      # the same workflow-level placeholder values used by the `lint` and
+      # `build` jobs above (the bundle only needs to compile, not reach
+      # real services). See the top of this file for the canonical list.
+      - name: Build frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: scout-off-frontend:ci
+          build-args: |
+            NEXT_PUBLIC_CONTRACT_ID=${{ env.NEXT_PUBLIC_CONTRACT_ID }}
+            NEXT_PUBLIC_HORIZON_URL=${{ env.NEXT_PUBLIC_HORIZON_URL }}
+            NEXT_PUBLIC_SOROBAN_RPC=${{ env.NEXT_PUBLIC_SOROBAN_RPC }}
+            NEXT_PUBLIC_IPFS_GATEWAY=${{ env.NEXT_PUBLIC_IPFS_GATEWAY }}
+            NEXT_PUBLIC_API_URL=${{ env.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_APP_URL=${{ env.NEXT_PUBLIC_APP_URL }}
+            NEXT_PUBLIC_ADMIN_ADDRESS=${{ env.NEXT_PUBLIC_ADMIN_ADDRESS }}
+            NEXT_PUBLIC_DOMAIN=${{ env.NEXT_PUBLIC_DOMAIN }}
+            NEXT_PUBLIC_BASE_URL=${{ env.NEXT_PUBLIC_BASE_URL }}
+
+      # The indexer Dockerfile's build context is ./packages/indexer, but
+      # the package depends on the sibling workspace package
+      # @scoutoff/contract-events (packages/contract-events), which is
+      # private/unpublished and lives outside that context — so `npm
+      # install` can't resolve it and `prebuild` (`npm run build --prefix
+      # ../contract-events`) can't find its target. That's a pre-existing
+      # workspace-context limitation, not node-version drift, and fixing it
+      # (e.g. widening the build context to the repo root) is out of scope
+      # for #1520. We still build it best-effort so the node:24 bump is
+      # exercised, but a failure here doesn't fail the job — tracked as
+      # follow-up so the three self-contained images keep gating the PR.
+      - name: Build indexer image
+        continue-on-error: true
+        uses: docker/build-push-action@v6
+        with:
+          context: ./packages/indexer
+          file: ./packages/indexer/Dockerfile
+          push: false
+          load: true
+          tags: scout-off-indexer:ci
+
+      - name: Build mock-api image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./docker/mock-api
+          file: ./docker/mock-api/Dockerfile
+          push: false
+          load: true
+          tags: scout-off-mock-api:ci
+
+      - name: Build mock-rpc image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./docker/mock-rpc
+          file: ./docker/mock-rpc/Dockerfile
+          push: false
+          load: true
+          tags: scout-off-mock-rpc:ci
+
+  e2e:
+    # Playwright suite (e2e/). Boots the Next.js dev server itself through
+    # playwright.config.ts's `webServer` block, so it needs no external
+    # services. Issue #1299: nothing ran this suite in CI, so every spec
+    # under e2e/ — including the SEP-10 session lifecycle ones — could rot
+    # without a single red check.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      # CI's workflow-level `env:` block declares SEP10_SERVER_KEY,
+      # SEP10_HOME_DOMAIN and the NEXT_PUBLIC_* vars as empty placeholders
+      # for `npm run build`. playwright.config.ts's `envOr` helper treats a
+      # set-but-empty value as unset and boots the dev server with its own,
+      # so no step-level env is needed here.
+      - name: Playwright suite
+        run: npm run test:e2e
+
+      # The session-lifecycle spec is deterministic (localhost only — no
+      # testnet, no third-party calls), so it also runs with a 10-second
+      # access-token TTL to exercise a token that genuinely lapses, and with
+      # retries turned off: a spec that only passes on a second attempt is a
+      # broken spec rather than a flaky one, and this suite is where the
+      # session guarantees (rotate, revoke, no silent sign-out) are pinned.
+      - name: Session lifecycle specs (10s token TTL, no retries)
+        run: npm run test:e2e:sessions -- --retries=0
+
+      # Traces/screenshots of failures are the only way to debug a red E2E
+      # run after the fact — they're uploaded whether the specs passed or not.
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: playwright-artifacts
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  build-storybook:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build-storybook
+      # Interaction tests (issue #1322): runs every story's play function in
+      # a real Chromium against the static build, plus axe a11y checks
+      # (.storybook/test-runner.ts). A failing assertion fails the job.
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test-storybook:ci
+
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: .next
+          key: ${{ runner.os }}-next-build-${{ hashFiles('package-lock.json') }}
+          restore-keys: ${{ runner.os }}-next-build-
+
+      - run: npm run build
+
+      - run: npx --no-install lhci autorun
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: lighthouse-report
+          path: lighthouse-report/
+
+  bundle-size:
+    # Runs after the standalone build job so we can reuse its .next cache
+    # instead of building twice.
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: npm
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run test
-      - run: npm run test:locales
-      - run: node scripts/validate-env.js
+
+      - run: npm ci --no-audit --no-fund
+
+      # Restore the .next output produced by the `build` job.
+      - uses: actions/cache@v4
+        with:
+          path: .next
+          key: ${{ runner.os }}-next-build-${{ hashFiles('package-lock.json') }}
+          restore-keys: ${{ runner.os }}-next-build-
+
+      # Re-run build only if the cache was not restored (e.g. first run on a
+      # new branch). The `build` job's cache key is identical so this is
+      # almost always a no-op.
+      - name: Build (cache miss fallback)
+        run: npm run build
+
+      # Run size-limit against the committed .size-limit.json budgets.
+      # Exit code is non-zero if any entry exceeds its limit — CI fails fast.
+      - name: Check bundle sizes against budget
+        id: size_check
+        run: npx size-limit --json > size-limit-report.json
+        continue-on-error: true
+
+      # Always publish the raw JSON as a downloadable artifact for historical
+      # tracking and debugging, regardless of pass/fail.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bundle-size-report
+          path: size-limit-report.json
+
+      # Write a human-readable markdown table to the GitHub Actions job
+      # summary so bundle sizes are visible on every PR without downloading
+      # the artifact.
+      - name: Post bundle-size summary
+        if: always()
+        run: |
+          echo "## Bundle Size Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Chunk | Size (gzip) | Limit | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|------------|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          node -e "
+            const fs = require('fs');
+            let report;
+            try {
+              report = JSON.parse(fs.readFileSync('size-limit-report.json', 'utf8'));
+            } catch (e) {
+              console.log('| _Report unavailable_ | – | – | ❓ |');
+              process.exit(0);
+            }
+            for (const entry of report) {
+              const sizeKb = (entry.size / 1024).toFixed(1);
+              const limitKb = entry.limit || 'none';
+              const passed = entry.passed !== false;
+              const icon = passed ? '✅' : '❌';
+              console.log(\`| \${entry.name} | \${sizeKb} kB | \${limitKb} | \${icon} |\`);
+            }
+          " >> $GITHUB_STEP_SUMMARY
+
+      # Fail the job now (after posting the summary) if size-limit found
+      # any chunk over budget.
+      - name: Enforce budget (fail if over limit)
+        if: steps.size_check.outcome == 'failure'
+        run: |
+          echo "One or more bundle chunks exceed their size budget. See the summary above."
+          exit 1

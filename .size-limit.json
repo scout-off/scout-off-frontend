@@ -1,0 +1,45 @@
+[
+  {
+    "name": "Shared runtime chunks (framework + webpack + main)",
+    "path": [
+      ".next/static/chunks/framework-*.js",
+      ".next/static/chunks/webpack-*.js",
+      ".next/static/chunks/main-*.js"
+    ],
+    "limit": "250 kB",
+    "gzip": true
+  },
+  {
+    "name": "Home page JS",
+    "path": [
+      ".next/static/chunks/app/[locale]/page-*.js",
+      ".next/static/chunks/app/page-*.js"
+    ],
+    "limit": "50 kB",
+    "gzip": true
+  },
+  {
+    "name": "Player dashboard JS",
+    "path": ".next/static/chunks/app/**/player/page-*.js",
+    "limit": "120 kB",
+    "gzip": true
+  },
+  {
+    "name": "Scout dashboard JS",
+    "path": ".next/static/chunks/app/**/scout/page-*.js",
+    "limit": "120 kB",
+    "gzip": true
+  },
+  {
+    "name": "Validator dashboard JS",
+    "path": ".next/static/chunks/app/**/validator/page-*.js",
+    "limit": "120 kB",
+    "gzip": true
+  },
+  {
+    "name": "Admin panel JS",
+    "path": ".next/static/chunks/app/**/admin/page-*.js",
+    "limit": "120 kB",
+    "gzip": true
+  }
+]

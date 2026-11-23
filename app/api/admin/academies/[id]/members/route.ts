@@ -1,0 +1,49 @@
+import { NextRequest } from 'next/server';
+import api from '@/lib/api';
+import { requireAcademyManager } from '@/lib/academyAuth';
+import { privateJson } from '@/lib/httpResponses';
+import { getErrorMessage } from '@/lib/getErrorMessage';
+import { upstreamStatus } from '@/lib/httpClient';
+
+// Stellar public key: 'G' followed by 55 uppercase base32 characters (A-Z, 2-7).
+const STELLAR_PUBLIC_KEY_RE = /^G[A-Z2-7]{55}$/;
+
+// Reachable by the super-admin (any academy) or that academy's recorded
+// ownerWallet (their own academy only) — see lib/academyAuth.ts and
+// docs/academy-validator-model.md's "Admin flow" section (issue #1173).
+export async function POST(
+  req: NextRequest,
+  props: { params: Promise<{ id: string }> },
+) {
+  const params = await props.params;
+  const manager = await requireAcademyManager(req, params.id);
+  if (!manager) {
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { wallet } = await req.json().catch(() => ({}));
+  if (typeof wallet !== 'string' || !wallet.trim()) {
+    return privateJson({ error: 'wallet is required' }, { status: 400 });
+  }
+
+  if (!STELLAR_PUBLIC_KEY_RE.test(wallet.trim())) {
+    return privateJson(
+      { error: 'wallet must be a valid Stellar public key' },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const academy = await api
+      .post(`/academies/${encodeURIComponent(params.id)}/members`, {
+        wallet,
+        addedBy: manager.wallet,
+      })
+      .then((r) => r.data);
+    return privateJson(academy, { status: 201 });
+  } catch (err: unknown) {
+    const status = upstreamStatus(err);
+    const message = getErrorMessage(err, 'Failed to add signer wallet');
+    return privateJson({ error: message }, { status });
+  }
+}

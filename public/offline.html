@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0a0f1e" />
+    <title>You're offline – ScoutOff</title>
+    <style>
+      /* Minimal brand-aligned styles — no external assets required so this
+         page renders fully even when the network and caches are cold. */
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      :root {
+        --color-bg:       #0a0f1e;
+        --color-surface:  #111827;
+        --color-green:    #22c55e;
+        --color-text:     #f9fafb;
+        --color-muted:    #9ca3af;
+        --color-border:   #1f2937;
+      }
+
+      html, body {
+        height: 100%;
+        background-color: var(--color-bg);
+        color: var(--color-text);
+        font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .page {
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1rem;
+        text-align: center;
+      }
+
+      .icon {
+        width: 5rem;
+        height: 5rem;
+        color: var(--color-green);
+        opacity: 0.6;
+        margin-bottom: 2rem;
+      }
+
+      h1 {
+        font-size: clamp(1.5rem, 5vw, 2.5rem);
+        font-weight: 700;
+        color: var(--color-text);
+        margin-bottom: 0.75rem;
+        letter-spacing: -0.025em;
+      }
+
+      p {
+        color: var(--color-muted);
+        font-size: 1rem;
+        max-width: 36ch;
+        line-height: 1.6;
+        margin-bottom: 2.5rem;
+      }
+
+      .btn {
+        display: inline-block;
+        background-color: var(--color-green);
+        color: #000;
+        font-weight: 600;
+        font-size: 0.9375rem;
+        padding: 0.75rem 1.75rem;
+        border-radius: 0.5rem;
+        border: none;
+        cursor: pointer;
+        text-decoration: none;
+        transition: opacity 0.15s;
+      }
+
+      .btn:hover, .btn:focus-visible {
+        opacity: 0.85;
+      }
+
+      .btn:focus-visible {
+        outline: 2px solid var(--color-green);
+        outline-offset: 3px;
+      }
+
+      .lang-picker {
+        margin-top: 2.5rem;
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .lang-picker button {
+        background: none;
+        border: 1px solid var(--color-border);
+        color: var(--color-muted);
+        padding: 0.3rem 0.8rem;
+        border-radius: 999px;
+        font-size: 0.8125rem;
+        cursor: pointer;
+        transition: border-color 0.15s, color 0.15s;
+      }
+
+      .lang-picker button:hover,
+      .lang-picker button[aria-pressed="true"] {
+        border-color: var(--color-green);
+        color: var(--color-text);
+      }
+
+      footer {
+        margin-top: 3rem;
+        color: var(--color-border);
+        font-size: 0.75rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page" role="main">
+      <!-- No-network icon (wifi-off, inline SVG — no external fetch) -->
+      <svg
+        class="icon"
+        aria-hidden="true"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M3 3l18 18M8.111 8.111A9.955 9.955 0 0 0 2 12c2.762 2.762 6.553 4 10 4a9.956 9.956 0 0 0 5.889-1.889M16.243 7.757A9.956 9.956 0 0 0 12 7c-1.813 0-3.52.482-4.99 1.327M12 20h.01M15 16.364A5.978 5.978 0 0 1 12 17a5.978 5.978 0 0 1-4.243-1.757"
+        />
+      </svg>
+
+      <h1 id="offline-heading" data-key="heading">You're offline</h1>
+      <p data-key="body">
+        This page wasn't cached on your device. Please reconnect to the
+        internet and try again, or navigate to a page you've visited before.
+      </p>
+
+      <button
+        class="btn"
+        type="button"
+        onclick="window.location.reload()"
+        data-key="retry"
+        aria-label="Try again"
+      >
+        Try again
+      </button>
+
+      <!-- Lightweight locale switcher — no JS framework required. -->
+      <nav class="lang-picker" aria-label="Language">
+        <button type="button" data-lang="en" aria-pressed="true">English</button>
+        <button type="button" data-lang="fr" aria-pressed="false">Français</button>
+        <button type="button" data-lang="sw" aria-pressed="false">Kiswahili</button>
+      </nav>
+
+      <footer>ScoutOff</footer>
+    </main>
+
+    <script>
+      /* Minimal i18n — updates visible copy when a language button is pressed.
+         No framework, no fetch, works fully offline. */
+      var STRINGS = {
+        en: {
+          heading: "You\u2019re offline",
+          body: "This page wasn\u2019t cached on your device. Please reconnect to the internet and try again, or navigate to a page you\u2019ve visited before.",
+          retry: "Try again"
+        },
+        fr: {
+          heading: "Vous \u00eates hors ligne",
+          body: "Cette page n\u2019a pas \u00e9t\u00e9 mise en cache sur votre appareil. Reconnectez-vous \u00e0 internet et r\u00e9essayez, ou acc\u00e9dez \u00e0 une page que vous avez d\u00e9j\u00e0 visit\u00e9e.",
+          retry: "R\u00e9essayer"
+        },
+        sw: {
+          heading: "Huna mtandao",
+          body: "Ukurasa huu haukuhifadhiwa kwenye kifaa chako. Tafadhali unganisha upya mtandao na ujaribu tena, au nenda kwenye ukurasa uliowahi kutembelea.",
+          retry: "Jaribu tena"
+        }
+      };
+
+      function getLang() {
+        try {
+          var stored = localStorage.getItem('offline-lang');
+          if (stored && STRINGS[stored]) return stored;
+        } catch (_) {}
+        var nav = (navigator.language || 'en').split('-')[0];
+        return STRINGS[nav] ? nav : 'en';
+      }
+
+      function applyLang(lang) {
+        var strings = STRINGS[lang] || STRINGS['en'];
+        document.querySelectorAll('[data-key]').forEach(function (el) {
+          var key = el.getAttribute('data-key');
+          if (strings[key]) el.textContent = strings[key];
+        });
+        document.documentElement.setAttribute('lang', lang);
+        document.querySelectorAll('.lang-picker button').forEach(function (btn) {
+          btn.setAttribute('aria-pressed', btn.getAttribute('data-lang') === lang ? 'true' : 'false');
+        });
+        try { localStorage.setItem('offline-lang', lang); } catch (_) {}
+      }
+
+      document.querySelectorAll('.lang-picker button').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          applyLang(btn.getAttribute('data-lang'));
+        });
+      });
+
+      applyLang(getLang());
+    </script>
+  </body>
+</html>

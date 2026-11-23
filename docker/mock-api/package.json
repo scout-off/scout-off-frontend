@@ -1,0 +1,10 @@
+{
+  "name": "scoutoff-mock-backend-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local, credential-free mock of the backend API lib/api.ts talks to (NEXT_PUBLIC_API_URL). Used only by docker-compose.yml for local development.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

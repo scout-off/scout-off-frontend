@@ -1,0 +1,93 @@
+version: '3.9'
+
+# Full local dev stack: frontend + indexer + mocked Soroban RPC + mocked
+# backend API. No external credentials (Pinata, real testnet keys) are
+# required — every service here is either this repo's own code or a small
+# local mock. See DEVELOPMENT.md's "Docker Compose Quick Start" section.
+#
+# Quick start:
+#   docker compose up --build
+#   open http://localhost:3000
+#
+# Override NEXT_PUBLIC_CONTRACT_ID (or any other var below) by creating a
+# `.env` file in this directory — compose loads it automatically — if you'd
+# rather point the frontend at a real deployed contract while still using
+# the mocked RPC/API for everything else.
+
+services:
+  mock-rpc:
+    build: ./docker/mock-rpc
+    ports:
+      - '8000:8000'
+    environment:
+      PORT: 8000
+      NETWORK_PASSPHRASE: 'Test SDF Network ; September 2015'
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:8000/health']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  mock-api:
+    build: ./docker/mock-api
+    ports:
+      - '4000:4000'
+    environment:
+      PORT: 4000
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4000/health']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  indexer:
+    build: ./packages/indexer
+    # Graceful shutdown waits up to 10 s for the in-flight poll batch.
+    stop_signal: SIGTERM
+    stop_grace_period: 15s
+    ports:
+      - '3001:3001'
+    environment:
+      PORT: 3001
+      # The indexer's event-polling loop isn't wired up yet (see the
+      # companion "turn packages/indexer into a real npm package" issue) —
+      # these point it at mock-rpc for when that lands, but today this
+      # container just serves /health and /metrics.
+      SOROBAN_RPC_URL: http://mock-rpc:8000
+      CONTRACT_ID: ${NEXT_PUBLIC_CONTRACT_ID:-CBQHNAXSI55GX2GN6D67GK7BHVPSLJUGZQEU7WJ5LKR5PNUCGLIMAO4K}
+      NETWORK_PASSPHRASE: 'Test SDF Network ; September 2015'
+    depends_on:
+      mock-rpc:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      args:
+        # NEXT_PUBLIC_* values are inlined into the browser bundle at build
+        # time, so they must be host-reachable (localhost + the ports
+        # mapped above) rather than docker-internal service names.
+        NEXT_PUBLIC_CONTRACT_ID: ${NEXT_PUBLIC_CONTRACT_ID:-CBQHNAXSI55GX2GN6D67GK7BHVPSLJUGZQEU7WJ5LKR5PNUCGLIMAO4K}
+        NEXT_PUBLIC_NETWORK: testnet
+        NEXT_PUBLIC_HORIZON_URL: http://localhost:8000
+        NEXT_PUBLIC_SOROBAN_RPC: http://localhost:8000
+        NEXT_PUBLIC_IPFS_GATEWAY: https://gateway.pinata.cloud/ipfs
+        NEXT_PUBLIC_API_URL: http://localhost:4000
+        NEXT_PUBLIC_APP_URL: http://localhost:3000
+        NEXT_PUBLIC_ADMIN_ADDRESS: ${NEXT_PUBLIC_ADMIN_ADDRESS:-GBR6LYRKEFYV3MG322FYLED6PLOTEV77KCX6AZSR7V4RV7EJLIWOZJWQ}
+        NEXT_PUBLIC_DOMAIN: localhost:3000
+        NEXT_PUBLIC_BASE_URL: http://localhost:3000
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV: production
+      # Server-only override so SSR/Server Component fetches (e.g. the scout
+      # profile page) reach mock-api via the docker-internal hostname; the
+      # browser bundle only ever sees NEXT_PUBLIC_API_URL above. See
+      # lib/api.ts.
+      API_URL_INTERNAL: http://mock-api:4000
+    depends_on:
+      mock-rpc:
+        condition: service_healthy
+      mock-api:
+        condition: service_healthy

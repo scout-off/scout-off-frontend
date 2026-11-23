@@ -1,0 +1,167 @@
+import { render, screen } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import LocaleLayout, {
+  generateMetadata,
+  generateStaticParams,
+} from '@/app/[locale]/layout';
+
+const setRequestLocale = jest.fn();
+
+jest.mock('next-intl/server', () => ({
+  setRequestLocale: (...args: unknown[]) => setRequestLocale(...args),
+  getTranslations: async ({
+    locale,
+    namespace,
+  }: {
+    locale: string;
+    namespace: string;
+  }) => {
+    const messages = require(`@/messages/${locale}.json`);
+    return (key: string) => messages[namespace][key];
+  },
+}));
+
+const mockHeaders = new Map<string, string>();
+
+jest.mock('next/headers', () => ({
+  headers: jest.fn().mockImplementation(async () => ({
+    get: (key: string) => mockHeaders.get(key) ?? null,
+  })),
+}));
+
+// LocaleLayout is an async server component (params is a Promise as of
+// Next 15), so resolve it to its element tree before rendering.
+async function renderLayout(locale: string, children: React.ReactNode) {
+  render(await LocaleLayout({ params: Promise.resolve({ locale }), children }));
+}
+
+describe('LocaleLayout', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockHeaders.clear();
+    process.env.NEXT_PUBLIC_APP_URL = 'https://scoutoff.app';
+  });
+
+  it('renders its children unchanged', async () => {
+    await renderLayout('fr', <p>Locale-scoped content</p>);
+
+    expect(screen.getByText('Locale-scoped content')).toBeInTheDocument();
+  });
+
+  it('sets lang="fr" on the locale root for French', async () => {
+    await renderLayout('fr', <p>Bonjour</p>);
+
+    expect(screen.getByTestId('locale-lang')).toHaveAttribute('lang', 'fr');
+  });
+
+  it('sets lang="sw" on the locale root for Swahili', async () => {
+    await renderLayout('sw', <p>Habari</p>);
+
+    expect(screen.getByTestId('locale-lang')).toHaveAttribute('lang', 'sw');
+  });
+
+  it('sets the request locale from params', async () => {
+    await renderLayout('sw', <p>content</p>);
+
+    expect(setRequestLocale).toHaveBeenCalledWith('sw');
+  });
+
+  it('generates static params for every supported locale', () => {
+    expect(generateStaticParams()).toEqual([
+      { locale: 'en' },
+      { locale: 'fr' },
+      { locale: 'sw' },
+    ]);
+  });
+
+  describe('generateMetadata', () => {
+    it('returns localized title, description, Open Graph and Twitter fields', async () => {
+      mockHeaders.set('x-pathname', '/fr/scout');
+
+      const metadata = await generateMetadata({
+        params: Promise.resolve({ locale: 'fr' }),
+      });
+
+      const fr = require('@/messages/fr.json').meta;
+      expect(metadata).toMatchObject({
+        title: fr.title,
+        description: fr.description,
+        openGraph: {
+          title: fr.title,
+          description: fr.description,
+          url: 'https://scoutoff.app/fr/scout',
+          siteName: 'ScoutOff',
+          type: 'website',
+          locale: 'fr_FR',
+          alternateLocale: ['en_US', 'sw_KE'],
+        },
+        twitter: {
+          card: 'summary_large_image',
+          title: fr.title,
+          description: fr.description,
+        },
+      });
+      // The raster OG image comes from app/[locale]/opengraph-image.tsx.
+      expect(JSON.stringify(metadata)).not.toMatch(/\.svg/);
+    });
+
+    it('returns canonical URL and hreflang alternates from x-pathname header', async () => {
+      mockHeaders.set('x-pathname', '/en/scout/abc123');
+
+      const metadata = await generateMetadata({
+        params: Promise.resolve({ locale: 'en' }),
+      });
+
+      expect(metadata).toMatchObject({
+        alternates: {
+          canonical: 'https://scoutoff.app/en/scout/abc123',
+          languages: {
+            en: 'https://scoutoff.app/en/scout/abc123',
+            fr: 'https://scoutoff.app/fr/scout/abc123',
+            sw: 'https://scoutoff.app/sw/scout/abc123',
+            'x-default': 'https://scoutoff.app/en/scout/abc123',
+          },
+        },
+      });
+    });
+
+    it('falls back to root when x-pathname header is absent', async () => {
+      const metadata = await generateMetadata({
+        params: Promise.resolve({ locale: 'en' }),
+      });
+
+      expect(metadata).toMatchObject({
+        alternates: {
+          canonical: 'https://scoutoff.app/',
+          languages: {
+            en: 'https://scoutoff.app/en/',
+            fr: 'https://scoutoff.app/fr/',
+            sw: 'https://scoutoff.app/sw/',
+            'x-default': 'https://scoutoff.app/en/',
+          },
+        },
+      });
+    });
+
+    it('uses NEXT_PUBLIC_APP_URL as the origin', async () => {
+      process.env.NEXT_PUBLIC_APP_URL = 'https://example.com';
+      mockHeaders.set('x-pathname', '/fr/player/42');
+
+      const metadata = await generateMetadata({
+        params: Promise.resolve({ locale: 'en' }),
+      });
+
+      expect(metadata).toMatchObject({
+        alternates: {
+          canonical: 'https://example.com/fr/player/42',
+          languages: {
+            en: 'https://example.com/en/player/42',
+            fr: 'https://example.com/fr/player/42',
+            sw: 'https://example.com/sw/player/42',
+            'x-default': 'https://example.com/en/player/42',
+          },
+        },
+      });
+    });
+  });
+});

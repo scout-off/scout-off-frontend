@@ -1,0 +1,29 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Select snapshot 1`] = `
+<div
+  class="space-y-1"
+>
+  <label
+    class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+    for="position-select"
+  >
+    Position
+  </label>
+  <select
+    class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-green focus-visible:ring-2 focus-visible:ring-brand-green transition  "
+    id="position-select"
+  >
+    <option
+      value=""
+    >
+      All
+    </option>
+    <option
+      value="forward"
+    >
+      Forward
+    </option>
+  </select>
+</div>
+`;

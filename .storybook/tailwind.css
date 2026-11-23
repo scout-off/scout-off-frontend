@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Theme colors as space-separated RGB triplets (not hex), matching
+ * app/globals.css, since tailwind.config.ts's brand.* colors wrap these in
+ * rgb(var(--x) / <alpha-value>) to support opacity modifiers like
+ * bg-brand-green/20. Hex values here would make bg-brand-green (and every
+ * other brand-* utility) resolve to invalid CSS and silently render
+ * transparent in Storybook.
+ */
+:root {
+  --bg: 255 255 255;
+  --card: 243 244 246;
+  --text: #0a0f1e;
+  --green: 0 150 64;
+}
+
+.dark {
+  --bg: 10 15 30;
+  --card: 17 24 39;
+  --text: #f9fafb;
+  --green: 0 200 83;
+}
+
+body {
+  background-color: rgb(var(--bg));
+  color: var(--text);
+  font-family: Inter, system-ui, sans-serif;
+}

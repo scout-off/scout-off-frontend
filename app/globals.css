@@ -2,21 +2,154 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Theme colors as space-separated RGB triplets (not hex) so tailwind.config.ts
+ * can wrap them in rgb(var(--x) / <alpha-value>) and still support opacity
+ * modifiers like bg-brand-green/20. Dark is the default (:root); .light
+ * overrides apply when next-themes (components/ThemeProvider.tsx) puts the
+ * "light" class on <html> for a scout who has switched themes.
+ */
 :root {
-  --bg: #0A0F1E;
-  --card: #111827;
-  --green: #00C853;
+  --bg: 10 15 30;
+  --card: 17 24 39;
+  --green: 0 200 83;
+  --fg: 249 250 251;
+}
+
+.light {
+  --bg: 255 255 255;
+  --card: 243 244 246;
+  --green: 0 150 64;
+  --fg: 17 24 39;
+}
+
+/*
+ * Components throughout the app use Tailwind's fixed gray/white palette
+ * (text-white, border-gray-800, ...) rather than the brand-* CSS variables
+ * above, since the app only ever had one (dark) theme until now. Re-pointing
+ * every call site to theme-aware colors is a larger follow-up; this patch
+ * keeps the highest-traffic utility classes legible in light mode in the
+ * meantime.
+ */
+.light .text-white {
+  color: rgb(17 24 39);
+}
+.light .text-gray-200,
+.light .text-gray-300,
+.light .text-gray-400 {
+  color: rgb(75 85 99);
+}
+.light .text-gray-500 {
+  color: rgb(107 114 128);
+}
+.light .border-gray-700,
+.light .border-gray-800 {
+  border-color: rgb(209 213 219);
+}
+.light .bg-gray-700,
+.light .bg-gray-800,
+.light .bg-gray-900 {
+  background-color: rgb(229 231 235);
 }
 
 body {
-  background-color: var(--bg);
-  color: #f9fafb;
+  background-color: rgb(var(--bg));
+  color: rgb(var(--fg));
   font-family: Inter, system-ui, sans-serif;
+}
+
+/*
+ * Shared prefers-reduced-motion handling (Issue: vestibular disorders).
+ * Applies globally so Toast, Modal, ProgressBar and any other animated
+ * component get instant state changes instead of motion when the user
+ * has requested reduced motion at the OS level.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * Print support for the player public profile (app/[locale]/player/[id]/page.tsx).
+ * `.print-area` wraps that page's content; `.print-hidden` marks the
+ * interactive controls (nav links, download/share/contact buttons, trial
+ * offer form) that don't make sense in a printed copy. Dark-theme surface
+ * and text classes are forced to a light/dark-ink pairing here rather than
+ * relying on the app's (currently fixed) dark theme, since the printed page
+ * should stay legible regardless of what theme is active on screen.
+ */
+@media print {
+  nav[aria-label='Main navigation'],
+  footer,
+  .print-hidden {
+    display: none !important;
+  }
+
+  @page {
+    margin: 1.5cm;
+  }
+
+  .print-area {
+    max-width: 100% !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  .print-area .bg-brand-card,
+  .print-area .bg-brand-dark,
+  .print-area .bg-gray-700,
+  .print-area .bg-gray-800,
+  .print-area .bg-gray-900 {
+    background-color: #ffffff !important;
+  }
+
+  .print-area .text-white,
+  .print-area .text-gray-50,
+  .print-area .text-gray-100,
+  .print-area .text-gray-200,
+  .print-area .text-gray-300,
+  .print-area .text-gray-400 {
+    color: #111827 !important;
+  }
+
+  .print-area .border-gray-700,
+  .print-area .border-gray-800 {
+    border-color: #d1d5db !important;
+  }
+
+  .print-area [class*='shadow'] {
+    box-shadow: none !important;
+  }
+
+  .print-area section,
+  .print-area > div > div {
+    break-inside: avoid;
+  }
 }
 
 @layer components {
   .input {
-    @apply w-full bg-gray-900 border border-gray-700 text-white text-sm rounded-lg px-3 py-2
-           placeholder-gray-500 focus:outline-none focus:border-brand-green transition;
+    @apply w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700
+           text-gray-900 dark:text-white text-sm rounded-lg px-3 py-2
+           placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none
+           focus:border-brand-green transition;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
   }
 }

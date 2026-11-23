@@ -1,12 +1,134 @@
+node_modules
+.next/
+.vercel
+out
+dist
+build
+coverage
+public/build
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.husky/_
+/.git
+.vscode
+public/sw.js
+public/workbox-*.js
+# next-pwa regenerates sourcemaps adjacent to workbox output on local builds
+public/sw.js.map
+public/workbox-*.js.map
+
 .env.local
 .env*.local
-.next/
-node_modules/
-out/
 *.tsbuildinfo
+# Jest coverage output (issue #108)
+coverage/
+storybook-static/
 
-# Playwright
+# Jest / Vitest snapshot files
+__snapshots__/
+**/__snapshots__/
+*.snap
+
+# Playwright E2E output (issue #673)
 /test-results/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Jest test snapshots (issues #532, #531, #530, #529)
+__tests__/**/__snapshots__/
+**/__snapshots__/
+*.snap
+
+# Playwright visual snapshots / screenshot baselines (issues #526 #527 #528)
+# Excludes e2e/visual/**/*-snapshots/ — those are the committed visual-regression
+# baselines (docs/visual-regression.md), not ad-hoc test-run screenshots.
+**/__snapshots__/
+e2e/**/*.png
+!e2e/visual/**/*-snapshots/*.png
+e2e/**/*.jpg
+e2e/**/*.jpeg
+e2e/**/*.webp
+
+# Playwright trace archives
+trace.zip
+*.trace
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.bak
+
+# Kiro IDE directory
+.kiro
+.kiro/
+
+# Pull request description files
+pr-*.md
+PULL_REQUEST.md
+
+# Jest snapshot files
+__snapshots__/
+*.snap
+
+# Local referral-store data (lib/referralStore.ts writes here in dev)
+/data/
+
+# Local indexer SQLite event store (packages/indexer/src/db/eventStore.ts writes here in dev)
+packages/indexer/data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# OS artefacts
+.DS_Store
+Thumbs.db
+
+# Editor swap / backup files
+*.swp
+*.swo
+*~
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Temporary files created by test runs (server test DB)
+/tmp/
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Editor / IDE swap and temp files
+*.swp
+*.swo
+*~
+.idea/
+
+# Log files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Contract integration test artifacts
+# .env.integration contains ephemeral admin secret keys — never commit it.
+.env.integration
+# WASM cache: cached by CI using the SHA-256 key; not source files.
+.wasm-cache/
+# Integration test output reports
+integration-test-results/
+
+# Generated API client and types (issue #1475) — regenerate with: npm run generate:api
+lib/generated/apiTypes.ts
+lib/generated/apiClient.ts

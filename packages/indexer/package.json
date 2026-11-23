@@ -1,0 +1,23 @@
+{
+  "name": "@scoutoff/indexer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Off-chain Soroban event indexer for the ScoutOff platform. See README.md.",
+  "main": "dist/index.js",
+  "scripts": {
+    "prebuild": "npm run build --prefix ../contract-events",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "seed:players": "npm run build && node dist/scripts/seedPlayers.js",
+    "test": "cd ../.. && npx jest packages/indexer"
+  },
+  "dependencies": {
+    "@scoutoff/contract-events": "0.1.0",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.2",
+    "@types/pg": "^8.23.1",
+    "typescript": "^6.0.3"
+  }
+}
