@@ -1,3 +1,5 @@
+const { systemLogger, errorFields } = require('../logger');
+
 const VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 
 /**
@@ -44,7 +46,7 @@ async function verifyTurnstile(req, res, next) {
     const log = req.log;
     const reason = err instanceof Error ? err.message : String(err);
     if (log) log.error('Turnstile verification request failed', { reason });
-    else console.error('[turnstile] verification request failed', err);
+    else systemLogger.error('turnstile verification failed', errorFields(err));
     return res.status(502).json({
       error: 'Unable to verify bot-protection challenge. Please try again.',
     });
