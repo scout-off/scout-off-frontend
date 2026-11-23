@@ -1,3 +1,4 @@
+const { getClientIp } = require('../clientIp');
 const VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 
 /**
@@ -23,8 +24,9 @@ async function verifyTurnstile(req, res, next) {
 
   try {
     const params = new URLSearchParams({ secret, response: token });
-    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim();
-    if (ip) params.set('remoteip', ip);
+    // #1775: Express's trusted req.ip, never the raw X-Forwarded-For header.
+    const ip = getClientIp(req);
+    if (ip !== 'unknown') params.set('remoteip', ip);
 
     const verifyRes = await fetch(VERIFY_URL, {
       method: 'POST',
