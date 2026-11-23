@@ -1,4 +1,4 @@
-import { labelUserAgent } from '@/lib/userAgentLabel';
+import { labelUserAgent, parseUserAgent } from '@/lib/userAgentLabel';
 
 describe('labelUserAgent', () => {
   it('labels Chrome on Android', () => {
@@ -42,5 +42,22 @@ describe('labelUserAgent', () => {
 
   it('labels an unrecognised UA as unknown browser and OS', () => {
     expect(labelUserAgent('curl/8.4.0')).toBe('Unknown browser on Unknown OS');
+  });
+
+  // #1779: both send a Chrome/ token, so they must be matched first.
+  it('recognises Samsung Internet on Android', () => {
+    expect(
+      parseUserAgent(
+        'Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/23.0 Chrome/115.0.0.0 Mobile Safari/537.36',
+      ),
+    ).toEqual({ browser: 'Samsung Internet', os: 'Android' });
+  });
+
+  it('recognises UC Browser on Android', () => {
+    expect(
+      parseUserAgent(
+        'Mozilla/5.0 (Linux; U; Android 10; en-US; RMX2185) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/78.0.3904.108 UCBrowser/13.4.0.1306 Mobile Safari/537.36',
+      ),
+    ).toEqual({ browser: 'UC Browser', os: 'Android' });
   });
 });

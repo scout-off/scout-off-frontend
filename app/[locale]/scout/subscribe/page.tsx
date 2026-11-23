@@ -1,5 +1,6 @@
 'use client';
 
+import { normalizeReferralCode } from '@/lib/referralCode';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
@@ -88,7 +89,8 @@ function SubscribeContent() {
   const [showTierChangeWarning, setShowTierChangeWarning] = useState(false);
   const [warningTier, setWarningTier] = useState<SubscriptionTier | null>(null);
   const redirectTimer = useRef<number | null>(null);
-  const referralCode = searchParams.get('ref');
+  // #1777: codes are case-insensitive; tidy `?ref=` before using it.
+  const referralCode = normalizeReferralCode(searchParams.get('ref')) || null;
   const redirectReason = searchParams.get('reason');
 
   useEffect(() => {

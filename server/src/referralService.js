@@ -3,6 +3,31 @@ const db = require('./db');
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const CODE_BODY_LENGTH = 6;
 const MAX_GENERATE_ATTEMPTS = 20;
+const DEFAULT_MAX_UNREDEEMED_CODES_PER_WALLET = 10;
+
+/**
+ * Most unredeemed codes one scout wallet may hold (#1774). Set with
+ * REFERRAL_MAX_UNREDEEMED; read on each call so tests and restarts pick it up.
+ */
+function maxUnredeemedCodesPerWallet() {
+  const parsed = Number.parseInt(process.env.REFERRAL_MAX_UNREDEEMED ?? '', 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_MAX_UNREDEEMED_CODES_PER_WALLET;
+}
+
+/** Thrown when a wallet already holds the maximum number of unredeemed codes. */
+class ReferralLimitError extends Error {
+  constructor(limit) {
+    super('Referral code limit reached');
+    this.name = 'ReferralLimitError';
+    this.code = 'REFERRAL_LIMIT_REACHED';
+    this.limit = limit;
+  }
+}
+
+/** Referral codes are upper case; accept any case and surrounding whitespace (#1777). */
+function normalizeReferralCode(code) {
+  return typeof code === 'string' ? code.trim().toUpperCase() : '';
+}
 
 function randomCode() {
   let code = 'SCOUT-';
@@ -19,6 +44,10 @@ const insertCode = db.prepare(
 const findByCode = db.prepare(`SELECT * FROM referral_codes WHERE code = ?`);
 const findByScout = db.prepare(
   `SELECT * FROM referral_codes WHERE scout_wallet = ? ORDER BY created_at DESC`,
+);
+const countUnredeemedByScout = db.prepare(
+  `SELECT COUNT(*) AS count FROM referral_codes
+   WHERE scout_wallet = ? AND used_by IS NULL`,
 );
 const countRedeemedByScout = db.prepare(
   `SELECT COUNT(*) AS count FROM referral_codes
@@ -43,8 +72,17 @@ function toReferral(row) {
  * Generates a unique referral code for a scout, retrying on the rare
  * collision. Mirrors the collision-retry loop from the file-based
  * implementation this service replaces (lib/referralStore.ts).
+ *
+ * #1774: refuses with ReferralLimitError once the wallet holds the maximum
+ * number of unredeemed codes. The count and the insert run in one
+ * transaction so concurrent calls cannot both slip past the cap.
  */
-function generateCode(scoutWallet) {
+const generateCodeTx = db.transaction((scoutWallet) => {
+  const limit = maxUnredeemedCodesPerWallet();
+  if (countUnredeemedByScout.get(scoutWallet).count >= limit) {
+    throw new ReferralLimitError(limit);
+  }
+
   let code;
   for (let attempt = 0; attempt < MAX_GENERATE_ATTEMPTS; attempt++) {
     code = randomCode();
@@ -58,6 +96,10 @@ function generateCode(scoutWallet) {
   const createdAt = Date.now();
   insertCode.run({ code, scoutWallet, createdAt });
   return { code, scoutWallet, createdAt, usedBy: null, usedAt: null };
+});
+
+function generateCode(scoutWallet) {
+  return generateCodeTx(scoutWallet);
 }
 
 function getCodesByScout(scoutWallet) {
@@ -74,7 +116,9 @@ function getAllCodes() {
 }
 
 /** Redeems a code on behalf of `usedBy`; rejects self-redemption. */
-function redeemCode(code, usedBy) {
+function redeemCode(rawCode, usedBy) {
+  const code = normalizeReferralCode(rawCode);
+  if (!code) return false;
   const existing = findByCode.get(code);
   if (!existing || existing.used_by !== null) return false;
   if (existing.scout_wallet === usedBy) return false;
@@ -120,6 +164,9 @@ function getReferralOverview() {
 }
 
 module.exports = {
+  ReferralLimitError,
+  maxUnredeemedCodesPerWallet,
+  normalizeReferralCode,
   generateCode,
   getCodesByScout,
   getReferralCount,

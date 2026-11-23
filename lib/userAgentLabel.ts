@@ -46,6 +46,9 @@ export function parseUserAgent(
   else if (/CriOS\//i.test(ua)) browser = 'Chrome';
   else if (/FxiOS\//i.test(ua)) browser = 'Firefox';
   else if (/Firefox\//i.test(ua)) browser = 'Firefox';
+  // Samsung Internet and UC Browser also send a Chrome/ token (#1779).
+  else if (/SamsungBrowser\//i.test(ua)) browser = 'Samsung Internet';
+  else if (/UCBrowser\//i.test(ua)) browser = 'UC Browser';
   else if (/Chrome\//i.test(ua)) browser = 'Chrome';
   else if (/Safari\//i.test(ua)) browser = 'Safari';
 

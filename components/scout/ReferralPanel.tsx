@@ -2,6 +2,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useTranslations } from 'next-intl';
+import { REFERRAL_LIMIT_REACHED } from '@/lib/referralCode';
 import {
   generateReferralCode,
   getReferralStats,
@@ -121,10 +122,17 @@ export default function ReferralPanel({ scoutId }: { scoutId?: string } = {}) {
       setCodes((prev) => [referral, ...prev]);
       await loadStats();
     } catch (err) {
-      const serverMessage = axios.isAxiosError(err)
-        ? (err.response?.data as { error?: string } | undefined)?.error
+      const data = axios.isAxiosError(err)
+        ? (err.response?.data as
+            | { error?: string; code?: string; limit?: number }
+            | undefined)
         : undefined;
-      setGenerateError(serverMessage ?? t('generateError'));
+      // #1774: the wallet already holds the maximum number of unused codes.
+      if (data?.code === REFERRAL_LIMIT_REACHED) {
+        setGenerateError(t('limitReached', { limit: data.limit ?? 0 }));
+      } else {
+        setGenerateError(data?.error ?? t('generateError'));
+      }
     } finally {
       setGenerating(false);
       // Turnstile tokens are single-use — force a fresh widget/token for

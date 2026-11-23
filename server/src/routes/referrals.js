@@ -20,7 +20,20 @@ router.post('/generate', verifyTurnstile, (req, res) => {
     return res.status(400).json({ error: 'scoutWallet is required' });
   }
 
-  const referral = referralService.generateCode(scoutWallet);
+  let referral;
+  try {
+    referral = referralService.generateCode(scoutWallet);
+  } catch (err) {
+    if (err instanceof referralService.ReferralLimitError) {
+      // #1774: the wallet already holds the maximum number of unused codes.
+      return res.status(409).json({
+        error: 'Referral code limit reached',
+        code: 'REFERRAL_LIMIT_REACHED',
+        limit: err.limit,
+      });
+    }
+    throw err;
+  }
   return res.status(201).json(referral);
 });
 
@@ -52,11 +65,13 @@ router.get('/all', (req, res) => {
 // Body: { code: string, usedBy: string }
 router.post('/redeem', (req, res) => {
   const { code, usedBy } = req.body ?? {};
-  if (!isNonEmptyString(code) || !isNonEmptyString(usedBy)) {
+  // #1777: codes are case-insensitive and may arrive with stray whitespace.
+  const normalized = referralService.normalizeReferralCode(code);
+  if (!normalized || !isNonEmptyString(usedBy)) {
     return res.status(400).json({ error: 'code and usedBy are required' });
   }
 
-  const ok = referralService.redeemCode(code, usedBy);
+  const ok = referralService.redeemCode(normalized, usedBy);
   if (!ok) {
     return res.status(404).json({ error: 'Invalid or already redeemed code' });
   }
