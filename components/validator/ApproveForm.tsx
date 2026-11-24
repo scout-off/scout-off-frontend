@@ -1,11 +1,11 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { sanitize } from '@/lib/sanitize';
 import { useWallet } from '@/hooks/useWallet';
 import useIsPaused from '@/hooks/useIsPaused';
 import { useValidator } from '@/hooks/useValidator';
 import { getPlayer } from '@/lib/contract';
-import { PROGRESS_LABELS } from '@/types';
 import type { Player } from '@/types';
 import TransactionStatus, { TxStatus } from '@/components/ui/TransactionStatus';
 
@@ -17,6 +17,7 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
   const { publicKey, signAndSubmit } = useWallet();
   const { isValidator, checking, approveMilestone } = useValidator(publicKey);
   const isPaused = useIsPaused();
+  const t = useTranslations('progress_levels');
   const [playerId, setPlayerId] = useState('');
   const [description, setDescription] = useState('');
   const [evidenceUrl, setEvidenceUrl] = useState('');
@@ -200,7 +201,7 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
           </p>
           <p>
             <span className="text-gray-500">Level:</span>{' '}
-            {PROGRESS_LABELS[player.progressLevel]}
+            {t(`level${player.progressLevel}`)}
           </p>
           <p>
             <span className="text-gray-500">Last milestone:</span>{' '}

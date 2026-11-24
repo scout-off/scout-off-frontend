@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
 import { useToast } from '@/components/ui/Toast';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -60,6 +60,7 @@ type DialogAction = 'add' | 'remove' | 'withdraw' | 'pause' | 'unpause' | null;
 function AdminDashboardContent() {
   const { publicKey, signAndSubmit } = useWallet();
   const router = useRouter();
+  const { locale } = useParams<{ locale: string }>();
   const { show } = useToast();
 
   const [validators, setValidators] = useState<ValidatorInfo[]>([]);
@@ -351,7 +352,7 @@ function AdminDashboardContent() {
         <p className="text-sm text-gray-400">
           Accumulated:{' '}
           <span className="text-white font-medium">
-            {formatXlm(fees ?? 0)} XLM
+            {formatXlm(fees ?? 0, locale)} XLM
           </span>
         </p>
         <button
@@ -360,7 +361,7 @@ function AdminDashboardContent() {
             setDialog({
               action: 'withdraw',
               label: 'Withdraw Fees',
-              message: `Withdraw ${formatXlm(fees ?? 0)} XLM to your wallet?`,
+              message: `Withdraw ${formatXlm(fees ?? 0, locale)} XLM to your wallet?`,
             })
           }
           title={paused ? 'Contract is currently paused' : undefined}

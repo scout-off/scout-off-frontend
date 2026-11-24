@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import type { Milestone, ProgressLevel } from '@/types';
-import { PROGRESS_LABELS } from '@/types';
 import Badge from '@/components/ui/Badge';
 import ValidatorChip from '@/components/player/ValidatorChip';
 
@@ -47,6 +47,7 @@ export default function MilestoneTimeline({
   milestones,
   currentLevel,
 }: MilestoneTimelineProps) {
+  const t = useTranslations('progress_levels');
   const [expanded, setExpanded] = useState<ProgressLevel | null>(null);
 
   function toggle(level: ProgressLevel) {
@@ -77,10 +78,10 @@ export default function MilestoneTimeline({
             key={level}
             aria-label={
               isCompleted && milestone
-                ? `${PROGRESS_LABELS[level]}, achieved ${formatDate(milestone.timestamp)}`
+                ? `${t(BADGE_VARIANT[level])}, achieved ${formatDate(milestone.timestamp)}`
                 : isCompleted
-                  ? PROGRESS_LABELS[level]
-                  : `${PROGRESS_LABELS[level]}, not yet reached`
+                  ? t(BADGE_VARIANT[level])
+                  : `${t(BADGE_VARIANT[level])}, not yet reached`
             }
             className="relative flex flex-row items-start gap-3 pb-8 sm:flex-col sm:items-center sm:flex-1 sm:pb-0"
           >
@@ -107,7 +108,7 @@ export default function MilestoneTimeline({
               onClick={() => toggle(level)}
               aria-expanded={isExpanded}
               aria-controls={`timeline-detail-${level}`}
-              aria-label={`${PROGRESS_LABELS[level]}${milestone ? `, achieved ${formatDate(milestone.timestamp)}` : ''}. ${isExpanded ? 'Collapse' : 'Expand'} details`}
+              aria-label={`${t(BADGE_VARIANT[level])}${milestone ? `, achieved ${formatDate(milestone.timestamp)}` : ''}. ${isExpanded ? 'Collapse' : 'Expand'} details`}
               className={[
                 'relative z-10 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-green',
                 isCompleted
@@ -150,7 +151,7 @@ export default function MilestoneTimeline({
             >
               <Badge
                 variant={BADGE_VARIANT[level]}
-                label={PROGRESS_LABELS[level]}
+                label={t(BADGE_VARIANT[level])}
                 size="sm"
               />
               {isCompleted && milestone && (
@@ -173,7 +174,7 @@ export default function MilestoneTimeline({
               <div
                 id={`timeline-detail-${level}`}
                 role="region"
-                aria-label={`Details for ${PROGRESS_LABELS[level]}`}
+                aria-label={`Details for ${t(BADGE_VARIANT[level])}`}
                 className="sm:absolute sm:top-full sm:mt-2 sm:left-1/2 sm:-translate-x-1/2 sm:w-56 z-20 rounded-xl border border-gray-700 bg-brand-card p-3 text-xs text-gray-300 flex flex-col gap-1 shadow-2xl"
               >
                 {level === 0 && (

@@ -15,7 +15,7 @@
  */
 
 import type { Milestone, ProgressLevel } from '@/types';
-import { PROGRESS_LABELS } from '@/types';
+import { useTranslations } from 'next-intl';
 import Badge from '@/components/ui/Badge';
 import ValidatorChip from '@/components/player/ValidatorChip';
 
@@ -34,6 +34,7 @@ interface MilestoneListProps {
 }
 
 export default function MilestoneList({ milestones }: MilestoneListProps) {
+  const t = useTranslations('progress_levels');
   if (milestones.length === 0) {
     return (
       <p className="text-sm text-gray-500 py-4">No milestones approved yet.</p>
@@ -60,7 +61,7 @@ export default function MilestoneList({ milestones }: MilestoneListProps) {
             <div className="flex-shrink-0 pt-0.5">
               <Badge
                 variant={BADGE_VARIANT[level]}
-                label={PROGRESS_LABELS[level]}
+                label={t(BADGE_VARIANT[level])}
                 size="sm"
               />
             </div>

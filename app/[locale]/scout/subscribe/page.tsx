@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import Button from '@/components/ui/Button';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import RedirectReasonBanner from '@/components/ui/RedirectReasonBanner';
@@ -70,6 +70,7 @@ function remainingDays(expiresAt: number): number {
 function SubscribeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { locale } = useParams<{ locale: string }>();
   const isPaused = useIsPaused();
   const { publicKey } = useWallet();
   const { subscription, isExpired, subscribe, loading, error } =
@@ -146,7 +147,7 @@ function SubscribeContent() {
         redeemReferralCode(referralCode, publicKey).catch(() => {});
       }
       const plan = TIERS.find((p) => p.tier === tier);
-      setFeePaid(plan ? formatXlm(plan.priceXlm) : undefined);
+      setFeePaid(plan ? formatXlm(plan.priceXlm, locale) : undefined);
       setSuccessMessage(`Subscribed to ${tier} successfully`);
       setTxStatus('success');
       redirectTimer.current = window.setTimeout(() => {
@@ -295,7 +296,7 @@ function SubscribeContent() {
                     {plan.title}
                   </p>
                   <p className="text-4xl font-bold text-white mt-3">
-                    {formatXlm(plan.priceXlm)} XLM
+                    {formatXlm(plan.priceXlm, locale)} XLM
                   </p>
                 </div>
                 <div className="flex flex-col items-end gap-2">

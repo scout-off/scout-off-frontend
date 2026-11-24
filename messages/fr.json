@@ -148,7 +148,11 @@
     "level0": "Non vérifié",
     "level1": "Vérifié",
     "level2": "Performance",
-    "level3": "Élite"
+    "level3": "Élite",
+    "level0_label": "Non vérifié",
+    "level1_label": "Identité vérifiée",
+    "level2_label": "Jalons de performance",
+    "level3_label": "Niveau élite"
   },
   "validator": {
     "title": "Tableau de bord validateur",

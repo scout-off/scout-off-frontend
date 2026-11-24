@@ -148,7 +148,11 @@
     "level0": "Unverified",
     "level1": "Verified",
     "level2": "Performance",
-    "level3": "Elite"
+    "level3": "Elite",
+    "level0_label": "Unverified",
+    "level1_label": "Verified Identity",
+    "level2_label": "Performance Milestones",
+    "level3_label": "Elite Tier"
   },
   "validator": {
     "title": "Validator Dashboard",
