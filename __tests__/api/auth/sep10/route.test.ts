@@ -2,6 +2,18 @@
 import { POST } from '../../../../app/api/auth/sep10/route';
 import { NextRequest } from 'next/server';
 
+// The sep10 route now uses lib/rateLimit for per-IP throttling. Mock it here
+// so origin-validation, SEP-10 verification, and cookie-setting logic can be
+// tested in isolation without consuming rate-limit budget between test runs.
+// Rate-limit behavior itself is covered by __tests__/lib/rateLimit.test.ts.
+jest.mock('@/lib/rateLimit', () => ({
+  getClientIp: jest.fn().mockReturnValue('127.0.0.1'),
+  checkRateLimit: jest.fn().mockResolvedValue({ limited: false }),
+}));
+
+import { checkRateLimit } from '@/lib/rateLimit';
+const mockCheckRateLimit = checkRateLimit as jest.MockedFunction<typeof checkRateLimit>;
+
 // Mock stellar-sdk so tests don't need real Stellar keys or network access.
 // Keypair.fromSecret is mocked to return the secret itself as the "public
 // key", so route.ts's `Keypair.fromSecret(serverKey).publicKey()` resolves
@@ -49,6 +61,7 @@ function makeRequest(
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockCheckRateLimit.mockResolvedValue({ limited: false });
   process.env.NEXT_PUBLIC_BASE_URL = ALLOWED_ORIGIN;
   process.env.SEP10_SERVER_KEY =
     'GBSERVERKEY0000000000000000000000000000000000000000000000000';
@@ -308,5 +321,28 @@ describe('POST /api/auth/sep10 — production fails closed with no allow-list co
     const body = await res.json();
     expect(body).toEqual({ error: 'Forbidden' });
     expect(mockVerify).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/auth/sep10 — rate limiting (issue #1700)', () => {
+  test('returns 429 with Retry-After header when the rate limiter fires', async () => {
+    mockCheckRateLimit.mockResolvedValueOnce({ limited: true, retryAfterSec: 42 });
+
+    const res = await POST(makeRequest(ALLOWED_ORIGIN));
+    expect(res.status).toBe(429);
+    const body = await res.json();
+    expect(body).toEqual({ error: 'Too many requests. Please slow down.' });
+    expect(res.headers.get('Retry-After')).toBe('42');
+    expect(mockVerify).not.toHaveBeenCalled();
+  });
+
+  test('calls checkRateLimit with algorithm: sliding', async () => {
+    mockVerify.mockReturnValueOnce(undefined);
+    await POST(makeRequest(ALLOWED_ORIGIN));
+
+    expect(mockCheckRateLimit).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ algorithm: 'sliding' }),
+    );
   });
 });
