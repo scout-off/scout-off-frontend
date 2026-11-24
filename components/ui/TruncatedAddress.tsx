@@ -45,6 +45,7 @@ export default function TruncatedAddress({
       onClick={handleCopy}
       className={`inline-flex items-center gap-1 ${className}`}
       title={copied ? t('address_copied') : t('copy_address')}
+      aria-label={copied ? t('address_copied') : t('copy_address')}
     >
       <span className="font-mono">{truncated}</span>
       {copied ? (
