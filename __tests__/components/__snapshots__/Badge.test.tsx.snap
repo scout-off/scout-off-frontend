@@ -1,0 +1,97 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Badge snapshot: level0 variant 1`] = `
+<div>
+  <span
+    aria-label="Level 0"
+    class="inline-flex items-center rounded-full font-medium leading-none align-middle whitespace-nowrap px-2.5 py-0.5 text-xs bg-gray-100 text-gray-800"
+    role="status"
+  >
+    Level 0
+  </span>
+</div>
+`;
+
+exports[`Badge snapshot: level1 variant 1`] = `
+<div>
+  <span
+    aria-label="Level 1"
+    class="inline-flex items-center rounded-full font-medium leading-none align-middle whitespace-nowrap px-2.5 py-0.5 text-xs bg-blue-100 text-blue-800"
+    role="status"
+  >
+    Level 1
+  </span>
+</div>
+`;
+
+exports[`Badge snapshot: level2 variant 1`] = `
+<div>
+  <span
+    aria-label="Level 2"
+    class="inline-flex items-center rounded-full font-medium leading-none align-middle whitespace-nowrap px-2.5 py-0.5 text-xs bg-yellow-100 text-yellow-800"
+    role="status"
+  >
+    Level 2
+  </span>
+</div>
+`;
+
+exports[`Badge snapshot: level3 variant 1`] = `
+<div>
+  <span
+    aria-label="Level 3"
+    class="inline-flex items-center rounded-full font-medium leading-none align-middle whitespace-nowrap px-2.5 py-0.5 text-xs bg-green-100 text-green-800"
+    role="status"
+  >
+    Level 3
+  </span>
+</div>
+`;
+
+exports[`Badge snapshot: position variant 1`] = `
+<div>
+  <span
+    aria-label="Striker"
+    class="inline-flex items-center rounded-full font-medium leading-none align-middle whitespace-nowrap px-2.5 py-0.5 text-xs bg-indigo-100 text-indigo-800"
+    role="status"
+  >
+    Striker
+  </span>
+</div>
+`;
+
+exports[`Badge snapshot: region variant 1`] = `
+<div>
+  <span
+    aria-label="Europe"
+    class="inline-flex items-center rounded-full font-medium leading-none align-middle whitespace-nowrap px-2.5 py-0.5 text-xs bg-purple-100 text-purple-800"
+    role="status"
+  >
+    Europe
+  </span>
+</div>
+`;
+
+exports[`Badge snapshot: achievement variant 1`] = `
+<div>
+  <span
+    aria-label="Top Scorer"
+    class="inline-flex items-center rounded-full font-medium leading-none align-middle whitespace-nowrap px-2.5 py-0.5 text-xs bg-brand-green/20 text-brand-green"
+    role="status"
+  >
+    Top Scorer
+  </span>
+</div>
+`;
+
+exports[`Badge snapshot: academy variant 1`] = `
+<div>
+  <span
+    aria-label="Academy"
+    class="inline-flex items-center rounded-full font-medium leading-none align-middle whitespace-nowrap px-2.5 py-0.5 text-xs bg-sky-100 text-sky-800"
+    role="status"
+  >
+    Academy
+  </span>
+</div>
+`;
