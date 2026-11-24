@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import { userEvent, within, waitFor } from '@storybook/test';
 import Tooltip from './Tooltip';
 import Badge from './Badge';
 
@@ -55,4 +56,75 @@ export const BottomFlip: Story = {
       </Tooltip>
     </div>
   ),
+};
+
+export const KeyboardDismiss: Story = {
+  name: 'Keyboard Dismiss (Escape)',
+  render: () => (
+    <Tooltip content="Press Escape to dismiss this tooltip">
+      <button
+        type="button"
+        className="rounded bg-brand-green px-3 py-1.5 text-sm font-medium text-black"
+      >
+        Hover then press Escape
+      </button>
+    </Tooltip>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const button = canvas.getByRole('button', { name: /Hover then press Escape/i });
+
+    // Hover over the trigger to show the tooltip
+    await userEvent.hover(button);
+
+    // Wait for the tooltip to appear
+    await waitFor(() => {
+      within(document.body).getByRole('tooltip');
+    });
+
+    // Press Escape to dismiss
+    await userEvent.keyboard('{Escape}');
+
+    // Verify the tooltip is gone
+    await waitFor(() => {
+      const tooltip = document.body.querySelector('[role="tooltip"]');
+      if (tooltip) throw new Error('Tooltip still visible after Escape');
+    });
+  },
+};
+
+export const HoverableTooltip: Story = {
+  name: 'Hoverable Tooltip (pointer moves onto tooltip)',
+  render: () => (
+    <div style={{ padding: '60px' }}>
+      <Tooltip content="Move your pointer onto this tooltip — it stays visible">
+        <span className="text-brand-green underline cursor-help">
+          Hover me, then move onto the tooltip
+        </span>
+      </Tooltip>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const trigger = canvas.getByText(/Hover me, then move onto the tooltip/i);
+
+    // Hover over the trigger to show the tooltip
+    await userEvent.hover(trigger);
+
+    // Wait for tooltip to appear
+    await waitFor(() => {
+      within(document.body).getByRole('tooltip');
+    });
+
+    // Move pointer onto the tooltip itself
+    const tooltip = document.body.querySelector('[role="tooltip"]') as HTMLElement;
+    if (tooltip) {
+      await userEvent.hover(tooltip);
+    }
+
+    // Tooltip should still be visible after hovering onto it
+    await waitFor(() => {
+      within(document.body).getByRole('tooltip');
+    });
+  },
 };
