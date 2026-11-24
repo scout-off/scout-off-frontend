@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { mutate } from 'swr';
 import type { Player, ProgressLevel } from '@/types';
 import { getProgressLabel } from '@/lib/progress';
+import { useTranslations } from 'next-intl';
 import { getMediaProxyUrl } from '@/lib/mediaUrl';
 import ProgressBar from './ProgressBar';
 import Badge from '@/components/ui/Badge';
@@ -33,6 +34,7 @@ interface PlayerCardProps {
 }
 
 function PlayerCard({ player, isWatched, onToggleWatchlist }: PlayerCardProps) {
+  const t = useTranslations('progress_levels');
   const { id, vitals, progressLevel, ipfsHash } = player;
   const {
     data: milestones,
@@ -159,7 +161,7 @@ function PlayerCard({ player, isWatched, onToggleWatchlist }: PlayerCardProps) {
 
         <Badge
           variant={LEVEL_VARIANT[progressLevel]}
-          label={levelLabel}
+          label={t(LEVEL_VARIANT[progressLevel])}
           aria-label={`Level ${progressLevel}: ${levelLabel}`}
           size="sm"
           className="mt-1"

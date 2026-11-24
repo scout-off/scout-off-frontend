@@ -1,6 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import type { Player } from '@/types';
-import { PROGRESS_LABELS } from '@/types';
 
 // ── Module mocks (hoisted by Jest) ───────────────────────────────────────────
 
@@ -136,7 +135,7 @@ describe('PlayerCard — rendering', () => {
     const progressLabel = screen.getByRole('status');
     expect(progressLabel).toBeInTheDocument();
     expect(progressLabel).toHaveTextContent(
-      PROGRESS_LABELS[mockPlayer.progressLevel],
+      `level${mockPlayer.progressLevel}`,
     );
     expect(progressLabel).toHaveClass('text-yellow-800');
   });

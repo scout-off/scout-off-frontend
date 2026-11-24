@@ -1,13 +1,6 @@
 // ── Progress ──────────────────────────────────────────────────────────────────
 export type ProgressLevel = 0 | 1 | 2 | 3;
 
-export const PROGRESS_LABELS: Record<ProgressLevel, string> = {
-  0: 'Unverified',
-  1: 'Verified Identity',
-  2: 'Performance Milestones',
-  3: 'Elite Tier',
-};
-
 // ── Player Stats ──────────────────────────────────────────────────────────────
 export interface PlayerStats {
   goals: number;
