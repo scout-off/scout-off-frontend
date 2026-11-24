@@ -10,6 +10,7 @@ import {
   Radio,
 } from 'lucide-react';
 import RedirectReasonBanner from '@/components/ui/RedirectReasonBanner';
+import CookieSettingsLink from '@/components/ui/CookieSettingsLink';
 
 // ── Feature card data ─────────────────────────────────────────────────────────
 const features = [
@@ -39,13 +40,12 @@ const features = [
   },
 ];
 
-export default async function HomePage({
-  params,
-  searchParams,
-}: {
-  params: { locale: string };
-  searchParams?: { reason?: string | string[] };
+export default async function HomePage(props: {
+  params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ reason?: string | string[] }>;
 }) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const locale = params.locale;
   const t = await getTranslations({ locale, namespace: 'footer' });
 
@@ -142,7 +142,7 @@ export default async function HomePage({
       {/* ── Footer ────────────────────────────────────────────────────────── */}
       <footer className="border-t border-gray-800 pt-10 px-4">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-6 max-w-4xl mx-auto">
-          <p className="text-gray-500 text-sm">
+          <p className="text-gray-400 text-sm">
             © {new Date().getFullYear()} ScoutOff. Built on Stellar.
           </p>
           <nav
@@ -187,6 +187,19 @@ export default async function HomePage({
               <Radio size={15} />
               {t('status')}
             </Link>
+            <Link
+              href={`/${locale}/privacy`}
+              className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition"
+            >
+              {t('privacy')}
+            </Link>
+            <Link
+              href={`/${locale}/terms`}
+              className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition"
+            >
+              {t('terms')}
+            </Link>
+            <CookieSettingsLink label={t('cookie_settings')} />
           </nav>
         </div>
       </footer>

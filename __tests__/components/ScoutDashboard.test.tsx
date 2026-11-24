@@ -4,22 +4,14 @@ import '@testing-library/jest-dom';
 
 // ── Globals ───────────────────────────────────────────────────────────────────
 
-// jsdom does not implement IntersectionObserver; provide a no-op stub.
-global.IntersectionObserver = class {
+// jsdom does not implement ResizeObserver; VirtualizedPlayerGrid's windowing
+// hook (useVirtualizedRows) constructs one on mount to track viewport
+// height. Provide a no-op stub.
+global.ResizeObserver = class {
   observe = jest.fn();
   unobserve = jest.fn();
   disconnect = jest.fn();
-  constructor(
-    _cb: IntersectionObserverCallback,
-    _opts?: IntersectionObserverInit,
-  ) {}
-  takeRecords(): IntersectionObserverEntry[] {
-    return [];
-  }
-  root: Element | null = null;
-  rootMargin: string = '';
-  thresholds: ReadonlyArray<number> = [];
-} as unknown as typeof IntersectionObserver;
+} as unknown as typeof ResizeObserver;
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -53,7 +45,19 @@ jest.mock('@/hooks/useScout', () => ({
 
 jest.mock('@/lib/contract', () => ({
   getPlayer: jest.fn(),
-  filterPlayers: jest.fn(),
+  getMilestoneHistoryBatch: jest.fn().mockResolvedValue({}),
+}));
+
+// Discovery reads the indexer now (issue #1298); the dashboard polls
+// /health for the ledger-lag hint — stub it so no real request is attempted.
+jest.mock('@/lib/indexerClient', () => ({
+  fetchIndexerHealth: jest.fn().mockResolvedValue({
+    status: 'ok',
+    lastLedger: 100,
+    ledgerLag: 0,
+    pollerRunning: true,
+    uptime: 1,
+  }),
 }));
 
 jest.mock('next/navigation', () => ({
@@ -125,6 +129,22 @@ jest.mock('@/components/ui/ErrorBoundary', () => ({
   default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+// useWatchlist/useSavedSearches (via useUndoableRemoval) and the component
+// itself all call useToast(), which needs a ToastProvider ancestor this
+// suite doesn't render.
+jest.mock('@/components/ui/Toast', () => ({
+  useToast: () => ({ show: jest.fn() }),
+}));
+
+// The real OnboardingTour renders a "Welcome to Scout Dashboard" heading and
+// Previous/Next-step buttons on first visit, colliding with this suite's own
+// heading/button queries — mock it out, tour behavior isn't this suite's
+// concern.
+jest.mock('@/components/ui/OnboardingTour', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
 // ── Import under test (after mocks) ───────────────────────────────────────────
 
 import ScoutDashboard from '@/app/[locale]/scout/page';
@@ -133,8 +153,15 @@ import ScoutDashboard from '@/app/[locale]/scout/page';
 
 const EMPTY_SCOUT = {
   players: [],
+  total: 0,
   loading: false,
   error: null,
+  isRateLimited: false,
+  retryAfterSec: null,
+  hasNextPage: false,
+  loadMore: jest.fn(),
+  searchId: null,
+  refetch: jest.fn(),
   search: mockSearch,
   searchByName: jest.fn(),
 };
@@ -157,6 +184,7 @@ function simulateSearchCycle(
       ...EMPTY_SCOUT,
       loading: false,
       players: resultPlayers,
+      total: resultPlayers.length,
     });
     rerender(<ScoutDashboard />);
   });

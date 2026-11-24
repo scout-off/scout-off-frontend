@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { fn } from '@storybook/test';
+import { expect, fn, userEvent, within } from '@storybook/test';
 import { useState } from 'react';
 import ConfirmDialog from './ConfirmDialog';
 import Button from './Button';
@@ -15,6 +15,10 @@ const meta: Meta<typeof ConfirmDialog> = {
 export default meta;
 type Story = StoryObj<typeof ConfirmDialog>;
 
+/**
+ * Default confirmation dialog — non-destructive, used for neutral confirmations
+ * such as pausing a contract or confirming a settings change.
+ */
 export const Default: Story = {
   args: {
     isOpen: true,
@@ -24,23 +28,46 @@ export const Default: Story = {
   },
 };
 
-export const WithCustomLabels: Story = {
+/**
+ * Destructive action dialog — confirm button signals danger.
+ * The component always renders its confirm button with `variant="danger"`,
+ * so this story documents that the default appearance is already destructive.
+ * Pass a `confirmLabel` that reinforces the irreversible nature of the action.
+ */
+export const Destructive: Story = {
+  name: 'Destructive action',
   args: {
     isOpen: true,
-    title: 'Pause Contract',
+    title: 'Archive Player Profile',
     message:
-      'Pausing the contract will disable all write operations for all users. Continue?',
-    confirmLabel: 'Yes, Pause',
-    cancelLabel: 'Keep Active',
+      'Archiving this profile will hide it from scouts and remove it from search results. This cannot be reversed without contacting support.',
+    confirmLabel: 'Archive Profile',
+    cancelLabel: 'Keep Profile',
   },
 };
 
+/**
+ * Loading / pending state — the confirm button shows a spinner and is disabled
+ * while an async operation (e.g. an on-chain transaction) is in progress.
+ */
 export const Loading: Story = {
   args: {
     isOpen: true,
     title: 'Confirm Withdrawal',
     message: 'Withdraw all accumulated platform fees to the admin wallet?',
     loading: true,
+  },
+};
+
+export const LongDescription: Story = {
+  name: 'Long description (scroll test)',
+  args: {
+    isOpen: true,
+    title: 'Revoke All Validator Privileges',
+    message:
+      'You are about to revoke validator privileges for this wallet. This means they will no longer be able to approve milestones, manage player profiles, or access the validator dashboard. All pending milestones assigned to this validator will be reassigned to the next available validator. This action is permanent and cannot be reversed without re-adding the validator manually through the admin dashboard. Please double-check the wallet address before proceeding.',
+    confirmLabel: 'Yes, Revoke',
+    cancelLabel: 'Cancel',
   },
 };
 
@@ -76,5 +103,53 @@ export const Interactive: Story = {
       );
     }
     return <Demo />;
+  },
+};
+
+/** Interaction test (issue #1322): Cancel, Escape and Confirm call the right handlers. */
+export const ConfirmCancelPlay: Story = {
+  name: 'Confirm / cancel (play)',
+  args: {
+    isOpen: true,
+    title: 'Remove Validator',
+    message: 'Remove this validator?',
+    confirmLabel: 'Remove',
+    cancelLabel: 'Keep',
+  },
+  play: async ({ args, canvasElement }) => {
+    const dialog = within(await within(canvasElement).findByRole('dialog'));
+
+    await userEvent.click(dialog.getByRole('button', { name: 'Keep' }));
+    await expect(args.onCancel).toHaveBeenCalledTimes(1);
+    await expect(args.onConfirm).not.toHaveBeenCalled();
+
+    await userEvent.keyboard('{Escape}');
+    await expect(args.onCancel).toHaveBeenCalledTimes(2);
+
+    await userEvent.click(dialog.getByRole('button', { name: 'Remove' }));
+    await expect(args.onConfirm).toHaveBeenCalledTimes(1);
+  },
+};
+
+/** Interaction test: while loading, neither button can fire. */
+export const LoadingBlocksPlay: Story = {
+  name: 'Loading blocks actions (play)',
+  args: {
+    isOpen: true,
+    title: 'Confirm Withdrawal',
+    message: 'Withdraw all fees?',
+    loading: true,
+  },
+  play: async ({ args, canvasElement }) => {
+    const dialog = within(await within(canvasElement).findByRole('dialog'));
+    await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+    await expect(
+      dialog.getByRole('button', { name: /Confirm/ }),
+    ).toBeDisabled();
+    await userEvent.click(dialog.getByRole('button', { name: 'Cancel' }), {
+      pointerEventsCheck: 0,
+    });
+    await expect(args.onCancel).not.toHaveBeenCalled();
+    await expect(args.onConfirm).not.toHaveBeenCalled();
   },
 };

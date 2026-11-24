@@ -12,7 +12,8 @@ const mockFetchAcademyForWallet = jest.fn();
 jest.mock('@/lib/api', () => ({
   fetchValidatorMilestoneCount: (...args: unknown[]) =>
     mockFetchValidatorMilestoneCount(...args),
-  fetchAcademyForWallet: (...args: unknown[]) => mockFetchAcademyForWallet(...args),
+  fetchAcademyForWallet: (...args: unknown[]) =>
+    mockFetchAcademyForWallet(...args),
 }));
 
 const ADDRESS = 'GVALIDATORAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
@@ -30,7 +31,9 @@ describe('ValidatorChip', () => {
 
     render(<ValidatorChip address={ADDRESS} />);
 
-    await waitFor(() => expect(screen.getByText(TRUNCATED_ADDRESS)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText(TRUNCATED_ADDRESS)).toBeInTheDocument(),
+    );
     expect(screen.queryByText('FC Sahel')).not.toBeInTheDocument();
   });
 
@@ -47,7 +50,9 @@ describe('ValidatorChip', () => {
 
     render(<ValidatorChip address={ADDRESS} />);
 
-    await waitFor(() => expect(screen.getByText('FC Sahel')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('FC Sahel')).toBeInTheDocument(),
+    );
     expect(screen.queryByText(TRUNCATED_ADDRESS)).not.toBeInTheDocument();
   });
 
@@ -58,6 +63,8 @@ describe('ValidatorChip', () => {
 
     render(<ValidatorChip address={ADDRESS} />);
 
-    await waitFor(() => expect(screen.getByText(TRUNCATED_ADDRESS)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText(TRUNCATED_ADDRESS)).toBeInTheDocument(),
+    );
   });
 });

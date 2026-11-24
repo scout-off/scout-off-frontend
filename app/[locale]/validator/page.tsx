@@ -1,15 +1,35 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 import { useRequireWallet } from '@/hooks/useRequireWallet';
 import { checkIsValidator } from '@/lib/contract';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import EmptyState from '@/components/ui/EmptyState';
-import ValidatorPlayerSearch from '@/components/validator/ValidatorPlayerSearch';
-import ApprovedPlayersRoster from '@/components/validator/ApprovedPlayersRoster';
-import ApproveForm from '@/components/validator/ApproveForm';
-import RevokeForm from '@/components/validator/RevokeForm';
 import type { Player } from '@/types';
+
+// Validator-only components lazy-loaded to avoid bundling into shared chunks
+// for the much larger player/scout user base (issue #967).
+const ValidatorPlayerSearch = dynamic(
+  () => import('@/components/validator/ValidatorPlayerSearch'),
+  { ssr: false },
+);
+const ApprovedPlayersRoster = dynamic(
+  () => import('@/components/validator/ApprovedPlayersRoster'),
+  { ssr: false },
+);
+const PendingMilestoneQueue = dynamic(
+  () => import('@/components/validator/PendingMilestoneQueue'),
+  { ssr: false },
+);
+const ApproveForm = dynamic(
+  () => import('@/components/validator/ApproveForm'),
+  { ssr: false },
+);
+const RevokeForm = dynamic(() => import('@/components/validator/RevokeForm'), {
+  ssr: false,
+});
 
 function ValidatorDashboardContent() {
   const { walletAddress: publicKey } = useRequireWallet();
@@ -66,7 +86,15 @@ function ValidatorDashboardContent() {
 
   return (
     <div className="flex flex-col gap-8">
-      <h1 className="text-3xl font-bold text-white">{t('title')}</h1>
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-3xl font-bold text-white">{t('title')}</h1>
+        <Link
+          href="/validator/leaderboard"
+          className="text-sm text-gray-400 hover:text-white transition"
+        >
+          View Leaderboard →
+        </Link>
+      </div>
 
       {/* Player search section */}
       <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
@@ -75,6 +103,9 @@ function ValidatorDashboardContent() {
         </h2>
         <ValidatorPlayerSearch onSelect={handlePlayerSelected} />
       </div>
+
+      {/* Pending milestone queue */}
+      <PendingMilestoneQueue validatorAddress={publicKey} />
 
       {/* Approved players roster */}
       <ApprovedPlayersRoster validatorAddress={publicKey} />
@@ -91,7 +122,7 @@ function ValidatorDashboardContent() {
               {selectedPlayer.vitals.position} · {selectedPlayer.vitals.region}·{' '}
               {selectedPlayer.vitals.nationality}
             </p>
-            <p className="text-gray-500 text-xs mt-2 font-mono">
+            <p className="text-gray-400 text-xs mt-2 font-mono">
               ID: {selectedPlayer.id}
             </p>
           </div>

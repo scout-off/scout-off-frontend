@@ -2,9 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useApprovedPlayers } from '@/hooks/useApprovedPlayers';
 import PlayerCard from '@/components/PlayerCard';
 import EmptyState from '@/components/ui/EmptyState';
+import DataFreshnessBadge from '@/components/ui/DataFreshnessBadge';
 import Button from '@/components/ui/Button';
 
 interface ApprovedPlayersRosterProps {
@@ -19,6 +21,7 @@ interface ApprovedPlayersRosterProps {
 export default function ApprovedPlayersRoster({
   validatorAddress,
 }: ApprovedPlayersRosterProps) {
+  const t = useTranslations('validator');
   const { players, loading, error, refetch } =
     useApprovedPlayers(validatorAddress);
   const pathname = usePathname();
@@ -28,7 +31,7 @@ export default function ApprovedPlayersRoster({
     return (
       <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
         <h2 className="text-lg font-semibold text-white mb-4">
-          My Approved Players
+          {t('roster_title')}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {[1, 2, 3].map((n) => (
@@ -47,16 +50,13 @@ export default function ApprovedPlayersRoster({
       <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-white">
-            My Approved Players
+            {t('roster_title')}
           </h2>
           <Button onClick={refetch} variant="secondary">
-            Retry
+            {t('roster_retry')}
           </Button>
         </div>
-        <p className="text-red-400 text-sm">
-          Could not load approved players. The indexer may be temporarily
-          unavailable.
-        </p>
+        <p className="text-red-400 text-sm">{t('roster_error')}</p>
       </div>
     );
   }
@@ -65,26 +65,30 @@ export default function ApprovedPlayersRoster({
     return (
       <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
         <h2 className="text-lg font-semibold text-white mb-4">
-          My Approved Players
+          {t('roster_title')}
         </h2>
         <EmptyState
-          title="No approved players yet"
-          description="Players you approve milestones for will appear here. Use the search above to find and approve a player's milestone."
+          title={t('roster_empty_title')}
+          description={t('roster_empty_description')}
         />
       </div>
     );
   }
 
+  const countLabel =
+    players.length === 1
+      ? t('roster_count_one')
+      : t('roster_count_other', { count: players.length });
+
   return (
     <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-white">
-          My Approved Players
+          {t('roster_title')}
         </h2>
-        <span className="text-sm text-gray-400">
-          {players.length} player{players.length !== 1 ? 's' : ''}
-        </span>
+        <span className="text-sm text-gray-400">{countLabel}</span>
       </div>
+      <DataFreshnessBadge className="mb-4" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {players.map((player) => (

@@ -79,6 +79,20 @@ describe('POST /api/ipfs/upload', () => {
   afterEach(() => {
     delete process.env.PINATA_API_KEY;
     delete process.env.PINATA_SECRET;
+    jest.restoreAllMocks();
+  });
+
+  it('returns 503 before doing any work when Pinata credentials are missing', async () => {
+    delete process.env.PINATA_SECRET;
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    const form = new FormData();
+    form.append('caption', 'hello');
+    const res = await POST(makeRequest({ form, ip: 'ip-upload-nocreds' }));
+    expect(mockedAxios.post).not.toHaveBeenCalled();
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({
+      error: 'IPFS uploads are not configured',
+    });
   });
 
   it('returns 400 when the request body is not valid form data', async () => {
@@ -227,7 +241,9 @@ describe('POST /api/ipfs/upload', () => {
     });
 
     it('returns 502 with a retryable error when the gateway cannot be reached for verification', async () => {
-      mockedAxios.post.mockResolvedValue({ data: { IpfsHash: 'QmGatewayDown' } });
+      mockedAxios.post.mockResolvedValue({
+        data: { IpfsHash: 'QmGatewayDown' },
+      });
       mockedAxios.get.mockRejectedValue(new Error('gateway timeout'));
 
       const file = makeFile(JPEG_HEADER, 'photo.jpg', 'image/jpeg');

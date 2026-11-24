@@ -1,8 +1,10 @@
+jest.unmock('next-intl');
+
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent } from '@/__tests__/setup-providers-intl';
 import '@testing-library/jest-dom';
 import MilestoneTimeline from '@/components/player/MilestoneTimeline';
-import type { Milestone } from '@/types';
+import type { Milestone, MilestoneDispute } from '@/types';
 
 const MS: Milestone[] = [
   {
@@ -81,7 +83,9 @@ describe('MilestoneTimeline — current level node', () => {
 
   it('pulse-ring has animate-ping class', () => {
     render(<MilestoneTimeline milestones={MS} currentLevel={1} />);
-    expect(screen.getByTestId('pulse-ring')).toHaveClass('animate-ping');
+    expect(screen.getByTestId('pulse-ring')).toHaveClass(
+      'motion-safe:animate-ping',
+    );
   });
 });
 
@@ -167,5 +171,187 @@ describe('MilestoneTimeline — milestone information accuracy', () => {
     const original = [...MS];
     render(<MilestoneTimeline milestones={MS} currentLevel={3} />);
     expect(MS).toEqual(original);
+  });
+});
+
+describe('MilestoneTimeline — badge tooltip (issue #1129)', () => {
+  it('shows a tooltip with the full validator address on hover over a completed badge', () => {
+    render(<MilestoneTimeline milestones={MS} currentLevel={2} />);
+    // The badge for level 1 (Verified Identity) should have a tooltip trigger.
+    // We hover the badge text inside the aria-hidden visual block.
+    const badge = screen.getByText('Verified Identity');
+    fireEvent.mouseEnter(badge);
+    const tooltip = screen.getByRole('tooltip');
+    // Should contain the full (un-truncated) validator address for m1.
+    expect(tooltip.textContent).toContain(
+      'GABCDEFGHIJKLMNOPQRSTUVWXYZ12345678901234567890123456',
+    );
+  });
+
+  it('includes the formatted approval date in the badge tooltip', () => {
+    render(<MilestoneTimeline milestones={MS} currentLevel={2} />);
+    const badge = screen.getByText('Verified Identity');
+    fireEvent.mouseEnter(badge);
+    const tooltip = screen.getByRole('tooltip');
+    // The date for timestamp 1_700_000_000 should appear somewhere.
+    expect(tooltip.textContent).toMatch(/Approved:/);
+  });
+
+  it('hides the badge tooltip on mouse leave', () => {
+    render(<MilestoneTimeline milestones={MS} currentLevel={2} />);
+    const badge = screen.getByText('Verified Identity');
+    fireEvent.mouseEnter(badge);
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+    fireEvent.mouseLeave(badge);
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('does not attach a tooltip to a badge for a level with no milestone data', () => {
+    // With currentLevel=0 and no milestones, level 1-3 badges have no milestone.
+    // Level 0 (Unverified) is completed but has no milestone record by design.
+    render(<MilestoneTimeline milestones={[]} currentLevel={0} />);
+    const verifiedBadge = screen.getByText('Verified Identity');
+    fireEvent.mouseEnter(verifiedBadge);
+    // No tooltip should appear because there is no milestone for this level.
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+});
+
+describe('MilestoneTimeline — dispute flow (issue #562)', () => {
+  function makeDispute(overrides: Partial<MilestoneDispute>): MilestoneDispute {
+    return {
+      id: 1,
+      playerId: 'player-1',
+      playerWallet: 'GPLAYERWALLET1234567890',
+      milestoneId: 'm1',
+      milestoneDescription: 'KYC verified',
+      reason: 'This was rejected in error.',
+      status: 'pending',
+      createdAt: 1_700_000_000_000,
+      decidedAt: null,
+      decidedBy: null,
+      resolutionNote: null,
+      revokeTxHash: null,
+      ...overrides,
+    };
+  }
+
+  it('hides all dispute UI when the disputes prop is omitted', () => {
+    render(<MilestoneTimeline milestones={MS} currentLevel={2} />);
+    fireEvent.click(screen.getByRole('button', { name: /Verified Identity/i }));
+    expect(
+      screen.queryByRole('button', { name: /Dispute this milestone/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows a "Dispute this milestone" action for a completed milestone with no existing dispute', () => {
+    const onDisputeMilestone = jest.fn();
+    render(
+      <MilestoneTimeline
+        milestones={MS}
+        currentLevel={2}
+        disputes={[]}
+        onDisputeMilestone={onDisputeMilestone}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Verified Identity/i }));
+
+    const disputeBtn = screen.getByRole('button', {
+      name: /Dispute this milestone/i,
+    });
+    fireEvent.click(disputeBtn);
+    expect(onDisputeMilestone).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'm1' }),
+    );
+  });
+
+  it('does not show the dispute action when disputes is set but onDisputeMilestone is omitted', () => {
+    render(
+      <MilestoneTimeline milestones={MS} currentLevel={2} disputes={[]} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Verified Identity/i }));
+    expect(
+      screen.queryByRole('button', { name: /Dispute this milestone/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows "pending" dispute status instead of the dispute action once filed', () => {
+    render(
+      <MilestoneTimeline
+        milestones={MS}
+        currentLevel={2}
+        disputes={[makeDispute({ status: 'pending' })]}
+        onDisputeMilestone={jest.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Verified Identity/i }));
+
+    expect(screen.getByText('Dispute pending review')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Dispute this milestone/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows the "upheld" resolution once an admin decides against the dispute', () => {
+    render(
+      <MilestoneTimeline
+        milestones={MS}
+        currentLevel={2}
+        disputes={[makeDispute({ status: 'upheld' })]}
+        onDisputeMilestone={jest.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Verified Identity/i }));
+    expect(
+      screen.getByText('Dispute reviewed — decision upheld'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows the "reversed" resolution once an admin reverses the milestone', () => {
+    render(
+      <MilestoneTimeline
+        milestones={MS}
+        currentLevel={2}
+        disputes={[makeDispute({ status: 'reversed' })]}
+        onDisputeMilestone={jest.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Verified Identity/i }));
+    expect(
+      screen.getByText('Dispute reviewed — milestone reversed'),
+    ).toBeInTheDocument();
+  });
+
+  it('matches a dispute to its milestone by milestoneId, not by level', () => {
+    render(
+      <MilestoneTimeline
+        milestones={MS}
+        currentLevel={2}
+        disputes={[makeDispute({ milestoneId: 'm2', status: 'upheld' })]}
+        onDisputeMilestone={jest.fn()}
+      />,
+    );
+    // Level for m1 (Unverified) has no matching dispute — action still shown.
+    fireEvent.click(screen.getByRole('button', { name: /Verified Identity/i }));
+    expect(
+      screen.getByRole('button', { name: /Dispute this milestone/i }),
+    ).toBeInTheDocument();
+  });
+});
+
+describe('MilestoneTimeline — localisation', () => {
+  it('renders labels and dates in French', () => {
+    render(<MilestoneTimeline milestones={MS} currentLevel={1} />, {
+      locale: 'fr',
+    });
+
+    expect(
+      screen.getByRole('list', {
+        name: 'Chronologie de progression des niveaux',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText('Pas encore atteint').length).toBeGreaterThan(0);
+    // fr-FR medium date for 2023-11-14.
+    expect(screen.getByText('14 nov. 2023')).toBeInTheDocument();
   });
 });

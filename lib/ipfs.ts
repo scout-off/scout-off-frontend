@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { IPFS_FALLBACK_GATEWAYS } from './ipfsGateways';
 
 const PRIMARY_GATEWAY =
   process.env.NEXT_PUBLIC_IPFS_GATEWAY ?? 'https://gateway.pinata.cloud/ipfs';
@@ -9,10 +10,7 @@ const PRIMARY_GATEWAY =
  *
  * Exported so consumers and test suites can reference or override the list.
  */
-export const DEFAULT_IPFS_FALLBACKS: string[] = [
-  'https://ipfs.io/ipfs',
-  'https://cloudflare-ipfs.com/ipfs',
-];
+export const DEFAULT_IPFS_FALLBACKS: string[] = [...IPFS_FALLBACK_GATEWAYS];
 
 /** Timeout per gateway attempt in milliseconds. */
 const ATTEMPT_TIMEOUT_MS = 8_000;
@@ -64,18 +62,21 @@ export class ChunkedUploadError extends Error {
   sessionId: string;
   uploadedChunks: number;
   totalChunks: number;
+  retryAfterSec?: number;
 
   constructor(
     message: string,
     sessionId: string,
     uploadedChunks: number,
     totalChunks: number,
+    retryAfterSec?: number,
   ) {
     super(message);
     this.name = 'ChunkedUploadError';
     this.sessionId = sessionId;
     this.uploadedChunks = uploadedChunks;
     this.totalChunks = totalChunks;
+    this.retryAfterSec = retryAfterSec;
   }
 }
 
@@ -124,6 +125,29 @@ async function uploadChunkWithRetry(
       return;
     } catch (err) {
       lastErr = err;
+      // If this is a 429 response, extract retryAfterSec and throw immediately
+      // rather than retrying (retries won't help against a rate limit)
+      if (axios.isAxiosError(err) && err.response?.status === 429) {
+        const retryAfter = (err.response?.headers as any)?.['retry-after'];
+        const retryAfterSec = retryAfter ? parseInt(retryAfter, 10) : undefined;
+        throw new ChunkedUploadError(
+          'Upload rate limited. Please wait and try again.',
+          sessionId,
+          chunkIndex,
+          0, // totalChunks not known at this point
+          retryAfterSec,
+        );
+      }
+      // Other 4xx responses (bad chunk index, unknown/expired session) won't
+      // succeed on retry — surface them immediately.
+      if (
+        axios.isAxiosError(err) &&
+        err.response &&
+        err.response.status >= 400 &&
+        err.response.status < 500
+      ) {
+        throw err;
+      }
     }
   }
   throw lastErr;
@@ -168,13 +192,28 @@ export async function uploadToIPFSChunked(
     const status = await getChunkedUploadStatus(sessionId);
     startChunk = status.receivedChunks.length;
   } else {
-    const { data } = await axios.post('/api/ipfs/upload/init', {
-      filename: file.name,
-      fileType: file.type,
-      fileSize: file.size,
-      totalChunks,
-    });
-    sessionId = data.sessionId as string;
+    try {
+      const { data } = await axios.post('/api/ipfs/upload/init', {
+        filename: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        totalChunks,
+      });
+      sessionId = data.sessionId as string;
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 429) {
+        const retryAfter = (err.response?.headers as any)?.['retry-after'];
+        const retryAfterSec = retryAfter ? parseInt(retryAfter, 10) : undefined;
+        throw new ChunkedUploadError(
+          'Upload rate limited. Please wait and try again.',
+          '',
+          0,
+          totalChunks,
+          retryAfterSec,
+        );
+      }
+      throw err;
+    }
   }
 
   options.onProgress?.(startChunk / totalChunks);
@@ -198,8 +237,25 @@ export async function uploadToIPFSChunked(
   }
 
   options.onPhaseChange?.('processing');
-  const { data } = await axios.post('/api/ipfs/upload/complete', { sessionId });
-  return data.cid as string;
+  try {
+    const { data } = await axios.post('/api/ipfs/upload/complete', {
+      sessionId,
+    });
+    return data.cid as string;
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.status === 429) {
+      const retryAfter = (err.response?.headers as any)?.['retry-after'];
+      const retryAfterSec = retryAfter ? parseInt(retryAfter, 10) : undefined;
+      throw new ChunkedUploadError(
+        'Upload rate limited. Please wait and try again.',
+        sessionId,
+        totalChunks,
+        totalChunks,
+        retryAfterSec,
+      );
+    }
+    throw err;
+  }
 }
 
 /**

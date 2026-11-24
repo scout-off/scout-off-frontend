@@ -6,6 +6,12 @@ export interface TourStep {
   description: string;
   targetSelector: string;
   position?: 'top' | 'bottom' | 'left' | 'right';
+  /** Selector used instead of `targetSelector` on narrow viewports. */
+  mobileTargetSelector?: string;
+  /** Omit the step on narrow viewports. */
+  desktopOnly?: boolean;
+  /** Only include the step when this feature flag is enabled. */
+  flag?: string;
 }
 
 interface TourState {
@@ -17,7 +23,11 @@ interface TourState {
 
 const STORAGE_PREFIX = 'scout_tour_';
 
-export function useOnboardingTour(tourId: string, steps: TourStep[], walletAddress?: string) {
+export function useOnboardingTour(
+  tourId: string,
+  steps: TourStep[],
+  walletAddress?: string,
+) {
   const [state, setState] = useState<TourState>({
     currentStep: 0,
     isVisible: false,
@@ -32,26 +42,47 @@ export function useOnboardingTour(tourId: string, steps: TourStep[], walletAddre
     const stored = localStorage.getItem(storageKey);
     if (stored) {
       const parsed = JSON.parse(stored);
+      const savedStep =
+        typeof parsed.currentStep === 'number'
+          ? Math.min(Math.max(parsed.currentStep, 0), steps.length - 1)
+          : 0;
       if (parsed.isDismissed || parsed.isCompleted) {
-        setState((prev) => ({ ...prev, isDismissed: parsed.isDismissed, isCompleted: parsed.isCompleted }));
+        // Hide explicitly: the key changes from `_anon` to the wallet once
+        // the session restores, and the anon pass has already shown the tour.
+        setState((prev) => ({
+          ...prev,
+          isVisible: false,
+          isDismissed: parsed.isDismissed,
+          isCompleted: parsed.isCompleted,
+        }));
       } else {
-        setState((prev) => ({ ...prev, isVisible: true }));
+        // Resume where this wallet left off rather than restarting.
+        setState((prev) => ({
+          ...prev,
+          currentStep: savedStep,
+          isVisible: true,
+        }));
       }
     } else {
       // Show tour for first-time users
       setState((prev) => ({ ...prev, isVisible: true }));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
 
-  const saveTourState = useCallback((newState: TourState) => {
-    localStorage.setItem(
-      storageKey,
-      JSON.stringify({
-        isDismissed: newState.isDismissed,
-        isCompleted: newState.isCompleted,
-      })
-    );
-  }, [storageKey]);
+  const saveTourState = useCallback(
+    (newState: TourState) => {
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          isDismissed: newState.isDismissed,
+          isCompleted: newState.isCompleted,
+          currentStep: newState.currentStep,
+        }),
+      );
+    },
+    [storageKey],
+  );
 
   const nextStep = useCallback(() => {
     setState((prev) => {
@@ -64,19 +95,38 @@ export function useOnboardingTour(tourId: string, steps: TourStep[], walletAddre
       if (newStep >= steps.length) {
         newState.isCompleted = true;
         newState.isVisible = false;
-        saveTourState(newState);
       }
+      saveTourState(newState);
 
       return newState;
     });
   }, [steps.length, saveTourState]);
 
   const prevStep = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      currentStep: Math.max(prev.currentStep - 1, 0),
-    }));
-  }, []);
+    setState((prev) => {
+      const newState = {
+        ...prev,
+        currentStep: Math.max(prev.currentStep - 1, 0),
+      };
+      saveTourState(newState);
+      return newState;
+    });
+  }, [saveTourState]);
+
+  /** Jump directly to `index` (used to skip steps whose target is hidden). */
+  const goToStep = useCallback(
+    (index: number) => {
+      setState((prev) => {
+        const newState = {
+          ...prev,
+          currentStep: Math.min(Math.max(index, 0), steps.length - 1),
+        };
+        saveTourState(newState);
+        return newState;
+      });
+    },
+    [steps.length, saveTourState],
+  );
 
   const dismissTour = useCallback(() => {
     setState((prev) => {
@@ -125,6 +175,7 @@ export function useOnboardingTour(tourId: string, steps: TourStep[], walletAddre
     steps,
     nextStep,
     prevStep,
+    goToStep,
     dismissTour,
     skipTour,
     completeTour,

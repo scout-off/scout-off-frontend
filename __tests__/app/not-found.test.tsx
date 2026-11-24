@@ -35,9 +35,30 @@ describe('NotFound', () => {
       'href',
       '/',
     );
+
+    // Verify headings are present for screen-reader navigation
+    expect(
+      screen.getByRole('heading', { level: 1, name: '404' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Page Not Found' }),
+    ).toBeInTheDocument();
   });
 
   it('exposes the expected page title metadata', () => {
     expect(metadata.title).toBe('Page Not Found – ScoutOff');
+  });
+
+  it('renders a heading on the 404 page', () => {
+    render(<NotFound />);
+    expect(screen.getByRole('heading', { name: '404' })).toBeInTheDocument();
+  });
+
+  it('renders a back-to-home link pointing to the root path', () => {
+    render(<NotFound />);
+    expect(screen.getByRole('link', { name: 'Go Home' })).toHaveAttribute(
+      'href',
+      '/',
+    );
   });
 });

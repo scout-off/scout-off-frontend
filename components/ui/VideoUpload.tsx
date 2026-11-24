@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, ChangeEvent } from 'react';
+import { useState, useEffect, useRef, ChangeEvent } from 'react';
 import { useChunkedUpload } from '@/hooks/useChunkedUpload';
+import { getChunkedUploadStatus } from '@/lib/ipfs';
 import Spinner from '@/components/ui/Spinner';
 
 /** Accepted MIME types for client-side validation */
@@ -40,12 +41,30 @@ interface VideoUploadProps {
   error?: string;
   /** Called whenever client-side file validation produces an error (or null to clear) */
   onValidationError?: (error: string | null) => void;
+  /**
+   * Called the instant a new upload begins (a file has passed client-side
+   * validation and is about to start uploading, or a resume is kicked off) —
+   * fires *before* `onUpload`. Callers use this to immediately invalidate
+   * any previously-accepted CID they're holding in form state, so a
+   * still-in-flight replacement upload can never be shadowed by a stale CID
+   * from an earlier, already-completed upload (see issue #1184).
+   */
+  onUploadStart?: () => void;
+  /**
+   * Mirrors this component's internal "an upload is currently in flight"
+   * state to the parent, so a submit/continue button can be disabled for
+   * the entire duration of an upload — not just while `onUpload` hasn't
+   * fired yet, but from the very first byte.
+   */
+  onUploadingChange?: (uploading: boolean) => void;
 }
 
 export default function VideoUpload({
   onUpload,
   error,
   onValidationError,
+  onUploadStart,
+  onUploadingChange,
 }: VideoUploadProps) {
   const [fileName, setFileName] = useState<string>('');
   const [localError, setLocalError] = useState<string | null>(null);
@@ -56,13 +75,62 @@ export default function VideoUpload({
     canResume,
     upload,
     resume,
+    persistedSession,
+    promptResume,
   } = useChunkedUpload();
   const isProcessing = isUploading && phase === 'processing';
+  const lastAnnouncedProgressRef = useRef<number | null>(null);
+  const [progressAnnouncement, setProgressAnnouncement] = useState('');
+
+  // After a reload, an interrupted upload persisted by useChunkedUpload can be
+  // resumed by re-selecting the same file (see #1003). Show how far it got.
+  const [resumedChunks, setResumedChunks] = useState<number | null>(null);
+  const persistedSessionId = persistedSession?.sessionId;
+  useEffect(() => {
+    setResumedChunks(null);
+    if (!persistedSessionId) return;
+    let cancelled = false;
+    getChunkedUploadStatus(persistedSessionId)
+      .then((status) => {
+        if (!cancelled) setResumedChunks(status.receivedChunks.length);
+      })
+      .catch(() => {
+        // Expired or unreachable — promptResume reports it on re-selection.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [persistedSessionId]);
+
+  useEffect(() => {
+    onUploadingChange?.(isUploading);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isUploading]);
+
+  useEffect(() => {
+    if (!isUploading) {
+      lastAnnouncedProgressRef.current = null;
+      setProgressAnnouncement('');
+      return;
+    }
+    if (isProcessing) {
+      setProgressAnnouncement('Processing upload…');
+      return;
+    }
+    const milestone = progress >= 100 ? 100 : Math.floor(progress / 10) * 10;
+    if (milestone > 0 && milestone !== lastAnnouncedProgressRef.current) {
+      lastAnnouncedProgressRef.current = milestone;
+      setProgressAnnouncement(`Upload progress: ${milestone} percent.`);
+    }
+  }, [isUploading, isProcessing, progress]);
 
   const displayError = error ?? localError;
   const errorId = displayError ? 'video-upload-error' : undefined;
 
-  const handleUploadResult = (cid: string | null, uploadError: string | null) => {
+  const handleUploadResult = (
+    cid: string | null,
+    uploadError: string | null,
+  ) => {
     if (cid) {
       setLocalError(null);
       onValidationError?.(null);
@@ -92,12 +160,21 @@ export default function VideoUpload({
     setLocalError(null);
     onValidationError?.(null);
     setFileName(file.name);
+    onUploadStart?.();
 
-    const outcome = await upload(file);
+    const matchesPersisted =
+      persistedSession &&
+      !canResume &&
+      file.name === persistedSession.filename &&
+      file.size === persistedSession.fileSize;
+    const outcome = matchesPersisted
+      ? await promptResume(file)
+      : await upload(file);
     handleUploadResult(outcome.cid, outcome.error);
   };
 
   const handleResume = async () => {
+    onUploadStart?.();
     const outcome = await resume();
     handleUploadResult(outcome.cid, outcome.error);
   };
@@ -106,13 +183,24 @@ export default function VideoUpload({
     <div className="space-y-1">
       <label
         htmlFor="video-upload-input"
-        className="block text-sm font-medium text-gray-300"
+        className="block text-sm font-medium text-gray-700 dark:text-gray-300"
       >
         Highlight Reel
       </label>
-      <p id="video-upload-hint" className="text-xs text-gray-500">
+      <p
+        id="video-upload-hint"
+        className="text-xs text-gray-500 dark:text-gray-400"
+      >
         Accepted: {ACCEPTED_TYPES_LABEL} · Max {MAX_FILE_SIZE_LABEL}
       </p>
+      {persistedSession && !canResume && !isUploading && (
+        <p role="status" className="text-xs text-yellow-500">
+          Resume upload
+          {resumedChunks !== null &&
+            ` (${resumedChunks} of ${persistedSession.totalChunks} chunks uploaded)`}
+          : select {persistedSession.filename} again to continue.
+        </p>
+      )}
       <div className="relative">
         <input
           id="video-upload-input"
@@ -125,12 +213,12 @@ export default function VideoUpload({
             undefined
           }
           aria-invalid={displayError ? true : undefined}
-          className={`w-full bg-gray-900 border border-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-green transition file:mr-4 file:py-1 file:px-4 file:rounded-lg file:border-0 file:bg-brand-green file:text-black file:font-medium hover:file:opacity-90 disabled:opacity-50 ${
+          className={`w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-green transition file:mr-4 file:py-1 file:px-4 file:rounded-lg file:border-0 file:bg-brand-green file:text-black file:font-medium hover:file:opacity-90 disabled:opacity-50 ${
             displayError ? 'border-red-500' : ''
           }`}
         />
         {isUploading && (
-          <div className="absolute inset-0 bg-gray-900/80 flex items-center justify-center rounded-lg">
+          <div className="absolute inset-0 bg-white/80 dark:bg-gray-900/80 flex items-center justify-center rounded-lg">
             <div className="flex items-center gap-2 text-brand-green">
               <Spinner size="sm" />
               <span className="text-sm">
@@ -146,19 +234,20 @@ export default function VideoUpload({
           aria-valuenow={isProcessing ? undefined : progress}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-label={
-            isProcessing ? 'Processing upload' : 'Upload progress'
-          }
-          className="h-1.5 w-full rounded-full bg-gray-800 overflow-hidden"
+          aria-label={isProcessing ? 'Processing upload' : 'Upload progress'}
+          className="h-1.5 w-full rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden"
         >
           <div
-            className={`h-full bg-brand-green transition-[width] duration-200 ${
+            className={`h-full bg-brand-green motion-safe:transition-[width] motion-safe:duration-200 motion-reduce:transition-none ${
               isProcessing ? 'animate-pulse w-full' : ''
             }`}
             style={isProcessing ? undefined : { width: `${progress}%` }}
           />
         </div>
       )}
+      <div className="sr-only" role="status" aria-live="polite">
+        {progressAnnouncement}
+      </div>
       {displayError && (
         <p id={errorId} role="alert" className="text-sm text-red-500">
           {displayError}
@@ -174,7 +263,9 @@ export default function VideoUpload({
         </button>
       )}
       {fileName && !isUploading && !displayError && (
-        <p className="text-sm text-gray-400">Uploaded: {fileName}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Uploaded: {fileName}
+        </p>
       )}
     </div>
   );

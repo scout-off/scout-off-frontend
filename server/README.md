@@ -7,8 +7,25 @@ history and player/scout comments next) and shouldn't be stored as ad-hoc
 files or stubs inside the Next.js app.
 
 Frontend calls hit this service through the shared `api` axios instance in
-`lib/api.ts` (`NEXT_PUBLIC_API_URL`), the same pattern already used for the
-chat helpers (`fetchChatHistory`/`postChatMessage`).
+`lib/api.ts` (`NEXT_PUBLIC_API_URL`). The chat client in
+`lib/messaging/chatApi.ts` reuses that same instance.
+
+## Planned: messaging API (canonical contract)
+
+`lib/messaging/chatApi.ts` is the single chat client; the backend chat
+implementation should target exactly these endpoints. The sender of a message
+is **always** derived from the authenticated session on the server — clients
+never send a `sender`/`senderId`, and the server must ignore one if present.
+
+| Method | Path                    | Body       | Response        |
+| ------ | ----------------------- | ---------- | --------------- |
+| GET    | `/threads/:id/messages` | —          | `ChatMessage[]` |
+| POST   | `/threads/:id/messages` | `{ body }` | `ChatMessage`   |
+| POST   | `/threads/:id/read`     | —          | `204`           |
+
+`ChatMessage` is `{ id, threadId, senderId, body, createdAt, status }`, where
+`status` is `'sent' | 'delivered' | 'read'` and `senderId` is server-set.
+The legacy `/chat/:roomId` routes are retired and must not be implemented.
 
 ## Stack
 
@@ -22,7 +39,7 @@ chat helpers (`fetchChatHistory`/`postChatMessage`).
 ```bash
 cd server
 npm install
-cp .env.example .env   # adjust PORT / CORS_ORIGIN / DB_PATH if needed
+cp .env.example .env   # adjust PORT / CORS_ORIGINS / DB_PATH if needed
 npm start              # or `npm run dev` for auto-restart on file changes
 ```
 
@@ -32,6 +49,23 @@ run — the `data/` directory is gitignored, same as the frontend's `.data/`.
 
 Point the frontend at it by setting `NEXT_PUBLIC_API_URL=http://localhost:4000`
 in the frontend's `.env.local` (see the root `DEVELOPMENT.md`).
+
+## HTTP hardening
+
+Every response carries `helmet`'s security headers (CSP is off, since this is
+a JSON API) and no `X-Powered-By`. The rest is configured through env vars
+(see `.env.example`):
+
+| Variable                                                               | Default                 | Purpose                                                                                                                                    |
+| ---------------------------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `CORS_ORIGINS`                                                         | `http://localhost:3000` | Comma-separated origin allow-list. `CORS_ORIGIN` (a single origin) is still read for backward compatibility.                               |
+| `CORS_ORIGIN_PATTERN`                                                  | none                    | Regex for extra allowed origins, such as Vercel preview deployments.                                                                       |
+| `TRUST_PROXY_HOPS`                                                     | `0`                     | Number of reverse proxies in front of the server, so `req.ip` is the client's address.                                                     |
+| `JSON_BODY_LIMIT`                                                      | `100kb`                 | Max JSON body size. Larger bodies get `413 {"error":"Request body too large"}`.                                                            |
+| `RATE_LIMIT_WINDOW_MS`                                                 | `60000`                 | Rate-limit window.                                                                                                                         |
+| `RATE_LIMIT_MAX` / `RATE_LIMIT_WRITE_MAX` / `RATE_LIMIT_TURNSTILE_MAX` | `300` / `30` / `10`     | Per-IP limits for all requests, for write methods (POST/PUT/PATCH/DELETE) and for Turnstile-protected routes. Exceeding one returns `429`. |
+| `REDIS_URL`                                                            | none                    | When set, rate-limit counters are shared through Redis instead of kept in process memory.                                                  |
+| `REQUEST_TIMEOUT_MS`                                                   | `30000`                 | `server.requestTimeout`: how long a client may take to send a full request.                                                                |
 
 ## Running tests
 
@@ -45,18 +79,18 @@ required, nothing touches `server/data/`.
 
 ## API
 
-| Method | Path                       | Body / Params                | Description                                              |
-| ------ | -------------------------- | ----------------------------- | ---------------------------------------------------------- |
-| GET    | `/health`                  | —                              | Liveness check                                              |
-| POST   | `/referrals/generate`      | `{ scoutWallet }`              | Generate a new referral code owned by `scoutWallet`         |
-| GET    | `/referrals/scout/:wallet` | —                              | List all codes generated by `wallet`                        |
-| GET    | `/referrals/count/:wallet` | —                              | `{ totalCodes, successfulReferrals }` for `wallet`           |
-| POST   | `/referrals/redeem`        | `{ code, usedBy }`             | Redeem `code` on behalf of `usedBy`                          |
-| POST   | `/academies`               | `{ name, ownerWallet, createdBy }` | Create an academy; owner becomes its first member       |
-| GET    | `/academies`               | —                              | List all academies with their members                       |
-| GET    | `/academies/wallet/:wallet`| —                              | Look up the academy (if any) a wallet is registered under    |
-| POST   | `/academies/:id/members`   | `{ wallet, addedBy }`          | Register an additional signer wallet under an academy        |
-| DELETE | `/academies/:id/members/:wallet` | —                        | Remove a signer wallet's academy membership                  |
+| Method | Path                             | Body / Params                      | Description                                               |
+| ------ | -------------------------------- | ---------------------------------- | --------------------------------------------------------- |
+| GET    | `/health`                        | —                                  | Liveness check                                            |
+| POST   | `/referrals/generate`            | `{ scoutWallet }`                  | Generate a new referral code owned by `scoutWallet`       |
+| GET    | `/referrals/scout/:wallet`       | —                                  | List all codes generated by `wallet`                      |
+| GET    | `/referrals/count/:wallet`       | —                                  | `{ totalCodes, successfulReferrals }` for `wallet`        |
+| POST   | `/referrals/redeem`              | `{ code, usedBy }`                 | Redeem `code` on behalf of `usedBy`                       |
+| POST   | `/academies`                     | `{ name, ownerWallet, createdBy }` | Create an academy; owner becomes its first member         |
+| GET    | `/academies`                     | —                                  | List all academies with their members                     |
+| GET    | `/academies/wallet/:wallet`      | —                                  | Look up the academy (if any) a wallet is registered under |
+| POST   | `/academies/:id/members`         | `{ wallet, addedBy }`              | Register an additional signer wallet under an academy     |
+| DELETE | `/academies/:id/members/:wallet` | —                                  | Remove a signer wallet's academy membership               |
 
 The `/academies` endpoints are an off-chain grouping layer only — see
 `docs/academy-validator-model.md` in the frontend app for how this relates

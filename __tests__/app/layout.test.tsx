@@ -6,10 +6,22 @@ jest.mock('next-intl/server', () => ({
   getMessages: jest.fn().mockResolvedValue({ app_title: 'ScoutOff' }),
 }));
 
+// The real `@/lib/locales` only lists 'en'/'fr'/'sw' (all LTR). To prove the
+// `<html dir>` wiring actually branches on `lib/rtl.ts` (and not just on a
+// hardcoded 'ltr'), this mock adds a hypothetical 'ar' (RTL) locale to the
+// recognized-locale list used by `getLocale()` in app/layout.tsx, without
+// touching the real `SUPPORTED_LOCALES` in lib/locales.ts (out of scope —
+// see GitHub issue #1008).
+jest.mock('@/lib/locales', () => ({
+  locales: ['en', 'fr', 'sw', 'ar'],
+  defaultLocale: 'en',
+}));
+
 jest.mock('next-intl', () => ({
   NextIntlClientProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="intl-provider">{children}</div>
   ),
+  useTranslations: () => (key: string) => key,
 }));
 
 jest.mock('@/components/Navbar', () => ({
@@ -30,14 +42,12 @@ jest.mock('@/components/ContractIncompatibleBanner', () => ({
 jest.mock('@/components/ConfigWarningBanner', () => ({
   __esModule: true,
   default: ({ warnings }: { warnings: unknown[] }) =>
-    warnings.length > 0 ? (
-      <div data-testid="config-warning-banner" />
-    ) : null,
+    warnings.length > 0 ? <div data-testid="config-warning-banner" /> : null,
 }));
 
-jest.mock('@/components/WebVitalsReporter', () => ({
+jest.mock('@/components/OfflineBanner', () => ({
   __esModule: true,
-  default: () => <div data-testid="web-vitals-reporter" />,
+  default: () => <div data-testid="offline-banner" />,
 }));
 
 jest.mock('@/components/ServiceWorkerUpdateBanner', () => ({
@@ -45,11 +55,13 @@ jest.mock('@/components/ServiceWorkerUpdateBanner', () => ({
   default: () => <div data-testid="service-worker-update-banner" />,
 }));
 
-// @vercel/analytics/next ships an ESM-only build under the "browser" export
-// condition, which jest-environment-jsdom resolves by default — Jest can't
-// transform it, so it's mocked out like the other leaf components above.
-jest.mock('@vercel/analytics/next', () => ({
-  Analytics: () => <div data-testid="vercel-analytics" />,
+// Analytics/Web Vitals now mount from inside CookieConsentGate, gated
+// behind cookie consent — RootLayout only decides whether to mount the
+// gate at all (see isTestEnv below). Consent-gated mounting of Analytics/
+// WebVitalsReporter is CookieConsentGate's own concern, not RootLayout's.
+jest.mock('@/components/ui/CookieConsentGate', () => ({
+  __esModule: true,
+  default: () => <div data-testid="cookie-consent-gate" />,
 }));
 
 jest.mock('@/components/ui/Toast', () => ({
@@ -57,6 +69,7 @@ jest.mock('@/components/ui/Toast', () => ({
   ToastProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="toast-provider">{children}</div>
   ),
+  useToast: () => ({ show: jest.fn() }),
 }));
 
 jest.mock('@/context/WalletContext', () => ({
@@ -64,6 +77,11 @@ jest.mock('@/context/WalletContext', () => ({
   WalletProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="wallet-provider">{children}</div>
   ),
+  useWalletContext: () => ({
+    isAuthenticated: false,
+    sessionExpiresAt: null,
+    reauthenticate: jest.fn(),
+  }),
 }));
 
 // ── next/headers mock (used by getLocale() in the root layout) ────────────────
@@ -109,10 +127,17 @@ describe('RootLayout', () => {
     expect(screen.getByTestId('navbar')).toBeInTheDocument();
     expect(screen.getByTestId('contract-paused-banner')).toBeInTheDocument();
     expect(screen.getByText('Page content')).toBeInTheDocument();
-    expect(screen.getByText('Skip to main content')).toHaveAttribute(
-      'href',
-      '#main-content',
-    );
+    expect(screen.getByTestId('offline-banner')).toBeInTheDocument();
+
+    // Translated skip link (useTranslations is mocked to return the key) is
+    // the first focusable element in the document.
+    const skipLink = screen.getByRole('link', { name: 'skipToContent' });
+    expect(skipLink).toHaveAttribute('href', '#main-content');
+    expect(
+      document.body.querySelector(
+        'a[href], button, input, select, textarea, [tabindex]',
+      ),
+    ).toBe(skipLink);
   });
 
   it('sets html lang to "fr" when x-pathname has /fr/ prefix', async () => {
@@ -126,6 +151,7 @@ describe('RootLayout', () => {
     const { container } = render(<>{element}</>);
 
     expect(container.querySelector('html')).toHaveAttribute('lang', 'fr');
+    expect(container.querySelector('html')).toHaveAttribute('dir', 'ltr');
   });
 
   it('sets html lang to "sw" when x-pathname has /sw/ prefix', async () => {
@@ -139,6 +165,7 @@ describe('RootLayout', () => {
     const { container } = render(<>{element}</>);
 
     expect(container.querySelector('html')).toHaveAttribute('lang', 'sw');
+    expect(container.querySelector('html')).toHaveAttribute('dir', 'ltr');
   });
 
   it('falls back to "en" when x-pathname header is absent', async () => {
@@ -152,6 +179,7 @@ describe('RootLayout', () => {
     const { container } = render(<>{element}</>);
 
     expect(container.querySelector('html')).toHaveAttribute('lang', 'en');
+    expect(container.querySelector('html')).toHaveAttribute('dir', 'ltr');
   });
 
   it('falls back to "en" for unrecognized locale prefix', async () => {
@@ -165,11 +193,55 @@ describe('RootLayout', () => {
     const { container } = render(<>{element}</>);
 
     expect(container.querySelector('html')).toHaveAttribute('lang', 'en');
+    expect(container.querySelector('html')).toHaveAttribute('dir', 'ltr');
+  });
+
+  it('sets html dir to "rtl" for a hypothetical RTL locale (ar) recognized via x-pathname', async () => {
+    // 'ar' is not in the real SUPPORTED_LOCALES (see lib/locales.ts) but is
+    // added to the recognized-locale list by the '@/lib/locales' mock above
+    // so this test can exercise the RTL branch end-to-end without touching
+    // real locale routing.
+    mockPathname = '/ar/scout';
+
+    const element = await RootLayout({
+      children: <p>مرحبا</p>,
+      params: { locale: 'ar' },
+    });
+
+    const { container } = render(<>{element}</>);
+
+    expect(container.querySelector('html')).toHaveAttribute('lang', 'ar');
+    expect(container.querySelector('html')).toHaveAttribute('dir', 'rtl');
+  });
+
+  it('sets html dir to "ltr" for the default "en" locale', async () => {
+    mockPathname = '/en/scout';
+
+    const element = await RootLayout({
+      children: <p>Hello</p>,
+      params: { locale: 'en' },
+    });
+
+    const { container } = render(<>{element}</>);
+
+    expect(container.querySelector('html')).toHaveAttribute('lang', 'en');
+    expect(container.querySelector('html')).toHaveAttribute('dir', 'ltr');
   });
 
   it('exposes SEO metadata for the app', () => {
     expect(metadata.title).toBe('ScoutOff — Decentralized Football Scouting');
-    expect(metadata.openGraph?.url).toBe('https://scoutoff.app');
+    // The origin comes from NEXT_PUBLIC_APP_URL (set to the production URL
+    // in CI's env), never from a hard-coded value.
+    expect(metadata.metadataBase).toEqual(
+      new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'),
+    );
+    expect(metadata.openGraph).toEqual({
+      siteName: 'ScoutOff',
+      type: 'website',
+    });
+    // No hard-coded production origin or SVG OG image anywhere else.
+    const { metadataBase: _origin, ...rest } = metadata;
+    expect(JSON.stringify(rest)).not.toMatch(/scoutoff\.app|\.svg/);
   });
 
   it('renders ConfigWarningBanner when config is invalid', async () => {
@@ -185,9 +257,7 @@ describe('RootLayout', () => {
 
       render(<>{element}</>);
 
-      expect(
-        screen.getByTestId('config-warning-banner'),
-      ).toBeInTheDocument();
+      expect(screen.getByTestId('config-warning-banner')).toBeInTheDocument();
     } finally {
       process.env.NEXT_PUBLIC_CONTRACT_ID = prev;
     }
@@ -214,7 +284,7 @@ describe('RootLayout', () => {
     }
   });
 
-  it('does not render Analytics or WebVitalsReporter in the test environment', async () => {
+  it('does not render CookieConsentGate (and therefore Analytics/Web Vitals) in the test environment', async () => {
     mockPathname = '/en/';
 
     const element = await RootLayout({
@@ -224,25 +294,35 @@ describe('RootLayout', () => {
 
     render(<>{element}</>);
 
-    expect(
-      screen.queryByTestId('vercel-analytics'),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByTestId('web-vitals-reporter'),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('cookie-consent-gate')).not.toBeInTheDocument();
   });
 
-  it('renders Analytics and WebVitalsReporter outside the test environment', async () => {
+  it('renders CookieConsentGate outside the test environment', async () => {
+    // Analytics/WebVitalsReporter now mount from *inside* CookieConsentGate,
+    // gated behind cookie consent (see components/ui/CookieConsentGate.tsx)
+    // — RootLayout's isTestEnv branch only decides whether to mount the
+    // gate at all, so that's what this test exercises.
     mockPathname = '/en/';
     const prevNodeEnv = process.env.NODE_ENV;
     // @ts-expect-error NODE_ENV is typed readonly; reassigning to simulate a
     // production build is the standard way to exercise this branch.
     process.env.NODE_ENV = 'production';
 
+    // Capture the already-loaded 'react' instance before resetting the
+    // module registry below, then pin the next require() of it back to
+    // this exact object. Without this, reloading '@/app/layout' after
+    // resetModules() would instantiate a *second* copy of 'react' for
+    // every hook-using component in its tree (e.g. A11yDevAudit) —
+    // distinct from the one react-dom (bound at this file's top-level
+    // import, unaffected by the reset) already set its hooks dispatcher
+    // on, which surfaces as "Cannot read properties of null" from within
+    // the hook call itself.
+    const actualReact = jest.requireActual('react');
+
     let ProductionRootLayout: typeof RootLayout;
     try {
       jest.resetModules();
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      jest.doMock('react', () => actualReact);
       ProductionRootLayout = require('@/app/layout').default;
 
       const element = await ProductionRootLayout({
@@ -252,10 +332,7 @@ describe('RootLayout', () => {
 
       render(<>{element}</>);
 
-      expect(screen.getByTestId('vercel-analytics')).toBeInTheDocument();
-      expect(
-        screen.getByTestId('web-vitals-reporter'),
-      ).toBeInTheDocument();
+      expect(screen.getByTestId('cookie-consent-gate')).toBeInTheDocument();
     } finally {
       // @ts-expect-error see above
       process.env.NODE_ENV = prevNodeEnv;

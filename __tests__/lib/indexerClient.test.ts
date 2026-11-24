@@ -23,8 +23,10 @@ jest.mock('axios', () => {
 import axios from 'axios';
 import {
   fetchEvents,
+  fetchIndexerHealth,
   fetchPlayerEvents,
   getMilestoneHistoryFromIndexer,
+  listPlayers,
 } from '@/lib/indexerClient';
 
 beforeAll(() => {
@@ -70,7 +72,10 @@ describe('fetchPlayerEvents', () => {
   it('GETs /players/:id/events with the given query params', async () => {
     mockGet.mockResolvedValue({ data: { events: [], nextCursor: null } });
 
-    await fetchPlayerEvents('player-1', { type: 'milestone_approved', limit: 20 });
+    await fetchPlayerEvents('player-1', {
+      type: 'milestone_approved',
+      limit: 20,
+    });
 
     expect(mockGet).toHaveBeenCalledWith('/players/player-1/events', {
       params: { type: 'milestone_approved', limit: 20 },
@@ -102,7 +107,11 @@ describe('getMilestoneHistoryFromIndexer', () => {
             validator: 'GVAL',
             ledger: 10,
             timestamp: 1000,
-            data: { milestone_id: 'm1', description: 'Scored 20 goals', validator: 'GVAL' },
+            data: {
+              milestone_id: 'm1',
+              description: 'Scored 20 goals',
+              validator: 'GVAL',
+            },
           },
         ],
         nextCursor: null,
@@ -145,7 +154,11 @@ describe('getMilestoneHistoryFromIndexer', () => {
             validator: 'GVAL',
             ledger: 10,
             timestamp: 1000,
-            data: { milestone_id: 'm1', description: 'Scored 20 goals', validator: 'GVAL' },
+            data: {
+              milestone_id: 'm1',
+              description: 'Scored 20 goals',
+              validator: 'GVAL',
+            },
           },
         ],
         nextCursor: null,
@@ -169,7 +182,11 @@ describe('getMilestoneHistoryFromIndexer', () => {
             validator: 'GVAL',
             ledger: 30,
             timestamp: 3000,
-            data: { milestone_id: 'm1', description: 'Re-approved', validator: 'GVAL' },
+            data: {
+              milestone_id: 'm1',
+              description: 'Re-approved',
+              validator: 'GVAL',
+            },
           },
           {
             id: 2,
@@ -189,7 +206,11 @@ describe('getMilestoneHistoryFromIndexer', () => {
             validator: 'GVAL',
             ledger: 10,
             timestamp: 1000,
-            data: { milestone_id: 'm1', description: 'First approval', validator: 'GVAL' },
+            data: {
+              milestone_id: 'm1',
+              description: 'First approval',
+              validator: 'GVAL',
+            },
           },
         ],
         nextCursor: null,
@@ -222,7 +243,11 @@ describe('getMilestoneHistoryFromIndexer', () => {
               validator: 'GVAL',
               ledger: 20,
               timestamp: 2000,
-              data: { milestone_id: 'm2', description: 'Second', validator: 'GVAL' },
+              data: {
+                milestone_id: 'm2',
+                description: 'Second',
+                validator: 'GVAL',
+              },
             },
           ],
           nextCursor: 20,
@@ -239,7 +264,11 @@ describe('getMilestoneHistoryFromIndexer', () => {
               validator: 'GVAL',
               ledger: 10,
               timestamp: 1000,
-              data: { milestone_id: 'm1', description: 'First', validator: 'GVAL' },
+              data: {
+                milestone_id: 'm1',
+                description: 'First',
+                validator: 'GVAL',
+              },
             },
           ],
           nextCursor: null,
@@ -261,5 +290,64 @@ describe('getMilestoneHistoryFromIndexer', () => {
     await expect(getMilestoneHistoryFromIndexer('player-1')).rejects.toThrow(
       'network error',
     );
+  });
+});
+
+// ── Scout discovery (issue #1298) ─────────────────────────────────────────────
+
+describe('listPlayers', () => {
+  it('GETs /players with the filter and cursor params', async () => {
+    const page = { players: [], nextCursor: 'abc', total: 42 };
+    mockGet.mockResolvedValue({ data: page });
+
+    const result = await listPlayers({
+      region: 'West Africa',
+      position: 'ST',
+      minLevel: 1,
+      cursor: 'abc',
+      limit: 50,
+      createdAfter: 1_700_000_000,
+    });
+
+    expect(mockGet).toHaveBeenCalledWith('/players', {
+      params: {
+        region: 'West Africa',
+        position: 'ST',
+        minLevel: 1,
+        cursor: 'abc',
+        limit: 50,
+        createdAfter: 1_700_000_000,
+      },
+    });
+    expect(result).toEqual(page);
+  });
+
+  it('defaults to an empty params object', async () => {
+    mockGet.mockResolvedValue({
+      data: { players: [], nextCursor: null, total: 0 },
+    });
+
+    await listPlayers();
+
+    expect(mockGet).toHaveBeenCalledWith('/players', { params: {} });
+  });
+});
+
+describe('fetchIndexerHealth', () => {
+  it('GETs /health and returns the lag snapshot', async () => {
+    const health = {
+      status: 'ok',
+      lastLedger: 123,
+      ledgerLag: 4,
+      pollerRunning: true,
+      uptime: 10,
+    };
+    mockGet.mockResolvedValue({ data: health });
+
+    const result = await fetchIndexerHealth();
+
+    expect(mockGet).toHaveBeenCalledWith('/health');
+    expect(result.lastLedger).toBe(123);
+    expect(result.ledgerLag).toBe(4);
   });
 });

@@ -5,12 +5,22 @@ updates:
     target-branch: "main"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 10
     labels:
       - "dependencies"
 
-    # Group all patch-level updates into a single PR to reduce noise
     groups:
+      # Batch all @types/* patch and minor bumps into one PR — they are
+      # almost always safe no-ops for runtime behaviour and reviewing them
+      # individually wastes reviewer time.
+      types-updates:
+        patterns:
+          - "@types/*"
+        update-types:
+          - "minor"
+          - "patch"
+
+      # Group all remaining patch-level updates into a single PR to reduce noise.
       patch-updates:
         patterns:
           - "*"
@@ -26,6 +36,19 @@ updates:
         update-types: ["version-update:semver-major"]
         # Reason: Major Stellar SDK bumps usually include breaking Soroban RPC changes that require smart contract compatibility checks.
 
+  # Workflow `uses:` references are pinned to commit SHAs (supply-chain
+  # security — see .github/workflows/*.yml) so Dependabot needs its own
+  # ecosystem entry to keep those pins current.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    target-branch: "main"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "ci"
+
   # packages/indexer has its own package.json (see its README) — Dependabot
   # scopes updates per-directory, so it needs its own entry or its
   # dependencies (currently just typescript/@types/node) go unmonitored.
@@ -38,10 +61,41 @@ updates:
     labels:
       - "dependencies"
 
-    # Group all patch-level updates into a single PR to reduce noise
     groups:
+      # Batch @types/* patch/minor bumps in the indexer package too.
+      types-updates:
+        patterns:
+          - "@types/*"
+        update-types:
+          - "minor"
+          - "patch"
+
+      # Group all remaining patch-level updates into a single PR to reduce noise.
       patch-updates:
         patterns:
           - "*"
         update-types:
+          - "patch"
+
+  # Monitor GitHub Actions themselves for updates (runner images, action
+  # versions like actions/checkout@v4). Weekly cadence matches the npm entries.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    target-branch: "main"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+    # Group all action patch/minor bumps into one PR — major bumps (e.g.,
+    # actions/checkout v3 → v4) are intentionally left ungrouped so they
+    # get their own PR with a clear title.
+    groups:
+      actions-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
           - "patch"

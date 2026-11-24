@@ -4,8 +4,15 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
 import WalletButton from './WalletButton';
+import AccountSwitcher from './AccountSwitcher';
+import ThemeToggle from './ui/ThemeToggle';
 import { useContractStatus } from '@/hooks/useContractStatus';
 import { useWallet } from '@/hooks/useWallet';
+import { useCurrencyPreference } from '@/hooks/useCurrencyPreference';
+import { getCurrencyLabel } from '@/lib/currencies';
+import NotificationBell from './NotificationBell';
+import { LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE } from '@/lib/locales';
+import SessionMismatchWarning from './SessionMismatchWarning';
 
 const NAV_LINKS = [
   { href: '/scout', labelKey: 'nav.scout_dashboard' },
@@ -16,12 +23,15 @@ const SPONSORSHIP_LINK = { href: '/sponsorship', labelKey: 'nav.sponsorship' };
 
 export default function Navbar() {
   const { isPaused } = useContractStatus();
-  const { xlmBalance, isLoadingBalance, isAuthenticated } = useWallet();
+  const { xlmBalance, isLoadingBalance, isAuthenticated, sessionMismatch } =
+    useWallet();
+  const { currency, setCurrency, supported } = useCurrencyPreference();
   const t = useTranslations();
   const router = useRouter();
   const pathname = usePathname() ?? '/';
   const [localeOpen, setLocaleOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [currencyOpen, setCurrencyOpen] = useState(false);
 
   const hamburgerRef = useRef<HTMLButtonElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -39,7 +49,7 @@ export default function Navbar() {
       ? newPathname
       : `/${locale}${pathname}`;
     router.push(target);
-    document.cookie = `NEXT_LOCALE=${locale}; path=/; max-age=31536000`;
+    document.cookie = `${LOCALE_COOKIE}=${locale}; path=/; max-age=${LOCALE_COOKIE_MAX_AGE}; samesite=lax`;
     setLocaleOpen(false);
     setMenuOpen(false);
   };
@@ -98,6 +108,7 @@ export default function Navbar() {
 
   return (
     <>
+      {sessionMismatch && <SessionMismatchWarning />}
       {isPaused && (
         <div className="bg-yellow-500 text-black text-center text-sm font-medium py-2 px-4">
           {t('nav.maintenance_warning')}
@@ -105,7 +116,7 @@ export default function Navbar() {
       )}
       <nav
         aria-label="Main navigation"
-        className="border-b border-gray-800 bg-brand-dark"
+        className="border-b border-gray-200 dark:border-gray-800 bg-brand-dark"
       >
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-2">
           {/* Logo */}
@@ -117,12 +128,12 @@ export default function Navbar() {
           </Link>
 
           {/* ── Desktop nav (sm and above) ── */}
-          <div className="hidden sm:flex items-center gap-6 text-sm text-gray-300 min-w-0">
+          <div className="hidden sm:flex items-center gap-6 text-sm text-gray-700 dark:text-gray-300 min-w-0">
             {NAV_LINKS.map(({ href, labelKey }) => (
               <Link
                 key={href}
                 href={`/${currentLocale}${href}`}
-                className="hover:text-white transition whitespace-nowrap"
+                className="hover:text-gray-900 dark:hover:text-white transition whitespace-nowrap"
               >
                 {t(labelKey)}
               </Link>
@@ -130,10 +141,10 @@ export default function Navbar() {
 
             <Link
               href={`/${currentLocale}${SPONSORSHIP_LINK.href}`}
-              className="flex items-center gap-1.5 text-gray-500 hover:text-gray-300 transition whitespace-nowrap"
+              className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition whitespace-nowrap"
             >
               {t(SPONSORSHIP_LINK.labelKey)}
-              <span className="text-[10px] uppercase tracking-wide border border-gray-700 rounded-full px-1.5 py-0.5">
+              <span className="text-[10px] uppercase tracking-wide border border-gray-300 dark:border-gray-700 rounded-full px-1.5 py-0.5">
                 {t('nav.soon')}
               </span>
             </Link>
@@ -142,7 +153,7 @@ export default function Navbar() {
             <div className="relative">
               <button
                 onClick={() => setLocaleOpen(!localeOpen)}
-                className="hover:text-white transition flex items-center gap-1 whitespace-nowrap"
+                className="hover:text-gray-900 dark:hover:text-white transition flex items-center gap-1 whitespace-nowrap"
                 type="button"
                 aria-haspopup="listbox"
                 aria-expanded={localeOpen}
@@ -158,7 +169,7 @@ export default function Navbar() {
                 <div
                   role="listbox"
                   aria-label={t('language.select_language')}
-                  className="absolute right-0 mt-2 w-40 bg-brand-dark border border-gray-800 rounded-lg shadow-lg z-50"
+                  className="absolute right-0 mt-2 w-40 bg-brand-dark border border-gray-200 dark:border-gray-800 rounded-lg shadow-lg z-50"
                 >
                   {locales.map((locale) => (
                     <button
@@ -180,11 +191,61 @@ export default function Navbar() {
               )}
             </div>
 
+            {/* Currency selector */}
+            <div className="relative">
+              <button
+                onClick={() => setCurrencyOpen(!currencyOpen)}
+                className="hover:text-gray-900 dark:hover:text-white transition flex items-center gap-1 whitespace-nowrap"
+                type="button"
+                aria-haspopup="listbox"
+                aria-expanded={currencyOpen}
+                aria-label="Select currency"
+                title={`Current currency: ${currency}`}
+              >
+                {currency}
+                <span className="text-xs" aria-hidden="true">
+                  ▼
+                </span>
+              </button>
+              {currencyOpen && (
+                <div
+                  role="listbox"
+                  aria-label="Select currency"
+                  className="absolute right-0 mt-2 w-52 bg-brand-dark border border-gray-200 dark:border-gray-800 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto"
+                >
+                  {supported.map((c) => (
+                    <button
+                      key={c.code}
+                      type="button"
+                      role="option"
+                      aria-selected={currency === c.code}
+                      onClick={() => {
+                        setCurrency(c.code);
+                        setCurrencyOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-brand-green hover:text-black transition ${
+                        currency === c.code
+                          ? 'bg-brand-green/20 text-brand-green'
+                          : ''
+                      }`}
+                    >
+                      {getCurrencyLabel(c.code, currentLocale)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <NotificationBell />
+
             {/* XLM balance — hidden below md */}
             {isAuthenticated && (
-              <span className="hidden md:inline text-sm text-gray-300 whitespace-nowrap">
+              <span className="hidden md:inline text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
                 {isLoadingBalance ? (
-                  <span className="text-gray-500" aria-hidden="true">
+                  <span
+                    className="text-gray-500 dark:text-gray-400"
+                    aria-hidden="true"
+                  >
                     ⟳
                   </span>
                 ) : (
@@ -193,16 +254,20 @@ export default function Navbar() {
               </span>
             )}
 
-            <WalletButton />
+            <ThemeToggle />
+            <AccountSwitcher />
+            <div data-tour="wallet-button">
+              <WalletButton />
+            </div>
           </div>
 
           {/* ── Hamburger button (mobile only) ── */}
           <button
             ref={hamburgerRef}
             type="button"
-            className="sm:hidden p-2 rounded text-gray-300 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green"
+            className="sm:hidden p-2 rounded text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green"
             aria-expanded={menuOpen}
-            aria-controls="mobile-menu"
+            aria-controls="mobile-nav"
             aria-label={
               menuOpen
                 ? t('common.close') + ' navigation menu'
@@ -241,11 +306,11 @@ export default function Navbar() {
         {menuOpen && (
           <div
             ref={mobileMenuRef}
-            id="mobile-menu"
+            id="mobile-nav"
             role="dialog"
             aria-modal="true"
             aria-label="Navigation menu"
-            className="sm:hidden border-t border-gray-800 bg-brand-dark px-4 py-3 flex flex-col gap-1 text-sm text-gray-300"
+            className="sm:hidden border-t border-gray-200 dark:border-gray-800 bg-brand-dark px-4 py-3 flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300"
           >
             {NAV_LINKS.map(({ href, labelKey }) => (
               <Link
@@ -254,7 +319,7 @@ export default function Navbar() {
                 aria-current={
                   pathname === `/${currentLocale}${href}` ? 'page' : undefined
                 }
-                className="hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green rounded py-2 px-1"
+                className="hover:text-gray-900 dark:hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green rounded py-2 px-1"
                 onClick={closeMenu}
               >
                 {t(labelKey)}
@@ -268,18 +333,18 @@ export default function Navbar() {
                   ? 'page'
                   : undefined
               }
-              className="flex items-center gap-1.5 text-gray-500 hover:text-gray-300 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green rounded py-2 px-1"
+              className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green rounded py-2 px-1"
               onClick={closeMenu}
             >
               {t(SPONSORSHIP_LINK.labelKey)}
-              <span className="text-[10px] uppercase tracking-wide border border-gray-700 rounded-full px-1.5 py-0.5">
+              <span className="text-[10px] uppercase tracking-wide border border-gray-300 dark:border-gray-700 rounded-full px-1.5 py-0.5">
                 {t('nav.soon')}
               </span>
             </Link>
 
             {/* Locale switcher in mobile menu */}
-            <div className="border-t border-gray-800 mt-1 pt-3 flex flex-col gap-0.5">
-              <p className="text-xs text-gray-500 px-1 mb-1">
+            <div className="border-t border-gray-200 dark:border-gray-800 mt-1 pt-3 flex flex-col gap-0.5">
+              <p className="text-xs text-gray-500 dark:text-gray-400 px-1 mb-1">
                 {t('language.select_language')}
               </p>
               {locales.map((locale) => (
@@ -299,8 +364,39 @@ export default function Navbar() {
               ))}
             </div>
 
+            {/* Currency selector in mobile menu */}
+            <div className="border-t border-gray-800 mt-1 pt-3 flex flex-col gap-0.5">
+              <p className="text-xs text-gray-500 px-1 mb-1">Currency</p>
+              {supported.map((c) => (
+                <button
+                  key={c.code}
+                  type="button"
+                  aria-pressed={currency === c.code}
+                  onClick={() => {
+                    setCurrency(c.code);
+                    closeMenu();
+                  }}
+                  className={`w-full text-left px-4 py-2 text-sm rounded hover:bg-brand-green hover:text-black transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green ${
+                    currency === c.code
+                      ? 'bg-brand-green/20 text-brand-green'
+                      : ''
+                  }`}
+                >
+                  {getCurrencyLabel(c.code, currentLocale)}
+                </button>
+              ))}
+            </div>
+
+            {/* Theme toggle in mobile menu */}
+            <div className="border-t border-gray-800 mt-1 pt-3 flex items-center gap-2">
+              <span className="text-xs text-gray-500 px-1">Theme</span>
+              <ThemeToggle />
+            </div>
+
             {/* Wallet — balance hidden on mobile to prevent overflow */}
-            <div className="border-t border-gray-800 mt-1 pt-3">
+            <div className="border-t border-gray-800 mt-1 pt-3 flex items-center gap-2">
+              <NotificationBell />
+              <AccountSwitcher />
               <WalletButton hideBalance />
             </div>
           </div>

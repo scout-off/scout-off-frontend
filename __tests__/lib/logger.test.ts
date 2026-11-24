@@ -1,3 +1,4 @@
+/** @jest-environment node */
 import { NextResponse } from 'next/server';
 import {
   createRequestLogger,
@@ -6,7 +7,10 @@ import {
   REQUEST_ID_HEADER,
 } from '@/lib/logger';
 
-function makeRequest(url: string, headers: Record<string, string> = {}): Request {
+function makeRequest(
+  url: string,
+  headers: Record<string, string> = {},
+): Request {
   return new Request(url, { headers });
 }
 

@@ -38,7 +38,9 @@ describe('security.txt RFC 9116 compliance', () => {
 
   it('should contain Canonical field with https URL', () => {
     const content = fs.readFileSync(securityTxtPath, 'utf-8');
-    expect(content).toMatch(/^Canonical:\s*https:\/\/.+\/\.well-known\/security\.txt$/m);
+    expect(content).toMatch(
+      /^Canonical:\s*https:\/\/.+\/\.well-known\/security\.txt$/m,
+    );
   });
 
   it('should contain Policy field referencing SECURITY.md', () => {

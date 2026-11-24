@@ -62,6 +62,44 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_sponsorship_waitlist_email
     ON sponsorship_waitlist (email);
+
+  -- Pending milestone submissions (issues #567, #568): an off-chain queue of
+  -- milestone claims awaiting validator review. Distinct from the on-chain
+  -- Milestone record in types/index.ts, which only exists once a validator
+  -- has already approved one via approve_milestone — this table models the
+  -- "not yet approved" state that the contract has no concept of.
+  CREATE TABLE IF NOT EXISTS milestone_submissions (
+    id TEXT PRIMARY KEY,
+    player_id TEXT NOT NULL,
+    player_name TEXT,
+    description TEXT NOT NULL,
+    evidence_url TEXT,
+    validator_wallet TEXT NOT NULL,
+    submitted_by TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at INTEGER NOT NULL,
+    decided_at INTEGER,
+    tx_hash TEXT
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_milestone_submissions_validator_status
+    ON milestone_submissions (validator_wallet, status, created_at);
 `);
+
+// Academy validator quorum (issue #1185): an optional, off-chain-only
+// minimum number of an academy's distinct member wallets that must each
+// endorse a milestone before it's shown as "academy-verified" in the UI —
+// purely additive, never touches on-chain approve_milestone authorization.
+// NULL (the default) means "no quorum configured," which must behave
+// identically to today. Added via a guarded ALTER TABLE rather than the
+// CREATE TABLE above, since IF NOT EXISTS is a no-op against an
+// already-existing `academies` table in any deployment that predates this
+// column — this repo has no migration-versioning framework on the server
+// side (unlike the Next app's lib/sqliteMigrations.ts), so the guard is
+// inlined here instead.
+const academyColumns = db.prepare('PRAGMA table_info(academies)').all();
+if (!academyColumns.some((c) => c.name === 'quorum')) {
+  db.exec('ALTER TABLE academies ADD COLUMN quorum INTEGER');
+}
 
 module.exports = db;

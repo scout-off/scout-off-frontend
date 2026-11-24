@@ -1,10 +1,32 @@
 'use client';
 
 import { useState } from 'react';
-import type { Milestone, ProgressLevel } from '@/types';
+import { useLocale, useTranslations } from 'next-intl';
+import type { Milestone, MilestoneDispute, ProgressLevel } from '@/types';
 import { PROGRESS_LABELS } from '@/types';
 import Badge from '@/components/ui/Badge';
+import Tooltip from '@/components/ui/Tooltip';
 import ValidatorChip from '@/components/player/ValidatorChip';
+import AcademyQuorumBadge from '@/components/player/AcademyQuorumBadge';
+import { formatDate as formatLocaleDate } from '@/lib/localeFormat';
+import type { Locale } from '@/lib/locales';
+
+// Translation keys under player_profile.milestoneTimeline.
+const DISPUTE_STATUS_KEY: Record<MilestoneDispute['status'], string> = {
+  pending: 'disputePending',
+  under_review: 'disputeUnderReview',
+  escalated: 'disputeEscalated',
+  upheld: 'disputeUpheld',
+  reversed: 'disputeReversed',
+};
+
+const DISPUTE_STATUS_COLOUR: Record<MilestoneDispute['status'], string> = {
+  pending: 'text-amber-400',
+  under_review: 'text-amber-400',
+  escalated: 'text-orange-400',
+  upheld: 'text-gray-400',
+  reversed: 'text-red-400',
+};
 
 // Map each level to the ProgressBar colour tokens so nodes stay in sync.
 const NODE_COLOUR: Record<ProgressLevel, string> = {
@@ -18,12 +40,9 @@ const BADGE_VARIANT = ['level0', 'level1', 'level2', 'level3'] as const;
 
 const LEVELS: ProgressLevel[] = [0, 1, 2, 3];
 
-function formatDate(ts: number): string {
-  return new Date(ts * 1000).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+function formatDate(ts: number, locale: Locale): string {
+  // dateStyle 'medium' matches the previous en output ("Nov 14, 2023").
+  return formatLocaleDate(ts * 1000, locale);
 }
 
 /** Return the most-recent milestone for a given level (levels 1-3 map to index). */
@@ -41,13 +60,30 @@ function milestoneForLevel(
 interface MilestoneTimelineProps {
   milestones: Milestone[];
   currentLevel: ProgressLevel;
+  /** This player's own disputes, matched to milestones by id (issue #562). Omit to hide dispute UI entirely. */
+  disputes?: MilestoneDispute[];
+  /** Called when the player clicks "Dispute" on a completed milestone. */
+  onDisputeMilestone?: (milestone: Milestone) => void;
+  /**
+   * The player these milestones belong to (issue #1185) — needed to look up
+   * per-milestone academy-quorum endorsements. Omit to hide the
+   * academy-verification badge entirely (e.g. contexts with no stable
+   * player id available).
+   */
+  playerId?: string;
 }
 
 export default function MilestoneTimeline({
   milestones,
   currentLevel,
+  disputes,
+  onDisputeMilestone,
+  playerId,
 }: MilestoneTimelineProps) {
   const [expanded, setExpanded] = useState<ProgressLevel | null>(null);
+  const t = useTranslations('player_profile.milestoneTimeline');
+  const locale = useLocale() as Locale;
+  const fmt = (ts: number) => formatDate(ts, locale);
 
   function toggle(level: ProgressLevel) {
     setExpanded((prev) => (prev === level ? null : level));
@@ -58,29 +94,38 @@ export default function MilestoneTimeline({
     // screen readers announce "Level progression timeline, list" rather than
     // a bare "list".
     <ol
-      aria-label="Level progression timeline"
+      aria-label={t('timelineLabel')}
       className="relative flex flex-col gap-0 sm:flex-row sm:items-start sm:gap-0"
     >
-      {LEVELS.map((level, idx) => {
+      {LEVELS.map((level) => {
         const isCompleted = level <= currentLevel;
         const isCurrent = level === currentLevel;
         const isFuture = level > currentLevel;
         const milestone = milestoneForLevel(milestones, level);
         const isExpanded = expanded === level;
-        const isLast = idx === LEVELS.length - 1;
+        const isLast = level === LEVELS[LEVELS.length - 1];
+        // Prefer milestone.id (stable unique id) when the level has a milestone;
+        // fall back to evidenceHash, then a level-scoped key — never the array index.
+        const itemKey =
+          milestone?.id ??
+          milestone?.evidenceHash ??
+          `level-${level}-${milestone?.timestamp ?? 0}-${milestone?.validator ?? 'none'}`;
 
         return (
           // Each <li> is a timeline entry. aria-label provides the full
           // accessible name so users scanning the list hear a meaningful
           // summary without having to enter the node.
           <li
-            key={level}
+            key={itemKey}
             aria-label={
               isCompleted && milestone
-                ? `${PROGRESS_LABELS[level]}, achieved ${formatDate(milestone.timestamp)}`
+                ? t('levelAchieved', {
+                    level: PROGRESS_LABELS[level],
+                    date: fmt(milestone.timestamp),
+                  })
                 : isCompleted
                   ? PROGRESS_LABELS[level]
-                  : `${PROGRESS_LABELS[level]}, not yet reached`
+                  : t('levelNotReached', { level: PROGRESS_LABELS[level] })
             }
             className="relative flex flex-row items-start gap-3 pb-8 sm:flex-col sm:items-center sm:flex-1 sm:pb-0"
           >
@@ -107,9 +152,18 @@ export default function MilestoneTimeline({
               onClick={() => toggle(level)}
               aria-expanded={isExpanded}
               aria-controls={`timeline-detail-${level}`}
-              aria-label={`${PROGRESS_LABELS[level]}${milestone ? `, achieved ${formatDate(milestone.timestamp)}` : ''}. ${isExpanded ? 'Collapse' : 'Expand'} details`}
+              aria-label={
+                milestone
+                  ? t(isExpanded ? 'collapseAchieved' : 'expandAchieved', {
+                      level: PROGRESS_LABELS[level],
+                      date: fmt(milestone.timestamp),
+                    })
+                  : t(isExpanded ? 'collapseLevel' : 'expandLevel', {
+                      level: PROGRESS_LABELS[level],
+                    })
+              }
               className={[
-                'relative z-10 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-green',
+                'relative z-10 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center motion-safe:transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-green',
                 isCompleted
                   ? NODE_COLOUR[level]
                   : 'bg-gray-800 border-2 border-gray-600',
@@ -120,7 +174,7 @@ export default function MilestoneTimeline({
                 <span
                   aria-hidden="true"
                   data-testid="pulse-ring"
-                  className="absolute inset-0 rounded-full animate-ping opacity-50 bg-current"
+                  className="absolute inset-0 rounded-full motion-safe:animate-ping opacity-50 bg-current"
                 />
               )}
               {/* Checkmark SVG — decorative; aria-hidden + focusable=false. */}
@@ -143,26 +197,47 @@ export default function MilestoneTimeline({
 
             {/* Visual label block (Badge + date text).
                 The button above already carries the full accessible name, so
-                this block is aria-hidden to avoid redundant announcements. */}
+                this block is aria-hidden to avoid redundant announcements.
+                When a milestone exists for this level, the Badge is wrapped in
+                a Tooltip showing the full validator address and block timestamp
+                on hover — giving mouse users quick access to the details
+                without having to expand the panel (issue #1129). */}
             <div
               aria-hidden="true"
               className="flex flex-col gap-0.5 sm:items-center sm:text-center mt-0.5 sm:mt-2"
             >
-              <Badge
-                variant={BADGE_VARIANT[level]}
-                label={PROGRESS_LABELS[level]}
-                size="sm"
-              />
+              {isCompleted && milestone ? (
+                <Tooltip
+                  content={t('badgeTooltip', {
+                    validator: milestone.validator,
+                    date: fmt(milestone.timestamp),
+                  })}
+                >
+                  <Badge
+                    variant={BADGE_VARIANT[level]}
+                    label={PROGRESS_LABELS[level]}
+                    size="sm"
+                  />
+                </Tooltip>
+              ) : (
+                <Badge
+                  variant={BADGE_VARIANT[level]}
+                  label={PROGRESS_LABELS[level]}
+                  size="sm"
+                />
+              )}
               {isCompleted && milestone && (
                 <time
                   dateTime={new Date(milestone.timestamp * 1000).toISOString()}
-                  className="text-xs text-gray-500"
+                  className="text-xs text-gray-400"
                 >
-                  {formatDate(milestone.timestamp)}
+                  {fmt(milestone.timestamp)}
                 </time>
               )}
               {isFuture && (
-                <span className="text-xs text-gray-600">Not yet reached</span>
+                <span className="text-xs text-gray-600">
+                  {t('notYetReached')}
+                </span>
               )}
             </div>
 
@@ -173,12 +248,10 @@ export default function MilestoneTimeline({
               <div
                 id={`timeline-detail-${level}`}
                 role="region"
-                aria-label={`Details for ${PROGRESS_LABELS[level]}`}
+                aria-label={t('detailsFor', { level: PROGRESS_LABELS[level] })}
                 className="sm:absolute sm:top-full sm:mt-2 sm:left-1/2 sm:-translate-x-1/2 sm:w-56 z-20 rounded-xl border border-gray-700 bg-brand-card p-3 text-xs text-gray-300 flex flex-col gap-1 shadow-2xl"
               >
-                {level === 0 && (
-                  <p>Profile created on-chain. No validator required.</p>
-                )}
+                {level === 0 && <p>{t('profileCreated')}</p>}
                 {level > 0 && milestone ? (
                   <>
                     <p className="font-medium text-white">
@@ -189,28 +262,65 @@ export default function MilestoneTimeline({
                         layout clues. */}
                     <p
                       className="flex flex-col gap-1"
-                      aria-label={`Approved by ${milestone.validator}`}
+                      aria-label={t('approvedBy', {
+                        address: milestone.validator,
+                      })}
                     >
                       {/* "Verified by" label is decorative in context of the
                           aria-label above — hide to avoid double-reading. */}
-                      <span aria-hidden="true" className="text-gray-500">
-                        Verified by
+                      <span aria-hidden="true" className="text-gray-400">
+                        {t('verifiedBy')}
                       </span>
                       <ValidatorChip address={milestone.validator} />
                     </p>
+                    {playerId && (
+                      <AcademyQuorumBadge
+                        playerId={playerId}
+                        milestone={milestone}
+                      />
+                    )}
                     <p>
-                      <span className="text-gray-500">Date: </span>
+                      <span className="text-gray-400">{t('dateLabel')} </span>
                       <time
                         dateTime={new Date(
                           milestone.timestamp * 1000,
                         ).toISOString()}
                       >
-                        {formatDate(milestone.timestamp)}
+                        {fmt(milestone.timestamp)}
                       </time>
                     </p>
+                    {disputes && (
+                      <>
+                        {(() => {
+                          const dispute = disputes.find(
+                            (d) => d.milestoneId === milestone.id,
+                          );
+                          if (dispute) {
+                            return (
+                              <p
+                                className={
+                                  DISPUTE_STATUS_COLOUR[dispute.status]
+                                }
+                              >
+                                {t(DISPUTE_STATUS_KEY[dispute.status])}
+                              </p>
+                            );
+                          }
+                          return onDisputeMilestone ? (
+                            <button
+                              type="button"
+                              onClick={() => onDisputeMilestone(milestone)}
+                              className="self-start text-red-400 underline hover:text-red-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green"
+                            >
+                              {t('disputeMilestone')}
+                            </button>
+                          ) : null;
+                        })()}
+                      </>
+                    )}
                   </>
                 ) : level > 0 ? (
-                  <p className="text-gray-500">No milestone data yet.</p>
+                  <p className="text-gray-400">{t('noMilestoneData')}</p>
                 ) : null}
               </div>
             )}

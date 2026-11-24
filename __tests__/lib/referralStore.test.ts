@@ -51,7 +51,9 @@ describe('pruneStaleEntries', () => {
     const nowMs = 1_800_000_000_000; // fixed anchor
     const created = new Date(nowMs).toISOString(); // now
 
-    const entries: ReferralEntry[] = [makeEntry({ code: 'SCOUT-A1', createdAt: created })];
+    const entries: ReferralEntry[] = [
+      makeEntry({ code: 'SCOUT-A1', createdAt: created }),
+    ];
 
     const result = pruneStaleEntries(entries, nowMs);
 
@@ -198,7 +200,9 @@ describe('configuration constants', () => {
   });
 
   it('UNUSED_RETENTION_MS is at least 30 days', () => {
-    expect(UNUSED_RETENTION_MS).toBeGreaterThanOrEqual(30 * 24 * 60 * 60 * 1000);
+    expect(UNUSED_RETENTION_MS).toBeGreaterThanOrEqual(
+      30 * 24 * 60 * 60 * 1000,
+    );
   });
 
   it('USED_RETENTION_MS is at least 90 days', () => {

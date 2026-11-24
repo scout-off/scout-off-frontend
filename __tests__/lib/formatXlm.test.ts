@@ -28,8 +28,38 @@ describe('formatXlm', () => {
 
   it('uses the exported precision constant', () => {
     expect(XLM_DISPLAY_DECIMALS).toBe(2);
-    expect(formatXlm(3.14159).split('.')[1]).toHaveLength(
-      XLM_DISPLAY_DECIMALS,
-    );
+    expect(formatXlm(3.14159).split('.')[1]).toHaveLength(XLM_DISPLAY_DECIMALS);
+  });
+
+  describe('rounding boundary values', () => {
+    // These sit exactly on a two-decimal rounding boundary. Plain
+    // Number.prototype.toFixed rounds them the wrong way because of how the
+    // value is stored as binary floating point (e.g. (1.005).toFixed(2) is
+    // '1.00', not '1.01').
+    it('rounds .xx5 boundaries up like a human would expect', () => {
+      expect(formatXlm(1.005)).toBe('1.01');
+      expect(formatXlm(2.675)).toBe('2.68');
+      expect(formatXlm(0.615)).toBe('0.62');
+    });
+
+    it('rounds negative .xx5 boundaries away from zero', () => {
+      expect(formatXlm(-1.005)).toBe('-1.01');
+      expect(formatXlm(-2.675)).toBe('-2.68');
+    });
+
+    it('rounds boundary values passed as strings', () => {
+      expect(formatXlm('1.005')).toBe('1.01');
+      expect(formatXlm('0.615')).toBe('0.62');
+    });
+  });
+
+  it('leaves non-boundary values unchanged', () => {
+    expect(formatXlm(1.5)).toBe('1.50');
+    expect(formatXlm(-1.5)).toBe('-1.50');
+  });
+
+  it('falls back to zero for non-finite input', () => {
+    expect(formatXlm(Infinity)).toBe('0.00');
+    expect(formatXlm(-Infinity)).toBe('0.00');
   });
 });

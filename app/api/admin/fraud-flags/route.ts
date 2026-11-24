@@ -1,79 +1,109 @@
-import { NextRequest, NextResponse } from 'next/server';
-import {
-  fetchAllReferralCodes,
-  fetchActivityEvents,
-  type ActivityEvent,
-} from '@/lib/api';
-import { analyzeReferralAbuse, analyzePayToContactAbuse } from '@/lib/fraudDetection';
+import { NextRequest } from 'next/server';
+import { requireAdminWallet } from '@/lib/adminAuth';
+import { runFraudFlagEvaluation } from '@/lib/fraudFlagsRunner';
+import { FraudFlagsStore } from '@/lib/fraudFlagsStore';
+import { FraudFlagDismissalStore } from '@/lib/fraudFlagDismissalStore';
+import { computeFraudFlagDismissalKey } from '@/lib/fraudDetection';
 import type { FraudFlag } from '@/types';
+import { privateJson } from '@/lib/httpResponses';
 
-/**
- * Bounds how much of the activity feed a single request will pull before
- * running pay-to-contact heuristics over it. This endpoint needs
- * cross-wallet visibility (the whole point of catching a pattern no single
- * request would trip), but it's computed on demand rather than by a
- * background job — see docs/fraud-detection.md — so it needs a hard cap to
- * stay responsive regardless of how large the activity feed grows.
- */
-const ACTIVITY_PAGE_SIZE = 200;
-const MAX_ACTIVITY_PAGES = 25; // up to 5,000 events
-
-async function fetchAllActivityEvents(): Promise<{
-  events: ActivityEvent[];
-  truncated: boolean;
-}> {
-  const events: ActivityEvent[] = [];
-  let page = 1;
-  let total = Infinity;
-
-  while (events.length < total && page <= MAX_ACTIVITY_PAGES) {
-    const res = await fetchActivityEvents(page, ACTIVITY_PAGE_SIZE);
-    events.push(...res.events);
-    total = res.total;
-    if (res.events.length === 0) break;
-    page++;
-  }
-
-  return { events, truncated: events.length < total };
-}
+const DEFAULT_FRAUD_FLAGS_MIN_INTERVAL_MS = 30_000;
 
 export async function GET(req: NextRequest) {
-  const sessionWallet = req.cookies.get('session')?.value;
-  const adminAddress = process.env.NEXT_PUBLIC_ADMIN_ADDRESS;
+  const sessionWallet = requireAdminWallet(req);
 
-  if (!sessionWallet || !adminAddress || sessionWallet !== adminAddress) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!sessionWallet) {
+    return privateJson({ error: 'Forbidden' }, { status: 403 });
   }
 
-  let referralFlags: FraudFlag[] = [];
-  const warnings: string[] = [];
-  try {
-    referralFlags = analyzeReferralAbuse(await fetchAllReferralCodes());
-  } catch {
-    warnings.push(
-      'Referral backend is unavailable — referral heuristics were skipped. Pay-to-contact heuristics below are unaffected.',
-    );
+  const dismissedKeys =
+    FraudFlagDismissalStore.getInstance().getDismissedKeys();
+  const filterVisibleFlags = (flags: FraudFlag[]) =>
+    dismissedKeys.size === 0
+      ? flags
+      : flags.filter(
+          (flag) => !dismissedKeys.has(computeFraudFlagDismissalKey(flag)),
+        );
+
+  const minIntervalMs = Number(
+    process.env.FRAUD_FLAGS_MIN_INTERVAL_MS ??
+      process.env.NEXT_PUBLIC_FRAUD_FLAGS_MIN_INTERVAL_MS ??
+      DEFAULT_FRAUD_FLAGS_MIN_INTERVAL_MS,
+  );
+  const latestRun = FraudFlagsStore.getInstance().getLatestRun();
+
+  if (
+    Number.isFinite(minIntervalMs) &&
+    minIntervalMs > 0 &&
+    latestRun &&
+    Date.now() - latestRun.evaluatedAt < minIntervalMs
+  ) {
+    return privateJson({
+      flags: filterVisibleFlags(latestRun.flags),
+      warnings: [
+        ...latestRun.warnings,
+        `Fraud flag evaluation is rate-limited; showing the last cached result from ${new Date(latestRun.evaluatedAt).toLocaleString()}.`,
+      ],
+      evaluatedAt: latestRun.evaluatedAt,
+      eventsProcessed: latestRun.eventsProcessed,
+      durationMs: latestRun.durationMs,
+    });
   }
 
-  let payToContactFlags: FraudFlag[] = [];
-  try {
-    const { events, truncated } = await fetchAllActivityEvents();
-    payToContactFlags = analyzePayToContactAbuse(events);
-    if (truncated) {
-      warnings.push(
-        `Activity feed has more than ${MAX_ACTIVITY_PAGES * ACTIVITY_PAGE_SIZE} events; pay-to-contact analysis only covers the most recent ones.`,
-      );
-    }
-  } catch {
-    warnings.push(
-      'Activity feed backend is unavailable — pay-to-contact heuristics were skipped. Referral heuristics below are unaffected.',
-    );
+  const { flags, warnings, eventsProcessed, durationMs } =
+    await runFraudFlagEvaluation();
+  const evaluatedAt = Date.now();
+  // Every flag is still computed and persisted in full (docs/fraud-detection.md,
+  // issue #1171) — the run history and staleness badge stay accurate to what
+  // was actually evaluated. Dismissals only filter what's *rendered* below,
+  // so a worsening pattern (a different or higher-severity key, see
+  // computeFraudFlagDismissalKey) is never hidden by a stale dismissal of an
+  // earlier, milder finding.
+  FraudFlagsStore.getInstance().recordRun(
+    'manual',
+    flags,
+    warnings,
+    evaluatedAt,
+    eventsProcessed ?? 0,
+    durationMs ?? 0,
+  );
+
+  return privateJson({
+    flags: filterVisibleFlags(flags),
+    warnings,
+    evaluatedAt,
+    eventsProcessed: eventsProcessed ?? 0,
+    durationMs: durationMs ?? 0,
+  });
+}
+
+export async function POST(req: NextRequest) {
+  const sessionWallet = requireAdminWallet(req);
+
+  if (!sessionWallet) {
+    return privateJson({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const flags = [...referralFlags, ...payToContactFlags].sort((a, b) => {
-    const severityRank = { high: 0, medium: 1, low: 2 } as const;
-    return severityRank[a.severity] - severityRank[b.severity];
+  const dismissedKeys =
+    FraudFlagDismissalStore.getInstance().getDismissedKeys();
+  const filterVisibleFlags = (flags: FraudFlag[]) =>
+    dismissedKeys.size === 0
+      ? flags
+      : flags.filter(
+          (flag) => !dismissedKeys.has(computeFraudFlagDismissalKey(flag)),
+        );
+
+  const result = await runFraudFlagEvaluation({
+    mode: 'incremental',
+    trigger: 'manual',
+    timeBudgetMs: 45_000,
   });
 
-  return NextResponse.json({ flags, warnings });
+  return privateJson({
+    flags: filterVisibleFlags(result.flags),
+    warnings: result.warnings,
+    evaluatedAt: result.evaluatedAt ?? Date.now(),
+    eventsProcessed: result.eventsProcessed ?? 0,
+    durationMs: result.durationMs ?? 0,
+  });
 }

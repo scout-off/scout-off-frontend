@@ -122,6 +122,68 @@ describe('Toast notifications', () => {
     expect(toast?.textContent).toContain('✓');
   });
 
+  it('uses role="alert" for error and warning toasts', () => {
+    render(
+      <ToastProvider>
+        <ToastTestApp />
+      </ToastProvider>,
+    );
+
+    // Trigger an error toast
+    fireEvent.click(screen.getByText(/show error/i));
+    const errorToast = screen
+      .getAllByRole('alert')
+      .find((node) => node.textContent?.includes('Error message'));
+    expect(errorToast).toBeDefined();
+    expect(errorToast).toHaveAttribute('role', 'alert');
+
+    // Trigger a warning toast
+    fireEvent.click(screen.getByText(/show warning/i));
+    const warningToast = screen
+      .getAllByRole('alert')
+      .find((node) => node.textContent?.includes('Warning message'));
+    expect(warningToast).toBeDefined();
+    expect(warningToast).toHaveAttribute('role', 'alert');
+  });
+
+  it('uses role="status" for success and info toasts', () => {
+    render(
+      <ToastProvider>
+        <ToastTestApp />
+      </ToastProvider>,
+    );
+
+    // The initial toast is an info toast (role="status")
+    const infoToast = screen
+      .getAllByRole('status')
+      .find((node) => node.textContent?.includes('Initial toast'));
+    expect(infoToast).toBeDefined();
+    expect(infoToast).toHaveAttribute('role', 'status');
+
+    // Trigger a success toast
+    fireEvent.click(screen.getByText(/show success/i));
+    const successToast = screen
+      .getAllByRole('status')
+      .find((node) => node.textContent?.includes('Success message'));
+    expect(successToast).toBeDefined();
+    expect(successToast).toHaveAttribute('role', 'status');
+  });
+
+  it('close button is a <button> element with aria-label="Close notification"', () => {
+    render(
+      <ToastProvider>
+        <ToastTestApp />
+      </ToastProvider>,
+    );
+
+    const closeButton = screen.getByRole('button', {
+      name: /close notification/i,
+    });
+    expect(closeButton.tagName).toBe('BUTTON');
+    expect(closeButton).toHaveAttribute('aria-label', 'Close notification');
+    expect(closeButton).toHaveAttribute('type', 'button');
+  });
+
   it('automatically dismisses a toast after 4 seconds', () => {
     render(
       <ToastProvider>
@@ -146,7 +208,7 @@ describe('Toast notifications', () => {
     );
 
     const closeButton = screen.getByRole('button', {
-      name: /dismiss notification/i,
+      name: /close notification/i,
     });
     fireEvent.click(closeButton);
 

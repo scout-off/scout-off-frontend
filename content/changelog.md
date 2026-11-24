@@ -4,6 +4,12 @@
 
 Notable updates and improvements to the platform.
 
+## Scout ContactModal — unlocked contact details display - 2026-07-28
+
+### Added
+
+- After paying the XLM contact fee, scouts can view unlocked email, phone, and Telegram contact details for a player directly in the ContactModal component (`components/scout/ContactModal.tsx`, powered by the `usePayToContact` hook).
+
 ## Scout referral/invite system - 2026-07-17
 
 ### Added

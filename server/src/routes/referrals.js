@@ -58,9 +58,7 @@ router.post('/redeem', (req, res) => {
 
   const ok = referralService.redeemCode(code, usedBy);
   if (!ok) {
-    return res
-      .status(404)
-      .json({ error: 'Invalid or already redeemed code' });
+    return res.status(404).json({ error: 'Invalid or already redeemed code' });
   }
 
   return res.json({ success: true });

@@ -15,7 +15,9 @@ export default function PullToRefresh({
   children,
 }: PullToRefreshProps) {
   const [pullDistance, setPullDistance] = useState(0);
-  const [refreshState, setRefreshState] = useState<'idle' | 'pulling' | 'ready' | 'refreshing'>('idle');
+  const [refreshState, setRefreshState] = useState<
+    'idle' | 'pulling' | 'ready' | 'refreshing'
+  >('idle');
   const [isDragging, setIsDragging] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -64,7 +66,8 @@ export default function PullToRefresh({
 
     const handleTouchStart = (e: TouchEvent) => {
       // Only initiate gesture if we are at the very top of the window scroll area
-      const isAtTop = window.scrollY === 0 || document.documentElement.scrollTop === 0;
+      const isAtTop =
+        window.scrollY === 0 || document.documentElement.scrollTop === 0;
       if (isAtTop && !isLoadingRef.current) {
         startY.current = e.touches[0].clientY;
         isPulling.current = true;
@@ -113,12 +116,14 @@ export default function PullToRefresh({
         // Invoke the refresh callback
         const result = onRefreshRef.current();
         if (result && typeof result.then === 'function') {
-          result.catch(() => {}).finally(() => {
-            if (refreshStateRef.current === 'refreshing') {
-              setRefreshState('idle');
-              setPullDistance(0);
-            }
-          });
+          result
+            .catch(() => {})
+            .finally(() => {
+              if (refreshStateRef.current === 'refreshing') {
+                setRefreshState('idle');
+                setPullDistance(0);
+              }
+            });
         }
       } else {
         setRefreshState('idle');
@@ -126,8 +131,12 @@ export default function PullToRefresh({
       }
     };
 
-    container.addEventListener('touchstart', handleTouchStart, { passive: true });
-    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('touchstart', handleTouchStart, {
+      passive: true,
+    });
+    container.addEventListener('touchmove', handleTouchMove, {
+      passive: false,
+    });
     container.addEventListener('touchend', handleTouchEnd, { passive: true });
 
     return () => {
@@ -152,7 +161,7 @@ export default function PullToRefresh({
             : 'transform 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 300ms ease-out',
         }}
       >
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-card border border-gray-800 shadow-2xl text-brand-green">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-card border border-gray-300 dark:border-gray-800 shadow-2xl text-brand-green">
           {refreshState === 'refreshing' ? (
             <Loader2 className="h-5 w-5 animate-spin" />
           ) : (
@@ -170,7 +179,10 @@ export default function PullToRefresh({
       {/* Main Content Area */}
       <div
         style={{
-          transform: refreshState === 'refreshing' ? 'none' : `translateY(${pullDistance * 0.25}px)`,
+          transform:
+            refreshState === 'refreshing'
+              ? 'none'
+              : `translateY(${pullDistance * 0.25}px)`,
           transition: isDragging
             ? 'none'
             : 'transform 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',

@@ -21,7 +21,10 @@ import {
  */
 
 export default function ProgressBar({ level }: { level: ProgressLevel }) {
-  const pct = (level / 3) * 100;
+  const clampedLevel = Number.isFinite(level)
+    ? Math.min(3, Math.max(0, level))
+    : 0;
+  const pct = (clampedLevel / 3) * 100;
 
   return (
     <div className="w-full">
@@ -29,7 +32,7 @@ export default function ProgressBar({ level }: { level: ProgressLevel }) {
         {PROGRESS_LEVELS.map(({ level: step, label }) => (
           <span
             key={step}
-            className={`text-xs ${step <= level ? 'text-gray-50' : 'text-gray-400'}`}
+            className={`text-xs ${step <= clampedLevel ? 'text-gray-50' : 'text-gray-400'}`}
           >
             {label}
           </span>
@@ -37,14 +40,14 @@ export default function ProgressBar({ level }: { level: ProgressLevel }) {
       </div>
       <div
         role="progressbar"
-        aria-valuenow={level}
+        aria-valuenow={clampedLevel}
         aria-valuemin={0}
         aria-valuemax={3}
-        aria-label={`Progress level: ${getProgressLabel(level)}`}
+        aria-label={`Progress level: ${getProgressLabel(clampedLevel)}`}
         className="h-2 bg-gray-800 rounded-full overflow-hidden"
       >
         <div
-          className={`h-full ${getProgressColor(level)} rounded-full transition-all duration-500`}
+          className={`h-full ${getProgressColor(clampedLevel)} rounded-full transition-all duration-500`}
           style={{ width: `${pct}%` }}
         />
       </div>

@@ -22,11 +22,14 @@ async function fetchApprovedPlayers(
 
   // 1. Fetch all milestone_approved events by this validator
   for (let page = 0; page < MAX_PAGES; page++) {
-    const { events, nextCursor } = await fetchValidatorEvents(validatorAddress, {
-      type: 'milestone_approved',
-      limit: 200,
-      before: cursor,
-    });
+    const { events, nextCursor } = await fetchValidatorEvents(
+      validatorAddress,
+      {
+        type: 'milestone_approved',
+        limit: 200,
+        before: cursor,
+      },
+    );
 
     allEvents.push(...events);
     if (nextCursor === null) break;

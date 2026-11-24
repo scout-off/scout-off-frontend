@@ -27,6 +27,10 @@ jest.mock('@/components/ui/ErrorBoundary', () => ({
   default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+jest.mock('@/components/ui/Toast', () => ({
+  useToast: () => ({ show: jest.fn() }),
+}));
+
 import ScoutSubscribePage from '@/app/[locale]/scout/subscribe/page';
 import { useSubscription } from '@/hooks/useSubscription';
 
@@ -123,7 +127,7 @@ describe('ScoutSubscribePage', () => {
       const banner = screen.getByRole('status', {
         name: /active subscription/i,
       });
-      expect(banner).toHaveTextContent('pro');
+      expect(banner).toHaveTextContent('Pro');
     });
 
     it('shows remaining days in banner', () => {

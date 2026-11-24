@@ -6,7 +6,9 @@ type Variant =
   | 'level2'
   | 'level3'
   | 'position'
-  | 'region';
+  | 'region'
+  | 'achievement'
+  | 'academy';
 type Size = 'sm' | 'md';
 
 const BASE =
@@ -24,12 +26,17 @@ const VARIANT_CLASSES: Record<Variant, string> = {
   level3: 'bg-green-100 text-green-800',
   position: 'bg-indigo-100 text-indigo-800',
   region: 'bg-purple-100 text-purple-800',
+  achievement: 'bg-brand-green/20 text-brand-green',
+  academy: 'bg-sky-100 text-sky-800',
 };
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant: Variant;
   label: string;
   size?: Size;
+  /** Optional decorative icon rendered before the label. Purely visual — the
+   * accessible name still comes from `label` via aria-label. */
+  icon?: React.ReactNode;
 }
 
 export default function Badge({
@@ -37,12 +44,14 @@ export default function Badge({
   label,
   size = 'sm',
   className,
+  icon,
   ...rest
 }: BadgeProps) {
   const classes = [
     BASE,
     SIZE_CLASSES[size],
     VARIANT_CLASSES[variant],
+    icon ? 'gap-1' : '',
     className,
   ]
     .filter(Boolean)
@@ -50,6 +59,11 @@ export default function Badge({
 
   return (
     <span aria-label={label} role="status" className={classes} {...rest}>
+      {icon && (
+        <span aria-hidden="true" className="flex-shrink-0">
+          {icon}
+        </span>
+      )}
       {label}
     </span>
   );

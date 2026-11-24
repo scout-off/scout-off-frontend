@@ -1,7 +1,11 @@
 /** @jest-environment node */
 import { GET } from '@/app/api/ipfs/upload/status/route';
 import { NextRequest } from 'next/server';
-import { initSession, writeChunk, __resetForTests } from '@/lib/chunkedUploadStore';
+import {
+  initSession,
+  writeChunk,
+  __resetForTests,
+} from '@/lib/chunkedUploadStore';
 
 function makeRequest(sessionId?: string): NextRequest {
   const url = new URL('http://localhost:3000/api/ipfs/upload/status');
@@ -23,10 +27,10 @@ describe('GET /api/ipfs/upload/status', () => {
   });
 
   it('reports which chunks have been received, enabling resume', async () => {
-    const { sessionId } = initSession({
+    const { sessionId } = await initSession({
       filename: 'clip.mp4',
       fileType: 'video/mp4',
-      fileSize: 30,
+      fileSize: 4,
       totalChunks: 3,
     });
     await writeChunk(sessionId, 0, Buffer.from('aa'));
@@ -35,6 +39,9 @@ describe('GET /api/ipfs/upload/status', () => {
     const res = await GET(makeRequest(sessionId));
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ receivedChunks: [0, 2], totalChunks: 3 });
+    expect(await res.json()).toEqual({
+      receivedChunks: [0, 2],
+      totalChunks: 3,
+    });
   });
 });

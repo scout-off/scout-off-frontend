@@ -1,6 +1,8 @@
 /** @jest-environment node */
-import { POST } from '../../../../app/api/auth/sep10/route';
+import { POST, DELETE, GET } from '../../../../app/api/auth/sep10/route';
+import { GET as SESSION_GET } from '../../../../app/api/auth/session/route';
 import { NextRequest } from 'next/server';
+import { SessionStore } from '@/lib/sessionStore';
 
 // The sep10 route now uses lib/rateLimit for per-IP throttling. Mock it here
 // so origin-validation, SEP-10 verification, and cookie-setting logic can be
@@ -18,6 +20,11 @@ const mockCheckRateLimit = checkRateLimit as jest.MockedFunction<typeof checkRat
 // Keypair.fromSecret is mocked to return the secret itself as the "public
 // key", so route.ts's `Keypair.fromSecret(serverKey).publicKey()` resolves
 // to `process.env.SEP10_SERVER_KEY` for assertion purposes below.
+//
+// TransactionBuilder.fromXDR is mocked to return a minimal transaction
+// envelope with realistic timeBounds so the nonce-extraction path in
+// postSep10 doesn't need a real XDR string.
+const MOCK_MAX_TIME_SEC = Math.floor(Date.now() / 1000) + 300;
 jest.mock('@stellar/stellar-sdk', () => ({
   WebAuth: {
     verifyChallengeTxSigners: jest.fn(),
@@ -31,9 +38,44 @@ jest.mock('@stellar/stellar-sdk', () => ({
       publicKey: () => secret,
     })),
   },
+  // Treat any G-prefixed key as valid so the fixture keys below pass
+  // without needing real checksummed addresses.
+  StrKey: {
+    isValidEd25519PublicKey: (key: string) => key.startsWith('G'),
+  },
+  // Returns a minimal fake transaction with timeBounds so postSep10 can
+  // read maxTime without needing a real XDR.
+  TransactionBuilder: {
+    fromXDR: jest.fn(() => ({
+      timeBounds: { maxTime: String(MOCK_MAX_TIME_SEC) },
+    })),
+  },
+}));
+
+// Mock Sep10NonceStore so route tests are fully isolated from SQLite and
+// can control consumeNonce / sweepExpired return values per-test.
+const mockConsumeNonce = jest.fn().mockReturnValue(true); // true = first use
+const mockSweepExpired = jest.fn().mockReturnValue(0);
+const mockHashXdr = jest.fn((xdr: string) => `hash:${xdr}`);
+
+jest.mock('@/lib/sep10NonceStore', () => ({
+  Sep10NonceStore: {
+    getInstance: jest.fn(() => ({
+      consumeNonce: mockConsumeNonce,
+      sweepExpired: mockSweepExpired,
+    })),
+    // Deferred: jest.mock is hoisted above the const, so read it at call time.
+    hashXdr: (xdr: string) => mockHashXdr(xdr),
+    resetInstance: jest.fn(),
+  },
 }));
 
 import { WebAuth } from '@stellar/stellar-sdk';
+import {
+  ACCESS_TOKEN_TTL_SEC,
+  DEFAULT_REFRESH_TTL_SEC,
+  verifySessionToken,
+} from '@/lib/session';
 const mockVerify = WebAuth.verifyChallengeTxSigners as jest.Mock;
 
 const ALLOWED_ORIGIN = 'https://app.scoutoff.com';
@@ -61,7 +103,12 @@ function makeRequest(
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockCheckRateLimit.mockResolvedValue({ limited: false });
+  // Restore default mock implementations cleared by clearAllMocks().
+  // consumeNonce returns true (first use / not a replay) by default; individual
+  // tests that want to simulate a replay override this with mockReturnValueOnce.
+  mockConsumeNonce.mockReturnValue(true);
+  mockHashXdr.mockImplementation((xdr: string) => `hash:${xdr}`);
+  SessionStore.resetInstance();
   process.env.NEXT_PUBLIC_BASE_URL = ALLOWED_ORIGIN;
   process.env.SEP10_SERVER_KEY =
     'GBSERVERKEY0000000000000000000000000000000000000000000000000';
@@ -73,6 +120,7 @@ afterEach(() => {
   delete process.env.NEXT_PUBLIC_BASE_URL;
   delete process.env.SEP10_SERVER_KEY;
   delete process.env.SEP10_HOME_DOMAIN;
+  SessionStore.resetInstance();
 });
 
 describe('POST /api/auth/sep10 — origin validation', () => {
@@ -123,14 +171,48 @@ describe('POST /api/auth/sep10 — successful authentication', () => {
     );
 
     const body = await res.json();
-    expect(body).toEqual({ success: true });
+    expect(body).toEqual({ success: true, maxAge: 86400 });
 
+    // Per #778, the cookie value must be an HMAC-signed, time-bound token —
+    // never the caller's plaintext public key — so a client can't forge a
+    // session by setting `session=<any-address>` by hand.
     const cookie = res.cookies.get('session');
     expect(cookie).toBeDefined();
-    expect(cookie?.value).toBe(VALID_PUBLIC_KEY);
+    expect(cookie?.value).not.toBe(VALID_PUBLIC_KEY);
+    const payload = verifySessionToken(cookie!.value, 'access');
+    expect(payload?.sub).toBe(VALID_PUBLIC_KEY);
     expect(cookie?.httpOnly).toBe(true);
     expect(cookie?.sameSite).toBe('strict');
     expect(cookie?.path).toBe('/');
+
+    // A distinct, longer-lived refresh token is also issued, scoped to
+    // /api/auth so it isn't sent on every request the way `session` is.
+    const refreshCookie = res.cookies.get('session_refresh');
+    expect(refreshCookie).toBeDefined();
+    const refreshPayload = verifySessionToken(refreshCookie!.value, 'refresh');
+    expect(refreshPayload?.sub).toBe(VALID_PUBLIC_KEY);
+    expect(refreshCookie?.httpOnly).toBe(true);
+    expect(refreshCookie?.path).toBe('/api/auth');
+  });
+
+  test('issues a REMEMBER_ME_REFRESH_TTL_SEC-lived refresh token when rememberMe is set', async () => {
+    mockVerify.mockReturnValueOnce(undefined);
+
+    const res = await POST(
+      makeRequest(ALLOWED_ORIGIN, {
+        signedXdr: SIGNED_XDR,
+        publicKey: VALID_PUBLIC_KEY,
+        rememberMe: true,
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.maxAge).toBe(60 * 60 * 24 * 30);
+
+    const refreshCookie = res.cookies.get('session_refresh');
+    const refreshPayload = verifySessionToken(refreshCookie!.value, 'refresh');
+    expect(refreshPayload?.sub).toBe(VALID_PUBLIC_KEY);
   });
 });
 
@@ -144,8 +226,68 @@ describe('POST /api/auth/sep10 — SEP-10 verification failures', () => {
 
     expect(res.status).toBe(401);
     const body = await res.json();
-    expect(body).toEqual({ error: 'Transaction not signed by client' });
+    // #1323: the raw stellar-sdk message must not reach the client.
+    expect(body).toEqual({
+      error: { code: 'INVALID_SIGNATURE', message: 'Verification failed' },
+    });
   });
+});
+
+describe('POST /api/auth/sep10 — input and config validation', () => {
+  test('returns 400 when publicKey is not a valid G-address', async () => {
+    const res = await POST(
+      makeRequest(ALLOWED_ORIGIN, {
+        signedXdr: SIGNED_XDR,
+        publicKey: 'MBADMUXEDACCOUNT',
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'Invalid publicKey' });
+    expect(mockVerify).not.toHaveBeenCalled();
+  });
+
+  test.each(['SEP10_SERVER_KEY', 'SEP10_HOME_DOMAIN'])(
+    'returns 500 without calling the SDK when %s is missing',
+    async (name) => {
+      delete process.env[name];
+      const res = await POST(makeRequest(ALLOWED_ORIGIN));
+      expect(res.status).toBe(500);
+      expect(await res.json()).toEqual({ error: 'Server not configured' });
+      expect(mockVerify).not.toHaveBeenCalled();
+    },
+  );
+});
+
+describe('GET /api/auth/sep10 — challenge', () => {
+  function makeGet(account?: string): NextRequest {
+    const qs = account === undefined ? '' : `?account=${account}`;
+    return new NextRequest(`http://localhost:3000/api/auth/sep10${qs}`);
+  }
+
+  test('returns 400 when account is missing', async () => {
+    const res = await GET(makeGet());
+    expect(res.status).toBe(400);
+  });
+
+  test('returns 400 for an invalid or muxed account', async () => {
+    for (const account of ['not-an-address', 'MBADMUXEDACCOUNT']) {
+      const res = await GET(makeGet(account));
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({
+        error: 'Invalid account parameter',
+      });
+    }
+  });
+
+  test.each(['SEP10_SERVER_KEY', 'SEP10_HOME_DOMAIN'])(
+    'returns 500 when %s is missing',
+    async (name) => {
+      delete process.env[name];
+      const res = await GET(makeGet(VALID_PUBLIC_KEY));
+      expect(res.status).toBe(500);
+      expect(await res.json()).toEqual({ error: 'Server not configured' });
+    },
+  );
 });
 
 describe('POST /api/auth/sep10 — malformed request body', () => {
@@ -344,5 +486,234 @@ describe('POST /api/auth/sep10 — rate limiting (issue #1700)', () => {
       expect.any(String),
       expect.objectContaining({ algorithm: 'sliding' }),
     );
+  });
+// ── SEP-10 replay protection (#1488) ────────────────────────────────────────
+describe('POST /api/auth/sep10 — nonce replay protection', () => {
+  test('returns 200 for the first use of a signed XDR', async () => {
+    mockVerify.mockReturnValueOnce(undefined);
+    // consumeNonce default is true (first use) — restored in beforeEach
+
+    const res = await POST(makeRequest(ALLOWED_ORIGIN));
+
+    expect(res.status).toBe(200);
+    expect(mockConsumeNonce).toHaveBeenCalledTimes(1);
+    // The hash passed to consumeNonce must equal hashXdr(SIGNED_XDR)
+    expect(mockConsumeNonce).toHaveBeenCalledWith(
+      `hash:${SIGNED_XDR}`,
+      expect.any(Number),
+    );
+  });
+
+  test('returns 401 when the same signed XDR is submitted a second time (replay)', async () => {
+    mockVerify.mockReturnValue(undefined); // both calls pass signature check
+    // First call: first use — mints a session
+    mockConsumeNonce.mockReturnValueOnce(true);
+    const first = await POST(makeRequest(ALLOWED_ORIGIN));
+    expect(first.status).toBe(200);
+
+    // Second call: consumeNonce returns false — this XDR was already used
+    mockConsumeNonce.mockReturnValueOnce(false);
+    const second = await POST(makeRequest(ALLOWED_ORIGIN));
+    expect(second.status).toBe(401);
+    const body = await second.json();
+    expect(body).toEqual({
+      error: { code: 'INVALID_SIGNATURE', message: 'Verification failed' },
+    });
+  });
+
+  test('does not set session cookies when consumeNonce returns false', async () => {
+    mockVerify.mockReturnValueOnce(undefined);
+    mockConsumeNonce.mockReturnValueOnce(false); // simulate replay
+
+    const res = await POST(makeRequest(ALLOWED_ORIGIN));
+
+    expect(res.status).toBe(401);
+    // No session cookie must have been set
+    expect(res.cookies.get('session')).toBeUndefined();
+    expect(res.cookies.get('session_refresh')).toBeUndefined();
+  });
+
+  test('two different XDR values each succeed independently', async () => {
+    mockVerify.mockReturnValue(undefined);
+    mockConsumeNonce.mockReturnValue(true); // both are first-use
+
+    const xdr1 = 'CHALLENGE_XDR_ONE==';
+    const xdr2 = 'CHALLENGE_XDR_TWO==';
+
+    const res1 = await POST(
+      makeRequest(ALLOWED_ORIGIN, {
+        signedXdr: xdr1,
+        publicKey: VALID_PUBLIC_KEY,
+      }),
+    );
+    const res2 = await POST(
+      makeRequest(ALLOWED_ORIGIN, {
+        signedXdr: xdr2,
+        publicKey: VALID_PUBLIC_KEY,
+      }),
+    );
+
+    expect(res1.status).toBe(200);
+    expect(res2.status).toBe(200);
+    // hashXdr must have been called with each distinct XDR
+    expect(mockHashXdr).toHaveBeenCalledWith(xdr1);
+    expect(mockHashXdr).toHaveBeenCalledWith(xdr2);
+  });
+
+  test('passes the challenge maxTime from the parsed XDR to consumeNonce', async () => {
+    mockVerify.mockReturnValueOnce(undefined);
+
+    await POST(makeRequest(ALLOWED_ORIGIN));
+
+    // MOCK_MAX_TIME_SEC is what TransactionBuilder.fromXDR returns in the mock
+    expect(mockConsumeNonce).toHaveBeenCalledWith(
+      expect.any(String),
+      MOCK_MAX_TIME_SEC,
+    );
+  });
+
+  test('sweepExpired is called after a successful login', async () => {
+    mockVerify.mockReturnValueOnce(undefined);
+    mockConsumeNonce.mockReturnValueOnce(true);
+
+    const res = await POST(makeRequest(ALLOWED_ORIGIN));
+    expect(res.status).toBe(200);
+    expect(mockSweepExpired).toHaveBeenCalledTimes(1);
+  });
+
+  test('sweepExpired failure does not abort an otherwise-successful login', async () => {
+    mockVerify.mockReturnValueOnce(undefined);
+    mockConsumeNonce.mockReturnValueOnce(true);
+    mockSweepExpired.mockImplementationOnce(() => {
+      throw new Error('disk full');
+    });
+
+    const res = await POST(makeRequest(ALLOWED_ORIGIN));
+    expect(res.status).toBe(200);
+  });
+
+  test('a replay is rejected before any session is persisted to SessionStore', async () => {
+    mockVerify.mockReturnValueOnce(undefined);
+    mockConsumeNonce.mockReturnValueOnce(false); // replay
+
+    const createSpy = jest.spyOn(SessionStore.getInstance(), 'create');
+
+    const res = await POST(makeRequest(ALLOWED_ORIGIN));
+    expect(res.status).toBe(401);
+    expect(createSpy).not.toHaveBeenCalled();
+  });
+});
+// ── end replay protection ────────────────────────────────────────────────────
+
+describe('DELETE /api/auth/sep10 — logout', () => {
+  function deleteRequest(cookieHeader?: string): NextRequest {
+    const headers: Record<string, string> = {};
+    if (cookieHeader) headers['cookie'] = cookieHeader;
+    return new NextRequest('http://localhost:3000/api/auth/sep10', {
+      method: 'DELETE',
+      headers,
+    });
+  }
+
+  test('clears both the access and refresh session cookies', async () => {
+    const res = await DELETE(deleteRequest());
+    expect(res.status).toBe(200);
+
+    const cleared = res.cookies.get('session');
+    const refreshCleared = res.cookies.get('session_refresh');
+    // NextResponse represents a deleted cookie as an empty-value Set-Cookie.
+    expect(cleared?.value).toBe('');
+    expect(refreshCleared?.value).toBe('');
+  });
+
+  // See #1179's core acceptance criterion: revoking a session must reject
+  // its cookie on the very next request, not just clear it client-side.
+  test('revokes the session server-side so the same cookie is rejected by a subsequent authenticated request', async () => {
+    mockVerify.mockReturnValueOnce(undefined);
+
+    const loginRes = await POST(makeRequest(ALLOWED_ORIGIN));
+    expect(loginRes.status).toBe(200);
+    const accessToken = loginRes.cookies.get('session')!.value;
+    const refreshToken = loginRes.cookies.get('session_refresh')!.value;
+
+    // Sanity check: the freshly-issued cookie authenticates before logout.
+    const beforeRes = await SESSION_GET(
+      new NextRequest('http://localhost:3000/api/auth/session', {
+        headers: { cookie: `session=${accessToken}` },
+      }),
+    );
+    expect(beforeRes.status).toBe(200);
+
+    const logoutRes = await DELETE(
+      deleteRequest(`session=${accessToken}; session_refresh=${refreshToken}`),
+    );
+    expect(logoutRes.status).toBe(200);
+
+    // The exact same still-unexpired, still correctly-signed cookie must
+    // now be rejected with 401 — proof that revocation is enforced
+    // server-side, not merely by clearing the cookie in the response.
+    const afterRes = await SESSION_GET(
+      new NextRequest('http://localhost:3000/api/auth/session', {
+        headers: { cookie: `session=${accessToken}` },
+      }),
+    );
+    expect(afterRes.status).toBe(401);
+    expect(await afterRes.json()).toEqual({ authenticated: false });
+  });
+});
+
+// See #660: the session must carry a bounded lifetime that the server
+// enforces, and be revocable server-side independently of the cookie.
+describe('POST /api/auth/sep10 — session expiry and revocation', () => {
+  function sessionRequest(accessToken: string): NextRequest {
+    return new NextRequest('http://localhost:3000/api/auth/session', {
+      headers: { cookie: `session=${accessToken}` },
+    });
+  }
+
+  async function login() {
+    mockVerify.mockReturnValueOnce(undefined);
+    const res = await POST(makeRequest(ALLOWED_ORIGIN));
+    expect(res.status).toBe(200);
+    return res;
+  }
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  test('sets a bounded maxAge on both session cookies', async () => {
+    const res = await login();
+    expect(res.cookies.get('session')?.maxAge).toBe(ACCESS_TOKEN_TTL_SEC);
+    expect(res.cookies.get('session_refresh')?.maxAge).toBe(
+      DEFAULT_REFRESH_TTL_SEC,
+    );
+  });
+
+  test('rejects the access cookie once its lifetime has elapsed, even if the client still sends it', async () => {
+    const start = Date.now();
+    const res = await login();
+    const accessToken = res.cookies.get('session')!.value;
+
+    expect((await SESSION_GET(sessionRequest(accessToken))).status).toBe(200);
+
+    jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(start + (ACCESS_TOKEN_TTL_SEC + 1) * 1000);
+    const expiredRes = await SESSION_GET(sessionRequest(accessToken));
+    expect(expiredRes.status).toBe(401);
+    expect(await expiredRes.json()).toEqual({ authenticated: false });
+  });
+
+  test('rejects a still-unexpired cookie once its session is revoked server-side', async () => {
+    const res = await login();
+    const accessToken = res.cookies.get('session')!.value;
+    const sid = verifySessionToken(accessToken, 'access')!.sid;
+
+    expect(SessionStore.getInstance().revoke(sid)).toBe(true);
+
+    const revokedRes = await SESSION_GET(sessionRequest(accessToken));
+    expect(revokedRes.status).toBe(401);
+    expect(await revokedRes.json()).toEqual({ authenticated: false });
   });
 });

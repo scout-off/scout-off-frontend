@@ -2,11 +2,12 @@ import { render, screen } from '@testing-library/react';
 import PlayerCardSkeleton from '@/components/PlayerCardSkeleton';
 
 describe('PlayerCardSkeleton', () => {
-  test('renders an aria-hidden placeholder card', () => {
+  test('exposes role="status" with a localized loading label', () => {
     const { container } = render(<PlayerCardSkeleton />);
     const card = container.firstChild as HTMLElement;
     expect(card).not.toBeNull();
-    expect(card.getAttribute('aria-hidden')).toBe('true');
+    expect(card.getAttribute('role')).toBe('status');
+    expect(card.getAttribute('aria-label')).toBe('Loading...');
     expect(card.className).toMatch(/animate-pulse/);
   });
 

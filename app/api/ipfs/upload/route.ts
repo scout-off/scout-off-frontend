@@ -1,9 +1,22 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { privateJson } from '@/lib/httpResponses';
 import axios from 'axios';
 import { sanitize } from '@/lib/sanitize';
-import { hasValidMagicBytes, bufToHex } from '@/lib/fileSignature';
+import { upstreamStatus } from '@/lib/httpClient';
+import {
+  detectFileType,
+  isDeclaredTypeCompatible,
+  bufToHex,
+} from '@/lib/fileSignature';
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
+import { getSessionWallet } from '@/lib/session';
 import { createRequestLogger } from '@/lib/logger';
+import { withOutboundSpan, withRouteTelemetry } from '@/lib/telemetry';
+import {
+  getPinataCredentials,
+  getMissingPinataEnvVars,
+  PINATA_NOT_CONFIGURED_ERROR,
+} from '@/lib/pinataConfig';
 import {
   verifyUploadedContent,
   UploadVerificationError,
@@ -34,19 +47,28 @@ const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024;
 /** Accepted MIME type prefixes */
 const ALLOWED_MIME_PREFIXES = ['image/', 'video/'];
 
-export async function POST(req: NextRequest) {
+async function postIpfsUpload(req: NextRequest) {
   const log = createRequestLogger(req);
+  const pinata = getPinataCredentials();
+  if (!pinata) {
+    log.error('Pinata credentials missing; IPFS uploads disabled', {
+      missing: getMissingPinataEnvVars().join(', '),
+    });
+    return privateJson({ error: PINATA_NOT_CONFIGURED_ERROR }, { status: 503 });
+  }
+  const wallet = getSessionWallet(req);
   const ip = getClientIp(req);
+  const key = wallet ? `ipfs-upload:wallet:${wallet}` : `ipfs-upload:${ip}`;
 
   // Rate limiting check
-  const rl = await checkRateLimit(`ipfs-upload:${ip}`, {
+  const rl = await checkRateLimit(key, {
     limit: RATE_LIMIT,
     windowMs: WINDOW_MS,
   });
   if (rl.limited) {
     log.warn('Rate limit exceeded', { ip });
     const retryAfter = rl.retryAfterSec ?? 60;
-    return NextResponse.json(
+    return privateJson(
       { error: 'Too many requests' },
       { status: 429, headers: { 'Retry-After': String(retryAfter) } },
     );
@@ -57,7 +79,7 @@ export async function POST(req: NextRequest) {
   try {
     form = await req.formData();
   } catch {
-    return NextResponse.json({ error: 'Invalid form data' }, { status: 400 });
+    return privateJson({ error: 'Invalid form data' }, { status: 400 });
   }
 
   // Server-side sanitization: strip HTML tags from any text fields that may be present
@@ -74,13 +96,17 @@ export async function POST(req: NextRequest) {
 
   const file = form.get('file') as File | null;
   if (!file) {
-    return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+    return privateJson({ error: 'No file provided' }, { status: 400 });
   }
 
   // ── 2. Size check (issue #119) ──────────────────────────────────────────────
   if (file.size > MAX_FILE_SIZE_BYTES) {
-    log.warn('Rejected oversized file', { size: file.size, type: file.type, ip });
-    return NextResponse.json(
+    log.warn('Rejected oversized file', {
+      size: file.size,
+      type: file.type,
+      ip,
+    });
+    return privateJson(
       {
         error: `File exceeds the 100 MB size limit (received ${(file.size / 1024 / 1024).toFixed(1)} MB)`,
       },
@@ -94,8 +120,12 @@ export async function POST(req: NextRequest) {
     mimeType.startsWith(prefix),
   );
   if (!mimeAllowed) {
-    log.warn('Rejected disallowed MIME type', { type: file.type, size: file.size, ip });
-    return NextResponse.json(
+    log.warn('Rejected disallowed MIME type', {
+      type: file.type,
+      size: file.size,
+      ip,
+    });
+    return privateJson(
       {
         error: `File type "${file.type}" is not allowed. Only image/* and video/* files are accepted.`,
       },
@@ -108,14 +138,17 @@ export async function POST(req: NextRequest) {
   const headerSlice = file.slice(0, 12);
   const headerBuffer = new Uint8Array(await headerSlice.arrayBuffer());
 
-  if (!hasValidMagicBytes(headerBuffer)) {
+  // Detected family must match the declared prefix (issue #1329).
+  const detected = detectFileType(headerBuffer);
+  if (!detected || !isDeclaredTypeCompatible(mimeType, detected)) {
     log.warn('Rejected spoofed MIME type', {
       type: file.type,
+      detected: detected?.mime ?? null,
       size: file.size,
       ip,
       header: bufToHex(headerBuffer),
     });
-    return NextResponse.json(
+    return privateJson(
       {
         error:
           'File content does not match its declared type. Upload rejected.',
@@ -126,29 +159,41 @@ export async function POST(req: NextRequest) {
 
   // ── 5. Forward to Pinata ────────────────────────────────────────────────────
   let cid: string;
+  const pinStartedAt = Date.now();
   try {
     const pinataForm = new FormData();
-    pinataForm.append('file', file);
+    // Pin with the detected MIME type, not the client-declared one.
+    pinataForm.append(
+      'file',
+      new File([file], file.name, { type: detected.mime }),
+    );
 
-    const { data } = await axios.post(
-      'https://api.pinata.cloud/pinning/pinFileToIPFS',
-      pinataForm,
-      {
-        headers: {
-          pinata_api_key: process.env.PINATA_API_KEY!,
-          pinata_secret_api_key: process.env.PINATA_SECRET!,
-        },
-      },
+    const { data } = await withOutboundSpan(
+      'pinata.pinFileToIPFS',
+      { dependency: 'pinata', operation: 'pinFileToIPFS' },
+      () =>
+        axios.post(
+          'https://api.pinata.cloud/pinning/pinFileToIPFS',
+          pinataForm,
+          {
+            headers: {
+              pinata_api_key: pinata.apiKey,
+              pinata_secret_api_key: pinata.secret,
+            },
+          },
+        ),
     );
     cid = data.IpfsHash;
+    const pinMs = Date.now() - pinStartedAt;
+    if (pinMs > 10_000) log.warn('Slow Pinata pin', { ip, pinMs });
   } catch (err) {
     log.error('Pinata upload failed', {
       ip,
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
+    return privateJson(
       { error: 'Failed to upload file to IPFS' },
-      { status: 502 },
+      { status: upstreamStatus(err) === 504 ? 504 : 502 },
     );
   }
 
@@ -158,14 +203,21 @@ export async function POST(req: NextRequest) {
   // lib/uploadVerification.ts for why this checks gateway-retrievable bytes
   // rather than recomputing the CID itself.
   try {
-    await verifyUploadedContent(cid, Buffer.from(await file.arrayBuffer()));
+    await withOutboundSpan(
+      'ipfs.upload.verify',
+      { dependency: 'ipfs-gateway', operation: 'verify-upload' },
+      () =>
+        file
+          .arrayBuffer()
+          .then((bytes) => verifyUploadedContent(cid, Buffer.from(bytes))),
+    );
   } catch (err) {
     log.error('Upload verification failed', {
       ip,
       cid,
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
+    return privateJson(
       {
         error:
           err instanceof UploadVerificationError
@@ -176,5 +228,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  return NextResponse.json({ cid });
+  return privateJson({ cid });
 }
+
+export const POST = withRouteTelemetry(postIpfsUpload, '/api/ipfs/upload');

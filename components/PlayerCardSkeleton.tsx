@@ -1,7 +1,13 @@
+'use client';
+import { useTranslations } from 'next-intl';
+
 export default function PlayerCardSkeleton() {
+  const t = useTranslations();
+
   return (
     <div
-      aria-hidden="true"
+      role="status"
+      aria-label={t('common.loading')}
       className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-4 animate-pulse"
     >
       {/* Avatar */}

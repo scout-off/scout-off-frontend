@@ -8,6 +8,7 @@ import {
   useState,
   ReactNode,
 } from 'react';
+import { useTranslations } from 'next-intl';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -15,6 +16,12 @@ export interface ModalProps {
   children: ReactNode;
   /** Optional title rendered at the top of the modal */
   title?: string;
+  /** Id of an element inside the modal that names it, when `title` isn't used. */
+  ariaLabelledBy?: string;
+  /** Optional element ID containing the dialog description. */
+  ariaDescribedBy?: string;
+  /** Overrides the translated close-button label. */
+  closeLabel?: string;
 }
 
 /** CSS selector that matches all natively focusable elements. */
@@ -45,7 +52,11 @@ export default function Modal({
   onClose,
   children,
   title,
+  ariaLabelledBy,
+  ariaDescribedBy,
+  closeLabel,
 }: ModalProps) {
+  const t = useTranslations('common');
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   // Keep a stable ref to the element that triggered the modal so we can
@@ -153,23 +164,27 @@ export default function Modal({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={title ? titleId : undefined}
+        aria-labelledby={title ? titleId : ariaLabelledBy}
+        aria-describedby={ariaDescribedBy}
         // tabIndex="-1" lets the container receive programmatic focus when
         // no focusable children are present.
         tabIndex={-1}
-        className="relative bg-brand-card border border-gray-700 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl focus:outline-none"
+        className="relative bg-brand-card border border-gray-300 dark:border-gray-700 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl focus:outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           type="button"
-          aria-label="Close modal"
-          className="absolute top-3 right-3 text-gray-400 hover:text-white transition"
+          aria-label={closeLabel ?? t('close_modal')}
+          className="absolute top-3 right-3 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition"
           onClick={onClose}
         >
           ✕
         </button>
         {title && (
-          <h2 id={titleId} className="text-lg font-semibold text-white mb-4">
+          <h2
+            id={titleId}
+            className="text-lg font-semibold text-gray-900 dark:text-white mb-4"
+          >
             {title}
           </h2>
         )}

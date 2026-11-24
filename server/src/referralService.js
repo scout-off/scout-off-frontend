@@ -16,9 +16,7 @@ const insertCode = db.prepare(
   `INSERT INTO referral_codes (code, scout_wallet, created_at, used_by, used_at)
    VALUES (@code, @scoutWallet, @createdAt, NULL, NULL)`,
 );
-const findByCode = db.prepare(
-  `SELECT * FROM referral_codes WHERE code = ?`,
-);
+const findByCode = db.prepare(`SELECT * FROM referral_codes WHERE code = ?`);
 const findByScout = db.prepare(
   `SELECT * FROM referral_codes WHERE scout_wallet = ? ORDER BY created_at DESC`,
 );

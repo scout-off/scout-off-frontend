@@ -26,6 +26,10 @@ const customJestConfig = {
     // helpers in the same dir (e.g. setup-providers-helpers.tsx).
     // Update this regex if you add another non-test helper at __tests__/.
     '<rootDir>/__tests__/setup-providers[^/]*\\.tsx',
+    // Integration tests require a live Soroban node and a deployed contract.
+    // They are run via jest.integration.config.js (`npm run test:integration`),
+    // not as part of the default `npm test` unit suite.
+    '<rootDir>/__tests__/integration/',
   ],
   // Issue #108: enforce minimum coverage thresholds
   coverageThreshold: {
@@ -59,6 +63,28 @@ async function jestConfig() {
       '/node_modules/(?!(next-intl|use-intl|@formatjs|intl-messageformat)/)',
       '^.+\\.module\\.(css|sass|scss)$',
     ],
+    // Include .mjs so __tests__/scripts/a11y-audit.test.mjs is picked up
+    // (issue #1124). Jest's default testMatch covers **/__tests__/**/*.[jt]s?(x)
+    // which excludes .mjs; we extend it here without disturbing the existing set.
+    testMatch: [
+      '**/__tests__/**/*.[jt]s?(x)',
+      '**/?(*.)+(spec|test).[jt]s?(x)',
+      '**/__tests__/**/*.test.mjs',
+      '**/?(*.)+(spec|test).mjs',
+    ],
+    moduleFileExtensions: [
+      ...(nextJestConfig.moduleFileExtensions ?? [
+        'js',
+        'mjs',
+        'cjs',
+        'jsx',
+        'ts',
+        'tsx',
+        'json',
+        'node',
+      ]),
+      'mjs',
+    ].filter((v, i, a) => a.indexOf(v) === i), // dedupe
   };
 }
 

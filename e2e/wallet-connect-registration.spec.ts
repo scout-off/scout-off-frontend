@@ -77,13 +77,11 @@ test.describe('wallet connect → player registration', () => {
     await page.getByLabel('Position *').selectOption({ label: 'Striker' });
     await page.getByRole('button', { name: 'Continue' }).click();
 
-    await page
-      .locator('input[type="file"]')
-      .setInputFiles({
-        name: 'highlight.png',
-        mimeType: 'image/png',
-        buffer: TINY_PNG,
-      });
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'highlight.png',
+      mimeType: 'image/png',
+      buffer: TINY_PNG,
+    });
     await page.getByRole('button', { name: 'Continue' }).click();
 
     await page.getByRole('button', { name: 'Register as Player' }).click();

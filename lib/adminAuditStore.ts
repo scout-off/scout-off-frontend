@@ -5,15 +5,15 @@
  * POST /api/admin/audit-log, and read back for the audit view and for
  * reconciliation (GET /api/admin/audit-log/reconcile).
  *
- * Mirrors packages/indexer/src/db/eventStore.ts's conventions: better-sqlite3
- * (already a root dependency), one table with idempotent
- * `CREATE TABLE IF NOT EXISTS` DDL run on construction (no separate
- * migration tool exists in this repo), a process-wide singleton, and keyset
- * pagination rather than OFFSET.
+ * DB bootstrap and schema are shared via lib/sqliteDb.ts's openSqliteDb,
+ * with schema applied through lib/sqliteMigrations.ts's versioned migration
+ * runner (see lib/migrations/adminAuditMigrations.ts) rather than a bare
+ * `CREATE TABLE IF NOT EXISTS` — a process-wide singleton and keyset
+ * pagination rather than OFFSET otherwise unchanged.
  */
-import Database from 'better-sqlite3';
-import * as fs from 'fs';
-import * as path from 'path';
+import type Database from 'better-sqlite3';
+import { openSqliteDb } from './sqliteDb';
+import { adminAuditMigrations } from './migrations/adminAuditMigrations';
 import type {
   AdminAuditEntry,
   AdminAuditQueryFilter,
@@ -21,26 +21,6 @@ import type {
   AdminAuditStatus,
 } from './adminAudit';
 import type { AdminAuditActionType } from './adminAudit';
-
-const DEFAULT_DB_PATH = path.join(process.cwd(), 'data', 'admin-audit.db');
-
-const SCHEMA = `
-CREATE TABLE IF NOT EXISTS admin_audit_log (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  action_type TEXT NOT NULL,
-  admin_wallet TEXT NOT NULL,
-  target TEXT,
-  amount_stroops INTEGER,
-  tx_hash TEXT,
-  status TEXT NOT NULL,
-  timestamp INTEGER NOT NULL,
-  data TEXT NOT NULL,
-  inserted_at INTEGER NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_admin_audit_action_ts ON admin_audit_log(action_type, timestamp DESC);
-CREATE INDEX IF NOT EXISTS idx_admin_audit_ts ON admin_audit_log(timestamp DESC);
-CREATE INDEX IF NOT EXISTS idx_admin_audit_tx_hash ON admin_audit_log(tx_hash);
-`;
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
@@ -87,25 +67,20 @@ export class AdminAuditStore {
 
   private db: Database.Database;
 
-  private constructor(dbPath: string) {
-    if (dbPath !== ':memory:') {
-      fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-    }
-    this.db = new Database(dbPath);
-    if (dbPath !== ':memory:') {
-      this.db.pragma('journal_mode = WAL');
-    }
-    this.db.exec(SCHEMA);
+  private constructor(db: Database.Database) {
+    this.db = db;
   }
 
   /** Returns the process-wide singleton, matching EventStore's pattern. */
   static getInstance(dbPath?: string): AdminAuditStore {
     if (!AdminAuditStore._instance) {
-      const resolvedPath =
-        dbPath ??
-        process.env.ADMIN_AUDIT_DB_PATH ??
-        (process.env.NODE_ENV === 'test' ? ':memory:' : DEFAULT_DB_PATH);
-      AdminAuditStore._instance = new AdminAuditStore(resolvedPath);
+      const db = openSqliteDb(
+        'admin-audit.db',
+        'ADMIN_AUDIT_DB_PATH',
+        adminAuditMigrations,
+        dbPath,
+      );
+      AdminAuditStore._instance = new AdminAuditStore(db);
     }
     return AdminAuditStore._instance;
   }
@@ -165,6 +140,10 @@ export class AdminAuditStore {
       clauses.push('id < @before');
       params.before = filter.before;
     }
+    if (filter.dataUserId !== undefined) {
+      clauses.push("json_extract(data, '$.userId') = @dataUserId");
+      params.dataUserId = filter.dataUserId;
+    }
 
     const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
     const rows = this.db
@@ -180,6 +159,48 @@ export class AdminAuditStore {
       entries: page.map(rowToEntry),
       nextCursor: hasMore ? page[page.length - 1].id : null,
     };
+  }
+
+  /**
+   * Redaction placeholder written into `admin_wallet`/`target` by
+   * {@link anonymizeWallet}. Kept as a stable, greppable constant (rather
+   * than e.g. deriving one from the wallet itself) so a redacted row is
+   * unambiguously distinguishable from a real wallet address in the UI and
+   * in `data`/CSV exports of the log.
+   */
+  static readonly REDACTED_WALLET_PLACEHOLDER = '[deleted-user]';
+
+  /**
+   * Anonymizes every audit entry that references `wallet`, in either the
+   * `admin_wallet` (who performed the action) or `target` (e.g. a validator
+   * address added/removed) column — used by the data-deletion cascade (see
+   * app/api/data-deletion/request/route.ts).
+   *
+   * The row itself is NOT deleted: the audit log exists to prove what
+   * privileged action was taken, by whom, and when (issue #670), and that
+   * integrity/accountability need outlives any one wallet's deletion
+   * request — matching DataDeletionModal's own on-chain/off-chain framing,
+   * where a small class of records must be retained rather than purged.
+   * Only the wallet reference is replaced with
+   * {@link AdminAuditStore.REDACTED_WALLET_PLACEHOLDER}; action type,
+   * amount, tx hash, status, and timestamp are left intact.
+   *
+   * Returns the number of rows touched (a row matching in both columns
+   * counts once).
+   */
+  anonymizeWallet(wallet: string): number {
+    const result = this.db
+      .prepare(
+        `UPDATE admin_audit_log
+         SET admin_wallet = CASE WHEN admin_wallet = @wallet THEN @placeholder ELSE admin_wallet END,
+             target = CASE WHEN target = @wallet THEN @placeholder ELSE target END
+         WHERE admin_wallet = @wallet OR target = @wallet`,
+      )
+      .run({
+        wallet,
+        placeholder: AdminAuditStore.REDACTED_WALLET_PLACEHOLDER,
+      });
+    return result.changes;
   }
 
   /** All entries for a given action type, oldest first — used by reconciliation to replay state. */

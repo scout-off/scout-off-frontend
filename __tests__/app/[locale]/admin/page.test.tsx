@@ -4,6 +4,7 @@ import {
   waitFor,
   fireEvent,
   act,
+  cleanup,
 } from '@testing-library/react';
 
 const ADMIN_ADDRESS = 'G'.padEnd(56, 'A');
@@ -17,6 +18,7 @@ const mockReplace = jest.fn();
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ replace: mockReplace }),
+  usePathname: () => '/en/admin',
 }));
 
 jest.mock('@/hooks/useWallet', () => ({
@@ -38,6 +40,30 @@ jest.mock('@/components/ui/ErrorBoundary', () => ({
 jest.mock('@/components/admin/AdminDashboardSkeleton', () => ({
   __esModule: true,
   default: () => <div data-testid="admin-skeleton">Loading skeleton</div>,
+}));
+
+// ConfigStatus fetches '/api/admin/config-status' directly via the global
+// fetch() (not the axios-based @/lib/api client the other mocks above
+// intercept), which jsdom doesn't provide — mock the component itself
+// since this suite is testing the surrounding page, not ConfigStatus.
+jest.mock('@/components/admin/ConfigStatus', () => ({
+  __esModule: true,
+  default: () => <div data-testid="config-status" />,
+}));
+
+// AcademyManager calls fetchAcademies() from @/lib/api, which the mock
+// below doesn't provide (this suite is testing the surrounding page, not
+// AcademyManager) — mock the component itself, same as ConfigStatus above.
+jest.mock('@/components/admin/AcademyManager', () => ({
+  __esModule: true,
+  default: () => <div data-testid="academy-manager" />,
+}));
+
+// Same as AcademyManager above: fetchFraudFlags() isn't in the @/lib/api
+// mock below, so mock the component itself.
+jest.mock('@/components/admin/FraudFlagsPanel', () => ({
+  __esModule: true,
+  default: () => <div data-testid="fraud-flags-panel" />,
 }));
 
 jest.mock('@/components/ui/EmptyState', () => ({
@@ -120,10 +146,14 @@ jest.mock('@/lib/contract', () => ({
 
 const mockFetchActivityEvents = jest.fn();
 const mockGetReferralOverview = jest.fn();
+const mockFetchFraudFlagsStatus = jest.fn();
 jest.mock('@/lib/api', () => ({
   fetchActivityEvents: (...args: unknown[]) => mockFetchActivityEvents(...args),
-  getReferralOverview: (...args: unknown[]) =>
-    mockGetReferralOverview(...args),
+  getReferralOverview: (...args: unknown[]) => mockGetReferralOverview(...args),
+  // FraudFlagsStalenessBadge (rendered inside the dashboard) reads this on
+  // mount — stub it so the module mock stays complete.
+  fetchFraudFlagsStatus: (...args: unknown[]) =>
+    mockFetchFraudFlagsStatus(...args),
 }));
 
 jest.mock('@/lib/contractErrorMessage', () => ({
@@ -133,9 +163,27 @@ jest.mock('@/lib/contractErrorMessage', () => ({
 
 process.env.NEXT_PUBLIC_ADMIN_ADDRESS = ADMIN_ADDRESS;
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const AdminDashboard = require('@/app/[locale]/admin/page')
+// The admin area is split into routed sections (issue #1354): the guard and
+// nav live in AdminShell (rendered by admin/layout.tsx), and each section is
+// its own page. Every test renders the shell around the page it exercises.
+const AdminShell = require('@/components/admin/AdminShell')
+  .default as React.ComponentType<{ children: React.ReactNode }>;
+const OverviewPage = require('@/app/[locale]/admin/page')
   .default as React.ComponentType;
+const ValidatorsPage = require('@/app/[locale]/admin/validators/page')
+  .default as React.ComponentType;
+const FeesPage = require('@/app/[locale]/admin/fees/page')
+  .default as React.ComponentType;
+const ReferralsPage = require('@/app/[locale]/admin/referrals/page')
+  .default as React.ComponentType;
+
+function renderAdmin(Page: React.ComponentType = OverviewPage) {
+  return render(
+    <AdminShell>
+      <Page />
+    </AdminShell>,
+  );
+}
 
 function defaultActivity() {
   return { events: [], total: 0 };
@@ -154,17 +202,22 @@ describe('AdminDashboard page', () => {
     mockGetContractPaused.mockResolvedValue(false);
     mockFetchActivityEvents.mockResolvedValue(defaultActivity());
     mockGetReferralOverview.mockResolvedValue(defaultReferralOverview());
+    mockFetchFraudFlagsStatus.mockResolvedValue({
+      evaluatedAt: null,
+      highSeverityCount: 0,
+      trigger: null,
+    });
   });
 
   it('renders nothing when no wallet is connected', () => {
     mockPublicKey = null;
-    const { container } = render(<AdminDashboard />);
+    const { container } = renderAdmin();
     expect(container).toBeEmptyDOMElement();
   });
 
   it('redirects and shows a toast when connected wallet is not the admin wallet', async () => {
     mockPublicKey = NON_ADMIN_ADDRESS;
-    const { container } = render(<AdminDashboard />);
+    const { container } = renderAdmin();
 
     await waitFor(() => {
       expect(mockShow).toHaveBeenCalledWith({
@@ -185,8 +238,11 @@ describe('AdminDashboard page', () => {
       }),
     );
 
-    render(<AdminDashboard />);
-    expect(screen.getByTestId('admin-skeleton')).toBeInTheDocument();
+    renderAdmin();
+    // AdminDashboardSkeleton is lazy-loaded via next/dynamic ({ ssr: false }),
+    // so it isn't present on the first synchronous render — only after the
+    // dynamic import's promise resolves.
+    expect(await screen.findByTestId('admin-skeleton')).toBeInTheDocument();
 
     await act(async () => {
       resolveValidators([]);
@@ -201,14 +257,22 @@ describe('AdminDashboard page', () => {
     mockGetPlatformFees.mockResolvedValue(42);
     mockGetContractPaused.mockResolvedValue(false);
 
-    render(<AdminDashboard />);
+    renderAdmin();
 
     expect(
       await screen.findByRole('heading', { name: 'Admin Dashboard' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Active')).toBeInTheDocument();
-    expect(screen.getByText(/42\.00 XLM/)).toBeInTheDocument();
-    expect(screen.getByText('Validators (1)')).toBeInTheDocument();
+    cleanup();
+
+    renderAdmin(FeesPage);
+    expect(await screen.findByText(/42\.00 XLM/)).toBeInTheDocument();
+    cleanup();
+
+    renderAdmin(ValidatorsPage);
+    expect(
+      await screen.findByText('Authorized Validators (1)'),
+    ).toBeInTheDocument();
     expect(screen.getByText(VALID_VALIDATOR_ADDRESS)).toBeInTheDocument();
   });
 
@@ -217,21 +281,27 @@ describe('AdminDashboard page', () => {
     mockGetContractPaused.mockResolvedValue(true);
     mockGetPlatformFees.mockResolvedValue(10);
 
-    render(<AdminDashboard />);
+    renderAdmin();
 
     await screen.findByText('Paused');
     expect(
       screen.getByRole('button', { name: 'Unpause Contract' }),
     ).toBeInTheDocument();
+    cleanup();
+
+    renderAdmin(FeesPage);
     expect(
-      screen.getByRole('button', { name: 'Withdraw Fees' }),
+      await screen.findByRole('button', { name: 'Withdraw Fees' }),
     ).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Add' })).toBeDisabled();
+    cleanup();
+
+    renderAdmin(ValidatorsPage);
+    expect(await screen.findByRole('button', { name: 'Add' })).toBeDisabled();
   });
 
   it('shows an empty state message when there are no validators', async () => {
     mockPublicKey = ADMIN_ADDRESS;
-    render(<AdminDashboard />);
+    renderAdmin(ValidatorsPage);
     expect(
       await screen.findByText('No validators authorized.'),
     ).toBeInTheDocument();
@@ -243,7 +313,7 @@ describe('AdminDashboard page', () => {
       .mockRejectedValueOnce(new Error('network down'))
       .mockResolvedValueOnce([]);
 
-    render(<AdminDashboard />);
+    renderAdmin();
 
     expect(
       await screen.findByText(/Failed to load admin data/),
@@ -265,7 +335,7 @@ describe('AdminDashboard page', () => {
     mockPublicKey = ADMIN_ADDRESS;
     mockFetchActivityEvents.mockRejectedValue(new Error('activity down'));
 
-    render(<AdminDashboard />);
+    renderAdmin();
 
     await waitFor(() => {
       expect(mockShow).toHaveBeenCalledWith({
@@ -277,7 +347,7 @@ describe('AdminDashboard page', () => {
 
   it('shows the empty state for the activity feed when there are no events', async () => {
     mockPublicKey = ADMIN_ADDRESS;
-    render(<AdminDashboard />);
+    renderAdmin();
     expect(await screen.findByText('No activity yet')).toBeInTheDocument();
   });
 
@@ -302,7 +372,7 @@ describe('AdminDashboard page', () => {
       total: 45,
     });
 
-    render(<AdminDashboard />);
+    renderAdmin();
 
     expect(await screen.findByText('Player Registered')).toBeInTheDocument();
     expect(screen.getByText('Milestone Approved')).toBeInTheDocument();
@@ -325,7 +395,7 @@ describe('AdminDashboard page', () => {
     mockPublicKey = ADMIN_ADDRESS;
     mockGetReferralOverview.mockRejectedValue(new Error('referrals down'));
 
-    render(<AdminDashboard />);
+    renderAdmin(ReferralsPage);
 
     await waitFor(() => {
       expect(mockShow).toHaveBeenCalledWith({
@@ -337,7 +407,7 @@ describe('AdminDashboard page', () => {
 
   it('shows the empty state for the referral program when there is no activity', async () => {
     mockPublicKey = ADMIN_ADDRESS;
-    render(<AdminDashboard />);
+    renderAdmin(ReferralsPage);
     expect(
       await screen.findByText('No referral activity yet'),
     ).toBeInTheDocument();
@@ -357,7 +427,7 @@ describe('AdminDashboard page', () => {
       ],
     });
 
-    render(<AdminDashboard />);
+    renderAdmin(ReferralsPage);
 
     expect(await screen.findByText('Referral Program')).toBeInTheDocument();
     expect(screen.getByText('12')).toBeInTheDocument();
@@ -371,8 +441,8 @@ describe('AdminDashboard page', () => {
     mockBuildAddValidator.mockResolvedValue('add-xdr');
     mockSignAndSubmit.mockResolvedValue({ hash: 'tx-hash' });
 
-    render(<AdminDashboard />);
-    await screen.findByText('Admin Dashboard');
+    renderAdmin(ValidatorsPage);
+    await screen.findByText('Manage Validators');
 
     const input = screen.getByPlaceholderText('Stellar public key (G...)');
     fireEvent.change(input, { target: { value: VALID_VALIDATOR_ADDRESS } });
@@ -408,7 +478,7 @@ describe('AdminDashboard page', () => {
     mockBuildRemoveValidator.mockResolvedValue('remove-xdr');
     mockSignAndSubmit.mockResolvedValue({});
 
-    render(<AdminDashboard />);
+    renderAdmin(ValidatorsPage);
     await screen.findByText(VALID_VALIDATOR_ADDRESS);
 
     fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
@@ -434,7 +504,7 @@ describe('AdminDashboard page', () => {
   it('cancels the confirm dialog without invoking the action', async () => {
     mockPublicKey = ADMIN_ADDRESS;
 
-    render(<AdminDashboard />);
+    renderAdmin();
     await screen.findByText('Admin Dashboard');
 
     fireEvent.click(screen.getByRole('button', { name: 'Pause Contract' }));
@@ -452,7 +522,7 @@ describe('AdminDashboard page', () => {
     mockBuildWithdrawFees.mockResolvedValue('withdraw-xdr');
     mockSignAndSubmit.mockResolvedValue({ hash: 'withdraw-hash' });
 
-    render(<AdminDashboard />);
+    renderAdmin(FeesPage);
     await screen.findByText(/100\.00 XLM/);
 
     fireEvent.click(screen.getByRole('button', { name: 'Withdraw Fees' }));
@@ -473,7 +543,7 @@ describe('AdminDashboard page', () => {
     mockBuildWithdrawFees.mockResolvedValue('withdraw-xdr');
     mockSignAndSubmit.mockRejectedValue(new Error('signing failed'));
 
-    render(<AdminDashboard />);
+    renderAdmin(FeesPage);
     await screen.findByText(/100\.00 XLM/);
 
     fireEvent.click(screen.getByRole('button', { name: 'Withdraw Fees' }));
@@ -494,7 +564,7 @@ describe('AdminDashboard page', () => {
     mockBuildPauseContract.mockResolvedValue('pause-xdr');
     mockSignAndSubmit.mockResolvedValue({});
 
-    render(<AdminDashboard />);
+    renderAdmin();
     await screen.findByText('Active');
 
     fireEvent.click(screen.getByRole('button', { name: 'Pause Contract' }));
@@ -518,7 +588,7 @@ describe('AdminDashboard page', () => {
     mockBuildUnpauseContract.mockResolvedValue('unpause-xdr');
     mockSignAndSubmit.mockResolvedValue({});
 
-    render(<AdminDashboard />);
+    renderAdmin();
     await screen.findByText('Paused');
 
     fireEvent.click(screen.getByRole('button', { name: 'Unpause Contract' }));

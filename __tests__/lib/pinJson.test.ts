@@ -146,7 +146,10 @@ describe('pinJson deduplication cache', () => {
 
     await pinJson({ wallet: 'GABC' });
 
-    const callArg = mockedAxios.post.mock.calls[0][1] as Record<string, unknown>;
+    const callArg = mockedAxios.post.mock.calls[0][1] as Record<
+      string,
+      unknown
+    >;
     expect(callArg).not.toHaveProperty('pinataMetadata');
   });
 });

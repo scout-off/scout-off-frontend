@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { AFRICAN_REGIONS_GROUPED } from '@/lib/regions';
 import { FOOTBALL_POSITIONS } from '@/lib/positions';
 import Select from '@/components/ui/Select';
@@ -39,6 +40,8 @@ export interface PlayerFilterFormProps {
   resetKey?: number;
   /** When provided, renders a "Save search" control that persists the current filter under a name. */
   onSaveSearch?: (name: string, filter: PlayerFilter) => void;
+  /** When true, disables all form controls (e.g., during rate limit countdown). */
+  disabled?: boolean;
 }
 
 export default function PlayerFilterForm({
@@ -46,7 +49,9 @@ export default function PlayerFilterForm({
   className = '',
   resetKey = 0,
   onSaveSearch,
+  disabled = false,
 }: PlayerFilterFormProps) {
+  const t = useTranslations('scout_dashboard');
   const router = useRouter();
   const searchParams = useSearchParams();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -142,8 +147,9 @@ export default function PlayerFilterForm({
         className="w-44"
         value={filter.region}
         onChange={(e) => handleChange('region', e.target.value)}
+        disabled={disabled}
       >
-        <option value="">All regions</option>
+        <option value="">{t('all_regions')}</option>
         {Object.entries(AFRICAN_REGIONS_GROUPED).map(([group, regions]) => (
           <optgroup key={group} label={group}>
             {regions.map(({ label, value }) => (
@@ -162,8 +168,9 @@ export default function PlayerFilterForm({
         className="w-40"
         value={filter.position}
         onChange={(e) => handleChange('position', e.target.value)}
+        disabled={disabled}
       >
-        <option value="">Any position</option>
+        <option value="">{t('any_position')}</option>
         {FOOTBALL_POSITIONS.map(({ label, value }) => (
           <option key={value} value={value}>
             {label}
@@ -178,6 +185,7 @@ export default function PlayerFilterForm({
         className="w-36"
         value={String(filter.level)}
         onChange={(e) => handleChange('level', e.target.value)}
+        disabled={disabled}
       >
         {LEVEL_OPTIONS.map(({ label, value }) => (
           <option key={value} value={value}>
@@ -190,7 +198,8 @@ export default function PlayerFilterForm({
       <button
         type="button"
         onClick={handleReset}
-        className="px-4 py-2 rounded-lg border border-gray-700 text-sm text-gray-300 hover:border-brand-green hover:text-white transition"
+        disabled={disabled}
+        className="px-4 py-2 rounded-lg border border-gray-700 text-sm text-gray-300 hover:border-brand-green hover:text-white transition disabled:opacity-40"
       >
         Reset Filters
       </button>
@@ -217,7 +226,7 @@ export default function PlayerFilterForm({
                     handleSaveSearch();
                   }
                 }}
-                placeholder="e.g. Lagos strikers"
+                placeholder={t('save_search_placeholder')}
                 autoFocus
               />
             </div>

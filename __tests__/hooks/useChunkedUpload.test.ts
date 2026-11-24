@@ -7,7 +7,8 @@ jest.mock('@/lib/ipfs', () => {
   const actual = jest.requireActual('@/lib/ipfs');
   return {
     ...actual,
-    uploadToIPFSChunked: (...args: unknown[]) => mockUploadToIPFSChunked(...args),
+    uploadToIPFSChunked: (...args: unknown[]) =>
+      mockUploadToIPFSChunked(...args),
   };
 });
 
@@ -64,7 +65,10 @@ describe('useChunkedUpload', () => {
 
     const { result } = renderHook(() => useChunkedUpload());
 
-    let outcome: { cid: string | null; error: string | null } = { cid: null, error: null };
+    let outcome: { cid: string | null; error: string | null } = {
+      cid: null,
+      error: null,
+    };
     await act(async () => {
       outcome = await result.current.upload(makeFile());
     });
@@ -112,7 +116,10 @@ describe('useChunkedUpload', () => {
     expect(result.current.error).toBe('Upload interrupted.');
     expect(result.current.canResume).toBe(true);
 
-    let outcome: { cid: string | null; error: string | null } = { cid: null, error: null };
+    let outcome: { cid: string | null; error: string | null } = {
+      cid: null,
+      error: null,
+    };
     await act(async () => {
       outcome = await result.current.resume();
     });
@@ -126,7 +133,9 @@ describe('useChunkedUpload', () => {
   });
 
   it('does not allow resume for a non-resumable error', async () => {
-    mockUploadToIPFSChunked.mockRejectedValueOnce(new Error('validation failed'));
+    mockUploadToIPFSChunked.mockRejectedValueOnce(
+      new Error('validation failed'),
+    );
 
     const { result } = renderHook(() => useChunkedUpload());
 
@@ -136,7 +145,10 @@ describe('useChunkedUpload', () => {
 
     expect(result.current.canResume).toBe(false);
 
-    let outcome: { cid: string | null; error: string | null } = { cid: null, error: null };
+    let outcome: { cid: string | null; error: string | null } = {
+      cid: null,
+      error: null,
+    };
     await act(async () => {
       outcome = await result.current.resume();
     });

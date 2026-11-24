@@ -1,7 +1,33 @@
 /**
- * Curated list of African regions and countries for the scout and player forms.
+ * Curated flat list of African regions and countries used across ScoutOff for
+ * player registration and scout search filtering.
  *
- * Values are lowercase slugs. The list is alphabetically sorted by label.
+ * Each entry is a `{ label, value }` object:
+ * - `label` — human-readable display name shown in dropdowns and filter chips
+ *   (e.g. `"Nigeria"`, `"West Africa"`).
+ * - `value` — URL-safe lowercase slug stored on-chain and passed as a filter
+ *   argument to `filter_players()` on the Soroban contract (e.g. `"nigeria"`,
+ *   `"west-africa"`). Slugs use hyphens as word separators and no accents.
+ *
+ * The list includes both individual countries (where ScoutOff has significant
+ * user density) and broad sub-regional groupings (for scouts who search across
+ * a wider territory). It is alphabetically sorted by `label` so it can be
+ * rendered directly without re-sorting.
+ *
+ * **Consumers:**
+ * - `components/player/PlayerOnboardingWizard.tsx` — region picker during player registration
+ * - `components/academy/BulkPlayerImport.tsx` — region column validation in CSV import
+ * - `lib/bulkImportParser.ts` — validates region values parsed from uploaded spreadsheets
+ * - `__tests__/components/PlayerFilterForm.test.tsx` — test assertions against region options
+ *
+ * To add a new region, append an entry in alphabetical order by `label` and
+ * keep the `value` slug consistent with the on-chain contract's accepted values.
+ *
+ * @example
+ * // Render a plain <select> of all regions
+ * AFRICAN_REGIONS.map(({ label, value }) => (
+ *   <option key={value} value={value}>{label}</option>
+ * ))
  */
 export const AFRICAN_REGIONS: { label: string; value: string }[] = [
   { label: 'Cameroon', value: 'cameroon' },
@@ -23,10 +49,33 @@ export const AFRICAN_REGIONS: { label: string; value: string }[] = [
 ];
 
 /**
- * Same entries grouped by sub-region for optgroup rendering.
- * Keys are the display labels for each <optgroup>; values are the region entries
- * that belong to that sub-region. All value strings are identical to the flat list
- * above so the contract always receives the unchanged flat region slug.
+ * The same regions as {@link AFRICAN_REGIONS}, grouped by sub-region for
+ * rendering `<optgroup>` elements in select inputs.
+ *
+ * The object keys are the human-readable sub-region display names used as
+ * `<optgroup label="...">` headings (e.g. `"West Africa"`, `"East Africa"`).
+ * Each value is an array of `{ label, value }` entries — identical in shape
+ * and slug format to {@link AFRICAN_REGIONS} — containing the countries and
+ * sub-regions that belong to that group.
+ *
+ * **Important:** the `value` slugs in this grouped structure are intentionally
+ * identical to those in {@link AFRICAN_REGIONS}. This ensures the on-chain
+ * `filter_players()` contract call always receives the same flat slug regardless
+ * of whether the UI uses the flat list or the grouped one.
+ *
+ * **Consumers:**
+ * - `components/scout/PlayerFilterForm.tsx` — renders a grouped `<select>` so
+ *   scouts can browse by sub-region before drilling into a specific country.
+ *
+ * @example
+ * // Render a grouped <select> with <optgroup> sections
+ * Object.entries(AFRICAN_REGIONS_GROUPED).map(([group, regions]) => (
+ *   <optgroup key={group} label={group}>
+ *     {regions.map(({ label, value }) => (
+ *       <option key={value} value={value}>{label}</option>
+ *     ))}
+ *   </optgroup>
+ * ))
  */
 export const AFRICAN_REGIONS_GROUPED: Record<
   string,

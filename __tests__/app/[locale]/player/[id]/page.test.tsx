@@ -17,7 +17,13 @@ jest.mock('@/hooks/usePlayer', () => ({
 }));
 
 jest.mock('@/hooks/usePayToContact', () => ({
-  usePayToContact: jest.fn(() => ({ unlock: jest.fn(), loading: false, contactDetails: undefined, error: null, clear: jest.fn() })),
+  usePayToContact: jest.fn(() => ({
+    unlock: jest.fn(),
+    loading: false,
+    contactDetails: undefined,
+    error: null,
+    clear: jest.fn(),
+  })),
 }));
 
 jest.mock('@/hooks/useSubscription', () => ({
@@ -26,6 +32,19 @@ jest.mock('@/hooks/useSubscription', () => ({
     isExpired: false,
     loading: false,
   })),
+}));
+
+const mockUseWatchlist = jest.fn();
+jest.mock('@/hooks/useWatchlist', () => ({
+  useWatchlist: (...args: unknown[]) => mockUseWatchlist(...args),
+}));
+
+jest.mock('@/hooks/useRecentlyViewed', () => ({
+  useRecentlyViewed: jest.fn(() => ({ entries: [], record: jest.fn() })),
+}));
+
+jest.mock('@/components/ui/Toast', () => ({
+  useToast: jest.fn(() => ({ show: jest.fn() })),
 }));
 
 // ── Component mocks ───────────────────────────────────────────────────────────
@@ -99,6 +118,13 @@ jest.mock('@/components/ui/ConfirmDialog', () => ({
     ) : null,
 }));
 
+jest.mock('@/components/ui/XlmFiatDisplay', () => ({
+  __esModule: true,
+  default: ({ xlmAmount }: { xlmAmount: number }) => (
+    <span data-testid="xlm-fiat-display">{xlmAmount} XLM</span>
+  ),
+}));
+
 jest.mock('@/components/ui/QRModal', () => ({
   __esModule: true,
   default: () => <div data-testid="qr-modal" />,
@@ -112,7 +138,7 @@ jest.mock('@/lib/contract', () => ({
 
 // ── Import after mocks ────────────────────────────────────────────────────────
 
-import PlayerProfile from '@/app/[locale]/player/[id]/page';
+import PlayerProfile from '@/app/[locale]/player/[id]/PlayerProfileClient';
 import { usePlayer } from '@/hooks/usePlayer';
 import { useWallet } from '@/hooks/useWallet';
 import { usePayToContact } from '@/hooks/usePayToContact';
@@ -141,8 +167,22 @@ const basePlayer = {
 beforeEach(() => {
   jest.clearAllMocks();
   mockUseWallet.mockReturnValue({ publicKey: null });
-  mockUsePayToContact.mockReturnValue({ unlock: jest.fn(), loading: false, contactDetails: undefined, error: null, clear: jest.fn() });
+  mockUsePayToContact.mockReturnValue({
+    unlock: jest.fn(),
+    loading: false,
+    contactDetails: undefined,
+    error: null,
+    clear: jest.fn(),
+  });
   mockGetContactFee.mockResolvedValue(1);
+  mockUseWatchlist.mockReturnValue({
+    entries: [],
+    loading: false,
+    error: null,
+    isWatched: () => false,
+    add: jest.fn(),
+    remove: jest.fn(),
+  });
 });
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -254,6 +294,76 @@ describe('PlayerProfile page', () => {
     render(<PlayerProfile />);
     expect(screen.queryByText(/Pay to Contact/)).not.toBeInTheDocument();
   });
+
+  it('does not render a watchlist star when no wallet is connected', () => {
+    mockUsePlayer.mockReturnValue({
+      player: basePlayer,
+      loading: false,
+      refetch: jest.fn(),
+    });
+    render(<PlayerProfile />);
+    expect(screen.queryByLabelText('Add to watchlist')).not.toBeInTheDocument();
+  });
+});
+
+// ── Watchlist star toggle ────────────────────────────────────────────────────
+
+describe('PlayerProfile watchlist toggle', () => {
+  beforeEach(() => {
+    mockUseWallet.mockReturnValue({ publicKey: 'GSCOUTWALLET' });
+    mockUsePlayer.mockReturnValue({
+      player: basePlayer,
+      loading: false,
+      refetch: jest.fn(),
+    });
+  });
+
+  it('does not render the star when viewing your own profile', () => {
+    mockUseWallet.mockReturnValue({ publicKey: basePlayer.wallet });
+    render(<PlayerProfile />);
+    expect(screen.queryByLabelText('Add to watchlist')).not.toBeInTheDocument();
+  });
+
+  it('renders an "Add to watchlist" star when not yet watched', () => {
+    render(<PlayerProfile />);
+    expect(screen.getByLabelText('Add to watchlist')).toBeInTheDocument();
+  });
+
+  it('calls watchlist.add when the star is clicked and not yet watched', () => {
+    const add = jest.fn();
+    mockUseWatchlist.mockReturnValue({
+      entries: [],
+      loading: false,
+      error: null,
+      isWatched: () => false,
+      add,
+      remove: jest.fn(),
+    });
+    render(<PlayerProfile />);
+    fireEvent.click(screen.getByLabelText('Add to watchlist'));
+    expect(add).toHaveBeenCalledWith('player-1');
+  });
+
+  it('calls watchlist.remove when the star is clicked and already watched', () => {
+    const remove = jest.fn();
+    const entry = {
+      id: 1,
+      scoutWallet: 'GSCOUTWALLET',
+      playerId: 'player-1',
+      createdAt: 0,
+    };
+    mockUseWatchlist.mockReturnValue({
+      entries: [entry],
+      loading: false,
+      error: null,
+      isWatched: () => true,
+      add: jest.fn(),
+      remove,
+    });
+    render(<PlayerProfile />);
+    fireEvent.click(screen.getByLabelText('Remove from watchlist'));
+    expect(remove).toHaveBeenCalledWith(entry);
+  });
 });
 
 // ── Live contact-fee staleness check ────────────────────────────────────────
@@ -270,14 +380,16 @@ describe('PlayerProfile pay-to-contact fee staleness check', () => {
 
   it('labels the pre-confirmation button fee as an estimate', () => {
     render(<PlayerProfile />);
-    expect(screen.getByText('Pay to Contact (~1 XLM)')).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: /Pay to Contact/ });
+    expect(button).toHaveTextContent('Pay to Contact');
+    expect(button).toHaveTextContent('1 XLM');
   });
 
   it('checks the live fee before showing the final confirm message, and shows the confirmed fee when it matches', async () => {
     mockGetContactFee.mockResolvedValue(1);
     render(<PlayerProfile />);
 
-    fireEvent.click(screen.getByText('Pay to Contact (~1 XLM)'));
+    fireEvent.click(screen.getByRole('button', { name: /Pay to Contact/ }));
 
     await waitFor(() => {
       expect(mockGetContactFee).toHaveBeenCalled();
@@ -293,7 +405,7 @@ describe('PlayerProfile pay-to-contact fee staleness check', () => {
     mockGetContactFee.mockResolvedValue(2);
     render(<PlayerProfile />);
 
-    fireEvent.click(screen.getByText('Pay to Contact (~1 XLM)'));
+    fireEvent.click(screen.getByRole('button', { name: /Pay to Contact/ }));
 
     await waitFor(() => {
       expect(
@@ -313,16 +425,18 @@ describe('PlayerProfile pay-to-contact fee staleness check', () => {
     );
     render(<PlayerProfile />);
 
-    fireEvent.click(screen.getByText('Pay to Contact (~1 XLM)'));
+    fireEvent.click(screen.getByRole('button', { name: /Pay to Contact/ }));
 
     expect(screen.getByText(/Confirming the current fee/)).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Confirm' }),
+      screen.getByRole('button', { name: /Pay .* XLM to contact/ }),
     ).toBeDisabled();
 
     resolveFee(1);
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Confirm' })).not.toBeDisabled(),
+      expect(
+        screen.getByRole('button', { name: /Pay .* XLM to contact/ }),
+      ).not.toBeDisabled(),
     );
   });
 
@@ -330,15 +444,19 @@ describe('PlayerProfile pay-to-contact fee staleness check', () => {
     mockGetContactFee.mockRejectedValue(new Error('rpc down'));
     render(<PlayerProfile />);
 
-    fireEvent.click(screen.getByText('Pay to Contact (~1 XLM)'));
+    fireEvent.click(screen.getByRole('button', { name: /Pay to Contact/ }));
 
     await waitFor(() => {
       expect(
-        screen.getByText(/Fee: ~1 XLM \(estimate — could not confirm the live rate\)/),
+        screen.getByText(
+          /Fee: ~1 XLM \(estimate — could not confirm the live rate\)/,
+        ),
       ).toBeInTheDocument();
     });
     // The user is not locked out by a failed check — Confirm remains available.
-    expect(screen.getByRole('button', { name: 'Confirm' })).not.toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /Pay .* XLM to contact/ }),
+    ).not.toBeDisabled();
   });
 });
 

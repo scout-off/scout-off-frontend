@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { userEvent, within, waitFor } from '@storybook/test';
+import { expect, userEvent, waitFor, within } from '@storybook/test';
 import Tooltip from './Tooltip';
 import Badge from './Badge';
 
@@ -58,73 +58,36 @@ export const BottomFlip: Story = {
   ),
 };
 
-export const KeyboardDismiss: Story = {
-  name: 'Keyboard Dismiss (Escape)',
+/**
+ * Interaction test (issue #1322): keyboard users get the tooltip on focus,
+ * it's linked to the trigger via aria-describedby, and it hides on blur.
+ */
+export const FocusPlay: Story = {
+  name: 'Keyboard focus (play)',
   render: () => (
-    <Tooltip content="Press Escape to dismiss this tooltip">
-      <button
-        type="button"
-        className="rounded bg-brand-green px-3 py-1.5 text-sm font-medium text-black"
-      >
-        Hover then press Escape
+    <Tooltip content="Fee goes to the platform treasury">
+      <button type="button" className="text-brand-green underline">
+        Fee info
       </button>
     </Tooltip>
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const button = canvas.getByRole('button', { name: /Hover then press Escape/i });
+    const page = within(canvasElement.ownerDocument.body);
 
-    // Hover over the trigger to show the tooltip
-    await userEvent.hover(button);
+    await userEvent.tab();
+    await expect(
+      canvas.getByRole('button', { name: 'Fee info' }),
+    ).toHaveFocus();
+    const tooltip = await page.findByRole('tooltip');
+    await expect(tooltip).toHaveTextContent(
+      'Fee goes to the platform treasury',
+    );
+    await expect(
+      canvasElement.querySelector(`[aria-describedby="${tooltip.id}"]`),
+    ).not.toBeNull();
 
-    // Wait for the tooltip to appear
-    await waitFor(() => {
-      within(document.body).getByRole('tooltip');
-    });
-
-    // Press Escape to dismiss
-    await userEvent.keyboard('{Escape}');
-
-    // Verify the tooltip is gone
-    await waitFor(() => {
-      const tooltip = document.body.querySelector('[role="tooltip"]');
-      if (tooltip) throw new Error('Tooltip still visible after Escape');
-    });
-  },
-};
-
-export const HoverableTooltip: Story = {
-  name: 'Hoverable Tooltip (pointer moves onto tooltip)',
-  render: () => (
-    <div style={{ padding: '60px' }}>
-      <Tooltip content="Move your pointer onto this tooltip — it stays visible">
-        <span className="text-brand-green underline cursor-help">
-          Hover me, then move onto the tooltip
-        </span>
-      </Tooltip>
-    </div>
-  ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const trigger = canvas.getByText(/Hover me, then move onto the tooltip/i);
-
-    // Hover over the trigger to show the tooltip
-    await userEvent.hover(trigger);
-
-    // Wait for tooltip to appear
-    await waitFor(() => {
-      within(document.body).getByRole('tooltip');
-    });
-
-    // Move pointer onto the tooltip itself
-    const tooltip = document.body.querySelector('[role="tooltip"]') as HTMLElement;
-    if (tooltip) {
-      await userEvent.hover(tooltip);
-    }
-
-    // Tooltip should still be visible after hovering onto it
-    await waitFor(() => {
-      within(document.body).getByRole('tooltip');
-    });
+    await userEvent.tab();
+    await waitFor(() => expect(page.queryByRole('tooltip')).toBeNull());
   },
 };

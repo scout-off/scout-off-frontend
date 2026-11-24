@@ -41,7 +41,7 @@ describe('ServiceWorkerUpdateBanner', () => {
       screen.getByRole('button', { name: /^reload$/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: /dismiss update notification/i }),
+      screen.getByRole('button', { name: /dismiss update banner/i }),
     ).toBeInTheDocument();
   });
 
@@ -74,7 +74,7 @@ describe('ServiceWorkerUpdateBanner', () => {
 
     act(() => {
       fireEvent.click(
-        screen.getByRole('button', { name: /dismiss update notification/i }),
+        screen.getByRole('button', { name: /dismiss update banner/i }),
       );
     });
 

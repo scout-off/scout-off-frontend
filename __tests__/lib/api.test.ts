@@ -47,8 +47,6 @@ import {
   fetchPlayerComments,
   fetchScoutProfile,
   fetchScoutContacts,
-  fetchChatHistory,
-  postChatMessage,
   searchPlayersByName,
   SearchRateLimitedError,
   fetchScoutStats,
@@ -59,6 +57,22 @@ import {
   addAcademyMember,
   removeAcademyMember,
   fetchAcademyForWallet,
+  archivePlayerProfile,
+  unarchivePlayerProfile,
+  linkBackupWallet,
+  removeBackupWallet,
+  claimAccountWithBackupWallet,
+  generateReferralCode,
+  getReferralStats,
+  listReferralCodes,
+  redeemReferralCode,
+  joinSponsorshipWaitlist,
+  fetchAllReferralCodes,
+  getReferralOverview,
+  fetchFraudFlags,
+  fetchPendingMilestoneSubmissions,
+  decideMilestoneSubmission,
+  createMilestoneSubmission,
 } from '@/lib/api';
 
 // Grab the mock functions from the instance that axios.create returned
@@ -80,7 +94,10 @@ describe('lib/api – axios instance configuration', () => {
   });
 
   it('sets baseURL from NEXT_PUBLIC_API_URL or falls back to localhost:4000', () => {
-    const [[callArgs]] = (axios.create as jest.Mock).mock.calls;
+    // lib/api imports lib/indexerClient, whose own client is created first.
+    const callArgs = (axios.create as jest.Mock).mock.calls
+      .map(([args]) => args)
+      .find((args) => args.baseURL !== '/api/indexer');
     expect(callArgs.baseURL).toMatch(/localhost:4000|https?:\/\//);
   });
 });
@@ -149,36 +166,6 @@ describe('fetchScoutContacts', () => {
   });
 });
 
-// ── fetchChatHistory (getMessages) ────────────────────────────────────────────
-
-describe('fetchChatHistory (getMessages)', () => {
-  beforeEach(() => jest.clearAllMocks());
-
-  it('calls GET /chat/:roomId and returns data', async () => {
-    const mockData = [{ id: 'msg-1', text: 'Hello' }];
-    mockGet.mockResolvedValueOnce({ data: mockData });
-
-    const result = await fetchChatHistory('room-abc');
-
-    expect(mockGet).toHaveBeenCalledWith('/chat/room-abc');
-    expect(result).toEqual(mockData);
-  });
-
-  it('surfaces a 500 error', async () => {
-    const serverError = Object.assign(
-      new Error('Request failed with status code 500'),
-      {
-        response: { status: 500, data: { message: 'Internal Server Error' } },
-      },
-    );
-    mockGet.mockRejectedValueOnce(serverError);
-
-    await expect(fetchChatHistory('room-abc')).rejects.toThrow(
-      'Request failed with status code 500',
-    );
-  });
-});
-
 // ── searchPlayersByName ───────────────────────────────────────────────────────
 
 describe('searchPlayersByName', () => {
@@ -198,7 +185,10 @@ describe('searchPlayersByName', () => {
 
     const result = await searchPlayersByName('Alice');
 
-    expect(global.fetch).toHaveBeenCalledWith('/api/players/search?name=Alice');
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/players/search?name=Alice',
+      { signal: undefined },
+    );
     expect(result).toEqual(mockData);
   });
 
@@ -207,7 +197,9 @@ describe('searchPlayersByName', () => {
       ok: false,
       status: 429,
       headers: new Headers({ 'Retry-After': '7' }),
-      json: async () => ({ error: 'Too many search requests. Please slow down.' }),
+      json: async () => ({
+        error: 'Too many search requests. Please slow down.',
+      }),
     });
 
     await expect(searchPlayersByName('Alice')).rejects.toThrow(
@@ -217,7 +209,9 @@ describe('searchPlayersByName', () => {
       ok: false,
       status: 429,
       headers: new Headers({ 'Retry-After': '7' }),
-      json: async () => ({ error: 'Too many search requests. Please slow down.' }),
+      json: async () => ({
+        error: 'Too many search requests. Please slow down.',
+      }),
     });
     const err = await searchPlayersByName('Alice').catch((e) => e);
     expect(err).toBeInstanceOf(SearchRateLimitedError);
@@ -225,16 +219,23 @@ describe('searchPlayersByName', () => {
   });
 
   it('throws a generic error for other failed responses', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
+    // 500 is a retryable status (see lib/fetchWithRetry.ts), so every
+    // attempt — not just the first — needs to see this response; fake
+    // timers skip the real backoff delay between retries.
+    jest.useFakeTimers();
+    (global.fetch as jest.Mock).mockResolvedValue({
       ok: false,
       status: 500,
       headers: new Headers(),
       json: async () => ({}),
     });
 
-    await expect(searchPlayersByName('Alice')).rejects.toThrow(
+    const assertion = expect(searchPlayersByName('Alice')).rejects.toThrow(
       'Failed to search players',
     );
+    await jest.runAllTimersAsync();
+    await assertion;
+    jest.useRealTimers();
   });
 });
 
@@ -321,6 +322,29 @@ describe('fetchValidatorMilestoneCount', () => {
     expect(result).toBeNull();
   });
 
+  it('counts only approvals inside a ms range, comparing against unix-second event timestamps', async () => {
+    const end = Date.UTC(2026, 0, 31);
+    const start = end - 7 * 24 * 60 * 60 * 1000;
+    const sec = (ms: number) => Math.floor(ms / 1000);
+    mockGet.mockResolvedValueOnce({
+      data: {
+        events: [
+          { timestamp: sec(end - 60_000) }, // inside the window
+          { timestamp: sec(start + 60_000) }, // inside the window
+          { timestamp: sec(start - 60_000) }, // before the window
+        ],
+        nextCursor: null,
+      },
+    });
+
+    const result = await fetchValidatorMilestoneCount('GVALIDATOR', {
+      start,
+      end,
+    });
+
+    expect(result).toBe(2);
+  });
+
   it('URL-encodes the validator address', async () => {
     mockGet.mockResolvedValueOnce({ data: { milestoneCount: 1 } });
 
@@ -332,55 +356,6 @@ describe('fetchValidatorMilestoneCount', () => {
   });
 });
 
-// ── postChatMessage (sendMessage) ─────────────────────────────────────────────
-
-describe('postChatMessage (sendMessage)', () => {
-  beforeEach(() => jest.clearAllMocks());
-
-  it('calls POST /chat/:roomId with the correct body and returns data', async () => {
-    const mockData = { id: 'msg-2', text: 'Hi there' };
-    mockPost.mockResolvedValueOnce({ data: mockData });
-
-    const result = await postChatMessage('room-abc', 'Hi there', 'sender-1');
-
-    expect(mockPost).toHaveBeenCalledWith('/chat/room-abc', {
-      message: 'Hi there',
-      sender: 'sender-1',
-    });
-    expect(result).toEqual(mockData);
-  });
-
-  it('surfaces a 500 error', async () => {
-    const serverError = Object.assign(
-      new Error('Request failed with status code 500'),
-      {
-        response: { status: 500, data: { message: 'Internal Server Error' } },
-      },
-    );
-    mockPost.mockRejectedValueOnce(serverError);
-
-    await expect(postChatMessage('room-abc', 'Hi', 'sender-1')).rejects.toThrow(
-      'Request failed with status code 500',
-    );
-  });
-
-  it('surfaces a 401 error (session cleared scenario)', async () => {
-    const authError = Object.assign(
-      new Error('Request failed with status code 401'),
-      {
-        response: { status: 401, data: { message: 'Unauthorized' } },
-      },
-    );
-    mockPost.mockRejectedValueOnce(authError);
-
-    await expect(
-      postChatMessage('room-abc', 'Hi', 'sender-1'),
-    ).rejects.toMatchObject({
-      response: { status: 401 },
-    });
-  });
-});
-
 // ── Academies (issue #663) ──────────────────────────────────────────────────
 
 const ACADEMY = {
@@ -388,7 +363,14 @@ const ACADEMY = {
   name: 'FC Sahel',
   ownerWallet: 'GOWNER',
   createdAt: 1_700_000_000,
-  members: [{ wallet: 'GOWNER', academyId: 'academy-1', addedAt: 1_700_000_000, addedBy: 'GADMIN' }],
+  members: [
+    {
+      wallet: 'GOWNER',
+      academyId: 'academy-1',
+      addedAt: 1_700_000_000,
+      addedBy: 'GADMIN',
+    },
+  ],
 };
 
 describe('fetchAcademies', () => {
@@ -405,7 +387,9 @@ describe('fetchAcademies', () => {
 
     const result = await fetchAcademies();
 
-    expect(global.fetch).toHaveBeenCalledWith('/api/admin/academies');
+    expect(global.fetch).toHaveBeenCalledWith('/api/admin/academies', {
+      signal: undefined,
+    });
     expect(result).toEqual([ACADEMY]);
   });
 
@@ -487,7 +471,10 @@ describe('removeAcademyMember', () => {
   });
 
   it('DELETEs the member from the admin proxy, URL-encoding both segments', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({}),
+    });
 
     await removeAcademyMember('academy 1', 'GCOACH/WITH SLASH');
 
@@ -537,5 +524,330 @@ describe('fetchAcademyForWallet', () => {
     expect(mockGet).toHaveBeenCalledWith(
       '/academies/wallet/G%20WALLET%2FWITH%20SPACE',
     );
+  });
+});
+
+// ── Player archive / backup-wallet / recovery ───────────────────────────────
+
+describe('archivePlayerProfile', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('calls POST /players/:playerId/archive and returns data', async () => {
+    const mockData = { id: 'player-1', archived: true };
+    mockPost.mockResolvedValueOnce({ data: mockData });
+
+    const result = await archivePlayerProfile('player-1');
+
+    expect(mockPost).toHaveBeenCalledWith('/players/player-1/archive');
+    expect(result).toEqual(mockData);
+  });
+});
+
+describe('unarchivePlayerProfile', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('calls POST /players/:playerId/unarchive and returns data', async () => {
+    const mockData = { id: 'player-1', archived: false };
+    mockPost.mockResolvedValueOnce({ data: mockData });
+
+    const result = await unarchivePlayerProfile('player-1');
+
+    expect(mockPost).toHaveBeenCalledWith('/players/player-1/unarchive');
+    expect(result).toEqual(mockData);
+  });
+});
+
+describe('linkBackupWallet', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('calls POST /players/:playerId/backup-wallet/link with the wallet and signature', async () => {
+    const mockData = { id: 'player-1', backupWallet: 'GBACKUP' };
+    mockPost.mockResolvedValueOnce({ data: mockData });
+
+    const result = await linkBackupWallet('player-1', 'GBACKUP', 'sig123');
+
+    expect(mockPost).toHaveBeenCalledWith(
+      '/players/player-1/backup-wallet/link',
+      { backupWallet: 'GBACKUP', signature: 'sig123' },
+    );
+    expect(result).toEqual(mockData);
+  });
+});
+
+describe('removeBackupWallet', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('calls POST /players/:playerId/backup-wallet/remove and returns data', async () => {
+    const mockData = { id: 'player-1', backupWallet: null };
+    mockPost.mockResolvedValueOnce({ data: mockData });
+
+    const result = await removeBackupWallet('player-1');
+
+    expect(mockPost).toHaveBeenCalledWith(
+      '/players/player-1/backup-wallet/remove',
+    );
+    expect(result).toEqual(mockData);
+  });
+});
+
+describe('claimAccountWithBackupWallet', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('calls POST /players/recovery/claim with both wallets', async () => {
+    const mockData = { playerId: 'player-1', wallet: 'GBACKUP' };
+    mockPost.mockResolvedValueOnce({ data: mockData });
+
+    const result = await claimAccountWithBackupWallet('GPRIMARY', 'GBACKUP');
+
+    expect(mockPost).toHaveBeenCalledWith('/players/recovery/claim', {
+      primaryWallet: 'GPRIMARY',
+      backupWallet: 'GBACKUP',
+    });
+    expect(result).toEqual(mockData);
+  });
+});
+
+// ── Referrals ────────────────────────────────────────────────────────────────
+
+describe('generateReferralCode', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('calls POST /referrals/generate with the scout wallet and turnstile token', async () => {
+    const mockData = { code: 'ABC123' };
+    mockPost.mockResolvedValueOnce({ data: mockData });
+
+    const result = await generateReferralCode('GSCOUT', 'turnstile-token');
+
+    expect(mockPost).toHaveBeenCalledWith('/referrals/generate', {
+      scoutWallet: 'GSCOUT',
+      turnstileToken: 'turnstile-token',
+    });
+    expect(result).toEqual(mockData);
+  });
+});
+
+describe('getReferralStats', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('calls GET /referrals/count/:scoutWallet and returns data', async () => {
+    const mockData = { count: 3 };
+    mockGet.mockResolvedValueOnce({ data: mockData });
+
+    const result = await getReferralStats('GSCOUT');
+
+    expect(mockGet).toHaveBeenCalledWith('/referrals/count/GSCOUT');
+    expect(result).toEqual(mockData);
+  });
+});
+
+describe('listReferralCodes', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('calls GET /referrals/scout/:scoutWallet and returns data', async () => {
+    const mockData = [{ code: 'ABC123' }];
+    mockGet.mockResolvedValueOnce({ data: mockData });
+
+    const result = await listReferralCodes('GSCOUT');
+
+    expect(mockGet).toHaveBeenCalledWith('/referrals/scout/GSCOUT');
+    expect(result).toEqual(mockData);
+  });
+});
+
+describe('redeemReferralCode', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('returns true on success', async () => {
+    mockPost.mockResolvedValueOnce({ data: {} });
+
+    const result = await redeemReferralCode('ABC123', 'GUSER');
+
+    expect(mockPost).toHaveBeenCalledWith('/referrals/redeem', {
+      code: 'ABC123',
+      usedBy: 'GUSER',
+    });
+    expect(result).toBe(true);
+  });
+
+  it('returns false on failure', async () => {
+    mockPost.mockRejectedValueOnce(new Error('Invalid code'));
+
+    const result = await redeemReferralCode('BADCODE', 'GUSER');
+
+    expect(result).toBe(false);
+  });
+});
+
+describe('fetchAllReferralCodes', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('calls GET /referrals/all and returns data', async () => {
+    const mockData = [{ code: 'ABC123' }];
+    mockGet.mockResolvedValueOnce({ data: mockData });
+
+    const result = await fetchAllReferralCodes();
+
+    expect(mockGet).toHaveBeenCalledWith('/referrals/all');
+    expect(result).toEqual(mockData);
+  });
+});
+
+describe('getReferralOverview', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    global.fetch = jest.fn();
+  });
+
+  it('GETs the admin referrals proxy and returns the overview', async () => {
+    const mockData = { totalReferrals: 5 };
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockData,
+    });
+
+    const result = await getReferralOverview();
+
+    expect(global.fetch).toHaveBeenCalledWith('/api/admin/referrals', {
+      signal: undefined,
+    });
+    expect(result).toEqual(mockData);
+  });
+
+  it('throws when the response is not ok', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false });
+
+    await expect(getReferralOverview()).rejects.toThrow(
+      'Failed to fetch referral overview',
+    );
+  });
+});
+
+// ── Fraud flags ──────────────────────────────────────────────────────────────
+
+describe('fetchFraudFlags', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    global.fetch = jest.fn();
+  });
+
+  it('GETs the fraud-flags admin proxy and returns the payload', async () => {
+    const mockData = { flags: [], warnings: [] };
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockData,
+    });
+
+    const result = await fetchFraudFlags();
+
+    expect(global.fetch).toHaveBeenCalledWith('/api/admin/fraud-flags', {
+      signal: undefined,
+    });
+    expect(result).toEqual(mockData);
+  });
+
+  it('throws when the response is not ok', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false });
+
+    await expect(fetchFraudFlags()).rejects.toThrow(
+      'Failed to fetch fraud flags',
+    );
+  });
+});
+
+// ── Sponsorship waitlist ─────────────────────────────────────────────────────
+
+describe('joinSponsorshipWaitlist', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('calls POST /sponsorship/waitlist with defaults applied', async () => {
+    const mockData = { message: 'ok' };
+    mockPost.mockResolvedValueOnce({ data: mockData });
+
+    const result = await joinSponsorshipWaitlist('fan@example.com');
+
+    expect(mockPost).toHaveBeenCalledWith('/sponsorship/waitlist', {
+      email: 'fan@example.com',
+      interestType: 'fan',
+      turnstileToken: undefined,
+    });
+    expect(result).toEqual(mockData);
+  });
+
+  it('forwards an explicit interestType and turnstileToken', async () => {
+    const mockData = { message: 'ok' };
+    mockPost.mockResolvedValueOnce({ data: mockData });
+
+    await joinSponsorshipWaitlist(
+      'sponsor@example.com',
+      'sponsor',
+      'turnstile-token',
+    );
+
+    expect(mockPost).toHaveBeenCalledWith('/sponsorship/waitlist', {
+      email: 'sponsor@example.com',
+      interestType: 'sponsor',
+      turnstileToken: 'turnstile-token',
+    });
+  });
+});
+
+// ── Milestone submissions (issues #567, #568) ───────────────────────────────
+
+describe('fetchPendingMilestoneSubmissions', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('calls GET /milestone-submissions/validator/:wallet with status=pending', async () => {
+    const mockData = [{ id: 'sub-1' }];
+    mockGet.mockResolvedValueOnce({ data: mockData });
+
+    const result = await fetchPendingMilestoneSubmissions('GVALIDATOR');
+
+    expect(mockGet).toHaveBeenCalledWith(
+      '/milestone-submissions/validator/GVALIDATOR',
+      { params: { status: 'pending' } },
+    );
+    expect(result).toEqual(mockData);
+  });
+});
+
+describe('decideMilestoneSubmission', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('calls PATCH /milestone-submissions/:id with the status and txHash', async () => {
+    const mockData = { id: 'sub-1', status: 'approved' };
+    const mockPatch = jest.fn().mockResolvedValueOnce({ data: mockData });
+    (axios as any).__instance.patch = mockPatch;
+
+    const result = await decideMilestoneSubmission(
+      'sub-1',
+      'approved',
+      'tx-hash',
+    );
+
+    expect(mockPatch).toHaveBeenCalledWith('/milestone-submissions/sub-1', {
+      status: 'approved',
+      txHash: 'tx-hash',
+    });
+    expect(result).toEqual(mockData);
+  });
+});
+
+describe('createMilestoneSubmission', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('calls POST /milestone-submissions with the payload', async () => {
+    const payload = {
+      playerId: 'player-1',
+      description: 'Scored a hat-trick',
+      validatorWallet: 'GVALIDATOR',
+      submittedBy: 'GSUBMITTER',
+    };
+    const mockData = { id: 'sub-1', ...payload };
+    mockPost.mockResolvedValueOnce({ data: mockData });
+
+    const result = await createMilestoneSubmission(payload);
+
+    expect(mockPost).toHaveBeenCalledWith('/milestone-submissions', payload);
+    expect(result).toEqual(mockData);
   });
 });

@@ -4,6 +4,7 @@ import ApproveForm from '@/components/validator/ApproveForm';
 import { useWallet } from '@/hooks/useWallet';
 import { useValidator } from '@/hooks/useValidator';
 import { getPlayer } from '@/lib/contract';
+import { submitAndConfirmApproval } from '@/lib/confirmApprovalSubmission';
 import type { Player } from '@/types';
 
 jest.mock('@/hooks/useWallet', () => ({
@@ -18,11 +19,20 @@ jest.mock('@/lib/contract', () => ({
   getPlayer: jest.fn(),
 }));
 
+jest.mock('@/lib/confirmApprovalSubmission', () => ({
+  submitAndConfirmApproval: jest.fn(),
+  isOnChainApproved: (phase: string) =>
+    phase === 'success' || phase === 'event_lag',
+}));
+
 const mockedUseWallet = useWallet as jest.MockedFunction<typeof useWallet>;
 const mockedUseValidator = useValidator as jest.MockedFunction<
   typeof useValidator
 >;
 const mockedGetPlayer = getPlayer as jest.MockedFunction<typeof getPlayer>;
+const mockedSubmitAndConfirm = submitAndConfirmApproval as jest.MockedFunction<
+  typeof submitAndConfirmApproval
+>;
 
 const player: Player = {
   id: 'player-1',
@@ -40,6 +50,22 @@ const player: Player = {
   createdAt: 1234567890,
 };
 
+const HASH = 'real-ledger-tx-hash-001';
+
+function fillForm() {
+  fireEvent.change(screen.getByPlaceholderText('Enter player ID'), {
+    target: { value: 'player-1' },
+  });
+  fireEvent.change(
+    screen.getByPlaceholderText(/Describe the player's achievement/i),
+    { target: { value: 'Test milestone' } },
+  );
+  fireEvent.change(
+    screen.getByPlaceholderText('https://example.com/evidence'),
+    { target: { value: 'https://example.com/evidence' } },
+  );
+}
+
 function renderComponent(
   isValidator: boolean = true,
   onSuccess: () => void = jest.fn(),
@@ -56,7 +82,7 @@ function renderComponent(
   mockedUseValidator.mockReturnValue({
     isValidator,
     checking: false,
-    approveMilestone: jest.fn(),
+    approveMilestone: jest.fn().mockResolvedValue('mock-xdr'),
     revokeMilestone: jest.fn(),
     loading: false,
     error: null,
@@ -68,10 +94,11 @@ function renderComponent(
 describe('ApproveForm', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-  });
-
-  afterEach(() => {
-    jest.clearAllMocks();
+    mockedSubmitAndConfirm.mockResolvedValue({
+      phase: 'success',
+      hash: HASH,
+      message: 'Transaction confirmed on-chain.',
+    });
   });
 
   it('shows not a validator message when isValidator=false', () => {
@@ -84,32 +111,23 @@ describe('ApproveForm', () => {
     expect(
       screen.getByRole('heading', { name: 'Approve Milestone' }),
     ).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Enter player ID')).toBeInTheDocument();
-    expect(
-      screen.getByPlaceholderText(/Describe the player's achievement/i),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByPlaceholderText('https://example.com/evidence'),
-    ).toBeInTheDocument();
   });
 
   it('shows validation error for invalid evidence URL', async () => {
     renderComponent(true);
-    const evidenceUrlInput = screen.getByPlaceholderText(
-      'https://example.com/evidence',
+    fireEvent.change(
+      screen.getByPlaceholderText('https://example.com/evidence'),
+      { target: { value: 'invalid-url' } },
     );
-
-    fireEvent.change(evidenceUrlInput, { target: { value: 'invalid-url' } });
-
     expect(
       await screen.findByText('Evidence URL must be a valid http/https URL'),
     ).toBeInTheDocument();
   });
 
-  it('calls approveMilestone with correct arguments when submitting valid data', async () => {
-    const approveMilestone = jest.fn().mockResolvedValue('mock-xdr');
-    const signAndSubmit = jest.fn().mockResolvedValue({});
+  it('calls submitAndConfirmApproval and onSuccess only after confirmation', async () => {
     const onSuccess = jest.fn();
+    const approveMilestone = jest.fn().mockResolvedValue('mock-xdr');
+    const signAndSubmit = jest.fn();
 
     mockedUseValidator.mockReturnValue({
       isValidator: true,
@@ -119,7 +137,6 @@ describe('ApproveForm', () => {
       loading: false,
       error: null,
     });
-
     mockedUseWallet.mockReturnValue({
       publicKey: 'GVALIDATORPUBLICKEY',
       isAuthenticated: true,
@@ -129,31 +146,118 @@ describe('ApproveForm', () => {
       signAndSubmit,
     } as any);
 
+    mockedSubmitAndConfirm.mockImplementation(async (params) => {
+      params.onPhase?.('confirming', { hash: HASH });
+      params.onPhase?.('success', { hash: HASH });
+      return {
+        phase: 'success',
+        hash: HASH,
+        message: 'Transaction confirmed on-chain.',
+      };
+    });
+
     render(<ApproveForm onSuccess={onSuccess} />);
-
-    const playerIdInput = screen.getByPlaceholderText('Enter player ID');
-    const descriptionInput = screen.getByPlaceholderText(
-      /Describe the player's achievement/i,
-    );
-    const evidenceUrlInput = screen.getByPlaceholderText(
-      'https://example.com/evidence',
-    );
-    const submitButton = screen.getByRole('button', {
-      name: /Approve Milestone/i,
-    });
-
-    fireEvent.change(playerIdInput, { target: { value: 'player-1' } });
-    fireEvent.change(descriptionInput, { target: { value: 'Test milestone' } });
-    fireEvent.change(evidenceUrlInput, {
-      target: { value: 'https://example.com/evidence' },
-    });
+    fillForm();
 
     await act(async () => {
-      fireEvent.click(submitButton);
+      fireEvent.click(
+        screen.getByRole('button', { name: /Approve Milestone/i }),
+      );
     });
 
-    expect(approveMilestone).toHaveBeenCalledWith('player-1', 'Test milestone');
-    expect(signAndSubmit).toHaveBeenCalledWith('mock-xdr');
+    expect(mockedSubmitAndConfirm).toHaveBeenCalledTimes(1);
     expect(onSuccess).toHaveBeenCalledTimes(1);
+    // Hash extraction bug fix: real hash is linked in the success UI
+    const link = screen.getByRole('link', {
+      name: /View transaction on Stellar Expert/i,
+    });
+    expect(link).toHaveAttribute(
+      'href',
+      expect.stringContaining(`/tx/${HASH}`),
+    );
   });
+
+  it('does not call onSuccess when ledger confirmation fails', async () => {
+    const onSuccess = jest.fn();
+    mockedSubmitAndConfirm.mockResolvedValue({
+      phase: 'failed',
+      hash: HASH,
+      message:
+        'Transaction failed on the ledger. The milestone was not approved — you can try again.',
+    });
+
+    renderComponent(true, onSuccess);
+    fillForm();
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: /Approve Milestone/i }),
+      );
+    });
+
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(screen.getByText(/failed on the ledger/i)).toBeInTheDocument();
+  });
+
+  it('shows a distinct timeout message and keeps the form retryable', async () => {
+    const onSuccess = jest.fn();
+    mockedSubmitAndConfirm.mockResolvedValue({
+      phase: 'timeout',
+      hash: HASH,
+      message:
+        'Transaction was submitted but not confirmed on-chain in time. Check the explorer link; if it never confirms, you can retry.',
+    });
+
+    renderComponent(true, onSuccess);
+    fillForm();
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: /Approve Milestone/i }),
+      );
+    });
+
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(/not confirmed on-chain in time/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Approve Milestone/i }),
+    ).not.toBeDisabled();
+  });
+
+  it('shows event_lag distinctly and still calls onSuccess (on-chain OK)', async () => {
+    const onSuccess = jest.fn();
+    mockedSubmitAndConfirm.mockImplementation(async (params) => {
+      params.onPhase?.('event_lag', {
+        hash: HASH,
+        message:
+          'Approved on-chain, but the activity feed has not caught up yet.',
+      });
+      return {
+        phase: 'event_lag',
+        hash: HASH,
+        message:
+          'Approved on-chain, but the activity feed has not caught up yet.',
+      };
+    });
+
+    renderComponent(true, onSuccess);
+    fillForm();
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: /Approve Milestone/i }),
+      );
+    });
+
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByText(/activity feed has not caught up/i),
+    ).toBeInTheDocument();
+  });
+
+  // silence unused import warning for getPlayer mock usage in other tests
+  void mockedGetPlayer;
+  void player;
 });

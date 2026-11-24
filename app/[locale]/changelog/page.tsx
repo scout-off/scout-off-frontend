@@ -7,9 +7,9 @@ import { ArrowLeft, Sparkles } from 'lucide-react';
 import EmptyState from '@/components/ui/EmptyState';
 
 interface ChangelogPageProps {
-  params: {
+  params: Promise<{
     locale: string;
-  };
+  }>;
 }
 
 type ChangelogSectionType = 'added' | 'improved' | 'fixed';
@@ -90,22 +90,23 @@ function loadChangelogEntries(): ChangelogEntry[] {
   }
 }
 
-export async function generateMetadata({
-  params,
-}: ChangelogPageProps): Promise<Metadata> {
+export async function generateMetadata(
+  props: ChangelogPageProps,
+): Promise<Metadata> {
+  const params = await props.params;
   const locale = params.locale;
   const t = await getTranslations({ locale, namespace: 'changelog' });
 
-  return {
+  const { buildPageMetadata } = await import('@/lib/seo');
+  return buildPageMetadata({
     title: `${t('page_title')} | ScoutOff`,
     description: t('page_description'),
-    alternates: {
-      canonical: `/${locale}/changelog`,
-    },
-  };
+    path: `/${locale}/changelog`,
+  });
 }
 
-export default async function ChangelogPage({ params }: ChangelogPageProps) {
+export default async function ChangelogPage(props: ChangelogPageProps) {
+  const params = await props.params;
   const locale = params.locale;
   const t = await getTranslations({ locale, namespace: 'changelog' });
   const changelogEntries = loadChangelogEntries().sort((left, right) => {
@@ -133,7 +134,7 @@ export default async function ChangelogPage({ params }: ChangelogPageProps) {
                 {t('page_description')}
               </p>
             </div>
-            <p className="text-sm text-gray-500">{t('english_notice')}</p>
+            <p className="text-sm text-gray-400">{t('english_notice')}</p>
           </div>
           <div className="flex justify-start">
             <Link

@@ -1,26 +1,30 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import api from '@/lib/api';
+import { requireAcademyManager } from '@/lib/academyAuth';
+import { privateJson } from '@/lib/httpResponses';
+import { getErrorMessage } from '@/lib/getErrorMessage';
+import { upstreamStatus } from '@/lib/httpClient';
 
-const ADMIN_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_ADDRESS;
-
+// Reachable by the super-admin (any academy) or that academy's recorded
+// ownerWallet (their own academy only) — see lib/academyAuth.ts (issue #1173).
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string; wallet: string } },
+  props: { params: Promise<{ id: string; wallet: string }> },
 ) {
-  const sessionCookie = req.cookies.get('session')?.value;
-  if (!sessionCookie || sessionCookie !== ADMIN_ADDRESS) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const params = await props.params;
+  const manager = await requireAcademyManager(req, params.id);
+  if (!manager) {
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
     await api.delete(
       `/academies/${encodeURIComponent(params.id)}/members/${encodeURIComponent(params.wallet)}`,
     );
-    return NextResponse.json({ success: true });
-  } catch (err: any) {
-    const status = err?.response?.status ?? 502;
-    const message =
-      err?.response?.data?.error ?? 'Failed to remove signer wallet';
-    return NextResponse.json({ error: message }, { status });
+    return privateJson({ success: true });
+  } catch (err: unknown) {
+    const status = upstreamStatus(err);
+    const message = getErrorMessage(err, 'Failed to remove signer wallet');
+    return privateJson({ error: message }, { status });
   }
 }

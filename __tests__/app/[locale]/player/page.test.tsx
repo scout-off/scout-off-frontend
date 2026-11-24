@@ -14,7 +14,8 @@ import type { Player } from '@/types';
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 jest.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
+  useTranslations: () =>
+    Object.assign((key: string) => key, { rich: (key: string) => key }),
 }));
 
 jest.mock('next/navigation', () => ({
@@ -95,6 +96,19 @@ jest.mock('@/components/ProgressBar', () => ({
 jest.mock('@/components/ui/ErrorBoundary', () => ({
   __esModule: true,
   default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+const mockShowToast = jest.fn();
+jest.mock('@/components/ui/Toast', () => ({
+  useToast: () => ({ show: mockShowToast }),
+}));
+
+// BackupWalletModal reads useWalletContext() unconditionally (regardless of
+// its isOpen prop), which requires a real WalletProvider ancestor this
+// suite doesn't render — mock it out like the other page subcomponents.
+jest.mock('@/components/player/BackupWalletModal', () => ({
+  __esModule: true,
+  default: () => null,
 }));
 
 // ── Typed mock helpers ────────────────────────────────────────────────────────

@@ -1,3 +1,4 @@
+import { escapeCsvValue } from '@/lib/csvSafe';
 import type { ReferralCode } from '@/types';
 
 const CSV_HEADERS = [
@@ -24,14 +25,6 @@ function formatReferralDate(value: number | null | undefined): string {
   if (normalized === null) return '';
 
   return new Date(normalized).toISOString();
-}
-
-function escapeCsvValue(value: string): string {
-  if (/[",\n\r]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-
-  return value;
 }
 
 export function buildReferralCodesCsv(codes: ReferralCode[], baseUrl: string) {

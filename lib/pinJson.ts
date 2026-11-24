@@ -22,6 +22,7 @@
 
 import crypto from 'crypto';
 import axios from 'axios';
+import { pinTimeoutMs } from './httpClient';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -62,7 +63,10 @@ const cache = new Map<string, CacheEntry>();
  * `{ a: 2, b: 1 }` produce the same hash.
  */
 export function hashMetadata(metadata: unknown): string {
-  const canonical = JSON.stringify(metadata, Object.keys(metadata as object).sort());
+  const canonical = JSON.stringify(
+    metadata,
+    Object.keys(metadata as object).sort(),
+  );
   return crypto.createHash('sha256').update(canonical).digest('hex');
 }
 
@@ -108,6 +112,7 @@ export async function pinJson(
         pinata_secret_api_key: process.env.PINATA_SECRET!,
         'Content-Type': 'application/json',
       },
+      timeout: pinTimeoutMs(0),
     },
   );
 

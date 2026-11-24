@@ -78,6 +78,7 @@ describe('RevokeForm', () => {
   });
 
   it('disables submit button during transaction submission', async () => {
+    mockSignAndSubmit.mockResolvedValue('mock-tx-hash');
     (buildRevokeMilestone as jest.Mock).mockImplementation(
       () =>
         new Promise((resolve) => setTimeout(() => resolve('mock-xdr'), 100)),
@@ -101,7 +102,7 @@ describe('RevokeForm', () => {
 
     await waitFor(() => {
       expect(submitButton).toBeDisabled();
-      expect(screen.getByText(/revoking/i)).toBeInTheDocument();
+      expect(screen.getByText(/confirming/i)).toBeInTheDocument();
     });
 
     await waitFor(
@@ -113,6 +114,10 @@ describe('RevokeForm', () => {
   });
 
   it('calls onSuccess after a successful revoke', async () => {
+    // Text-input mode signs via signAndSubmit and reports the tx hash;
+    // onSuccess fires ~1.5s after a confirmed hash (see RevokeForm.tsx).
+    mockSignAndSubmit.mockResolvedValue('mock-tx-hash');
+
     render(<RevokeForm onSuccess={mockOnSuccess} />);
 
     const playerInput = screen.getByLabelText(/player id/i);
@@ -130,7 +135,9 @@ describe('RevokeForm', () => {
 
     await waitFor(() => {
       expect(mockSignAndSubmit).toHaveBeenCalledWith('mock-xdr');
-      expect(mockOnSuccess).toHaveBeenCalled();
+    });
+    await waitFor(() => expect(mockOnSuccess).toHaveBeenCalled(), {
+      timeout: 3000,
     });
   });
 

@@ -42,18 +42,56 @@ jest.mock('@/lib/contract', () => ({
   buildRegisterPlayer: jest.fn(),
 }));
 
+jest.mock('@/lib/sorobanRpc', () => ({
+  ...jest.requireActual('@/lib/sorobanRpc'),
+  submitSignedTransaction: jest.fn(),
+}));
+
+jest.mock('@/lib/uploadTrackingClient', () => ({
+  trackUploadedCid: jest.fn().mockResolvedValue(undefined),
+  matchTrackedUpload: jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock('@/components/ui/VideoUpload', () => ({
   __esModule: true,
   default: ({
     onUpload,
     error,
+    onUploadStart,
+    onUploadingChange,
   }: {
     onUpload: (cid: string) => void;
     error?: string;
+    onUploadStart?: () => void;
+    onUploadingChange?: (uploading: boolean) => void;
   }) => (
     <div>
       <button type="button" onClick={() => onUpload('QmTestCID1234567890')}>
         Upload video
+      </button>
+      <button type="button" onClick={() => onUpload('QmDifferentCID9999999')}>
+        Upload different video
+      </button>
+      {/* Two-phase controls for simulating an in-flight replacement upload
+          (issue #1184): "start" fires before the new CID is known, "finish"
+          fires once the replacement upload actually completes. */}
+      <button
+        type="button"
+        onClick={() => {
+          onUploadStart?.();
+          onUploadingChange?.(true);
+        }}
+      >
+        Start replacement upload
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          onUpload('QmReplacementCID555555');
+          onUploadingChange?.(false);
+        }}
+      >
+        Finish replacement upload
       </button>
       {error && <p>{error}</p>}
     </div>
@@ -65,6 +103,12 @@ const mockedBuildRegisterPlayer = buildRegisterPlayer as jest.MockedFunction<
   typeof buildRegisterPlayer
 >;
 const mockedUsePlayer = require('@/hooks/usePlayer').usePlayer as jest.Mock;
+const {
+  trackUploadedCid: mockedTrackUploadedCid,
+  matchTrackedUpload: mockedMatchTrackedUpload,
+} = require('@/lib/uploadTrackingClient');
+const mockedSubmitSignedTransaction = require('@/lib/sorobanRpc')
+  .submitSignedTransaction as jest.Mock;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -78,6 +122,7 @@ function setupWallet(overrides: Partial<ReturnType<typeof useWallet>> = {}) {
     connect: jest.fn(),
     disconnect: jest.fn(),
     signAndSubmit: jest.fn().mockResolvedValue({ hash: 'tx-hash-123' }),
+    signOnly: jest.fn().mockResolvedValue('SIGNED_XDR_MOCK'),
     ...overrides,
   } as any);
 }
@@ -119,6 +164,11 @@ async function fillStep1AndAdvance() {
 describe('PlayerOnboardingWizard', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    sessionStorage.clear();
+    mockedSubmitSignedTransaction.mockResolvedValue({
+      hash: 'tx-hash-123',
+      status: 'PENDING',
+    });
   });
 
   // ── Initial render ────────────────────────────────────────────────────────
@@ -507,7 +557,9 @@ describe('PlayerOnboardingWizard', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('Contract error')).toBeInTheDocument();
+      expect(
+        screen.getByText('Contract error', { selector: 'span' }),
+      ).toBeInTheDocument();
     });
   });
 
@@ -586,10 +638,10 @@ describe('PlayerOnboardingWizard', () => {
     renderWizard(jest.fn(), existingPlayer as any);
 
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'A profile already exists for this wallet. You cannot register again.'
+      'A profile already exists for this wallet. You cannot register again.',
     );
     expect(
-      screen.queryByRole('heading', { name: /personal information/i })
+      screen.queryByRole('heading', { name: /personal information/i }),
     ).toBeNull();
   });
 
@@ -639,5 +691,151 @@ describe('PlayerOnboardingWizard', () => {
     expect(
       screen.queryByRole('heading', { name: /personal information/i }),
     ).toBeNull();
+  });
+
+  // ── Wizard state persistence & upload tracking (issue #1005) ─────────────
+
+  it('tracks the uploaded CID via the backend as soon as the upload completes', async () => {
+    renderWizard();
+    await act(async () => fillStep1AndAdvance());
+    fireEvent.click(screen.getByRole('button', { name: /upload video/i }));
+
+    expect(mockedTrackUploadedCid).toHaveBeenCalledWith({
+      cid: 'QmTestCID1234567890',
+      wallet: MOCK_PUBLIC_KEY,
+      context: 'player_onboarding_highlight_reel',
+    });
+  });
+
+  it('marks the tracked upload matched with the tx hash after a successful registration', async () => {
+    mockedBuildRegisterPlayer.mockResolvedValue('mock-xdr');
+    renderWizard();
+
+    await act(async () => fillStep1AndAdvance());
+    fireEvent.click(screen.getByRole('button', { name: /upload video/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: /register as player/i }),
+      );
+    });
+
+    expect(mockedMatchTrackedUpload).toHaveBeenCalledWith({
+      cid: 'QmTestCID1234567890',
+      txHash: 'tx-hash-123',
+    });
+  });
+
+  it('persists progress across a remount and resumes without re-uploading', async () => {
+    const onSuccess = jest.fn();
+    const { unmount } = renderWizard(onSuccess);
+    await act(async () => fillStep1AndAdvance());
+    fireEvent.click(screen.getByRole('button', { name: /upload video/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+
+    expect(
+      screen.getByRole('heading', { name: /review & confirm/i }),
+    ).toBeInTheDocument();
+
+    unmount();
+
+    // Simulate a page reload: a fresh mount for the same wallet.
+    renderWizard(onSuccess);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: /review & confirm/i }),
+      ).toBeInTheDocument();
+    });
+    // The previously-obtained CID survived the "reload" — no re-upload needed.
+    expect(screen.getByText('John Doe')).toBeInTheDocument();
+    expect(screen.getByText(/QmTestCI/)).toBeInTheDocument();
+  });
+
+  it('shows a reuse notice at step 2 when a CID was already uploaded before a remount', async () => {
+    const { unmount } = renderWizard();
+    await act(async () => fillStep1AndAdvance());
+    fireEvent.click(screen.getByRole('button', { name: /upload video/i }));
+
+    unmount();
+    renderWizard();
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/highlight reel already uploaded/i),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it('re-uploading a different file at step 2 supersedes the previous CID, not appends to it', async () => {
+    renderWizard();
+    await act(async () => fillStep1AndAdvance());
+    fireEvent.click(screen.getByRole('button', { name: /upload video/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continue/i })); // -> step 3
+
+    fireEvent.click(screen.getByRole('button', { name: /back/i })); // -> step 2
+    fireEvent.click(
+      screen.getByRole('button', { name: /upload different video/i }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: /continue/i })); // -> step 3
+
+    expect(screen.queryByText(/QmTestCI/)).toBeNull();
+    expect(screen.getByText(/QmDiffer/)).toBeInTheDocument();
+  });
+
+  // ── End-to-end CID integrity (issue #1184) ──────────────────────────────────
+
+  it('submits the second, replacement CID rather than the first when a highlight video is replaced mid-form', async () => {
+    mockedBuildRegisterPlayer.mockResolvedValue('unsigned-xdr');
+
+    renderWizard();
+    await act(async () => fillStep1AndAdvance());
+    fireEvent.click(screen.getByRole('button', { name: /upload video/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continue/i })); // -> step 3
+    fireEvent.click(screen.getByRole('button', { name: /back/i })); // -> step 2
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /start replacement upload/i }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: /finish replacement upload/i }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /continue/i })); // -> step 3
+    expect(screen.getByText(/QmReplac/)).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: /register as player/i }),
+      );
+    });
+
+    expect(mockedBuildRegisterPlayer).toHaveBeenCalledWith(
+      MOCK_PUBLIC_KEY,
+      expect.anything(),
+      'QmReplacementCID555555',
+    );
+  });
+
+  it('blocks advancing past step 2 while a replacement upload is still in flight, rather than proceeding with an incomplete CID', async () => {
+    renderWizard();
+    await act(async () => fillStep1AndAdvance());
+    fireEvent.click(screen.getByRole('button', { name: /upload video/i }));
+
+    // Start a replacement upload — the previously-accepted CID must not
+    // survive to let "Continue" through while it's in flight.
+    fireEvent.click(
+      screen.getByRole('button', { name: /start replacement upload/i }),
+    );
+
+    const continueButton = screen.getByRole('button', { name: /continue/i });
+    expect(continueButton).toBeDisabled();
+
+    fireEvent.click(continueButton);
+    expect(
+      screen.getByRole('heading', { name: /highlight reel/i }),
+    ).toBeInTheDocument();
+    expect(mockedBuildRegisterPlayer).not.toHaveBeenCalled();
   });
 });

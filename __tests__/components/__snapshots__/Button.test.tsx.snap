@@ -2,7 +2,7 @@
 
 exports[`Button snapshot: danger variant 1`] = `
 <button
-  class="px-4 py-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 bg-red-600 text-white hover:bg-red-700 "
+  class="px-4 py-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand-green focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900 bg-red-600 text-white hover:bg-red-700 "
 >
   Danger
 </button>
@@ -10,7 +10,7 @@ exports[`Button snapshot: danger variant 1`] = `
 
 exports[`Button snapshot: default variant 1`] = `
 <button
-  class="px-4 py-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 bg-brand-green text-black hover:opacity-90 "
+  class="px-4 py-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand-green focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900 bg-brand-green text-black hover:opacity-90 "
 >
   Default
 </button>
@@ -18,7 +18,7 @@ exports[`Button snapshot: default variant 1`] = `
 
 exports[`Button snapshot: secondary variant 1`] = `
 <button
-  class="px-4 py-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 bg-gray-700 text-white hover:bg-gray-600 "
+  class="px-4 py-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand-green focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 "
 >
   Secondary
 </button>

@@ -1,15 +1,22 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import AdminAuditLog from '@/components/admin/AdminAuditLog';
 import { useAdminAuditLog } from '@/hooks/useAdminAuditLog';
+import { buildAuditLogCsv } from '@/lib/auditLogCsv';
 import type { AdminAuditEntry, ReconciliationResult } from '@/lib/adminAudit';
 
 jest.mock('@/hooks/useAdminAuditLog', () => ({
   useAdminAuditLog: jest.fn(),
 }));
 
+jest.mock('@/lib/auditLogCsv', () => ({
+  buildAuditLogCsv: jest.fn(() => 'mocked,csv,content'),
+}));
+
 const mockUseAdminAuditLog = useAdminAuditLog as jest.Mock;
+const mockBuildAuditLogCsv = buildAuditLogCsv as jest.Mock;
 
 const runReconciliation = jest.fn();
 const setFilter = jest.fn();
@@ -30,7 +37,9 @@ function makeEntry(overrides: Partial<AdminAuditEntry> = {}): AdminAuditEntry {
   };
 }
 
-function baseState(overrides: Partial<ReturnType<typeof useAdminAuditLog>> = {}) {
+function baseState(
+  overrides: Partial<ReturnType<typeof useAdminAuditLog>> = {},
+) {
   return {
     entries: [],
     loading: false,
@@ -41,6 +50,8 @@ function baseState(overrides: Partial<ReturnType<typeof useAdminAuditLog>> = {})
     reconciling: false,
     runReconciliation,
     refetch,
+    reconciliationHistory: [],
+    reconciliationHistoryLoading: false,
     ...overrides,
   };
 }
@@ -60,17 +71,33 @@ describe('AdminAuditLog', () => {
 
   it('renders a row per audit entry', () => {
     mockUseAdminAuditLog.mockReturnValue(
-      baseState({ entries: [makeEntry(), makeEntry({ id: 2, actionType: 'pause', target: null })] }),
+      baseState({
+        entries: [
+          makeEntry(),
+          makeEntry({ id: 2, actionType: 'pause', target: null }),
+        ],
+      }),
     );
     render(<AdminAuditLog />);
-    expect(screen.getByText('Validator Added')).toBeInTheDocument();
-    expect(screen.getByText('Contract Paused')).toBeInTheDocument();
+    // Both 'Contract Paused' and 'Validator Added' appear in the filter
+    // dropdown `<option>` elements and the table `<td>` cells — use
+    // getAllByText and assert the table renders at least one of each.
+    expect(
+      screen.getAllByText('Contract Paused').length,
+    ).toBeGreaterThanOrEqual(2);
+    expect(
+      screen.getAllByText('Validator Added').length,
+    ).toBeGreaterThanOrEqual(2);
   });
 
   it('does not show a mismatch banner when reconciliation found nothing', () => {
     mockUseAdminAuditLog.mockReturnValue(
       baseState({
-        reconciliation: { checkedAt: 1, mismatches: [], skipped: [] } as ReconciliationResult,
+        reconciliation: {
+          checkedAt: 1,
+          mismatches: [],
+          skipped: [],
+        } as ReconciliationResult,
       }),
     );
     render(<AdminAuditLog />);
@@ -123,7 +150,9 @@ describe('AdminAuditLog', () => {
   it('disables the export button when there are no entries', () => {
     mockUseAdminAuditLog.mockReturnValue(baseState());
     render(<AdminAuditLog />);
-    expect(screen.getByRole('button', { name: /export as csv/i })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /export as csv/i }),
+    ).toBeDisabled();
   });
 
   it('triggers a CSV download when export is clicked with entries present', () => {
@@ -134,11 +163,49 @@ describe('AdminAuditLog', () => {
     expect(global.URL.createObjectURL).toHaveBeenCalled();
   });
 
+  it('calls buildAuditLogCsv with the correct entries when export is clicked', async () => {
+    const entries = [
+      makeEntry(),
+      makeEntry({
+        id: 2,
+        actionType: 'fee_withdrawal',
+        amountStroops: 5_0000000,
+      }),
+    ];
+    mockBuildAuditLogCsv.mockReturnValue(
+      'timestamp,action,admin\n2024-01-01,Validator Added,GADMIN\n',
+    );
+    mockUseAdminAuditLog.mockReturnValue(baseState({ entries }));
+    render(<AdminAuditLog />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /export as csv/i }));
+
+    expect(mockBuildAuditLogCsv).toHaveBeenCalledTimes(1);
+    expect(mockBuildAuditLogCsv).toHaveBeenCalledWith(entries);
+    expect(global.URL.createObjectURL).toHaveBeenCalled();
+  });
+
+  it('keeps the export button disabled when the log is empty', () => {
+    mockBuildAuditLogCsv.mockReturnValue('');
+    mockUseAdminAuditLog.mockReturnValue(baseState({ entries: [] }));
+    render(<AdminAuditLog />);
+
+    // The export button is disabled when entries is empty, so CSV is never
+    // called from the button. But verify the component doesn't crash and the
+    // button is disabled.
+    const btn = screen.getByRole('button', { name: /export as csv/i });
+    expect(btn).toBeDisabled();
+    expect(mockBuildAuditLogCsv).not.toHaveBeenCalled();
+  });
+
   it('calls runReconciliation when "Run Reconciliation" is clicked', () => {
     mockUseAdminAuditLog.mockReturnValue(baseState());
     render(<AdminAuditLog />);
 
-    fireEvent.click(screen.getByRole('button', { name: /run reconciliation/i }));
+    fireEvent.click(
+      screen.getByRole('button', { name: /run reconciliation/i }),
+    );
     expect(runReconciliation).toHaveBeenCalled();
   });
 
@@ -167,5 +234,84 @@ describe('AdminAuditLog', () => {
     expect(setFilter).toHaveBeenCalledWith(
       expect.objectContaining({ actionType: 'pause' }),
     );
+  });
+
+  // ── Reconciliation history (issue #1188) ──────────────────────────────────
+
+  it('hides history rows until the history section is expanded', () => {
+    mockUseAdminAuditLog.mockReturnValue(
+      baseState({
+        reconciliationHistory: [
+          {
+            id: 1,
+            checkedAt: 1_700_000_000,
+            mismatches: [],
+            newMismatchCount: 0,
+            skipped: [],
+          },
+        ],
+      }),
+    );
+    render(<AdminAuditLog />);
+
+    expect(screen.queryByText(/checked at/i)).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole('button', { name: /reconciliation history/i }),
+    );
+    expect(screen.getByText(/checked at/i)).toBeInTheDocument();
+  });
+
+  it('shows past run mismatch counts and types once expanded', () => {
+    mockUseAdminAuditLog.mockReturnValue(
+      baseState({
+        reconciliationHistory: [
+          {
+            id: 2,
+            checkedAt: 1_700_000_100,
+            mismatches: [
+              {
+                actionType: 'validator_add',
+                kind: 'missing_audit_entry',
+                description: 'x',
+                target: 'GABC',
+              },
+            ],
+            newMismatchCount: 1,
+            skipped: [],
+          },
+          {
+            id: 1,
+            checkedAt: 1_700_000_000,
+            mismatches: [],
+            newMismatchCount: 0,
+            skipped: [],
+          },
+        ],
+      }),
+    );
+    render(<AdminAuditLog />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /reconciliation history/i }),
+    );
+
+    const rows = screen.getAllByRole('row');
+    // Header row + 2 data rows.
+    expect(rows).toHaveLength(3);
+    expect(screen.getByText('missing_audit_entry')).toBeInTheDocument();
+  });
+
+  it('shows an empty message when no reconciliation runs are recorded yet', () => {
+    mockUseAdminAuditLog.mockReturnValue(
+      baseState({ reconciliationHistory: [] }),
+    );
+    render(<AdminAuditLog />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /reconciliation history/i }),
+    );
+    expect(
+      screen.getByText(/no reconciliation runs recorded yet/i),
+    ).toBeInTheDocument();
   });
 });

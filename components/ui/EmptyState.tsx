@@ -15,7 +15,7 @@ export default function EmptyState({
 }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-      <div className="text-gray-600 mb-4">
+      <div className="text-gray-400 dark:text-gray-600 mb-4">
         {icon ?? (
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -33,9 +33,13 @@ export default function EmptyState({
           </svg>
         )}
       </div>
-      <h3 className="text-white font-semibold text-lg">{title}</h3>
+      <h3 className="text-gray-900 dark:text-white font-semibold text-lg">
+        {title}
+      </h3>
       {description && (
-        <p className="text-gray-500 text-sm mt-1 max-w-sm">{description}</p>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 max-w-sm">
+          {description}
+        </p>
       )}
       {action && (
         <button

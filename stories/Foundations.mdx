@@ -1,0 +1,32 @@
+import { Meta } from '@storybook/blocks';
+import {
+  ColorSwatches,
+  SpacingScale,
+  TypographyScale,
+} from './foundations/TokenExamples';
+
+<Meta title="Foundations/Design Tokens" />
+
+# Design Tokens
+
+Token values are read from the resolved Tailwind theme (`tailwind.config.ts` via
+`tailwindcss/resolveConfig`), so this page stays aligned with the config that
+`components/ui` primitives use.
+
+## Colors
+
+Brand palette from `theme.extend.colors.brand`, rendered as live swatches:
+
+<ColorSwatches />
+
+## Spacing
+
+Spacing scale from `theme.spacing`, shown as live width bars:
+
+<SpacingScale />
+
+## Typography
+
+Font-size scale from `theme.fontSize`, with live type samples:
+
+<TypographyScale />

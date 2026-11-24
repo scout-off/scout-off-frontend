@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import axios from 'axios';
+import { apiError, ApiErrorCode } from '@/lib/apiErrors';
+import {
+  createClient,
+  SEARCH_TIMEOUT_MS,
+  upstreamStatus,
+} from '@/lib/httpClient';
 import { createRequestLogger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/getErrorMessage';
 import { getClientIp, checkRateLimit } from '@/lib/rateLimit';
+import { withOutboundSpan, withRouteTelemetry } from '@/lib/telemetry';
+
+// Search names longer than this are likely abuse or mistake; never forward them.
+const PLAYER_SEARCH_NAME_MAX = 100;
 
 /**
  * GET /api/players/search?name=...
@@ -24,12 +34,13 @@ import { getClientIp, checkRateLimit } from '@/lib/rateLimit';
 const RATE_LIMIT = 20;
 const WINDOW_MS = 10 * 1000;
 
-const backend = axios.create({
+const backend = createClient('players-search', {
+  timeoutMs: SEARCH_TIMEOUT_MS,
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000',
   headers: { 'Content-Type': 'application/json' },
 });
 
-export async function GET(req: NextRequest) {
+async function getPlayerSearch(req: NextRequest) {
   const log = createRequestLogger(req);
   const ip = getClientIp(req);
 
@@ -40,23 +51,45 @@ export async function GET(req: NextRequest) {
   if (rl.limited) {
     log.warn('Rate limit exceeded', { ip });
     const retryAfter = rl.retryAfterSec ?? Math.ceil(WINDOW_MS / 1000);
-    return NextResponse.json(
-      { error: 'Too many search requests. Please slow down.' },
-      { status: 429, headers: { 'Retry-After': String(retryAfter) } },
+    return apiError(
+      ApiErrorCode.RATE_LIMITED,
+      429,
+      'Too many search requests. Please slow down.',
+      undefined,
+      { headers: { 'Retry-After': String(retryAfter) } },
     );
   }
 
   const name = req.nextUrl.searchParams.get('name') ?? '';
 
+  if (name.length > PLAYER_SEARCH_NAME_MAX) {
+    return apiError(
+      ApiErrorCode.QUERY_TOO_LONG,
+      400,
+      `name must be at most ${PLAYER_SEARCH_NAME_MAX} characters`,
+      { max: PLAYER_SEARCH_NAME_MAX },
+    );
+  }
+
   try {
-    const res = await backend.get('/players/search', { params: { name } });
+    const res = await withOutboundSpan(
+      'backend.players.search',
+      { dependency: 'backend', operation: 'players.search' },
+      () => backend.get('/players/search', { params: { name } }),
+    );
     return NextResponse.json(res.data);
-  } catch (e: any) {
-    const status = e?.response?.status ?? 502;
+  } catch (e: unknown) {
+    const status = upstreamStatus(e);
     log.error('Player search proxy failed', {
       status,
-      reason: e instanceof Error ? e.message : String(e),
+      reason: getErrorMessage(e, 'Unknown error'),
     });
-    return NextResponse.json({ error: 'Failed to search players' }, { status });
+    return apiError(
+      ApiErrorCode.UPSTREAM_FAILED,
+      status,
+      'Failed to search players',
+    );
   }
 }
+
+export const GET = withRouteTelemetry(getPlayerSearch, '/api/players/search');

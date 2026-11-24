@@ -115,3 +115,107 @@ describe('useIsPaused', () => {
     expect(isPausedResult.current).toBe(true);
   });
 });
+
+// ── Explicit paused / unpaused / error scenarios (acceptance criteria) ────────
+//
+// These three named cases satisfy the task requirement for coverage of each
+// distinct circuit-breaker state.  They also exercise the relationship between
+// the hook's boolean return value and the underlying useContractHealth data so
+// that ContractPausedBanner's rendering logic is indirectly verified.
+
+describe('useIsPaused — paused state', () => {
+  beforeEach(() => jest.resetAllMocks());
+
+  // AC: mock contract isPaused → true; hook surfaces { isPaused: true, loading: false }
+  it('surfaces isPaused:true and loading:false once the contract query resolves with true', async () => {
+    mockGetContractHealth.mockResolvedValue({ status: 'ok' });
+    mockGetContractPaused.mockResolvedValue(true);
+
+    const { result: healthResult } = renderHook(() => useContractHealth());
+    const { result: isPausedResult } = renderHook(() => useIsPaused());
+
+    // Settle all async state updates
+    await flush();
+
+    expect(isPausedResult.current).toBe(true); // isPaused: true
+    expect(healthResult.current.loading).toBe(false); // loading: false
+    expect(healthResult.current.paused).toBe(true); // underlying source agrees
+  });
+
+  // Verify getContractPaused was called (mock data accurately simulates contract)
+  it('calls getContractPaused exactly once per render cycle', async () => {
+    mockGetContractHealth.mockResolvedValue({});
+    mockGetContractPaused.mockResolvedValue(true);
+
+    renderHook(() => useIsPaused());
+    await flush();
+
+    expect(mockGetContractPaused).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('useIsPaused — unpaused state', () => {
+  beforeEach(() => jest.resetAllMocks());
+
+  it('surfaces isPaused:false and loading:false once the contract query resolves with false', async () => {
+    mockGetContractHealth.mockResolvedValue({ status: 'ok' });
+    mockGetContractPaused.mockResolvedValue(false);
+
+    const { result: healthResult } = renderHook(() => useContractHealth());
+    const { result: isPausedResult } = renderHook(() => useIsPaused());
+
+    await flush();
+
+    expect(isPausedResult.current).toBe(false); // isPaused: false
+    expect(healthResult.current.loading).toBe(false); // loading: false
+    expect(healthResult.current.paused).toBe(false); // underlying source agrees
+  });
+});
+
+describe('useIsPaused — error state (fail-open)', () => {
+  beforeEach(() => jest.resetAllMocks());
+
+  // AC: when the contract query fails, isPaused defaults to false (fail-open for
+  // read-only display) so ContractPausedBanner does not show a false positive.
+  it('defaults isPaused to false when getContractPaused rejects (fail-open)', async () => {
+    mockGetContractHealth.mockResolvedValue({});
+    mockGetContractPaused.mockRejectedValue(new Error('RPC timeout'));
+
+    const { result } = renderHook(() => useIsPaused());
+    await flush();
+
+    // fail-open: error must NOT trigger the paused banner
+    expect(result.current).toBe(false);
+  });
+
+  it('defaults isPaused to false when both getContractHealth and getContractPaused reject', async () => {
+    mockGetContractHealth.mockRejectedValue(new Error('network error'));
+    mockGetContractPaused.mockRejectedValue(new Error('network error'));
+
+    const { result } = renderHook(() => useIsPaused());
+    await flush();
+
+    expect(result.current).toBe(false);
+  });
+
+  // AC: SWR cache / polling re-evaluation — simulate a re-mount (equivalent to
+  // a polling interval firing) and verify the hook picks up a newly-paused state.
+  it('re-evaluates isPaused on re-mount, picking up a newly paused state', async () => {
+    // First render: contract healthy and NOT paused
+    mockGetContractHealth.mockResolvedValue({});
+    mockGetContractPaused.mockResolvedValue(false);
+
+    const { result, unmount } = renderHook(() => useIsPaused());
+    await flush();
+    expect(result.current).toBe(false);
+
+    unmount();
+
+    // Second render (simulates polling or component re-mount): contract IS paused now
+    mockGetContractPaused.mockResolvedValue(true);
+
+    const { result: result2 } = renderHook(() => useIsPaused());
+    await flush();
+    expect(result2.current).toBe(true);
+  });
+});

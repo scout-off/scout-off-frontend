@@ -61,12 +61,12 @@ reads the same cache entry, since the key is derived purely from
 lets `ContactModal` display what a caller already unlocked without needing
 to trigger (and pay for) `pay_to_contact` a second time.
 
-| Trigger | Action | Guarantee |
-| --- | --- | --- |
-| `unlock()` resolves | `cacheContactDetails(key, details)` | Cache entry created; TTL timer (re)started |
-| `CONTACT_DETAILS_TTL_MS` elapses | scheduled `purgeContactDetails`-equivalent purge | Entry cleared even with no user action |
-| `ContactModal` closed | `usePayToContact().clear()` | That entry cleared immediately |
-| Wallet disconnect | `purgeAllContactDetails()` + blanket SWR wipe | Every `contact:*` entry cleared immediately, pending TTL timers cancelled |
+| Trigger                          | Action                                           | Guarantee                                                                 |
+| -------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------- |
+| `unlock()` resolves              | `cacheContactDetails(key, details)`              | Cache entry created; TTL timer (re)started                                |
+| `CONTACT_DETAILS_TTL_MS` elapses | scheduled `purgeContactDetails`-equivalent purge | Entry cleared even with no user action                                    |
+| `ContactModal` closed            | `usePayToContact().clear()`                      | That entry cleared immediately                                            |
+| Wallet disconnect                | `purgeAllContactDetails()` + blanket SWR wipe    | Every `contact:*` entry cleared immediately, pending TTL timers cancelled |
 
 ## What not to do here
 

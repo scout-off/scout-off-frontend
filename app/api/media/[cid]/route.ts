@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyMediaUrlSignature } from '@/lib/mediaUrlSigning';
 import { createRequestLogger } from '@/lib/logger';
+import { fetchMediaFromGateways } from '@/lib/mediaProxyGateway';
+import { isValidCid, normalizeCid } from '@/lib/cid';
+import { withRouteTelemetry } from '@/lib/telemetry';
+import { IPFS_FALLBACK_GATEWAYS } from '@/lib/ipfsGateways';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
+import { MediaModerationStore } from '@/lib/mediaModerationStore';
 
 /**
  * GET /api/media/[cid]
@@ -24,45 +30,44 @@ import { createRequestLogger } from '@/lib/logger';
  * profile photo/video is a *new* CID (see buildUpdateProfile in
  * lib/contract.ts), not a mutation of an existing one, which is what makes
  * cache invalidation a non-issue here.
+ *
+ * HTTP Range requests are forwarded upstream so <video> scrubbing works.
+ * A bounded read-ahead probe (lib/mediaProxyGateway.ts) retries the next
+ * gateway when an upstream stream stalls or errors before any bytes are
+ * committed to the client.
  */
 
 const PRIMARY_GATEWAY =
   process.env.NEXT_PUBLIC_IPFS_GATEWAY ?? 'https://gateway.pinata.cloud/ipfs';
 
 /** Same fallback order as lib/ipfs.ts's client-side gateway fallback. */
-const FALLBACK_GATEWAYS = [
-  'https://ipfs.io/ipfs',
-  'https://cloudflare-ipfs.com/ipfs',
-];
+const FALLBACK_GATEWAYS = IPFS_FALLBACK_GATEWAYS;
 
 const CACHE_CONTROL = 'public, max-age=31536000, immutable';
 
-// Best-effort in-process rate limit. This only protects a single server
-// instance/region — it bounds obvious bulk-scraping in the default
-// single-instance deployment, but a production deployment fronted by a real
-// CDN should prefer that CDN's (or Cloudflare's/Upstash's) distributed rate
-// limiting instead of relying on this alone.
+/** Error responses must never be cached by the CDN or browser. */
+function errorResponse(
+  error: string,
+  status: number,
+  headers: Record<string, string> = {},
+) {
+  return NextResponse.json(
+    { error },
+    {
+      status,
+      headers: {
+        'Cache-Control': 'no-store',
+        'CDN-Cache-Control': 'no-store',
+        ...headers,
+      },
+    },
+  );
+}
+
+// Shared, Redis-backed (when configured) limiter from lib/rateLimit.ts so
+// the limit holds across serverless instances (#1330).
 const RATE_LIMIT_PER_WINDOW = 120;
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
-type RateEntry = { count: number; firstSeen: number };
-const rateMap = new Map<string, RateEntry>();
-
-function getClientIp(req: NextRequest): string {
-  const forwarded = req.headers.get('x-forwarded-for');
-  if (forwarded) return forwarded.split(',')[0].trim();
-  return req.headers.get('x-real-ip') ?? 'unknown';
-}
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateMap.get(ip);
-  if (!entry || now - entry.firstSeen > RATE_LIMIT_WINDOW_MS) {
-    rateMap.set(ip, { count: 1, firstSeen: now });
-    return false;
-  }
-  entry.count += 1;
-  return entry.count > RATE_LIMIT_PER_WINDOW;
-}
 
 function isAllowedReferrer(req: NextRequest): boolean {
   const referer = req.headers.get('referer');
@@ -72,9 +77,10 @@ function isAllowedReferrer(req: NextRequest): boolean {
   // Referer, which is the common hotlinking/scraping signature.
   if (!referer) return true;
 
-  const allowedOrigins = [process.env.NEXT_PUBLIC_APP_URL, 'http://localhost:3000'].filter(
-    (v): v is string => Boolean(v),
-  );
+  const allowedOrigins = [
+    process.env.NEXT_PUBLIC_APP_URL,
+    'http://localhost:3000',
+  ].filter((v): v is string => Boolean(v));
 
   try {
     const refOrigin = new URL(referer).origin;
@@ -90,23 +96,43 @@ function isAllowedReferrer(req: NextRequest): boolean {
   }
 }
 
-export async function GET(
+async function getMedia(
   req: NextRequest,
   { params }: { params: { cid: string } },
 ) {
   const log = createRequestLogger(req);
-  const cid = params.cid;
-  if (!cid) {
-    return NextResponse.json({ error: 'Missing cid' }, { status: 400 });
+  if (!params.cid) {
+    return errorResponse('Missing cid', 400);
+  }
+  // Validate before any upstream fetch so callers can't shape arbitrary
+  // gateway requests (path traversal, query injection) through our origin.
+  if (!isValidCid(params.cid)) {
+    return errorResponse('Invalid cid', 400);
+  }
+  // Canonical case, so `B…`/`b…` share one denylist entry and cache key.
+  const cid = normalizeCid(params.cid);
+
+  // Moderated media (issue #1320): never proxied, and never cached, so a
+  // later reinstatement takes effect. This only covers ScoutOff's own
+  // surfaces — the CID stays reachable through public IPFS gateways.
+  if (MediaModerationStore.getInstance().isDenylisted(cid)) {
+    return NextResponse.json(
+      { error: 'This media has been removed for legal or policy reasons' },
+      { status: 451, headers: { 'Cache-Control': 'no-store' } },
+    );
   }
 
   const ip = getClientIp(req);
-  if (isRateLimited(ip)) {
+  const rl = await checkRateLimit(`media:${ip}`, {
+    limit: RATE_LIMIT_PER_WINDOW,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+  });
+  if (rl.limited) {
     log.warn('Rate limit exceeded', { ip, cid });
-    return NextResponse.json(
-      { error: 'Too many requests' },
-      { status: 429, headers: { 'Retry-After': '60' } },
-    );
+    const retryAfter = rl.retryAfterSec ?? RATE_LIMIT_WINDOW_MS / 1000;
+    return errorResponse('Too many requests', 429, {
+      'Retry-After': String(retryAfter),
+    });
   }
 
   const { searchParams } = new URL(req.url);
@@ -117,56 +143,63 @@ export async function GET(
     // A signature was presented — it must be valid and unexpired regardless
     // of Referer.
     if (!verifyMediaUrlSignature(cid, exp, sig)) {
-      return NextResponse.json(
-        { error: 'Invalid or expired signature' },
-        { status: 403 },
-      );
+      return errorResponse('Invalid or expired signature', 403);
     }
   } else if (!isAllowedReferrer(req)) {
     // No signature — fall back to referrer gating. This rejects the
     // explicit-cross-site-Referer case (another site directly embedding our
     // proxy URL) while still allowing same-site and no-Referer requests,
     // which covers ordinary in-app <img>/<video> usage today.
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return errorResponse('Forbidden', 403);
   }
 
   const gateways = [PRIMARY_GATEWAY, ...FALLBACK_GATEWAYS];
-  let lastError: unknown = null;
+  const rangeHeader = req.headers.get('range');
 
-  for (const gateway of gateways) {
-    try {
-      const upstream = await fetch(`${gateway}/${cid}`);
-      if (!upstream.ok || !upstream.body) {
-        lastError = new Error(
-          `Gateway ${gateway} returned ${upstream.status}`,
-        );
-        continue;
-      }
+  try {
+    const result = await fetchMediaFromGateways({
+      cid,
+      gateways,
+      rangeHeader,
+    });
 
-      const contentType =
-        upstream.headers.get('content-type') ?? 'application/octet-stream';
-
-      return new NextResponse(upstream.body, {
-        status: 200,
-        headers: {
-          'Content-Type': contentType,
-          'Cache-Control': CACHE_CONTROL,
-          // Vercel's Edge Network (and most CDNs) prefer a dedicated
-          // CDN-facing directive over the browser-facing Cache-Control when
-          // both are present, so edge caching still applies even if a
-          // downstream proxy strips or rewrites Cache-Control for clients.
-          'CDN-Cache-Control': CACHE_CONTROL,
-          Vary: 'Accept',
-        },
-      });
-    } catch (err) {
-      lastError = err;
+    if (!result) {
+      log.error('All IPFS gateways exhausted', { cid });
+      return errorResponse('Media not available', 502);
     }
-  }
 
-  log.error('All IPFS gateways exhausted', {
-    cid,
-    reason: lastError instanceof Error ? lastError.message : String(lastError),
-  });
-  return NextResponse.json({ error: 'Media not available' }, { status: 502 });
+    const responseHeaders: Record<string, string> = {
+      'Content-Type': result.contentType,
+      'Cache-Control': CACHE_CONTROL,
+      // Vercel's Edge Network (and most CDNs) prefer a dedicated
+      // CDN-facing directive over the browser-facing Cache-Control when
+      // both are present, so edge caching still applies even if a
+      // downstream proxy strips or rewrites Cache-Control for clients.
+      'CDN-Cache-Control': CACHE_CONTROL,
+      // Range + Accept so edge caches key full-file vs partial responses
+      // separately without disabling caching for the common start-from-zero case.
+      Vary: 'Range, Accept',
+      'Accept-Ranges': result.acceptRanges,
+    };
+
+    if (result.contentRange) {
+      responseHeaders['Content-Range'] = result.contentRange;
+    }
+    if (result.contentLength) {
+      responseHeaders['Content-Length'] = result.contentLength;
+    }
+
+    return new NextResponse(result.body, {
+      status: result.status,
+      headers: responseHeaders,
+    });
+  } catch (err) {
+    log.error('All IPFS gateways exhausted', {
+      cid,
+      reason: err instanceof Error ? err.message : String(err),
+    });
+    return errorResponse('Media not available', 502);
+  }
 }
+
+export const GET = withRouteTelemetry(getMedia, '/api/media/[cid]');

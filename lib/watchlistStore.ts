@@ -1,23 +1,25 @@
 /**
  * watchlistStore — SQLite-backed persistence for scouts' player watchlists.
- * Mirrors lib/adminAuditStore.ts's conventions: one table with idempotent
- * `CREATE TABLE IF NOT EXISTS` DDL run on construction, a process-wide
- * singleton, DB bootstrap shared via lib/sqliteDb.ts.
+ * Mirrors lib/adminAuditStore.ts's conventions: a process-wide singleton,
+ * DB bootstrap and schema shared via lib/sqliteDb.ts's openSqliteDb, with
+ * schema applied through lib/sqliteMigrations.ts's versioned migration
+ * runner (see lib/migrations/watchlistMigrations.ts).
+ *
+ * Per-wallet cap: each scout is limited to MAX_WATCHLIST_ENTRIES (500)
+ * watchlist entries. The route layer enforces the cap before calling add()
+ * and returns 409 when the limit is reached (issue #1507).
  */
 import type Database from 'better-sqlite3';
 import { openSqliteDb } from './sqliteDb';
+import { watchlistMigrations } from './migrations/watchlistMigrations';
+import { normalizeStellarAddress } from './stellar';
 import type { WatchlistEntry } from '@/types';
 
-const SCHEMA = `
-CREATE TABLE IF NOT EXISTS watchlist (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  scout_wallet TEXT NOT NULL,
-  player_id TEXT NOT NULL,
-  created_at INTEGER NOT NULL,
-  UNIQUE(scout_wallet, player_id)
-);
-CREATE INDEX IF NOT EXISTS idx_watchlist_scout_wallet ON watchlist(scout_wallet);
-`;
+/**
+ * Maximum number of watchlist entries allowed per scout wallet.
+ * Exported so route handlers and tests can reference the canonical value.
+ */
+export const MAX_WATCHLIST_ENTRIES = 500;
 
 interface WatchlistRow {
   id: number;
@@ -42,13 +44,12 @@ export class WatchlistStore {
 
   private constructor(db: Database.Database) {
     this.db = db;
-    this.db.exec(SCHEMA);
   }
 
   static getInstance(): WatchlistStore {
     if (!WatchlistStore._instance) {
       WatchlistStore._instance = new WatchlistStore(
-        openSqliteDb('watchlist.db', 'WATCHLIST_DB_PATH'),
+        openSqliteDb('watchlist.db', 'WATCHLIST_DB_PATH', watchlistMigrations),
       );
     }
     return WatchlistStore._instance;
@@ -63,14 +64,18 @@ export class WatchlistStore {
   }
 
   add(scoutWallet: string, playerId: string): WatchlistEntry {
+    // Normalize both addresses to uppercase to prevent case-sensitivity duplicates
+    const normalizedScoutWallet = normalizeStellarAddress(scoutWallet);
+    const normalizedPlayerId = normalizeStellarAddress(playerId);
+
     this.db
       .prepare(
         `INSERT OR IGNORE INTO watchlist (scout_wallet, player_id, created_at)
          VALUES (@scout_wallet, @player_id, @created_at)`,
       )
       .run({
-        scout_wallet: scoutWallet,
-        player_id: playerId,
+        scout_wallet: normalizedScoutWallet,
+        player_id: normalizedPlayerId,
         created_at: Date.now(),
       });
 
@@ -78,25 +83,45 @@ export class WatchlistStore {
       .prepare(
         'SELECT * FROM watchlist WHERE scout_wallet = ? AND player_id = ?',
       )
-      .get(scoutWallet, playerId) as WatchlistRow;
+      .get(normalizedScoutWallet, normalizedPlayerId) as WatchlistRow;
     return rowToEntry(row);
   }
 
   /** Deletes an entry scoped to its owner. Returns false if not found or not owned by scoutWallet. */
   remove(scoutWallet: string, id: number): boolean {
+    const normalizedScoutWallet = normalizeStellarAddress(scoutWallet);
     const result = this.db
       .prepare('DELETE FROM watchlist WHERE id = ? AND scout_wallet = ?')
-      .run(id, scoutWallet);
+      .run(id, normalizedScoutWallet);
     return result.changes > 0;
   }
 
+  /** Deletes every entry owned by scoutWallet. Returns the number of rows removed. */
+  clearForWallet(scoutWallet: string): number {
+    const normalizedScoutWallet = normalizeStellarAddress(scoutWallet);
+    const result = this.db
+      .prepare('DELETE FROM watchlist WHERE scout_wallet = ?')
+      .run(normalizedScoutWallet);
+    return result.changes;
+  }
+
   list(scoutWallet: string): WatchlistEntry[] {
+    const normalizedScoutWallet = normalizeStellarAddress(scoutWallet);
     const rows = this.db
       .prepare(
         'SELECT * FROM watchlist WHERE scout_wallet = ? ORDER BY created_at DESC, id DESC',
       )
-      .all(scoutWallet) as WatchlistRow[];
+      .all(normalizedScoutWallet) as WatchlistRow[];
     return rows.map(rowToEntry);
+  }
+
+  /** Returns the number of entries owned by scoutWallet. */
+  count(scoutWallet: string): number {
+    const normalizedScoutWallet = normalizeStellarAddress(scoutWallet);
+    const row = this.db
+      .prepare('SELECT COUNT(*) AS n FROM watchlist WHERE scout_wallet = ?')
+      .get(normalizedScoutWallet) as { n: number };
+    return row.n;
   }
 
   close(): void {

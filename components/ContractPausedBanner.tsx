@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import useIsPaused from '@/hooks/useIsPaused';
+import { CONTRACT_PAUSED_DISMISSED_KEY } from '@/lib/storageKeys';
 
-const SESSION_KEY = 'scoutoff:contractPausedDismissed';
+const SESSION_KEY = CONTRACT_PAUSED_DISMISSED_KEY;
 const SUPPORT_URL = 'https://discord.gg/stellar';
 
 export default function ContractPausedBanner() {

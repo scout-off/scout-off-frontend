@@ -1,8 +1,46 @@
 User-agent: *
 Allow: /
+
+# ── Admin ─────────────────────────────────────────────────────────────────────
 Disallow: /admin
-Disallow: /api/
 Disallow: /en/admin
 Disallow: /fr/admin
 Disallow: /sw/admin
+
+# ── API ───────────────────────────────────────────────────────────────────────
+Disallow: /api/
+
+# ── Scout private routes ──────────────────────────────────────────────────────
+Disallow: /scout/subscribe
+Disallow: /en/scout/subscribe
+Disallow: /fr/scout/subscribe
+Disallow: /sw/scout/subscribe
+
+Disallow: /scout/watchlist
+Disallow: /en/scout/watchlist
+Disallow: /fr/scout/watchlist
+Disallow: /sw/scout/watchlist
+
+Disallow: /scout/compare
+Disallow: /en/scout/compare
+Disallow: /fr/scout/compare
+Disallow: /sw/scout/compare
+
+# ── User account & recovery ───────────────────────────────────────────────────
+Disallow: /settings
+Disallow: /en/settings
+Disallow: /fr/settings
+Disallow: /sw/settings
+
+Disallow: /recovery
+Disallow: /en/recovery
+Disallow: /fr/recovery
+Disallow: /sw/recovery
+
+# ── Academy management ────────────────────────────────────────────────────────
+Disallow: /academy/bulk-import
+Disallow: /en/academy/bulk-import
+Disallow: /fr/academy/bulk-import
+Disallow: /sw/academy/bulk-import
+
 Sitemap: /sitemap.xml

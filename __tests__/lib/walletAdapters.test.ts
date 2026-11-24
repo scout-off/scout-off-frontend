@@ -1,12 +1,16 @@
 import { walletAdapters } from '@/lib/walletAdapters';
 import {
-  getPublicKey as freighterGetPublicKey,
+  getAddress as freighterGetAddress,
   isConnected as freighterIsConnected,
   signTransaction as freighterSign,
 } from '@stellar/freighter-api';
 
+// freighter-api v3+ (issue #1515):
+//   - getPublicKey() → getAddress(), returns { address, error? }
+//   - isConnected() returns { isConnected: boolean }
+//   - signTransaction() returns { signedTransaction, signerAddress, error? }
 jest.mock('@stellar/freighter-api', () => ({
-  getPublicKey: jest.fn(),
+  getAddress: jest.fn(),
   isConnected: jest.fn(),
   signTransaction: jest.fn(),
 }));
@@ -47,7 +51,7 @@ jest.mock('@stellar/stellar-sdk', () => {
   };
 });
 
-const mockGetPublicKey = freighterGetPublicKey as jest.Mock;
+const mockGetAddress = freighterGetAddress as jest.Mock;
 const mockIsConnected = freighterIsConnected as jest.Mock;
 const mockSign = freighterSign as jest.Mock;
 
@@ -77,8 +81,8 @@ beforeEach(() => {
 
 describe('walletAdapters.freighter', () => {
   it('returns the public key when Freighter is connected', async () => {
-    mockIsConnected.mockResolvedValue(true);
-    mockGetPublicKey.mockResolvedValue('GPUBLICKEY');
+    mockIsConnected.mockResolvedValue({ isConnected: true });
+    mockGetAddress.mockResolvedValue({ address: 'GPUBLICKEY' });
 
     await expect(walletAdapters.freighter.getPublicKey()).resolves.toBe(
       'GPUBLICKEY',
@@ -86,16 +90,28 @@ describe('walletAdapters.freighter', () => {
   });
 
   it('throws when Freighter is not installed', async () => {
-    mockIsConnected.mockResolvedValue(false);
+    mockIsConnected.mockResolvedValue({ isConnected: false });
 
     await expect(walletAdapters.freighter.getPublicKey()).rejects.toThrow(
       'Freighter not installed',
     );
-    expect(mockGetPublicKey).not.toHaveBeenCalled();
+    expect(mockGetAddress).not.toHaveBeenCalled();
+  });
+
+  it('throws when getAddress returns an error', async () => {
+    mockIsConnected.mockResolvedValue({ isConnected: true });
+    mockGetAddress.mockResolvedValue({ address: '', error: 'User rejected' });
+
+    await expect(walletAdapters.freighter.getPublicKey()).rejects.toThrow(
+      'User rejected',
+    );
   });
 
   it('signs a transaction using the network passphrase', async () => {
-    mockSign.mockResolvedValue('signed-xdr');
+    mockSign.mockResolvedValue({
+      signedTransaction: 'signed-xdr',
+      signerAddress: 'GPUBLICKEY',
+    });
 
     const result = await walletAdapters.freighter.signTransaction(
       'raw-xdr',
@@ -107,19 +123,32 @@ describe('walletAdapters.freighter', () => {
       networkPassphrase: 'Test SDF Network ; September 2015',
     });
   });
+
+  it('throws when signTransaction returns an error', async () => {
+    mockSign.mockResolvedValue({
+      signedTransaction: '',
+      error: 'Transaction rejected',
+    });
+
+    await expect(
+      walletAdapters.freighter.signTransaction('raw-xdr', 'passphrase'),
+    ).rejects.toThrow('Transaction rejected');
+  });
 });
 
 describe('walletAdapters.albedo', () => {
-  it('rejects getPublicKey as unconfigured', async () => {
+  it('rejects getPublicKey when the Albedo SDK returns no public key', async () => {
     await expect(walletAdapters.albedo.getPublicKey()).rejects.toThrow(
-      'Albedo adapter not configured',
+      'Albedo did not return a public key. Please try again.',
     );
   });
 
-  it('rejects signTransaction as unconfigured', async () => {
+  it('rejects signTransaction when the Albedo SDK returns no signed envelope', async () => {
     await expect(
       walletAdapters.albedo.signTransaction('xdr', 'passphrase'),
-    ).rejects.toThrow('Albedo adapter not configured');
+    ).rejects.toThrow(
+      'Albedo did not return a signed envelope. Please try again.',
+    );
   });
 });
 
@@ -184,18 +213,14 @@ describe('walletAdapters.ledger', () => {
     });
 
     it('maps "user refused" errors to a user-friendly message', async () => {
-      mockStrInstance.getPublicKey.mockRejectedValue(
-        new Error('User refused'),
-      );
+      mockStrInstance.getPublicKey.mockRejectedValue(new Error('User refused'));
       await expect(walletAdapters.ledger.getPublicKey()).rejects.toThrow(
         'Request cancelled',
       );
     });
 
     it('maps "not supported" errors to a user-friendly message', async () => {
-      mockWebHIDCreate.mockRejectedValue(
-        new Error('WebHID is not supported'),
-      );
+      mockWebHIDCreate.mockRejectedValue(new Error('WebHID is not supported'));
       await expect(walletAdapters.ledger.getPublicKey()).rejects.toThrow(
         'WebHID is not supported',
       );
@@ -203,8 +228,7 @@ describe('walletAdapters.ledger', () => {
   });
 
   describe('signTransaction', () => {
-    const MOCK_XDR =
-      'AAAAAgAAAAA...';
+    const MOCK_XDR = 'AAAAAgAAAAA...';
     const NETWORK = 'Test SDF Network ; September 2015';
 
     it('parses the XDR, signs, and returns a signed XDR', async () => {

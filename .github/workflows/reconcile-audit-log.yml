@@ -1,0 +1,44 @@
+name: Admin Audit Log Reconciliation
+
+# Periodically triggers GET /api/admin/audit-log/reconcile so drift between
+# on-chain truth and the audit log is caught even when no admin has the
+# panel open — the external-scheduler half of issue #1188, explicitly
+# green-lit by docs/admin-audit-log.md's "Periodic vs. on-demand
+# reconciliation" section ("...can be triggered by any external scheduler
+# ... exactly as-is, without further changes to this design").
+#
+# Requires a DEPLOYED_APP_URL variable and an ADMIN_SESSION_COOKIE secret —
+# see docs/admin-audit-log.md for how to obtain and rotate the cookie. This
+# workflow does not (and cannot, without further auth changes out of this
+# issue's scope) authenticate any other way: the endpoint is gated by the
+# same session-cookie admin check every other app/api/admin/** route uses.
+
+on:
+  schedule:
+    - cron: '*/15 * * * *' # Every 15 minutes
+  workflow_dispatch:
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger reconciliation
+        run: |
+          if [ -z "${{ vars.DEPLOYED_APP_URL }}" ] || [ -z "${{ secrets.ADMIN_SESSION_COOKIE }}" ]; then
+            # Not configured yet: this is a scheduled job, so a hard failure
+            # here just posts a red run every 15 minutes for an infra step
+            # that's out of the app's control. Warn and no-op instead until
+            # DEPLOYED_APP_URL / ADMIN_SESSION_COOKIE are set (see
+            # docs/admin-audit-log.md); a manual workflow_dispatch run still
+            # surfaces the warning to whoever's checking.
+            echo "::warning::DEPLOYED_APP_URL variable and ADMIN_SESSION_COOKIE secret are not both set; skipping reconciliation. See docs/admin-audit-log.md."
+            exit 0
+          fi
+          status=$(curl -s -o /tmp/response.json -w '%{http_code}' \
+            --cookie "session=${{ secrets.ADMIN_SESSION_COOKIE }}" \
+            "${{ vars.DEPLOYED_APP_URL }}/api/admin/audit-log/reconcile")
+          cat /tmp/response.json
+          if [ "$status" != "200" ]; then
+            echo "::error::Reconciliation request failed with status $status"
+            exit 1
+          fi

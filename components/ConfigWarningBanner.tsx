@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import type { ConfigWarning } from '@/lib/config';
+import { CONFIG_WARNING_DISMISSED_KEY } from '@/lib/storageKeys';
 
-const SESSION_KEY = 'scoutoff:configWarningDismissed';
+const SESSION_KEY = CONFIG_WARNING_DISMISSED_KEY;
 
 interface ConfigWarningBannerProps {
   warnings: ConfigWarning[];

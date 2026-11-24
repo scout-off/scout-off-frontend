@@ -1,45 +1,107 @@
-const fs = require('fs');
 const path = require('path');
+const fs = require('fs');
 
-const scriptPath = path.join(__dirname, '../../scripts/generate-icons.js');
+const FAKE_PNG = Buffer.from('fake-png');
+const realReadFileSync = fs.readFileSync.bind(fs);
+
+jest.mock('../../scripts/create-minimal-png', () => ({
+  createMinimalPNG: jest.fn(() => FAKE_PNG),
+}));
+
+const { createMinimalPNG } = require('../../scripts/create-minimal-png');
+const {
+  ICON_SIZES,
+  getIconOutputFiles,
+  generateIcons,
+} = require('../../scripts/generate-icons');
+
+const iconsDir = path.join(__dirname, '../../public/icons');
+const sourcePath = path.join(iconsDir, 'icon.svg');
 const manifestPath = path.join(__dirname, '../../public/manifest.json');
 
-describe('generate-icons.js output matches manifest.json icons', () => {
-  let expectedFiles;
-  let manifestUniqueSrcs;
+describe('generate-icons.js', () => {
+  let writeFileSyncSpy;
+  let readFileSyncSpy;
+  let exitSpy;
+  let errorSpy;
+  let logSpy;
 
-  beforeAll(() => {
-    const scriptSrc = fs.readFileSync(scriptPath, 'utf8');
-    const sizesMatch = scriptSrc.match(/const sizes = \[([^\]]+)\]/);
-    const sizes = sizesMatch[1].split(',').map((s) => parseInt(s.trim(), 10));
+  beforeEach(() => {
+    createMinimalPNG.mockClear();
+    createMinimalPNG.mockReturnValue(FAKE_PNG);
 
-    expectedFiles = [
-      ...sizes.map((s) => `icon-${s}x${s}.png`),
-      'icon-maskable-512x512.png',
-    ].sort();
-
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-    manifestUniqueSrcs = [
-      ...new Set(
-        manifest.icons.map((entry) => {
-          const src = entry.src;
-          return src.startsWith('/') ? src.split('/').pop() : src;
-        }),
-      ),
-    ].sort();
+    writeFileSyncSpy = jest
+      .spyOn(fs, 'writeFileSync')
+      .mockImplementation(() => undefined);
+    readFileSyncSpy = jest
+      .spyOn(fs, 'readFileSync')
+      .mockImplementation((filePath, ...rest) => {
+        if (filePath === sourcePath) {
+          return '<svg />';
+        }
+        return realReadFileSync(filePath, ...rest);
+      });
+    exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => {});
+    errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
   });
 
-  it('has every manifest icon src covered by the script output', () => {
-    const missing = manifestUniqueSrcs.filter(
-      (src) => !expectedFiles.includes(src),
-    );
-    expect(missing).toEqual([]);
+  afterEach(() => {
+    writeFileSyncSpy.mockRestore();
+    readFileSyncSpy.mockRestore();
+    exitSpy.mockRestore();
+    errorSpy.mockRestore();
+    logSpy.mockRestore();
   });
 
-  it('has every script output file declared in the manifest', () => {
-    const missing = expectedFiles.filter(
-      (file) => !manifestUniqueSrcs.includes(file),
+  it('invokes the image renderer once per required icon size (including maskable)', () => {
+    generateIcons();
+
+    // One call per square size + one for the maskable 512 variant
+    expect(createMinimalPNG).toHaveBeenCalledTimes(ICON_SIZES.length + 1);
+
+    for (const size of ICON_SIZES) {
+      expect(createMinimalPNG).toHaveBeenCalledWith(size, size);
+    }
+    expect(createMinimalPNG).toHaveBeenCalledWith(512, 512);
+  });
+
+  it('writes output paths that match manifest.json icon srcs', () => {
+    generateIcons();
+
+    const writtenFiles = writeFileSyncSpy.mock.calls.map(([filePath]) =>
+      path.basename(filePath),
     );
-    expect(missing).toEqual([]);
+    expect(writtenFiles.sort()).toEqual(getIconOutputFiles().sort());
+
+    const manifest = JSON.parse(realReadFileSync(manifestPath, 'utf8'));
+    const manifestFiles = [
+      ...new Set(manifest.icons.map((entry) => path.basename(entry.src))),
+    ].sort();
+
+    expect(writtenFiles.sort()).toEqual(manifestFiles);
+  });
+
+  it('surfaces a clear error when the source image is missing', () => {
+    const missing = new Error(
+      `ENOENT: no such file or directory, open '${sourcePath}'`,
+    );
+    missing.code = 'ENOENT';
+    readFileSyncSpy.mockImplementation((filePath) => {
+      if (filePath === sourcePath) {
+        throw missing;
+      }
+      return realReadFileSync(filePath);
+    });
+
+    generateIcons();
+
+    expect(createMinimalPNG).not.toHaveBeenCalled();
+    expect(writeFileSyncSpy).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith(
+      'Error generating icons:',
+      expect.stringContaining('source image missing'),
+    );
+    expect(exitSpy).toHaveBeenCalledWith(1);
   });
 });

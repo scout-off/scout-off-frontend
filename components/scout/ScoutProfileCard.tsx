@@ -4,6 +4,7 @@ import Link from 'next/link';
 import type { Scout } from '@/types';
 import { fetchScoutStats, type ScoutStats } from '@/lib/api';
 import TruncatedAddress from '@/components/ui/TruncatedAddress';
+import { useLocale } from 'next-intl';
 
 const TIER_STYLES: Record<string, string> = {
   basic: 'bg-gray-700 text-gray-200',
@@ -21,8 +22,8 @@ function subscriptionStatus(
   return { tier, expiry };
 }
 
-function formatDate(unix: number) {
-  return new Date(unix * 1000).toLocaleDateString(undefined, {
+function formatDate(unix: number, locale: string) {
+  return new Date(unix * 1000).toLocaleDateString(locale, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -30,6 +31,7 @@ function formatDate(unix: number) {
 }
 
 function ScoutProfileCard({ scout }: { scout: Scout }) {
+  const locale = useLocale();
   const [stats, setStats] = useState<ScoutStats | null>(null);
   const [statsError, setStatsError] = useState(false);
   const [statsLoading, setStatsLoading] = useState(true);
@@ -80,7 +82,7 @@ function ScoutProfileCard({ scout }: { scout: Scout }) {
             {sub.tier}
           </span>
         ) : (
-          <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full bg-gray-800 text-gray-500">
+          <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full bg-gray-800 text-gray-400">
             No subscription
           </span>
         )}
@@ -96,12 +98,14 @@ function ScoutProfileCard({ scout }: { scout: Scout }) {
 
       {/* Subscription expiry */}
       {sub ? (
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-400">
           Expires{' '}
-          <span className="text-gray-300">{formatDate(sub.expiry)}</span>
+          <span className="text-gray-300">
+            {formatDate(sub.expiry, locale)}
+          </span>
         </p>
       ) : (
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-400">
           Subscription inactive or expired
         </p>
       )}
@@ -119,7 +123,7 @@ function ScoutProfileCard({ scout }: { scout: Scout }) {
                 {stats?.[key] ?? 0}
               </span>
             )}
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-gray-400 mt-0.5">
               {key === 'contactedCount' ? 'Players Contacted' : 'Trial Offers'}
             </p>
           </div>

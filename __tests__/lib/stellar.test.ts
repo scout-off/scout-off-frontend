@@ -6,7 +6,7 @@ jest.mock('@stellar/stellar-sdk', () => {
   const original = jest.requireActual('@stellar/stellar-sdk');
   return {
     ...original,
-    SorobanRpc: {
+    rpc: {
       Server: jest.fn().mockImplementation(() => ({
         getTransaction: mockGetTransaction,
       })),
@@ -27,7 +27,7 @@ describe('lib/stellar', () => {
 
     require('@/lib/stellar');
 
-    const { SorobanRpc } = require('@stellar/stellar-sdk');
+    const { rpc: SorobanRpc } = require('@stellar/stellar-sdk');
     expect(SorobanRpc.Server).toHaveBeenCalledWith(mockRpcUrl, {
       allowHttp: false,
     });

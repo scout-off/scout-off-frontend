@@ -13,6 +13,10 @@ The typical contribution workflow is:
 
 > This repository includes GitHub issue templates at `.github/ISSUE_TEMPLATE/` (for bug reports and feature requests) and a pull request template at `.github/PULL_REQUEST_TEMPLATE.md`, plus a PR process guide at `.github/PR_DOCUMENTATION.md` to help you provide the right details.
 
+## Finding Something to Work On
+
+All work is tracked in [GitHub Issues](https://github.com/scout-off/scout-off-frontend/issues). Filter by the `easy`, `medium`, `hard`, or `good first issue` labels to find a task that fits. The old `ISSUES.md` list is archived at [`docs/archive/ISSUES-2026.md`](docs/archive/ISSUES-2026.md) for historical reference only.
+
 ## Local Development Setup
 
 > For a complete end-to-end guide covering contracts, backend, and wallet setup, see [DEVELOPMENT.md](DEVELOPMENT.md).
@@ -123,6 +127,31 @@ Use clear, descriptive branch names based on the type of work.
 - `work`
 - `temp`
 
+## Commit Message Convention
+
+This project enforces the [Conventional Commits](https://www.conventionalcommits.org/) format via commitlint. Every commit message must follow the pattern:
+
+```
+<type>(<scope>): <description>
+```
+
+Allowed types: `feat`, `fix`, `build`, `chore`, `ci`, `docs`, `perf`, `refactor`, `revert`, `style`, `test`.
+
+### Good examples
+
+- `feat: add player profile IPFS upload`
+- `fix(scout-dashboard): correct pagination offset`
+- `chore(deps): bump axios to 1.7.2`
+- `test(hooks): add useSearchPlayers test`
+- `docs: update CONTRIBUTING.md with commit format`
+
+### Bad examples
+
+- `fixed bug`
+- `WIP`
+- `Update file`
+- `asdf`
+
 ## Development Workflow
 
 1. Create a branch from `main`:
@@ -151,6 +180,46 @@ The repository exposes the following test-related commands:
 - `npm run format` — format files with Prettier
 - `npm run format:check` — check formatting with Prettier
 - `npm run prepare` — install Husky hooks
+- `npm run test:visual` — run Storybook visual regression checks against committed baselines
+- `npm run test:visual:update` — regenerate visual regression baselines after an intentional UI change (see [docs/visual-regression.md](docs/visual-regression.md))
+- `npm run test-storybook` — run Storybook interaction tests (play functions and axe a11y checks) against a running Storybook (`npm run storybook`)
+- `npm run test-storybook:ci` — the same against the static build (`npm run build-storybook` first); this is what CI runs
+
+### Storybook Interaction Tests
+
+jsdom doesn't do real layout or focus, so behaviour like focus traps, keyboard navigation, stacking and gestures is tested in a real browser. You write it as a Storybook `play` function, and `@storybook/test-runner` runs it in Chromium in the `build-storybook` CI job. A failing assertion fails the job.
+
+When you add or change an interactive component, add a story with a `play` function next to its visual stories. Name it with a `(play)` suffix:
+
+```tsx
+import { expect, fn, userEvent, waitFor, within } from '@storybook/test';
+
+export const ConfirmCancelPlay: Story = {
+  name: 'Confirm / cancel (play)',
+  args: { isOpen: true, title: 'Remove?', message: '…', onCancel: fn() },
+  play: async ({ args, canvasElement }) => {
+    const dialog = within(await within(canvasElement).findByRole('dialog'));
+    await userEvent.click(dialog.getByRole('button', { name: 'Cancel' }));
+    await expect(args.onCancel).toHaveBeenCalled();
+  },
+};
+```
+
+Guidelines:
+
+- Assert **behaviour**, not markup: focus movement, handlers called, elements appearing or disappearing, layout (`getBoundingClientRect`).
+- Query by role and accessible name. Use `within(canvasElement.ownerDocument.body)` for anything portalled outside the story root (tooltips, toasts).
+- Use `fn()` args to assert callbacks. Use `waitFor` for timers and animations rather than fixed sleeps.
+- For mobile-only UI, request a viewport: `parameters: { testRunner: { viewport: { width: 375, height: 812 } } }`.
+- Stories with a `play` function are **excluded from visual regression**, because their end state isn't a stable screenshot. Keep a plain sibling story for the visual baseline.
+- Every story is also checked with axe (`.storybook/test-runner.ts`). Violations **fail** stories that have a `play` function and are logged as warnings for other stories. Tune or disable rules per story with the `a11y` parameter (`parameters: { a11y: { config: { rules: [...] } } }`), the same one the Storybook a11y panel reads.
+
+To run them locally:
+
+```bash
+npx playwright install chromium
+npm run build-storybook && npm run test-storybook:ci
+```
 
 ### Indexer Package Tests
 
@@ -172,23 +241,34 @@ cd ../scout-off-contracts && cargo test
 
 Run smart contract tests when your frontend changes depend on on-chain contract behavior, contract IDs, or Soroban interaction logic.
 
-## Husky Pre-Commit Hooks
+## Husky Hooks
 
-This project uses Husky to run checks before each commit. The repository has a pre-commit hook at `.husky/pre-commit` that executes `npx --no-install lint-staged`.
+This project uses Husky to run checks before each commit and push.
+
+### Pre-commit hook
+
+The pre-commit hook at `.husky/pre-commit` executes `npx --no-install lint-staged` before each commit. It runs only against staged files, so it does not run the full test suite locally.
 
 `lint-staged` runs:
 
 - `eslint --fix` on staged `.js`, `.jsx`, `.ts`, and `.tsx` files
 - `prettier --write` on staged `.json`, `.css`, `.md`, and `.mdx` files
 
-These hooks help keep commits clean and consistent.
+### Pre-push hook
+
+The pre-push hook at `.husky/pre-push` runs the full test suite via `npm test`. This ensures that no branch is pushed with broken tests.
+
+### Commit-msg hook
+
+The commit-msg hook at `.husky/commit-msg` runs `@commitlint/cli` with `@commitlint/config-conventional` to enforce the [Conventional Commits](https://www.conventionalcommits.org/) format.
 
 ### Bypassing hooks
 
-Only bypass hooks in an emergency:
+Only bypass the pre-commit hook in an emergency, such as when an unrelated local issue prevents a commit:
 
 ```bash
 git commit --no-verify
+git push --no-verify
 ```
 
 Do not use `--no-verify` for PRs targeting `main`.
@@ -197,10 +277,24 @@ Do not use `--no-verify` for PRs targeting `main`.
 
 - [ ] Tests pass locally
 - [ ] Environment validation passes (`node scripts/validate-env.js`)
+- [ ] Lighthouse CI passes (performance ≥ 80)
 - [ ] No secrets or credentials committed
 - [ ] New features include tests where applicable
 - [ ] Documentation updated where necessary
 - [ ] Code follows project conventions and formatting
+
+### Architecture Decision Records
+
+Significant technical decisions (framework choices, library selection, protocol
+selection, data-model changes) should be documented as an Architecture Decision
+Record (ADR) in [`docs/adr/`](docs/adr/). Each ADR follows the template at
+[`docs/adr/0000-template.md`](docs/adr/0000-template.md) and covers the
+Context, Decision, and Consequences of the choice. ADRs are numbered
+sequentially (e.g. `0001-sep10-wallet-auth.md`).
+
+For PRs that introduce a significant decision, include the ADR in the same PR
+or link to it in the PR description. Reviewers may request an ADR for any
+decision whose rationale is non-obvious from the code alone.
 
 ### Code review assignment
 
@@ -221,6 +315,8 @@ assignment is needed — GitHub applies CODEOWNERS rules on PR creation.
 
 - The frontend repository is configured for GitHub Actions in `.github/workflows/ci.yml`.
 - `npm run lint`, `npm run test`, and `node scripts/validate-env.js` are all part of the CI validation path.
+- Lighthouse CI runs on every PR as a `lighthouse` job — reports are uploaded as build artifacts.
+- Storybook visual regression runs on every PR as the `visual-regression` job (`.github/workflows/visual-regression.yml`); see [docs/visual-regression.md](docs/visual-regression.md) for how to review a failing diff and update baselines for intentional changes.
 - If Husky hooks are not active after cloning, run `npm run prepare`.
 - For offline PR-body drafts used when opening cross-fork PRs against `scout-off/scout-off-frontend:main`, see [docs/pr-bodies/](docs/pr-bodies/) — each file matches a branch in the bulk-deploy stack and is passed to `gh pr create --body-file`.
 

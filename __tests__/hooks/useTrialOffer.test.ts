@@ -9,13 +9,21 @@ jest.mock('@/hooks/useWallet', () => ({
 
 jest.mock('@/lib/contract', () => ({
   buildLogTrialOffer: jest.fn(),
+  getSubscription: jest.fn(),
+}));
+
+jest.mock('@/lib/messaging/moderation', () => ({
+  isBlockedByCounterpart: jest.fn(),
 }));
 
 import { useWallet } from '@/hooks/useWallet';
-import { buildLogTrialOffer } from '@/lib/contract';
+import { buildLogTrialOffer, getSubscription } from '@/lib/contract';
+import { isBlockedByCounterpart } from '@/lib/messaging/moderation';
 
 const mockUseWallet = useWallet as jest.Mock;
 const mockBuildLogTrialOffer = buildLogTrialOffer as jest.Mock;
+const mockGetSubscription = getSubscription as jest.Mock;
+const mockIsBlockedByCounterpart = isBlockedByCounterpart as jest.Mock;
 
 const PUBLIC_KEY =
   'GABCDE1234567890ABCDE1234567890ABCDE1234567890ABCDE1234567890';
@@ -51,6 +59,11 @@ describe('useTrialOffer', () => {
     mockUseWallet.mockReturnValue({
       publicKey: PUBLIC_KEY,
       signAndSubmit: mockSignAndSubmit,
+    });
+    mockIsBlockedByCounterpart.mockResolvedValue(false);
+    mockGetSubscription.mockResolvedValue({
+      tier: 'standard' as const,
+      expiresAt: Date.now() / 1000 + 86400, // expires in 24 hours
     });
   });
 
@@ -132,7 +145,7 @@ describe('useTrialOffer', () => {
     expect(mockSignAndSubmit).toHaveBeenCalledWith(MOCK_XDR);
   });
 
-  it('accepts a null hash from the result without throwing', async () => {
+  it('reports an error when the result carries no hash', async () => {
     mockBuildLogTrialOffer.mockResolvedValue(MOCK_XDR);
     mockSignAndSubmit.mockResolvedValue({}); // no .hash field
 
@@ -142,8 +155,12 @@ describe('useTrialOffer', () => {
       await result.current.logTrialOffer(PLAYER_ID, DETAILS);
     });
 
+    // lib/sorobanTx treats a hash-less result as a failure rather than a
+    // silent success.
     expect(result.current.txHash).toBeNull();
-    expect(result.current.error).toBeNull();
+    expect(result.current.error).toBe(
+      'Transaction completed but no hash was returned.',
+    );
   });
 
   // ── Error handling ────────────────────────────────────────────────────────
@@ -226,6 +243,25 @@ describe('useTrialOffer', () => {
 
     expect(result.current.error).toBe('Wallet not connected');
     expect(mockBuildLogTrialOffer).not.toHaveBeenCalled();
+  });
+
+  it('rejects with an error and skips buildLogTrialOffer when the player has blocked the scout', async () => {
+    mockIsBlockedByCounterpart.mockResolvedValueOnce(true);
+
+    const { result } = renderHook(() => useTrialOffer());
+
+    await act(async () => {
+      await result.current.logTrialOffer(PLAYER_ID, DETAILS);
+    });
+
+    expect(mockIsBlockedByCounterpart).toHaveBeenCalledWith(PLAYER_ID);
+    expect(mockBuildLogTrialOffer).not.toHaveBeenCalled();
+    expect(mockSignAndSubmit).not.toHaveBeenCalled();
+    expect(result.current.error).toBe(
+      'This player is not accepting new contact requests.',
+    );
+    expect(result.current.txHash).toBeNull();
+    expect(result.current.loading).toBe(false);
   });
 
   // ── State reset on new call ───────────────────────────────────────────────
@@ -313,5 +349,46 @@ describe('useTrialOffer', () => {
     expect(result.current.txHash).toBe(MOCK_HASH);
     expect(result.current.loading).toBe(false);
     expect(result.current.error).toBeNull();
+  });
+
+  // ── Subscription gate ───────────────────────────────────────────────────────
+
+  it('rejects with an error when subscription is expired', async () => {
+    mockGetSubscription.mockResolvedValue({
+      tier: 'standard' as const,
+      expiresAt: Date.now() / 1000 - 3600, // expired 1 hour ago
+    });
+
+    const { result } = renderHook(() => useTrialOffer());
+
+    await act(async () => {
+      await result.current.logTrialOffer(PLAYER_ID, DETAILS);
+    });
+
+    expect(mockBuildLogTrialOffer).not.toHaveBeenCalled();
+    expect(mockSignAndSubmit).not.toHaveBeenCalled();
+    expect(result.current.error).toBe(
+      'An active subscription is required to log trial offers. Please subscribe or renew.',
+    );
+    expect(result.current.txHash).toBeNull();
+    expect(result.current.loading).toBe(false);
+  });
+
+  it('rejects with an error when subscription is null', async () => {
+    mockGetSubscription.mockResolvedValue(null);
+
+    const { result } = renderHook(() => useTrialOffer());
+
+    await act(async () => {
+      await result.current.logTrialOffer(PLAYER_ID, DETAILS);
+    });
+
+    expect(mockBuildLogTrialOffer).not.toHaveBeenCalled();
+    expect(mockSignAndSubmit).not.toHaveBeenCalled();
+    expect(result.current.error).toBe(
+      'An active subscription is required to log trial offers. Please subscribe or renew.',
+    );
+    expect(result.current.txHash).toBeNull();
+    expect(result.current.loading).toBe(false);
   });
 });

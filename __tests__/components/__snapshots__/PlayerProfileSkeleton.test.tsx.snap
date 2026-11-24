@@ -3,8 +3,9 @@
 exports[`PlayerProfileSkeleton matches snapshot 1`] = `
 <div
   aria-busy="true"
-  aria-label="Loading player profile"
+  aria-label="Loading..."
   class="max-w-2xl mx-auto flex flex-col gap-8"
+  role="status"
 >
   <div
     class="bg-brand-card border border-gray-800 rounded-xl p-6 flex gap-6 items-start animate-pulse"

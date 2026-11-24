@@ -30,9 +30,7 @@ describe('mediaUrlSigning — signing disabled (no secret configured)', () => {
 
   test('verifyMediaUrlSignature returns false rather than throwing', () => {
     const { verifyMediaUrlSignature } = loadModule();
-    expect(verifyMediaUrlSignature(CID, '9999999999', 'anything')).toBe(
-      false,
-    );
+    expect(verifyMediaUrlSignature(CID, '9999999999', 'anything')).toBe(false);
   });
 });
 
@@ -67,11 +65,7 @@ describe('mediaUrlSigning — signing enabled', () => {
     const url = mod.signMediaUrl(CID, 3600);
     const params = new URL(url, 'http://localhost').searchParams;
     expect(
-      mod.verifyMediaUrlSignature(
-        CID,
-        params.get('exp'),
-        params.get('sig'),
-      ),
+      mod.verifyMediaUrlSignature(CID, params.get('exp'), params.get('sig')),
     ).toBe(true);
   });
 
@@ -93,11 +87,7 @@ describe('mediaUrlSigning — signing enabled', () => {
     const url = mod.signMediaUrl(CID, -10); // already expired
     const params = new URL(url, 'http://localhost').searchParams;
     expect(
-      mod.verifyMediaUrlSignature(
-        CID,
-        params.get('exp'),
-        params.get('sig'),
-      ),
+      mod.verifyMediaUrlSignature(CID, params.get('exp'), params.get('sig')),
     ).toBe(false);
   });
 
@@ -105,7 +95,10 @@ describe('mediaUrlSigning — signing enabled', () => {
     const mod = loadModule();
     const url = mod.signMediaUrl(CID, 3600);
     const params = new URL(url, 'http://localhost').searchParams;
-    const tamperedSig = `${params.get('sig')!.slice(0, -1)}0`;
+    const sig = params.get('sig')!;
+    const lastChar = sig.slice(-1);
+    const replacement = lastChar === '0' ? '1' : '0';
+    const tamperedSig = `${sig.slice(0, -1)}${replacement}`;
     expect(
       mod.verifyMediaUrlSignature(CID, params.get('exp'), tamperedSig),
     ).toBe(false);

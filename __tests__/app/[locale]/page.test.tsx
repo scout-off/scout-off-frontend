@@ -3,17 +3,19 @@ import '@testing-library/jest-dom';
 import HomePage from '@/app/[locale]/page';
 
 jest.mock('next-intl/server', () => ({
-  getTranslations: jest.fn(async ({ namespace }: { namespace?: string } = {}) => {
-    return (key: string) => {
-      if (namespace === 'footer') {
-        const translations: Record<string, string> = {
-          changelog: 'Changelog',
-        };
-        return translations[key] ?? key;
-      }
-      return key;
-    };
-  }),
+  getTranslations: jest.fn(
+    async ({ namespace }: { namespace?: string } = {}) => {
+      return (key: string) => {
+        if (namespace === 'footer') {
+          const translations: Record<string, string> = {
+            changelog: 'Changelog',
+          };
+          return translations[key] ?? key;
+        }
+        return key;
+      };
+    },
+  ),
 }));
 
 describe('HomePage', () => {

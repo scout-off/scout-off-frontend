@@ -1,4 +1,6 @@
-import { render, screen, waitFor, act } from '@testing-library/react';
+jest.unmock('next-intl');
+
+import { render, screen, waitFor, act } from '@/__tests__/setup-providers-intl';
 import ActivityFeed from '@/components/scout/ActivityFeed';
 
 const mockGet = jest.fn();
@@ -136,7 +138,7 @@ describe('ActivityFeed', () => {
     render(<ActivityFeed />);
 
     await waitFor(() => {
-      expect(screen.getByText('10s ago')).toBeInTheDocument();
+      expect(screen.getByText('10 seconds ago')).toBeInTheDocument();
     });
 
     dateNowSpy.mockRestore();
@@ -246,6 +248,26 @@ describe('ActivityFeed', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Live Player registered')).toBeInTheDocument();
+    });
+  });
+
+  it('renders the feed in French', async () => {
+    mockGet.mockResolvedValue({
+      data: [
+        {
+          id: 'evt-fr',
+          type: 'player_registered',
+          createdAt: Math.floor(Date.now() / 1000),
+          payload: { playerName: 'Alice' },
+        },
+      ],
+    });
+
+    render(<ActivityFeed />, { locale: 'fr' });
+
+    expect(screen.getByText('Fil d’activité')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Alice s’est inscrit')).toBeInTheDocument();
     });
   });
 });

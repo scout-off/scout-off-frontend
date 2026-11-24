@@ -15,6 +15,12 @@ const mockRefreshBalance = jest.fn();
 const mockCacheContactDetails = jest.fn();
 const mockPurgeContactDetails = jest.fn();
 const mockParseContractError = jest.fn();
+const mockIsBlockedByCounterpart = jest.fn();
+
+jest.mock('@/lib/messaging/moderation', () => ({
+  isBlockedByCounterpart: (...args: unknown[]) =>
+    mockIsBlockedByCounterpart(...args),
+}));
 
 jest.mock('@/hooks/useWallet', () => ({
   useWallet: () => mockUseWallet(),
@@ -35,6 +41,14 @@ jest.mock('@/lib/contactDetailsCache', () => ({
   contactDetailsKey: (playerId: string, wallet: string) =>
     `contact:${playerId}:${wallet}`,
   purgeContactDetails: (...args: unknown[]) => mockPurgeContactDetails(...args),
+}));
+
+// Release-endpoint stub: default is a vault hit returning decrypted PII.
+// Individual tests override per-case (404 fallback, 503 failure).
+const mockFetchRelease = jest.fn();
+
+jest.mock('@/lib/contactReleaseClient', () => ({
+  defaultFetchContactRelease: (...args: unknown[]) => mockFetchRelease(...args),
 }));
 
 jest.mock('@/lib/contractErrorMessage', () => ({
@@ -71,10 +85,17 @@ describe('usePayToContact', () => {
     mockRefreshBalance.mockReset();
     mockCacheContactDetails.mockReset();
     mockPurgeContactDetails.mockReset();
+    mockIsBlockedByCounterpart.mockReset();
+    mockFetchRelease.mockReset();
+    mockFetchRelease.mockResolvedValue({
+      status: 200,
+      details: { email: 'vault@example.com', phone: null, telegram: null },
+    });
     mockParseContractError.mockImplementation((e: unknown) =>
       e instanceof Error ? e.message : 'unknown',
     );
     // Default happy path
+    mockIsBlockedByCounterpart.mockResolvedValue(false);
     mockGetSubscription.mockResolvedValue(baseSubscription());
     mockPayToContact.mockResolvedValue({
       email: 'p@example.com',
@@ -98,16 +119,42 @@ describe('usePayToContact', () => {
       'p1',
       expect.any(Function),
     );
+    // Vault release wins over the untrusted chain return value.
+    expect(mockFetchRelease).toHaveBeenCalledWith('p1');
     expect(mockCacheContactDetails).toHaveBeenCalledWith(
       `contact:p1:${PUBLIC_KEY}`,
-      {
-        email: 'p@example.com',
-        phone: null,
-        telegram: null,
-      },
+      { email: 'vault@example.com', phone: null, telegram: null },
     );
     expect(mockRefreshBalance).toHaveBeenCalledTimes(1);
     expect(result.current.error).toBeNull();
+  });
+
+  test('vault 404 falls back to the legacy chain return value (migration window)', async () => {
+    mockFetchRelease.mockResolvedValueOnce({ status: 404 });
+    const { result } = renderHook(() => usePayToContact('p1'), { wrapper });
+
+    await act(async () => {
+      await result.current.unlock();
+    });
+
+    expect(mockCacheContactDetails).toHaveBeenCalledWith(
+      `contact:p1:${PUBLIC_KEY}`,
+      { email: 'p@example.com', phone: null, telegram: null },
+    );
+    expect(result.current.error).toBeNull();
+  });
+
+  test('vault non-404 failure surfaces an error and caches nothing', async () => {
+    mockFetchRelease.mockResolvedValueOnce({ status: 503 });
+    const { result } = renderHook(() => usePayToContact('p1'), { wrapper });
+
+    await act(async () => {
+      await expect(result.current.unlock()).rejects.toThrow(
+        'Contact release failed (status 503)',
+      );
+    });
+
+    expect(mockCacheContactDetails).not.toHaveBeenCalled();
   });
 
   test('expired subscription: surfaces error, does not call payToContact or refreshBalance', async () => {
@@ -145,6 +192,24 @@ describe('usePayToContact', () => {
     expect(result.current.error).toMatch(/insufficient xlm/i);
   });
 
+  test('blocked by counterpart: surfaces error, skips subscription fetch and payToContact', async () => {
+    mockIsBlockedByCounterpart.mockResolvedValueOnce(true);
+
+    const { result } = renderHook(() => usePayToContact('p1'), { wrapper });
+
+    await act(async () => {
+      await result.current.unlock();
+    });
+
+    expect(mockIsBlockedByCounterpart).toHaveBeenCalledWith('p1');
+    expect(mockGetSubscription).not.toHaveBeenCalled();
+    expect(mockPayToContact).not.toHaveBeenCalled();
+    expect(result.current.error).toBe(
+      'This player is not accepting new contact requests.',
+    );
+    expect(mockShow).toHaveBeenCalled();
+  });
+
   test('wallet not connected: surfaces error immediately, skips subscription fetch', async () => {
     mockUseWallet.mockReturnValue({ ...baseWallet(), publicKey: null });
 
@@ -176,6 +241,40 @@ describe('usePayToContact', () => {
 
     expect(mockParseContractError).toHaveBeenCalled();
     expect(result.current.error).toBe('Contract is paused. Try again later.');
+  });
+
+  test('a rapid double-click on unlock() builds/signs/submits only one transaction (issue #1177)', async () => {
+    let resolvePayToContact: (details: unknown) => void;
+    mockPayToContact.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolvePayToContact = resolve;
+      }),
+    );
+
+    const { result } = renderHook(() => usePayToContact('p1'), { wrapper });
+
+    let first: Promise<unknown>;
+    let second: Promise<unknown>;
+    act(() => {
+      // Both calls fire before payToContact's promise ever resolves —
+      // simulates a fast double-click before the disabled state visually
+      // registers.
+      first = result.current.unlock();
+      second = result.current.unlock();
+    });
+
+    await act(async () => {
+      resolvePayToContact!({
+        email: 'p@example.com',
+        phone: null,
+        telegram: null,
+      });
+      await Promise.all([first, second]);
+    });
+
+    expect(mockPayToContact).toHaveBeenCalledTimes(1);
+    expect(mockCacheContactDetails).toHaveBeenCalledTimes(1);
+    expect(mockRefreshBalance).toHaveBeenCalledTimes(1);
   });
 
   test('clear() calls purgeContactDetails with the same key unlock() targeted', async () => {

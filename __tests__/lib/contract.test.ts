@@ -1,13 +1,21 @@
 // Mock stellar-sdk to avoid real SDK/network calls.
 jest.mock('@stellar/stellar-sdk', () => ({
+  rpc: {
+    Api: {
+      isSimulationRestore: (simulation: { restorePreamble?: unknown }) =>
+        Boolean(simulation.restorePreamble),
+    },
+  },
   Contract: jest.fn().mockImplementation(() => ({
     call: jest.fn().mockReturnValue({}),
   })),
   nativeToScVal: jest.fn().mockReturnValue({}),
   scValToNative: jest.fn().mockReturnValue({}),
   xdr: {},
+  Operation: { restoreFootprint: jest.fn().mockReturnValue({}) },
   TransactionBuilder: jest.fn().mockImplementation(() => ({
     addOperation: jest.fn().mockReturnThis(),
+    setSorobanData: jest.fn().mockReturnThis(),
     setTimeout: jest.fn().mockReturnThis(),
     build: jest
       .fn()
@@ -30,6 +38,7 @@ jest.mock('../../lib/stellar', () => ({
   },
   NETWORK: 'Test SDF Network ; September 2015',
   BASE_FEE: '100',
+  signAndSubmitTx: jest.fn(),
   isValidStellarAddress: jest.fn(
     (key: string) => typeof key === 'string' && /^G[A-Z2-7]{55}$/.test(key),
   ),
@@ -43,20 +52,47 @@ jest.mock('../../lib/stellar', () => ({
 
 import {
   buildRegisterPlayer,
+  buildUpdateProfile,
   buildApproveMilestone,
   buildPayToContact,
-  filterPlayers,
+  buildLogTrialOffer,
+  logTrialOffer,
+  buildAddValidator,
+  buildRemoveValidator,
+  buildRevokeMilestone,
+  buildWithdrawFees,
+  buildPauseContract,
+  buildUnpauseContract,
+  registerPlayer,
+  updateProfile,
+  subscribe,
+  payToContact,
+  getPlayer,
+  checkIsValidator,
+  getMilestoneHistory,
+  getMilestoneHistoryBatch,
+  getContractHealth,
+  getValidators,
+  getSubscription,
+  getContactFee,
+  getPlatformFees,
+  getContractPaused,
   getContractVersion,
   checkContractCompatibility,
   assertContractCompatible,
   clearContractCompatibilityCache,
   EXPECTED_CONTRACT_VERSION,
 } from '../../lib/contract';
-import { ValidationError, ContractIncompatibleError } from '../../lib/errors';
-import { rpc } from '../../lib/stellar';
+import {
+  ArchivedEntryError,
+  ValidationError,
+  ContractIncompatibleError,
+} from '../../lib/errors';
+import { rpc, signAndSubmitTx } from '../../lib/stellar';
 import { scValToNative } from '@stellar/stellar-sdk';
 
 const mockScValToNative = scValToNative as jest.Mock;
+const mockSignAndSubmitTx = signAndSubmitTx as jest.Mock;
 
 const VALID_ADDRESS =
   'GBR6LYRKEFYV3MG322FYLED6PLOTEV77KCX6AZSR7V4RV7EJLIWOZJWQ';
@@ -73,11 +109,28 @@ describe('contract configuration', () => {
 
     const { getPlayer } = require('../../lib/contract');
 
-    await expect(getPlayer('player_1')).rejects.toThrow(
-      /NEXT_PUBLIC_CONTRACT_ID/,
-    );
+    const error = await getPlayer('player_1').catch((e: Error) => e);
+    expect(error.message).toMatch(/NEXT_PUBLIC_CONTRACT_ID/);
+    expect(error.message).toMatch(/\.env\.local/);
+    expect(error.message).toMatch(/validate-env\.js/);
 
     process.env.NEXT_PUBLIC_CONTRACT_ID = previousContractId;
+  });
+});
+
+describe('archived Soroban reads', () => {
+  test('throws ArchivedEntryError when simulation requests restoration', async () => {
+    mockRpc.simulateTransaction.mockResolvedValueOnce({
+      result: { retval: {} },
+      restorePreamble: {
+        minResourceFee: '200',
+        transactionData: { build: jest.fn().mockReturnValue({}) },
+      },
+    } as any);
+
+    await expect(getPlayer('player_1')).rejects.toBeInstanceOf(
+      ArchivedEntryError,
+    );
   });
 });
 
@@ -91,6 +144,26 @@ describe('buildRegisterPlayer', () => {
     region: 'EU',
     nationality: 'DE',
   };
+
+  test('restores an archived footprint before preparing the original transaction', async () => {
+    mockRpc.simulateTransaction
+      .mockResolvedValueOnce({ result: { retval: {} } })
+      .mockResolvedValueOnce({
+        result: { retval: {} },
+        restorePreamble: {
+          minResourceFee: '200',
+          transactionData: { build: jest.fn().mockReturnValue({}) },
+        },
+      } as any);
+    const restoreSigner = jest.fn().mockResolvedValue('signed-restore-xdr');
+    mockSignAndSubmitTx.mockImplementationOnce((xdr, signFn) => signFn(xdr));
+
+    await buildRegisterPlayer(VALID_ADDRESS, vitals, 'QmHash', restoreSigner);
+
+    expect(restoreSigner).toHaveBeenCalledWith('mock-xdr');
+    expect(mockSignAndSubmitTx).toHaveBeenCalledWith('mock-xdr', restoreSigner);
+    expect(mockRpc.prepareTransaction).toHaveBeenCalled();
+  });
 
   test('throws ValidationError for invalid wallet', async () => {
     await expect(
@@ -179,12 +252,294 @@ describe('buildPayToContact', () => {
   });
 });
 
-// ── filterPlayers (no address params — must never throw ValidationError) ──────
+// ── buildUpdateProfile ─────────────────────────────────────────────────────────
 
-describe('filterPlayers', () => {
-  test('does not throw for any string arguments', async () => {
-    await expect(filterPlayers('EU', 'MF', 1)).resolves.not.toThrow();
+describe('buildUpdateProfile', () => {
+  test('builds and prepares a transaction for a valid wallet', async () => {
+    const xdrTx = await buildUpdateProfile(
+      VALID_ADDRESS,
+      'player_1',
+      'QmHash2',
+    );
+    expect(mockRpc.getAccount).toHaveBeenCalledWith(VALID_ADDRESS);
+    expect(xdrTx).toBe('prepared-xdr');
+  });
+});
+
+// ── buildLogTrialOffer ────────────────────────────────────────────────────────
+
+describe('buildLogTrialOffer', () => {
+  const details = { clubName: 'FC Sahel', offerType: 'trial' as const };
+
+  test('throws ValidationError for an invalid scoutKey', async () => {
+    await expect(
+      buildLogTrialOffer('bad-key', 'player_1', details),
+    ).rejects.toThrow(ValidationError);
+    expect(mockRpc.getAccount).not.toHaveBeenCalled();
+  });
+
+  test('throws ValidationError for an empty playerId', async () => {
+    await expect(
+      buildLogTrialOffer(VALID_ADDRESS, '   ', details),
+    ).rejects.toThrow(ValidationError);
+    expect(mockRpc.getAccount).not.toHaveBeenCalled();
+  });
+
+  test('proceeds to RPC for valid inputs', async () => {
+    await buildLogTrialOffer(VALID_ADDRESS, 'player_1', details);
+    expect(mockRpc.getAccount).toHaveBeenCalledWith(VALID_ADDRESS);
+  });
+});
+
+// ── buildAddValidator / buildRemoveValidator / buildRevokeMilestone ────────────
+
+describe('buildAddValidator', () => {
+  test('builds a transaction sourced from the admin key', async () => {
+    await buildAddValidator(VALID_ADDRESS, VALID_ADDRESS);
+    expect(mockRpc.getAccount).toHaveBeenCalledWith(VALID_ADDRESS);
+  });
+});
+
+describe('buildRemoveValidator', () => {
+  test('builds a transaction sourced from the admin key', async () => {
+    await buildRemoveValidator(VALID_ADDRESS, VALID_ADDRESS);
+    expect(mockRpc.getAccount).toHaveBeenCalledWith(VALID_ADDRESS);
+  });
+});
+
+describe('buildRevokeMilestone', () => {
+  test('builds a transaction sourced from the validator key', async () => {
+    await buildRevokeMilestone(VALID_ADDRESS, 'player_1', 'milestone_1');
+    expect(mockRpc.getAccount).toHaveBeenCalledWith(VALID_ADDRESS);
+  });
+});
+
+// ── buildWithdrawFees / buildPauseContract / buildUnpauseContract ──────────────
+
+describe('buildWithdrawFees', () => {
+  test('builds a transaction sourced from the admin key', async () => {
+    const xdrTx = await buildWithdrawFees(VALID_ADDRESS);
+    expect(mockRpc.getAccount).toHaveBeenCalledWith(VALID_ADDRESS);
+    expect(xdrTx).toBe('prepared-xdr');
+  });
+});
+
+describe('buildPauseContract', () => {
+  test('builds a transaction sourced from the admin key', async () => {
+    await buildPauseContract(VALID_ADDRESS);
+    expect(mockRpc.getAccount).toHaveBeenCalledWith(VALID_ADDRESS);
+  });
+});
+
+describe('buildUnpauseContract', () => {
+  test('builds a transaction sourced from the admin key', async () => {
+    await buildUnpauseContract(VALID_ADDRESS);
+    expect(mockRpc.getAccount).toHaveBeenCalledWith(VALID_ADDRESS);
+  });
+});
+
+// ── Read-only simulateTx wrappers ───────────────────────────────────────────────
+
+describe('read-only contract queries', () => {
+  test('getPlayer simulates get_player', async () => {
+    await getPlayer('player_1');
     expect(mockRpc.simulateTransaction).toHaveBeenCalled();
+  });
+
+  test('checkIsValidator simulates is_validator', async () => {
+    await checkIsValidator(VALID_ADDRESS);
+    expect(mockRpc.simulateTransaction).toHaveBeenCalled();
+  });
+
+  test('getMilestoneHistory simulates get_milestone_history', async () => {
+    await getMilestoneHistory('player_1');
+    expect(mockRpc.simulateTransaction).toHaveBeenCalled();
+  });
+
+  test('getContractHealth simulates health', async () => {
+    await getContractHealth();
+    expect(mockRpc.simulateTransaction).toHaveBeenCalled();
+  });
+
+  test('getValidators simulates get_validators', async () => {
+    await getValidators();
+    expect(mockRpc.simulateTransaction).toHaveBeenCalled();
+  });
+
+  test('getSubscription simulates get_subscription', async () => {
+    await getSubscription(VALID_ADDRESS);
+    expect(mockRpc.simulateTransaction).toHaveBeenCalled();
+  });
+
+  test('getContactFee simulates get_contact_fee', async () => {
+    mockScValToNative.mockReturnValueOnce(1);
+    await expect(getContactFee()).resolves.toBe(1);
+  });
+
+  test('getPlatformFees simulates get_platform_fees', async () => {
+    mockScValToNative.mockReturnValueOnce(500);
+    await expect(getPlatformFees()).resolves.toBe(500);
+  });
+
+  test('getContractPaused simulates is_paused', async () => {
+    mockScValToNative.mockReturnValueOnce(false);
+    await expect(getContractPaused()).resolves.toBe(false);
+  });
+});
+
+// ── getMilestoneHistoryBatch ─────────────────────────────────────────────────
+//
+// Issue #781: milestone history for a batch of players must be one RPC
+// round-trip, not one per player.
+
+describe('getMilestoneHistoryBatch', () => {
+  test('returns {} without any RPC call for an empty ID list', async () => {
+    const result = await getMilestoneHistoryBatch([]);
+    expect(result).toEqual({});
+    expect(mockRpc.simulateTransaction).not.toHaveBeenCalled();
+  });
+
+  test('fetches milestone history for many players in a single simulateTransaction call', async () => {
+    mockScValToNative.mockReturnValueOnce({
+      p1: [],
+      p2: [],
+      p3: [],
+    });
+
+    const result = await getMilestoneHistoryBatch(['p1', 'p2', 'p3']);
+
+    expect(mockRpc.simulateTransaction).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ p1: [], p2: [], p3: [] });
+  });
+
+  test('de-duplicates repeated player IDs before calling out', async () => {
+    mockScValToNative.mockReturnValueOnce({ p1: [] });
+
+    await getMilestoneHistoryBatch(['p1', 'p1', 'p1']);
+
+    expect(mockRpc.simulateTransaction).toHaveBeenCalledTimes(1);
+  });
+
+  test('a real on-chain error (e.g. contract paused) is not swallowed by the fallback', async () => {
+    mockRpc.simulateTransaction.mockResolvedValueOnce({
+      error: 'Error(Contract, #9)',
+    } as any);
+
+    await expect(getMilestoneHistoryBatch(['p1'])).rejects.toThrow(
+      CONTRACT_ERRORS[9],
+    );
+    // No fallback per-player calls after a real contract error.
+    expect(mockRpc.simulateTransaction).toHaveBeenCalledTimes(1);
+  });
+
+  test('falls back to one call per player when the batch method is unavailable', async () => {
+    mockRpc.simulateTransaction
+      .mockRejectedValueOnce(new Error('UnexpectedType: unknown method'))
+      .mockResolvedValue({ result: { retval: {} } } as any);
+    mockScValToNative.mockReturnValue([]);
+
+    const result = await getMilestoneHistoryBatch(['p1', 'p2']);
+
+    // 1 failed batch attempt + 2 per-player fallback calls.
+    expect(mockRpc.simulateTransaction).toHaveBeenCalledTimes(3);
+    expect(result).toEqual({ p1: [], p2: [] });
+  });
+});
+
+// ── Sign-and-submit helpers ─────────────────────────────────────────────────────
+
+describe('registerPlayer', () => {
+  const vitals = {
+    name: 'Ada',
+    age: 22,
+    position: 'MF',
+    region: 'EU',
+    nationality: 'DE',
+  };
+  const signFn = jest.fn().mockResolvedValue('signed-xdr');
+
+  test('builds, signs, submits, and returns the new player id', async () => {
+    mockSignAndSubmitTx.mockResolvedValueOnce({ returnValue: {} });
+    mockScValToNative.mockReturnValueOnce('player_42');
+
+    const id = await registerPlayer(VALID_ADDRESS, vitals, 'QmHash', signFn);
+
+    expect(mockSignAndSubmitTx).toHaveBeenCalledWith('prepared-xdr', signFn);
+    expect(id).toBe('player_42');
+  });
+
+  test('throws when the submitted transaction has no returnValue', async () => {
+    mockSignAndSubmitTx.mockResolvedValueOnce({});
+
+    await expect(
+      registerPlayer(VALID_ADDRESS, vitals, 'QmHash', signFn),
+    ).rejects.toThrow(/did not return a value/);
+  });
+});
+
+describe('updateProfile', () => {
+  const signFn = jest.fn().mockResolvedValue('signed-xdr');
+
+  test('builds, signs, and submits the update transaction', async () => {
+    mockSignAndSubmitTx.mockResolvedValueOnce({ returnValue: {} });
+
+    await updateProfile(VALID_ADDRESS, 'player_1', 'QmHash2', signFn);
+
+    expect(mockSignAndSubmitTx).toHaveBeenCalledWith('prepared-xdr', signFn);
+  });
+});
+
+describe('subscribe', () => {
+  const signFn = jest.fn().mockResolvedValue('signed-xdr');
+
+  test('builds, signs, and submits the subscribe transaction', async () => {
+    mockSignAndSubmitTx.mockResolvedValueOnce({ returnValue: {} });
+
+    await subscribe(VALID_ADDRESS, 'pro', signFn);
+
+    expect(mockSignAndSubmitTx).toHaveBeenCalledWith('prepared-xdr', signFn);
+  });
+});
+
+describe('payToContact', () => {
+  const signFn = jest.fn().mockResolvedValue('signed-xdr');
+
+  test('resolves with the returned contact details', async () => {
+    mockSignAndSubmitTx.mockResolvedValueOnce({ returnValue: {} });
+    mockScValToNative.mockReturnValueOnce({ email: 'scout@example.com' });
+
+    const details = await payToContact(VALID_ADDRESS, 'player_1', signFn);
+
+    expect(details).toEqual({ email: 'scout@example.com' });
+  });
+
+  test('throws when the submitted transaction has no returnValue', async () => {
+    mockSignAndSubmitTx.mockResolvedValueOnce({});
+
+    await expect(
+      payToContact(VALID_ADDRESS, 'player_1', signFn),
+    ).rejects.toThrow(/did not return contact details/);
+  });
+});
+
+describe('logTrialOffer', () => {
+  const signFn = jest.fn().mockResolvedValue('signed-xdr');
+  const details = { clubName: 'FC Sahel', offerType: 'trial' as const };
+
+  test('builds via buildLogTrialOffer, then signs and submits', async () => {
+    mockSignAndSubmitTx.mockResolvedValueOnce({ returnValue: {} });
+
+    await logTrialOffer(VALID_ADDRESS, 'player_1', details, signFn);
+
+    expect(mockRpc.getAccount).toHaveBeenCalledWith(VALID_ADDRESS);
+    expect(mockSignAndSubmitTx).toHaveBeenCalledWith('prepared-xdr', signFn);
+  });
+
+  test('propagates validation errors from buildLogTrialOffer without signing', async () => {
+    await expect(
+      logTrialOffer('bad-key', 'player_1', details, signFn),
+    ).rejects.toThrow(ValidationError);
+    expect(mockSignAndSubmitTx).not.toHaveBeenCalled();
   });
 });
 
@@ -252,12 +607,15 @@ describe('parseContractError', () => {
 // ── simulateTx error surfacing ────────────────────────────────────────────────
 
 describe('simulateTx — human-readable errors', () => {
+  // Uses getValidators as the read-only vehicle — filterPlayers, the
+  // previous one, was removed in issue #1298 (discovery moved to the
+  // indexer's paginated GET /players).
   test('maps contract error code in simulation result to readable message', async () => {
     mockRpc.simulateTransaction.mockResolvedValueOnce({
       error: 'Error(Contract, #3)',
     } as any);
 
-    await expect(filterPlayers('', '', 0)).rejects.toThrow(CONTRACT_ERRORS[3]);
+    await expect(getValidators()).rejects.toThrow(CONTRACT_ERRORS[3]);
   });
 
   test('unknown contract code surfaces the code number, not raw JSON', async () => {
@@ -265,7 +623,7 @@ describe('simulateTx — human-readable errors', () => {
       error: 'Error(Contract, #42)',
     } as any);
 
-    const err = await filterPlayers('', '', 0).catch((e) => e);
+    const err = await getValidators().catch((e) => e);
     expect(err.message).toMatch(/42/);
     expect(err.message).not.toContain('"error"');
   });
@@ -273,7 +631,7 @@ describe('simulateTx — human-readable errors', () => {
   test('no raw JSON in error message when error field is absent', async () => {
     mockRpc.simulateTransaction.mockResolvedValueOnce({ events: [] } as any);
 
-    const err = await filterPlayers('', '', 0).catch((e) => e);
+    const err = await getValidators().catch((e) => e);
     expect(err.message).not.toMatch(/\{/); // no JSON object literals
     expect(err.message).not.toMatch(/"events"/);
   });
@@ -448,5 +806,19 @@ describe('buildTx short-circuits on known incompatibility', () => {
     );
 
     expect(mockRpc.getAccount).toHaveBeenCalledWith(VALID_ADDRESS);
+  });
+});
+
+describe('SIMULATION_SOURCE_ACCOUNT', () => {
+  it('is a well-formed Stellar address (the SDK rejects malformed ones)', () => {
+    const { SIMULATION_SOURCE_ACCOUNT } = jest.requireActual(
+      '../../lib/contract',
+    ) as typeof import('../../lib/contract');
+    const { StrKey } = jest.requireActual(
+      '@stellar/stellar-sdk',
+    ) as typeof import('@stellar/stellar-sdk');
+    expect(StrKey.isValidEd25519PublicKey(SIMULATION_SOURCE_ACCOUNT)).toBe(
+      true,
+    );
   });
 });

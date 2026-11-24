@@ -222,7 +222,14 @@ describe('ScoutProfileCard — optional fields missing', () => {
 
 describe('ScoutProfileCard — snapshot', () => {
   it('matches snapshot with a full scout profile', () => {
-    const { container } = render(<ScoutProfileCard scout={mockScout} />);
+    // A fixed, absolute expiry (rather than mockScout's Date.now()-relative
+    // FUTURE_EXPIRY) keeps the rendered "Expires" date — and this snapshot
+    // — stable regardless of what day the test happens to run.
+    const { container } = render(
+      <ScoutProfileCard
+        scout={{ ...mockScout, subscriptionExpiry: 1893456000 }} // 2030-01-01
+      />,
+    );
     expect(container.firstChild).toMatchSnapshot();
   });
 });

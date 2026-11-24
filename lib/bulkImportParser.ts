@@ -11,7 +11,7 @@
  */
 import { sanitize } from '@/lib/sanitize';
 import { AFRICAN_REGIONS } from '@/lib/regions';
-import { FOOTBALL_POSITIONS } from '@/components/player/PlayerOnboardingWizard';
+import { FOOTBALL_POSITIONS } from '@/lib/positions';
 
 export type BulkImportFileFormat = 'csv' | 'json';
 
@@ -47,14 +47,46 @@ export interface BulkImportRow {
   bio: string;
 }
 
+/**
+ * Machine-readable row error codes. The parser never produces display text —
+ * the UI translates `code` + `params` (see the `academy.bulkImport.rowErrors`
+ * message namespace) so errors render in the academy admin's locale.
+ */
+export type RowErrorCode =
+  | 'REQUIRED'
+  | 'NAME_TOO_SHORT'
+  | 'NAME_TOO_LONG'
+  | 'INVALID_AGE'
+  | 'NATIONALITY_TOO_LONG'
+  | 'INVALID_REGION'
+  | 'INVALID_POSITION'
+  | 'BIO_TOO_LONG';
+
 export interface RowFieldError {
   field: BulkImportField | 'row';
-  message: string;
+  code: RowErrorCode;
+  /** 1-based data-row index this error belongs to. */
+  row: number;
+  /** Interpolation values for the translated message (e.g. the offending value). */
+  params?: Record<string, string | number>;
+}
+
+export type BulkImportFileErrorCode =
+  | 'INVALID_JSON'
+  | 'JSON_NOT_ARRAY'
+  | 'EMPTY_JSON'
+  | 'EMPTY_CSV'
+  | 'TOO_MANY_ROWS'
+  | 'PARSE_FAILED';
+
+export interface BulkImportFileError {
+  code: BulkImportFileErrorCode;
+  params?: Record<string, string | number>;
 }
 
 export interface ParsedRow {
   /** 1-based index of this row among the data rows (header excluded). */
-  row: number;
+  rowNumber: number;
   /** Raw field values as read from the file (sanitized, not yet coerced). */
   data: BulkImportRow;
   /** Coerced/validated values, present when the row is fully valid. */
@@ -73,12 +105,15 @@ export interface ParsedRow {
 export interface BulkImportParseResult {
   rows: ParsedRow[];
   /** Fatal, file-level error (malformed JSON, empty file, too many rows, etc). Rows is [] when set. */
-  fileError: string | null;
+  fileError: BulkImportFileError | null;
 }
 
 // ── Format detection ─────────────────────────────────────────────────────────
 
-export function detectFormat(fileName: string, text: string): BulkImportFileFormat {
+export function detectFormat(
+  fileName: string,
+  text: string,
+): BulkImportFileFormat {
   const lower = fileName.toLowerCase();
   if (lower.endsWith('.json')) return 'json';
   if (lower.endsWith('.csv')) return 'csv';
@@ -180,20 +215,26 @@ function parseCsv(text: string): Record<string, string>[] {
 
 // ── JSON parsing ─────────────────────────────────────────────────────────────
 
+class BulkImportFileParseError extends Error {
+  constructor(readonly code: BulkImportFileErrorCode) {
+    super(code);
+  }
+}
+
 function parseJson(text: string): Record<string, unknown>[] {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
   } catch {
-    throw new Error('File is not valid JSON.');
+    throw new BulkImportFileParseError('INVALID_JSON');
   }
   if (!Array.isArray(parsed)) {
-    throw new Error(
-      'JSON file must contain an array of player objects, e.g. [{ "name": ... }].',
-    );
+    throw new BulkImportFileParseError('JSON_NOT_ARRAY');
   }
   return parsed.map((entry) =>
-    entry && typeof entry === 'object' ? (entry as Record<string, unknown>) : {},
+    entry && typeof entry === 'object'
+      ? (entry as Record<string, unknown>)
+      : {},
   );
 }
 
@@ -240,7 +281,10 @@ function resolvePosition(raw: string): string | null {
   return byLabel ?? null;
 }
 
-function validateRow(raw: Record<string, unknown>, rowNumber: number): ParsedRow {
+function validateRow(
+  raw: Record<string, unknown>,
+  rowNumber: number,
+): ParsedRow {
   const errors: RowFieldError[] = [];
 
   const rawName = toStringField(raw.name);
@@ -267,16 +311,26 @@ function validateRow(raw: Record<string, unknown>, rowNumber: number): ParsedRow
               ? rawRegion
               : rawPosition;
     if (!value) {
-      errors.push({ field, message: `${labelFor(field)} is required` });
+      errors.push({ field, code: 'REQUIRED', row: rowNumber });
     }
   }
 
   // Name
   if (rawName) {
     if (name.length < 2) {
-      errors.push({ field: 'name', message: 'Name must be at least 2 characters' });
+      errors.push({
+        field: 'name',
+        code: 'NAME_TOO_SHORT',
+        row: rowNumber,
+        params: { min: 2 },
+      });
     } else if (name.length > 50) {
-      errors.push({ field: 'name', message: 'Name must be 50 characters or fewer' });
+      errors.push({
+        field: 'name',
+        code: 'NAME_TOO_LONG',
+        row: rowNumber,
+        params: { max: 50 },
+      });
     }
   }
 
@@ -285,7 +339,12 @@ function validateRow(raw: Record<string, unknown>, rowNumber: number): ParsedRow
   if (rawAge) {
     const n = Number(rawAge);
     if (!Number.isFinite(n) || !Number.isInteger(n) || n < 14 || n > 45) {
-      errors.push({ field: 'age', message: 'Age must be a whole number between 14 and 45' });
+      errors.push({
+        field: 'age',
+        code: 'INVALID_AGE',
+        row: rowNumber,
+        params: { value: rawAge, min: 14, max: 45 },
+      });
     } else {
       age = n;
     }
@@ -295,7 +354,9 @@ function validateRow(raw: Record<string, unknown>, rowNumber: number): ParsedRow
   if (rawNationality && nationality.length > 56) {
     errors.push({
       field: 'nationality',
-      message: 'Nationality must be 56 characters or fewer',
+      code: 'NATIONALITY_TOO_LONG',
+      row: rowNumber,
+      params: { max: 56 },
     });
   }
 
@@ -306,7 +367,9 @@ function validateRow(raw: Record<string, unknown>, rowNumber: number): ParsedRow
     if (!region) {
       errors.push({
         field: 'region',
-        message: `"${rawRegion}" is not a recognised region`,
+        code: 'INVALID_REGION',
+        row: rowNumber,
+        params: { value: rawRegion },
       });
     }
   }
@@ -318,14 +381,21 @@ function validateRow(raw: Record<string, unknown>, rowNumber: number): ParsedRow
     if (!position) {
       errors.push({
         field: 'position',
-        message: `"${rawPosition}" is not a recognised position`,
+        code: 'INVALID_POSITION',
+        row: rowNumber,
+        params: { value: rawPosition },
       });
     }
   }
 
   // Bio (optional, but cap length so it doesn't blow up on-chain storage)
   if (bio.length > 500) {
-    errors.push({ field: 'bio', message: 'Bio must be 500 characters or fewer' });
+    errors.push({
+      field: 'bio',
+      code: 'BIO_TOO_LONG',
+      row: rowNumber,
+      params: { max: 500 },
+    });
   }
 
   const data: BulkImportRow = {
@@ -344,31 +414,12 @@ function validateRow(raw: Record<string, unknown>, rowNumber: number): ParsedRow
       : null;
 
   return {
-    row: rowNumber,
+    rowNumber,
     data,
     valid,
     errors,
     isValid: isValid && valid !== null,
   };
-}
-
-function labelFor(field: BulkImportField): string {
-  switch (field) {
-    case 'name':
-      return 'Name';
-    case 'age':
-      return 'Age';
-    case 'nationality':
-      return 'Nationality';
-    case 'region':
-      return 'Region';
-    case 'position':
-      return 'Position';
-    case 'bio':
-      return 'Bio';
-    default:
-      return field;
-  }
 }
 
 // ── Entry point ───────────────────────────────────────────────────────────────
@@ -383,24 +434,27 @@ export function parseBulkImportFile(
   } catch (err) {
     return {
       rows: [],
-      fileError: err instanceof Error ? err.message : 'Failed to parse file.',
+      fileError: {
+        code:
+          err instanceof BulkImportFileParseError ? err.code : 'PARSE_FAILED',
+      },
     };
   }
 
   if (records.length === 0) {
     return {
       rows: [],
-      fileError:
-        format === 'json'
-          ? 'JSON file contains no player entries.'
-          : 'CSV file contains no data rows (only a header, or the file is empty).',
+      fileError: { code: format === 'json' ? 'EMPTY_JSON' : 'EMPTY_CSV' },
     };
   }
 
   if (records.length > MAX_BULK_IMPORT_ROWS) {
     return {
       rows: [],
-      fileError: `File contains ${records.length} rows, which exceeds the ${MAX_BULK_IMPORT_ROWS}-row limit per import. Please split it into smaller batches.`,
+      fileError: {
+        code: 'TOO_MANY_ROWS',
+        params: { count: records.length, max: MAX_BULK_IMPORT_ROWS },
+      },
     };
   }
 

@@ -1,4 +1,11 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+jest.unmock('next-intl');
+
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@/__tests__/setup-providers-intl';
 import '@testing-library/jest-dom';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import BulkPlayerImport from '@/components/academy/BulkPlayerImport';
@@ -17,6 +24,17 @@ jest.mock('@/hooks/useIsPaused', () => ({
 
 jest.mock('@/lib/contract', () => ({
   buildRegisterPlayer: jest.fn(),
+}));
+
+jest.mock('@/lib/bulkImportStore', () => ({
+  hashFileContent: jest.fn().mockResolvedValue('testhash'),
+  getOrCreateSession: jest
+    .fn()
+    .mockResolvedValue({ sessionId: 'sess-1', rows: new Map() }),
+  getSessionRows: jest.fn().mockResolvedValue(new Map()),
+  updateRowStatus: jest.fn().mockResolvedValue(undefined),
+  deleteSession: jest.fn().mockResolvedValue(undefined),
+  cleanupExpiredSessions: jest.fn().mockResolvedValue(undefined),
 }));
 
 const mockedUseWallet = useWallet as jest.MockedFunction<typeof useWallet>;
@@ -48,9 +66,17 @@ const MIXED_CSV = [
   ',22,Nigerian,nigeria,ST',
 ].join('\n');
 
-async function uploadFile(container: HTMLElement, content: string, name: string) {
+async function uploadFile(
+  container: HTMLElement,
+  content: string,
+  name: string,
+) {
   const input = screen.getByLabelText(/player file/i) as HTMLInputElement;
   const file = new File([content], name, { type: 'text/csv' });
+  Object.defineProperty(input, 'files', {
+    value: [file],
+    configurable: true,
+  });
   fireEvent.change(input, { target: { files: [file] } });
   await waitFor(() => {
     expect(

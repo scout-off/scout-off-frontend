@@ -82,7 +82,10 @@ export default function WalletButton({
     connectWithProvider,
   } = useWallet();
 
-  // ── Wallet install detection ───────────────────────────────────────────────
+  // ── Remember me state ────────────────────────────────────────────────────
+  const [rememberMe, setRememberMe] = useState(false);
+
+  // ── Wallet install detection ─────────────────────────────────────────────
   const [installedMap, setInstalledMap] = useState<
     Partial<Record<WalletProvider, boolean>>
   >({});
@@ -91,7 +94,7 @@ export default function WalletButton({
     if (!showWalletModal) return;
     let cancelled = false;
     Promise.all(
-      WALLET_PROVIDERS.map(async (wp) => {
+      WALLET_PROVIDERS.filter((wp) => !wp.comingSoon).map(async (wp) => {
         const provider = wp.provider as WalletProvider;
         return [provider, await isWalletInstalled(provider)] as const;
       }),
@@ -106,16 +109,17 @@ export default function WalletButton({
     };
   }, [showWalletModal]);
 
-  const allChecked = WALLET_PROVIDERS.every(
+  const availableProviders = WALLET_PROVIDERS.filter((wp) => !wp.comingSoon);
+  const allChecked = availableProviders.every(
     (wp) => installedMap[wp.provider as WalletProvider] !== undefined,
   );
   const noneInstalled =
     allChecked &&
-    WALLET_PROVIDERS.every(
+    availableProviders.every(
       (wp) => installedMap[wp.provider as WalletProvider] === false,
     );
 
-  // ── Disconnect confirmation state ──────────────────────────────────────────
+  // ── Disconnect confirmation state ────────────────────────────────────────
   const [disconnectOpen, setDisconnectOpen] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
 
@@ -129,10 +133,10 @@ export default function WalletButton({
     }
   }, [disconnect]);
 
-  // ── Provider connection ────────────────────────────────────────────────────
+  // ── Provider connection ──────────────────────────────────────────────────
   async function handleConnectWithProvider(provider: WalletProvider) {
     try {
-      await connectWithProvider(provider);
+      await connectWithProvider(provider, rememberMe);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to connect wallet';
@@ -235,10 +239,18 @@ export default function WalletButton({
                   <button
                     key={wp.provider}
                     type="button"
-                    onClick={() =>
-                      handleConnectWithProvider(wp.provider as WalletProvider)
+                    onClick={
+                      wp.comingSoon
+                        ? undefined
+                        : () =>
+                            handleConnectWithProvider(
+                              wp.provider as WalletProvider,
+                            )
                     }
-                    disabled={isThisConnecting || isOtherConnecting}
+                    disabled={
+                      wp.comingSoon || isThisConnecting || isOtherConnecting
+                    }
+                    aria-disabled={wp.comingSoon}
                     className="flex items-center gap-3 w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-left text-white hover:border-brand-green hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span className="text-2xl shrink-0" aria-hidden="true">
@@ -246,12 +258,14 @@ export default function WalletButton({
                     </span>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium">{wp.label}</p>
-                      <p className="text-xs text-gray-500">
-                        {wp.provider === 'ledger'
-                          ? t('ledgerConnect')
-                          : wp.provider === 'albedo'
-                            ? t('installMobile')
-                            : t('install')}
+                      <p className="text-xs text-gray-400">
+                        {wp.comingSoon
+                          ? t('comingSoon')
+                          : wp.provider === 'ledger'
+                            ? t('ledgerConnect')
+                            : wp.provider === 'albedo'
+                              ? t('installMobile')
+                              : t('install')}
                       </p>
                       {wp.provider === 'ledger' && (
                         <p className="text-xs text-yellow-400 mt-1">
@@ -270,10 +284,29 @@ export default function WalletButton({
               })
             )}
           </div>
+
+          {/* ── Remember this device checkbox ── */}
+          <label className="flex items-start gap-3 cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-gray-600 bg-gray-800 text-brand-green focus:ring-brand-green focus:ring-offset-0 cursor-pointer"
+            />
+            <div className="flex flex-col gap-0.5">
+              <span className="text-sm font-medium text-gray-200 group-hover:text-white transition">
+                {t('rememberDevice')}
+              </span>
+              <span className="text-xs text-gray-500">
+                {t('rememberDeviceHint')}
+              </span>
+            </div>
+          </label>
+
           <button
             type="button"
             onClick={closeWalletModal}
-            className="text-sm text-gray-500 hover:text-gray-300 transition self-center"
+            className="text-sm text-gray-400 hover:text-gray-300 transition self-center"
           >
             {t('cancel')}
           </button>

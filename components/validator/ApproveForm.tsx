@@ -1,10 +1,18 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { sanitize } from '@/lib/sanitize';
 import { useWallet } from '@/hooks/useWallet';
 import useIsPaused from '@/hooks/useIsPaused';
 import { useValidator } from '@/hooks/useValidator';
 import { getPlayer } from '@/lib/contract';
+import { endorseMilestone } from '@/lib/api';
+import { getErrorMessage } from '@/lib/getErrorMessage';
+import {
+  isOnChainApproved,
+  submitAndConfirmApproval,
+  type ApprovalPhase,
+} from '@/lib/confirmApprovalSubmission';
 import { PROGRESS_LABELS } from '@/types';
 import type { Player } from '@/types';
 import TransactionStatus, { TxStatus } from '@/components/ui/TransactionStatus';
@@ -13,10 +21,35 @@ interface ApproveFormProps {
   onSuccess: () => void;
 }
 
+function phaseToTxStatus(phase: ApprovalPhase): TxStatus | null {
+  switch (phase) {
+    case 'idle':
+      return null;
+    case 'signing':
+      return 'pending';
+    case 'submitted':
+    case 'confirming':
+      return 'confirming';
+    case 'success':
+      return 'success';
+    case 'event_lag':
+      return 'event_lag';
+    case 'failed':
+      return 'failed';
+    case 'timeout':
+      return 'timeout';
+    case 'error':
+      return 'error';
+    default:
+      return 'error';
+  }
+}
+
 export default function ApproveForm({ onSuccess }: ApproveFormProps) {
   const { publicKey, signAndSubmit } = useWallet();
   const { isValidator, checking, approveMilestone } = useValidator(publicKey);
   const isPaused = useIsPaused();
+  const tContractStatus = useTranslations('contract_status');
   const [playerId, setPlayerId] = useState('');
   const [description, setDescription] = useState('');
   const [evidenceUrl, setEvidenceUrl] = useState('');
@@ -65,8 +98,8 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
     try {
       const result = await getPlayer(playerId.trim());
       setPlayer(result as Player);
-    } catch (e: any) {
-      setPlayerError(e.message);
+    } catch (e: unknown) {
+      setPlayerError(getErrorMessage(e, 'Failed to load player.'));
       setPlayer(null);
     } finally {
       setPlayerLoading(false);
@@ -93,15 +126,60 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
     setSubmitError(null);
     try {
       const sanitizedDescription = sanitize(description);
-      const xdr = await approveMilestone(playerId.trim(), sanitizedDescription);
-      const result = await signAndSubmit(xdr);
-      const hash = (result as any)?.hash ?? null;
-      setTxHash(hash);
-      setTxStatus('success');
+      const result = await submitAndConfirmApproval({
+        buildXdr: () => approveMilestone(playerId.trim(), sanitizedDescription),
+        signAndSubmit,
+        playerId: playerId.trim(),
+        validatorAddress: publicKey,
+        onPhase: (phase, meta) => {
+          setTxStatus(phaseToTxStatus(phase));
+          if (meta.hash) setTxHash(meta.hash);
+          if (
+            phase === 'failed' ||
+            phase === 'timeout' ||
+            phase === 'error' ||
+            phase === 'event_lag'
+          ) {
+            setSubmitError(meta.message ?? null);
+          }
+        },
+      });
+
+      setTxHash(result.hash);
+      setTxStatus(phaseToTxStatus(result.phase));
+      if (!isOnChainApproved(result.phase)) {
+        setSubmitError(result.message);
+        return;
+      }
+      if (result.phase === 'event_lag') {
+        setSubmitError(result.message);
+      } else {
+        setSubmitError(null);
+      }
       onSuccess();
-    } catch (e: any) {
+
+      // Auto-record this approving validator's own endorsement (issue
+      // #1185) — the first signer's own approval always counts toward
+      // their academy's quorum, without a separate manual step. Best-effort
+      // and fire-and-forget: a failure here must never surface as an
+      // approval error, since the on-chain approval has already succeeded.
+      // Re-fetches the player rather than trusting a locally-known
+      // milestone id, since approve_milestone assigns the id server-side —
+      // ApproveForm never receives it directly from submitAndConfirmApproval.
+      (async () => {
+        try {
+          const p: any = await getPlayer(playerId.trim());
+          const lastMilestone = p?.milestones?.[p.milestones.length - 1];
+          if (lastMilestone && lastMilestone.validator === publicKey) {
+            await endorseMilestone(playerId.trim(), lastMilestone.id);
+          }
+        } catch {
+          // Best-effort — see comment above.
+        }
+      })();
+    } catch (e: unknown) {
       setTxStatus('error');
-      setSubmitError(e?.message ?? 'Approval failed');
+      setSubmitError(getErrorMessage(e, 'Approval failed'));
     } finally {
       setSubmitting(false);
     }
@@ -127,12 +205,19 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
     return (
       <div className="bg-brand-card border border-gray-800 rounded-xl p-6 text-center">
         <p className="text-gray-400">Not a validator</p>
-        <p className="text-gray-500 text-sm mt-1">
+        <p className="text-gray-400 text-sm mt-1">
           Your wallet is not registered as a validator on this contract.
         </p>
       </div>
     );
   }
+
+  const submitLabel =
+    txStatus === 'confirming'
+      ? 'Confirming on-chain\u2026'
+      : submitting
+        ? 'Submitting\u2026'
+        : 'Approve Milestone';
 
   return (
     <form
@@ -141,19 +226,22 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
     >
       <h2 className="text-xl font-semibold text-white">Approve Milestone</h2>
 
-      {submitAttempted && submitError && (
-        <div
-          ref={summaryRef}
-          role="alert"
-          aria-label="Form submission error"
-          tabIndex={-1}
-          className="rounded-md border border-red-500 bg-red-950/30 p-3 outline-none"
-        >
-          <p className="text-sm text-red-400 font-medium">
-            Submission failed. Please review the error and try again.
-          </p>
-        </div>
-      )}
+      {submitAttempted &&
+        submitError &&
+        txStatus !== 'event_lag' &&
+        txStatus !== 'success' && (
+          <div
+            ref={summaryRef}
+            role="alert"
+            aria-label="Form submission error"
+            tabIndex={-1}
+            className="rounded-md border border-red-500 bg-red-950/30 p-3 outline-none"
+          >
+            <p className="text-sm text-red-400 font-medium">
+              Submission failed. Please review the error and try again.
+            </p>
+          </div>
+        )}
 
       <div className="flex flex-col gap-1">
         <label htmlFor="approve-player-id" className="text-xs text-gray-400">
@@ -196,14 +284,14 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
       {player && (
         <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 text-sm text-gray-300 flex flex-col gap-1">
           <p>
-            <span className="text-gray-500">Name:</span> {player.vitals.name}
+            <span className="text-gray-400">Name:</span> {player.vitals.name}
           </p>
           <p>
-            <span className="text-gray-500">Level:</span>{' '}
+            <span className="text-gray-400">Level:</span>{' '}
             {PROGRESS_LABELS[player.progressLevel]}
           </p>
           <p>
-            <span className="text-gray-500">Last milestone:</span>{' '}
+            <span className="text-gray-400">Last milestone:</span>{' '}
             {player.milestones.length > 0
               ? player.milestones[player.milestones.length - 1].description
               : 'None'}
@@ -260,12 +348,21 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
 
       <button
         type="submit"
-        disabled={submitting || !!urlError || isPaused}
-        title={isPaused ? 'Contract is currently paused' : undefined}
+        disabled={submitting || !!urlError}
+        aria-disabled={isPaused ? 'true' : undefined}
+        aria-describedby={isPaused ? 'paused-hint' : undefined}
+        onClick={(e) => {
+          if (isPaused) e.preventDefault();
+        }}
         className="bg-brand-green text-black font-semibold py-2 rounded-lg hover:opacity-90 transition disabled:opacity-50"
       >
-        {submitting ? 'Submitting\u2026' : 'Approve Milestone'}
+        {submitLabel}
       </button>
+      {isPaused && (
+        <p id="paused-hint" className="text-xs text-gray-400 mt-1">
+          {tContractStatus('paused_hint')}
+        </p>
+      )}
     </form>
   );
 }

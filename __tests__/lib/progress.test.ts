@@ -36,7 +36,8 @@ describe('getProgressLabel', () => {
   });
 
   it('returns "Unknown" for an out-of-range level', () => {
-    expect(getProgressLabel(99)).toBe('Unknown');
+    expect(getProgressLabel(4)).toBe('Unknown');
+    expect(getProgressLabel(-1)).toBe('Unknown');
   });
 });
 

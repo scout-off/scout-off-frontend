@@ -12,27 +12,30 @@ jest.mock('fs', () => {
 });
 
 jest.mock('next-intl/server', () => ({
-  getTranslations: jest.fn(async ({ namespace }: { namespace?: string } = {}) => {
-    return (key: string) => {
-      if (namespace === 'changelog') {
-        const translations: Record<string, string> = {
-          page_title: 'Changelog',
-          page_description: 'Recent platform updates and improvements.',
-          eyebrow: 'Platform updates',
-          english_notice: 'This changelog is currently available in English only.',
-          added: 'Added',
-          improved: 'Improved',
-          fixed: 'Fixed',
-          back_to_home: 'Back to home',
-          empty_title: 'Changelog unavailable',
-          empty_description:
-            "We couldn't load the changelog right now. Please check back later.",
-        };
-        return translations[key] ?? key;
-      }
-      return key;
-    };
-  }),
+  getTranslations: jest.fn(
+    async ({ namespace }: { namespace?: string } = {}) => {
+      return (key: string) => {
+        if (namespace === 'changelog') {
+          const translations: Record<string, string> = {
+            page_title: 'Changelog',
+            page_description: 'Recent platform updates and improvements.',
+            eyebrow: 'Platform updates',
+            english_notice:
+              'This changelog is currently available in English only.',
+            added: 'Added',
+            improved: 'Improved',
+            fixed: 'Fixed',
+            back_to_home: 'Back to home',
+            empty_title: 'Changelog unavailable',
+            empty_description:
+              "We couldn't load the changelog right now. Please check back later.",
+          };
+          return translations[key] ?? key;
+        }
+        return key;
+      };
+    },
+  ),
 }));
 
 describe('ChangelogPage', () => {
@@ -50,13 +53,15 @@ describe('ChangelogPage', () => {
     );
 
     const headings = screen.getAllByRole('heading', { level: 2 });
-    expect(headings[0]).toHaveTextContent('Accessibility and discovery updates');
-    expect(headings[1]).toHaveTextContent('Player onboarding and search improvements');
-    expect(headings[2]).toHaveTextContent('Scout dashboard and public profile improvements');
+    expect(headings[0]).toHaveTextContent(
+      'Scout ContactModal — unlocked contact details display',
+    );
+    expect(headings[1]).toHaveTextContent('Pull-to-refresh gesture support');
+    expect(headings[2]).toHaveTextContent('Scout referral/invite system');
 
+    expect(screen.getByText('2026-07-28')).toBeInTheDocument();
+    expect(screen.getAllByText('2026-07-17').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('2026-06-30')).toBeInTheDocument();
-    expect(screen.getByText('2026-06-29')).toBeInTheDocument();
-    expect(screen.getByText('2026-06-28')).toBeInTheDocument();
   });
 
   it('renders an EmptyState fallback when the changelog file fails to load', async () => {

@@ -16,13 +16,35 @@
  */
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import Tooltip from '@/components/ui/Tooltip';
+import Badge from '@/components/ui/Badge';
 import { checkIsValidator } from '@/lib/contract';
 import { fetchValidatorMilestoneCount, fetchAcademyForWallet } from '@/lib/api';
 
-interface ValidatorChipProps {
+/** Small institution glyph for the academy-affiliation marker — decorative,
+ * the accessible name comes from the enclosing Badge's aria-label. */
+function AcademyIcon() {
+  return (
+    <svg
+      className="w-3 h-3"
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M10 2L1 7l9 5 7-3.89V15h2V7L10 2zM5 10.09V14c0 .35 3 3 5 3s5-2.65 5-3v-3.91l-5 2.78-5-2.78z" />
+    </svg>
+  );
+}
+
+export interface ValidatorChipProps {
   /** Full Stellar public key of the validator. */
   address: string;
+  /** Optional display name shown on hover if validator is known. */
+  label?: string;
+  /** Additional Tailwind classes for custom sizing or colour. */
+  className?: string;
 }
 
 type Status = 'loading' | 'active' | 'former' | 'unknown';
@@ -31,7 +53,12 @@ function truncateAddress(addr: string): string {
   return `${addr.slice(0, 8)}…${addr.slice(-4)}`;
 }
 
-export default function ValidatorChip({ address }: ValidatorChipProps) {
+export default function ValidatorChip({
+  address,
+  label,
+  className,
+}: ValidatorChipProps) {
+  const t = useTranslations('validator.chip');
   const [status, setStatus] = useState<Status>('loading');
   const [milestoneCount, setMilestoneCount] = useState<number | null>(null);
   const [academyName, setAcademyName] = useState<string | null>(null);
@@ -73,12 +100,13 @@ export default function ValidatorChip({ address }: ValidatorChipProps) {
     unknown: 'bg-gray-700/60 text-gray-400 border border-gray-600/60',
   };
 
-  const statusLabel: Record<Status, string> = {
-    loading: 'Checking validator…',
-    active: 'Active validator',
-    former: 'Former validator',
-    unknown: 'Validator status unknown',
+  const statusLabelKey: Record<Status, string> = {
+    loading: 'loading',
+    active: 'active',
+    former: 'former',
+    unknown: 'unknown',
   };
+  const statusLabel = t(statusLabelKey[status]);
 
   const dotClasses: Record<Status, string> = {
     loading: 'bg-gray-500 animate-pulse',
@@ -93,18 +121,28 @@ export default function ValidatorChip({ address }: ValidatorChipProps) {
   // than surfacing only the individual wallet.
   const statusAndCount =
     status === 'loading'
-      ? 'Fetching validator information…'
+      ? t('fetching')
       : milestoneCount !== null
-        ? `${statusLabel[status]} · ${milestoneCount} milestone${milestoneCount !== 1 ? 's' : ''} approved`
-        : `${statusLabel[status]} · ${truncateAddress(address)}`;
-  const tooltipContent = academyName ? `${academyName} · ${statusAndCount}` : statusAndCount;
+        ? t('milestones_approved', {
+            status: statusLabel,
+            count: milestoneCount,
+          })
+        : `${statusLabel} · ${truncateAddress(address)}`;
+  const tooltipContent = academyName
+    ? `${academyName} · ${statusAndCount}`
+    : statusAndCount;
+  const displayLabel = label ?? academyName ?? truncateAddress(address);
+  const displayKind = label ? undefined : academyName ? 'academy' : 'address';
 
   const chip = (
     <span
       className={[
         'inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium leading-none select-none',
         chipClasses[status],
-      ].join(' ')}
+        className,
+      ]
+        .filter(Boolean)
+        .join(' ')}
       aria-label={tooltipContent}
     >
       {/* Status dot */}
@@ -118,11 +156,30 @@ export default function ValidatorChip({ address }: ValidatorChipProps) {
 
       {/* Label: academy name when this wallet is a registered signer for
           one, otherwise the raw address — always visible; status text only
-          shown once resolved. */}
-      {academyName ? (
-        <span className="font-medium">{academyName}</span>
+          shown once resolved. The optional label prop lets callers override
+          the display name entirely. */}
+      {displayLabel ? (
+        <span
+          className={displayKind === 'address' ? 'font-mono' : 'font-medium'}
+        >
+          {displayLabel}
+        </span>
       ) : (
         <span className="font-mono">{truncateAddress(address)}</span>
+      )}
+
+      {/* Academy-affiliation marker: on top of the name substitution above,
+          gives a scannable "institution vs. independent" signal that doesn't
+          require reading the full label. Reuses the shared Badge component
+          rather than a bespoke visual for this one spot (issue #1169). */}
+      {displayKind === 'academy' && (
+        <Badge
+          variant="academy"
+          label={t('academy_affiliated')}
+          size="sm"
+          icon={<AcademyIcon />}
+          className="!px-1.5 !py-0"
+        />
       )}
 
       {status !== 'loading' && status !== 'unknown' && (
@@ -130,7 +187,7 @@ export default function ValidatorChip({ address }: ValidatorChipProps) {
           <span aria-hidden="true" className="opacity-40">
             ·
           </span>
-          <span>{statusLabel[status]}</span>
+          <span>{statusLabel}</span>
         </>
       )}
     </span>

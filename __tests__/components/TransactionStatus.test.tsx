@@ -1,6 +1,14 @@
 import { act, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import TransactionStatus from '@/components/ui/TransactionStatus';
+import { getExplorerTxUrl } from '@/lib/network';
+
+// lib/network.ts reads NEXT_PUBLIC_NETWORK once at load, so the mainnet case
+// swaps in a copy of the helper loaded with NEXT_PUBLIC_NETWORK=mainnet.
+jest.mock('@/lib/network', () => {
+  const actual = jest.requireActual('@/lib/network');
+  return { ...actual, getExplorerTxUrl: jest.fn(actual.getExplorerTxUrl) };
+});
 
 describe('TransactionStatus', () => {
   beforeEach(() => {
@@ -49,7 +57,16 @@ describe('TransactionStatus', () => {
   });
 
   it('renders success state with explorer link for mainnet', () => {
+    const original = process.env.NEXT_PUBLIC_NETWORK;
     process.env.NEXT_PUBLIC_NETWORK = 'mainnet';
+    jest.isolateModules(() => {
+      jest
+        .mocked(getExplorerTxUrl)
+        .mockImplementationOnce(
+          jest.requireActual('@/lib/network').getExplorerTxUrl,
+        );
+    });
+    process.env.NEXT_PUBLIC_NETWORK = original;
     const hash = 'def456';
     render(<TransactionStatus status="success" txHash={hash} />);
     const link = screen.getByRole('link', {
@@ -57,7 +74,7 @@ describe('TransactionStatus', () => {
     });
     expect(link).toHaveAttribute(
       'href',
-      `https://stellar.expert/explorer/mainnet/tx/${hash}`,
+      `https://stellar.expert/explorer/public/tx/${hash}`,
     );
   });
 

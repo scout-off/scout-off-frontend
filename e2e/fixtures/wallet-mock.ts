@@ -12,12 +12,26 @@ export interface MockWalletOptions {
 
 export interface MockWallet {
   publicKey: string;
-  keypair: Keypair;
+  /** The keypair the mock is *currently* signing with (see `switchAccount`). */
+  readonly keypair: Keypair;
   /** Change how the mock answers *subsequent* connect/sign requests on this page. */
   setBehavior(behavior: WalletBehavior): Promise<void>;
+  /**
+   * Switches the account this mock extension reports and signs with —
+   * i.e. the "switch account" a user performs in Freighter's own popup,
+   * which a dApp can neither observe nor trigger. Returns the new public
+   * key.
+   *
+   * Unlike a page-side only toggle this survives navigation: the mock's
+   * `REQUEST_PUBLIC_KEY`/`SUBMIT_TRANSACTION` handlers ask Node for the
+   * active account on every request, so a reload after switching reports
+   * the new address rather than resetting to the initial secret.
+   */
+  switchAccount(secret: string): Promise<string>;
 }
 
 const SIGN_FN = '__e2eFreighterSign';
+const ACCOUNT_FN = '__e2eFreighterAccount';
 const BEHAVIOR_FLAG = '__e2eFreighterBehavior';
 
 /**
@@ -41,27 +55,55 @@ export async function installMockFreighter(
   page: Page,
   options: MockWalletOptions,
 ): Promise<MockWallet> {
-  const keypair = Keypair.fromSecret(options.secret);
-  const publicKey = keypair.publicKey();
   const initialBehavior: WalletBehavior = options.behavior ?? 'approve';
+
+  // Mutable so `switchAccount` below can change both what the extension
+  // reports and which key it signs with — the two must never disagree, or
+  // the mock would hand the app a signature from an account it never
+  // authenticated.
+  let activeKeypair = Keypair.fromSecret(options.secret);
+
+  await page.exposeFunction(ACCOUNT_FN, () => activeKeypair.publicKey());
 
   await page.exposeFunction(
     SIGN_FN,
     (transactionXdr: string, networkPassphrase: string) => {
       const tx = TransactionBuilder.fromXDR(transactionXdr, networkPassphrase);
-      tx.sign(keypair);
+      tx.sign(activeKeypair);
       return tx.toXDR();
     },
   );
 
+  // Two overlays sit on top of every page for a fresh browser and swallow
+  // clicks: the dashboards' onboarding tours (hooks/useOnboardingTour.ts)
+  // and the cookie-consent banner (components/ui/CookieConsentBanner.tsx).
+  // No spec exercises either, so record the choices the way the app does.
+  await page.addInitScript((publicKey: string) => {
+    window.localStorage.setItem('scoutoff:cookie-consent', 'declined');
+    for (const tour of [
+      'scout_dashboard',
+      'player_dashboard',
+      'validator_dashboard',
+    ]) {
+      window.localStorage.setItem(
+        `scout_tour_${tour}_${publicKey}`,
+        JSON.stringify({
+          isDismissed: true,
+          isCompleted: false,
+          currentStep: 0,
+        }),
+      );
+    }
+  }, activeKeypair.publicKey());
+
   await page.addInitScript(
     ({
-      publicKey,
+      accountFn,
       behaviorFlag,
       signFn,
       initialBehavior,
     }: {
-      publicKey: string;
+      accountFn: string;
       behaviorFlag: string;
       signFn: string;
       initialBehavior: WalletBehavior;
@@ -101,6 +143,10 @@ export async function installMockFreighter(
           behaviorFlag
         ] as WalletBehavior;
 
+        // freighter-api v6 reads failures from `apiError` ({ code, message });
+        // `error` is kept for the older wire format.
+        const DECLINED = { code: -4, message: 'User declined access' };
+
         const respond = (payload: Record<string, unknown>) => {
           window.postMessage(
             {
@@ -118,23 +164,44 @@ export async function installMockFreighter(
             return;
           case 'REQUEST_PUBLIC_KEY':
             if (behavior === 'reject') {
-              respond({ publicKey: '', error: 'User declined access' });
-            } else {
-              respond({ publicKey, error: '' });
+              respond({
+                publicKey: '',
+                error: 'User declined access',
+                apiError: DECLINED,
+              });
+              return;
             }
+            // Ask Node for the *current* account rather than using a value
+            // captured at install time, so a `switchAccount()` survives a
+            // page reload (the init script re-runs on every navigation).
+            (
+              (window as unknown as Record<string, unknown>)[
+                accountFn
+              ] as () => Promise<string>
+            )().then(
+              (currentPublicKey: string) =>
+                respond({ publicKey: currentPublicKey, error: '' }),
+              (err: unknown) =>
+                respond({
+                  publicKey: '',
+                  error: err instanceof Error ? err.message : String(err),
+                }),
+            );
             return;
           case 'SUBMIT_TRANSACTION':
             if (behavior === 'reject') {
               respond({
                 signedTransaction: '',
                 error: 'User declined access',
+                apiError: DECLINED,
               });
               return;
             }
             (
-              (window as unknown as Record<string, unknown>)[
-                signFn
-              ] as (xdr: string, passphrase?: string) => Promise<string>
+              (window as unknown as Record<string, unknown>)[signFn] as (
+                xdr: string,
+                passphrase?: string,
+              ) => Promise<string>
             )(data.transactionXdr ?? '', data.networkPassphrase).then(
               (signedTransaction: string) =>
                 respond({ signedTransaction, error: '' }),
@@ -150,12 +217,19 @@ export async function installMockFreighter(
         }
       });
     },
-    { publicKey, behaviorFlag: BEHAVIOR_FLAG, signFn: SIGN_FN, initialBehavior },
+    {
+      accountFn: ACCOUNT_FN,
+      behaviorFlag: BEHAVIOR_FLAG,
+      signFn: SIGN_FN,
+      initialBehavior,
+    },
   );
 
-  return {
-    publicKey,
-    keypair,
+  const mock: MockWallet = {
+    publicKey: activeKeypair.publicKey(),
+    get keypair() {
+      return activeKeypair;
+    },
     async setBehavior(behavior) {
       await page.evaluate(
         ({ flag, behavior }) => {
@@ -164,5 +238,12 @@ export async function installMockFreighter(
         { flag: BEHAVIOR_FLAG, behavior },
       );
     },
+    async switchAccount(secret) {
+      activeKeypair = Keypair.fromSecret(secret);
+      mock.publicKey = activeKeypair.publicKey();
+      return mock.publicKey;
+    },
   };
+
+  return mock;
 }

@@ -1,14 +1,16 @@
 'use client';
 
+import { useId, type ReactNode } from 'react';
 import Modal from './Modal';
 import Button from './Button';
+import { useTranslations } from 'next-intl';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
   onConfirm: () => void | Promise<void>;
   onCancel: () => void;
   title: string;
-  message: string;
+  message: ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
   loading?: boolean;
@@ -20,22 +22,41 @@ export default function ConfirmDialog({
   onCancel,
   title,
   message,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
+  confirmLabel,
+  cancelLabel,
   loading = false,
 }: ConfirmDialogProps) {
+  const titleId = useId();
+  const messageId = useId();
+  const t = useTranslations('common');
   const handleConfirm = async () => {
     await onConfirm();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onCancel}>
+    <Modal
+      isOpen={isOpen}
+      onClose={onCancel}
+      ariaLabelledBy={titleId}
+      ariaDescribedBy={messageId}
+    >
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-white">{title}</h2>
-        <p className="text-gray-300">{message}</p>
+        <h2
+          id={titleId}
+          className="text-xl font-semibold text-gray-900 dark:text-white"
+        >
+          {title}
+        </h2>
+        <p
+          id={messageId}
+          className="text-gray-700 dark:text-gray-300"
+          aria-live="polite"
+        >
+          {message}
+        </p>
         <div className="flex justify-end gap-3 pt-2">
           <Button variant="secondary" onClick={onCancel} disabled={loading}>
-            {cancelLabel}
+            {cancelLabel ?? t('cancel')}
           </Button>
           <Button
             variant="danger"
@@ -43,7 +64,7 @@ export default function ConfirmDialog({
             isLoading={loading}
             disabled={loading}
           >
-            {confirmLabel}
+            {confirmLabel ?? t('confirm')}
           </Button>
         </div>
       </div>

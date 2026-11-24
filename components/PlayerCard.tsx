@@ -7,11 +7,19 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { mutate } from 'swr';
-import type { Player, ProgressLevel } from '@/types';
+import type { Milestone, Player, ProgressLevel } from '@/types';
 import { getProgressLabel } from '@/lib/progress';
 import { getMediaProxyUrl } from '@/lib/mediaUrl';
 import ProgressBar from './ProgressBar';
 import Badge from '@/components/ui/Badge';
+import Tooltip from '@/components/ui/Tooltip';
+import { FOOTBALL_POSITIONS } from '@/lib/positions';
+
+/** Map position abbreviation (e.g. "ST") → full label (e.g. "Striker"). */
+/** Look up the full label for a position abbreviation, e.g. 'ST' → 'Striker'. */
+const POSITION_LABEL: Record<string, string> = Object.fromEntries(
+  FOOTBALL_POSITIONS.map(({ value, label }) => [value, label]),
+);
 
 const LEVEL_VARIANT: Record<
   ProgressLevel,
@@ -30,17 +38,49 @@ interface PlayerCardProps {
   /** When provided (with onToggleWatchlist), renders a watchlist toggle star. */
   isWatched?: boolean;
   onToggleWatchlist?: () => void;
+  /** When provided, renders a compare-selection checkbox at the top-left. */
+  isCompareSelected?: boolean;
+  onToggleCompare?: () => void;
+  /**
+   * When provided (even as an empty array), milestone data is taken from
+   * this prop instead of the card fetching its own via SWR. Callers that
+   * already have batched milestone data for a whole visible set of players
+   * (e.g. the virtualized scout results grid, via useMilestonesBatch) should
+   * pass it here to avoid one RPC round-trip per mounted card. Omit both
+   * this and `milestonesLoading` to keep the card's default self-fetching
+   * behavior for standalone usage (e.g. a single wallet-search result).
+   */
+  milestones?: Milestone[];
+  milestonesLoading?: boolean;
 }
 
-function PlayerCard({ player, isWatched, onToggleWatchlist }: PlayerCardProps) {
+function PlayerCard({
+  player,
+  isWatched,
+  onToggleWatchlist,
+  isCompareSelected,
+  onToggleCompare,
+  milestones: milestonesProp,
+  milestonesLoading: milestonesLoadingProp,
+}: PlayerCardProps) {
   const { id, vitals, progressLevel, ipfsHash } = player;
+  const usesExternalMilestones =
+    milestonesProp !== undefined || milestonesLoadingProp !== undefined;
   const {
-    data: milestones,
+    data: fetchedMilestones,
     error: milestonesError,
-    isLoading: milestonesLoading,
-  } = useSWR(`milestones:${id}`, () => getMilestoneHistory(id), {
-    revalidateOnFocus: false,
-  });
+    isLoading: fetchedMilestonesLoading,
+  } = useSWR(
+    usesExternalMilestones ? null : `milestones:${id}`,
+    () => getMilestoneHistory(id),
+    { revalidateOnFocus: false },
+  );
+  const milestones = usesExternalMilestones
+    ? milestonesProp
+    : fetchedMilestones;
+  const milestonesLoading = usesExternalMilestones
+    ? !!milestonesLoadingProp
+    : fetchedMilestonesLoading;
   const milestoneCount = milestones ? milestones.length : 0;
   const router = useRouter();
 
@@ -116,6 +156,35 @@ function PlayerCard({ player, isWatched, onToggleWatchlist }: PlayerCardProps) {
       onTouchStart={triggerPrefetch}
       className="relative bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-4 hover:border-brand-green transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-green focus:ring-offset-2 focus:ring-offset-black"
     >
+      {onToggleCompare && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleCompare();
+          }}
+          aria-pressed={!!isCompareSelected}
+          aria-label={
+            isCompareSelected ? 'Remove from comparison' : 'Add to comparison'
+          }
+          className="absolute top-3 left-3 inline-flex h-6 w-6 items-center justify-center rounded border transition focus:outline-none focus:ring-2 focus:ring-brand-green bg-brand-green"
+        >
+          {isCompareSelected && (
+            <svg
+              className="w-4 h-4 text-black"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+              aria-hidden="true"
+            >
+              <path
+                fillRule="evenodd"
+                d="M16.707 5.293a1 1 0 00-1.414 0L8 12.586 4.707 9.293a1 1 0 00-1.414 1.414l4 4a1 1 0 001.414 0l8-8a1 1 0 000-1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          )}
+        </button>
+      )}
       {onToggleWatchlist && (
         <button
           type="button"
@@ -154,7 +223,11 @@ function PlayerCard({ player, isWatched, onToggleWatchlist }: PlayerCardProps) {
       <div>
         <h3 className="font-semibold text-white">{vitals.name}</h3>
         <p className="text-sm text-gray-400">
-          {vitals.position} · {vitals.region}
+          <Tooltip content={POSITION_LABEL[vitals.position] ?? vitals.position}>
+            <span>{vitals.position}</span>
+          </Tooltip>
+          {' · '}
+          {vitals.region}
         </p>
 
         <Badge
@@ -200,5 +273,9 @@ export default memo(
     prev.player.id === next.player.id &&
     prev.player.progressLevel === next.player.progressLevel &&
     prev.isWatched === next.isWatched &&
-    prev.onToggleWatchlist === next.onToggleWatchlist,
+    prev.onToggleWatchlist === next.onToggleWatchlist &&
+    prev.isCompareSelected === next.isCompareSelected &&
+    prev.onToggleCompare === next.onToggleCompare &&
+    prev.milestones === next.milestones &&
+    prev.milestonesLoading === next.milestonesLoading,
 );

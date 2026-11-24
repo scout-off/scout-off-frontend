@@ -12,6 +12,24 @@ jest.mock('next/navigation', () => ({
   usePathname: jest.fn(() => '/en/validator'),
 }));
 
+jest.mock('next-intl', () => ({
+  useLocale: () => 'en',
+  useTranslations: () => (key: string, values?: { count?: number }) => {
+    const messages: Record<string, string> = {
+      roster_title: 'My Approved Players',
+      roster_empty_title: 'No approved players yet',
+      roster_empty_description:
+        "Use the approval form above to approve a player's milestone.",
+      roster_error:
+        'Could not load approved players. The indexer may be temporarily unavailable.',
+      roster_retry: 'Retry',
+      roster_count_one: '1 player',
+      roster_count_other: `${values?.count ?? 0} players`,
+    };
+    return messages[key] ?? key;
+  },
+}));
+
 jest.mock('@/components/PlayerCard', () => ({
   __esModule: true,
   default: ({ player }: { player: { vitals: { name: string } } }) => (
@@ -31,6 +49,22 @@ jest.mock('@/components/ui/Button', () => ({
     <button onClick={onClick} data-testid="retry-button">
       {children}
     </button>
+  ),
+}));
+
+jest.mock('@/components/ui/EmptyState', () => ({
+  __esModule: true,
+  default: ({
+    title,
+    description,
+  }: {
+    title: string;
+    description?: string;
+  }) => (
+    <div data-testid="empty-state">
+      <h3>{title}</h3>
+      {description && <p>{description}</p>}
+    </div>
   ),
 }));
 
@@ -85,7 +119,6 @@ describe('ApprovedPlayersRoster', () => {
     );
 
     expect(screen.getByText('My Approved Players')).toBeInTheDocument();
-    // Loading skeleton — should have animated pulse divs
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(
       0,
     );
@@ -100,9 +133,7 @@ describe('ApprovedPlayersRoster', () => {
       refetch,
     });
 
-    render(
-      <ApprovedPlayersRoster validatorAddress="GVALIDATOR" />,
-    );
+    render(<ApprovedPlayersRoster validatorAddress="GVALIDATOR" />);
 
     expect(screen.getByText('My Approved Players')).toBeInTheDocument();
     expect(
@@ -111,7 +142,7 @@ describe('ApprovedPlayersRoster', () => {
     expect(screen.getByTestId('retry-button')).toBeInTheDocument();
   });
 
-  it('shows empty state when no players approved', () => {
+  it('shows EmptyState when no players are approved and not loading', () => {
     mockUseApprovedPlayers.mockReturnValue({
       players: [],
       loading: false,
@@ -119,13 +150,14 @@ describe('ApprovedPlayersRoster', () => {
       refetch: jest.fn(),
     });
 
-    render(
-      <ApprovedPlayersRoster validatorAddress="GVALIDATOR" />,
-    );
+    render(<ApprovedPlayersRoster validatorAddress="GVALIDATOR" />);
 
-    expect(screen.getByText('My Approved Players')).toBeInTheDocument();
+    expect(screen.getByTestId('empty-state')).toBeInTheDocument();
+    expect(screen.getByText('No approved players yet')).toBeInTheDocument();
     expect(
-      screen.getByText('No approved players yet'),
+      screen.getByText(
+        "Use the approval form above to approve a player's milestone.",
+      ),
     ).toBeInTheDocument();
   });
 
@@ -137,9 +169,7 @@ describe('ApprovedPlayersRoster', () => {
       refetch: jest.fn(),
     });
 
-    render(
-      <ApprovedPlayersRoster validatorAddress="GVALIDATOR" />,
-    );
+    render(<ApprovedPlayersRoster validatorAddress="GVALIDATOR" />);
 
     expect(screen.getByText('My Approved Players')).toBeInTheDocument();
     expect(screen.getByText('2 players')).toBeInTheDocument();
@@ -155,9 +185,7 @@ describe('ApprovedPlayersRoster', () => {
       refetch: jest.fn(),
     });
 
-    render(
-      <ApprovedPlayersRoster validatorAddress="GVALIDATOR" />,
-    );
+    render(<ApprovedPlayersRoster validatorAddress="GVALIDATOR" />);
 
     expect(screen.getByText('1 player')).toBeInTheDocument();
   });
@@ -170,9 +198,7 @@ describe('ApprovedPlayersRoster', () => {
       refetch: jest.fn(),
     });
 
-    render(
-      <ApprovedPlayersRoster validatorAddress="GVALIDATOR" />,
-    );
+    render(<ApprovedPlayersRoster validatorAddress="GVALIDATOR" />);
 
     const links = screen.getAllByRole('link');
     expect(links).toHaveLength(2);

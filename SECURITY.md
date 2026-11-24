@@ -4,16 +4,17 @@
 
 We provide security updates for the following versions:
 
-| Version | Supported          |
-| ------- | ------------------ |
-| latest  | :white_check_mark: |
-| < latest| :x:                |
+| Version  | Supported          |
+| -------- | ------------------ |
+| latest   | :white_check_mark: |
+| < latest | :x:                |
 
 ## Scope
 
 ### In scope
 
 This **frontend repository** (`scout-off/scout-off-frontend`) — including:
+
 - Next.js application code (`app/`, `components/`, `hooks/`, `lib/`)
 - API routes (`app/api/`)
 - Server-side logic (IPFS upload proxy, SEP-10 authentication, referral handling)
@@ -51,22 +52,40 @@ preferred as it provides structured fields and automatic tracking.
 
 ### What to expect
 
-| Event             | Estimated time      |
-|-------------------|---------------------|
-| Acknowledgment    | Within 48 hours     |
-| Triage & analysis | Within 5 business days |
+| Event             | Estimated time                                                                  |
+| ----------------- | ------------------------------------------------------------------------------- |
+| Acknowledgment    | Within 48 hours                                                                 |
+| Triage & analysis | Within 5 business days                                                          |
 | Fix deployed      | Dependent on severity (critical: < 48 hours, high: < 7 days, medium: < 30 days) |
-| Public disclosure | After fix is deployed, coordinated with reporter |
+| Public disclosure | After fix is deployed, coordinated with reporter                                |
 
 We will work with you to understand the issue and ensure it is addressed
 promptly. You will be credited in our security acknowledgments (unless you
 prefer to remain anonymous).
 
+## Security Headers
+
+Every response carries these headers (`next.config.js#headers()`):
+
+| Header                    | Value                                                    |
+| ------------------------- | -------------------------------------------------------- |
+| `Content-Security-Policy` | Per-request nonce policy (`middleware.ts`, `lib/csp.ts`) |
+| `Reporting-Endpoints`     | `csp-endpoint="/api/csp-report"`                         |
+| `X-Content-Type-Options`  | `nosniff`                                                |
+| `X-Frame-Options`         | `DENY`                                                   |
+| `X-XSS-Protection`        | `0`                                                      |
+| `Referrer-Policy`         | `strict-origin-when-cross-origin`                        |
+
+`X-XSS-Protection` is deliberately `0`. Modern browsers have removed the XSS
+auditor, and its blocking mode could be abused for cross-site information
+leaks in browsers that still honour it, so OWASP and MDN recommend disabling
+it. The strict nonce-based CSP is the XSS defence.
+
 ## Hall of Fame
 
 We thank the following researchers for their responsible disclosures:
 
-*None yet — be the first!*
+_None yet — be the first!_
 
 ---
 

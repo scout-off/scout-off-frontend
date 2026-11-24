@@ -48,7 +48,10 @@ jest.mock('@upstash/redis', () => {
 
     async incr(key: string): Promise<number> {
       const entry = this.store.get(key);
-      if (!entry || (entry.expiresAt !== null && Date.now() >= entry.expiresAt)) {
+      if (
+        !entry ||
+        (entry.expiresAt !== null && Date.now() >= entry.expiresAt)
+      ) {
         this.store.set(key, { count: 1, expiresAt: null });
         return 1;
       }
@@ -70,44 +73,38 @@ jest.mock('@upstash/redis', () => {
       return Math.max(0, entry.expiresAt - Date.now());
     }
 
-    // Minimal Lua eval simulation for the sliding-window INCR+GET script.
-    // The script: INCR KEYS[1], optionally EXPIRE with ARGV[1], GET KEYS[2].
-    // Returns [currentCount, prevCount].
+    // lib/rateLimit runs INCR + EXPIRE as one Lua EVAL (#1493). Emulate that
+    // script with the commands above: returns [count, ttlSec].
     async eval(
       _script: string,
       keys: string[],
-      argv: string[],
+      args: string[],
     ): Promise<[number, number]> {
-      const currKey = keys[0];
-      const prevKey = keys[1];
-      const ttlSec = Number(argv[0]);
-
-      // INCR current key
-      const currEntry = this.store.get(currKey);
-      let currCount: number;
-      if (!currEntry || (currEntry.expiresAt !== null && Date.now() >= currEntry.expiresAt)) {
-        this.store.set(currKey, { count: 1, expiresAt: Date.now() + ttlSec * 1000 });
-        currCount = 1;
-      } else {
-        currEntry.count += 1;
-        currCount = currEntry.count;
+      const [key] = keys;
+      const windowSec = Number(args[0]);
+      const count = await this.incr(key);
+      if (count === 1) {
+        await this.expire(key, windowSec);
+        return [count, windowSec];
       }
-
-      // GET previous key
-      const prevEntry = this.store.get(prevKey);
-      let prevCount = 0;
-      if (prevEntry && !(prevEntry.expiresAt !== null && Date.now() >= prevEntry.expiresAt)) {
-        prevCount = prevEntry.count;
+      const ttl = await this.pttl(key);
+      if (ttl < 0) {
+        await this.expire(key, windowSec);
+        return [count, windowSec];
       }
-
-      return [currCount, prevCount];
+      return [count, Math.floor(ttl / 1000)];
     }
   }
 
   return { Redis: MockRedis, __mockBackingStores: backingStores };
 });
 
-import { checkRateLimit, _resetRateLimitStoreForTests } from '@/lib/rateLimit';
+import {
+  checkRateLimit,
+  _resetRateLimitStoreForTests,
+  _getInMemoryStoreSizeForTests,
+  IN_MEMORY_MAX_ENTRIES,
+} from '@/lib/rateLimit';
 
 const { __mockBackingStores } = jest.requireMock('@upstash/redis') as {
   __mockBackingStores: Map<string, Map<string, MockEntry>>;
@@ -217,7 +214,10 @@ describe('rateLimit under multiple "serverless instances" (issue #658)', () => {
     }
 
     expect(lastResult).toEqual(
-      expect.objectContaining({ limited: true, retryAfterSec: expect.any(Number) }),
+      expect.objectContaining({
+        limited: true,
+        retryAfterSec: expect.any(Number),
+      }),
     );
     expect(lastResult!.retryAfterSec).toBeGreaterThan(0);
   });
@@ -231,15 +231,24 @@ describe('rateLimit under multiple "serverless instances" (issue #658)', () => {
 
     await checkRateLimit('route-a:1.1.1.1', { limit, windowMs });
     await checkRateLimit('route-a:1.1.1.1', { limit, windowMs });
-    const overLimit = await checkRateLimit('route-a:1.1.1.1', { limit, windowMs });
+    const overLimit = await checkRateLimit('route-a:1.1.1.1', {
+      limit,
+      windowMs,
+    });
     expect(overLimit.limited).toBe(true);
 
     // A different key (different route prefix, same IP) must be unaffected.
-    const otherRoute = await checkRateLimit('route-b:1.1.1.1', { limit, windowMs });
+    const otherRoute = await checkRateLimit('route-b:1.1.1.1', {
+      limit,
+      windowMs,
+    });
     expect(otherRoute.limited).toBe(false);
 
     // A different IP under the same route prefix must also be unaffected.
-    const otherIp = await checkRateLimit('route-a:2.2.2.2', { limit, windowMs });
+    const otherIp = await checkRateLimit('route-a:2.2.2.2', {
+      limit,
+      windowMs,
+    });
     expect(otherIp.limited).toBe(false);
   });
 
@@ -250,8 +259,12 @@ describe('rateLimit under multiple "serverless instances" (issue #658)', () => {
     const windowMs = 10_000;
     const key = 'in-memory-fallback:9.9.9.9';
 
-    expect((await checkRateLimit(key, { limit, windowMs })).limited).toBe(false);
-    expect((await checkRateLimit(key, { limit, windowMs })).limited).toBe(false);
+    expect((await checkRateLimit(key, { limit, windowMs })).limited).toBe(
+      false,
+    );
+    expect((await checkRateLimit(key, { limit, windowMs })).limited).toBe(
+      false,
+    );
     const third = await checkRateLimit(key, { limit, windowMs });
     expect(third.limited).toBe(true);
   });
@@ -294,229 +307,40 @@ describe('rateLimit under multiple "serverless instances" (issue #658)', () => {
   });
 });
 
-// ── Sliding-window counter tests (issue #1700) ───────────────────────────────
-
-describe('sliding-window algorithm (issue #1700)', () => {
+describe('in-memory store eviction (issue #1582)', () => {
   const ORIGINAL_ENV = process.env;
+  const opts = { limit: 5, windowMs: 1_000 };
 
   beforeEach(() => {
     process.env = { ...ORIGINAL_ENV };
     delete process.env.UPSTASH_REDIS_REST_URL;
     delete process.env.UPSTASH_REDIS_REST_TOKEN;
-    __mockBackingStores.clear();
     _resetRateLimitStoreForTests();
     jest.useFakeTimers();
   });
 
   afterEach(() => {
+    jest.useRealTimers();
     process.env = ORIGINAL_ENV;
     _resetRateLimitStoreForTests();
-    jest.useRealTimers();
   });
 
-  // ── In-memory sliding window ────────────────────────────────────────────
+  it('sweeps expired entries during normal operation', async () => {
+    for (let i = 0; i < 2_000; i++) await checkRateLimit(`k:${i}`, opts);
+    expect(_getInMemoryStoreSizeForTests()).toBeLessThanOrEqual(2_000);
 
-  describe('in-memory store', () => {
-    it('limits after `limit` requests within a single window', async () => {
-      // The sliding-window formula rejects when estimated >= limit, so the
-      // limit-th request (count === limit, estimate === limit) is blocked.
-      // Exactly limit-1 requests are admitted before the first rejection.
-      const limit = 5;
-      const windowMs = 10_000;
-      const key = 'sliding-mem:1.2.3.4';
+    jest.advanceTimersByTime(opts.windowMs + 1);
+    // Enough fresh calls to cross the next sweep boundary.
+    for (let i = 0; i < 1_000; i++) await checkRateLimit('fresh', opts);
 
-      let admitted = 0;
-      for (let i = 0; i < limit + 2; i++) {
-        const result = await checkRateLimit(key, { limit, windowMs, algorithm: 'sliding' });
-        if (!result.limited) admitted++;
-      }
-
-      // The estimate hits `limit` on the limit-th call (>= rejects), so
-      // limit-1 calls are admitted (not limit as in fixed-window's > check).
-      expect(admitted).toBe(limit - 1);
-    });
-
-    it('bounds boundary burst to ~limit (not 2× limit) unlike fixed window', async () => {
-      // With a fixed window a client can send `limit` requests at the very end
-      // of one window and `limit` more at the very start of the next — 2×limit
-      // in a short span. The sliding window weights the previous window's count
-      // by elapsed fraction, so the total stays close to `limit`.
-      //
-      // For the in-memory store we verify mid-window throttling: at 50% elapsed
-      // the previous window contributes half its count. If the previous window
-      // is fully saturated, the blended estimate from the new window should
-      // exceed the limit well before `limit` new requests are made.
-      const limit = 10;
-      const windowMs = 10_000;
-      const key = 'sliding-boundary:5.6.7.8';
-
-      jest.setSystemTime(0);
-
-      // Fill window 1 to limit-1 (the last admitted count before >= rejects)
-      for (let i = 0; i < limit - 1; i++) {
-        await checkRateLimit(key, { limit, windowMs, algorithm: 'sliding' });
-      }
-
-      // Jump to 50% into the next window. Previous window contributed (limit-1)
-      // requests. At elapsed = windowMs/2:
-      //   estimated = currentCount + (limit-1) * (1 - 0.5) = currentCount + (limit-1)*0.5
-      // With currentCount=1 on the first request: 1 + 4.5 = 5.5 < 10, admitted.
-      // But we won't be able to reach `limit` new requests before the estimate
-      // crosses the threshold — fewer than `limit` are admitted.
-      jest.setSystemTime(windowMs + windowMs / 2); // 50% into window 2
-
-      let admittedInNewWindow = 0;
-      for (let i = 0; i < limit + 5; i++) {
-        const result = await checkRateLimit(key, { limit, windowMs, algorithm: 'sliding' });
-        if (!result.limited) admittedInNewWindow++;
-      }
-
-      // With a full previous window, we can admit fewer than `limit` new
-      // requests in the new window — that's the point: bounded at ~limit total.
-      expect(admittedInNewWindow).toBeLessThan(limit);
-      expect(admittedInNewWindow).toBeGreaterThan(0);
-    });
-
-    it('allows requests again after the previous window fully decays', async () => {
-      const limit = 5;
-      const windowMs = 10_000;
-      const key = 'sliding-decay:9.10.11.12';
-
-      jest.setSystemTime(0);
-
-      // Fill window 1
-      for (let i = 0; i < limit; i++) {
-        await checkRateLimit(key, { limit, windowMs, algorithm: 'sliding' });
-      }
-
-      // Advance two full windows. The previous window's count has fully
-      // decayed; a fresh budget is available.
-      jest.setSystemTime(windowMs * 2 + 1);
-      _resetRateLimitStoreForTests();
-
-      const result = await checkRateLimit(key, { limit, windowMs, algorithm: 'sliding' });
-      expect(result.limited).toBe(false);
-    });
-
-    it('returns a positive retryAfterSec when limited', async () => {
-      const limit = 3;
-      const windowMs = 10_000;
-      const key = 'sliding-retry:3.3.3.3';
-
-      for (let i = 0; i < limit; i++) {
-        await checkRateLimit(key, { limit, windowMs, algorithm: 'sliding' });
-      }
-
-      const limited = await checkRateLimit(key, { limit, windowMs, algorithm: 'sliding' });
-      expect(limited.limited).toBe(true);
-      expect(limited.retryAfterSec).toBeDefined();
-      expect(limited.retryAfterSec!).toBeGreaterThan(0);
-    });
-
-    it('tracks sliding and fixed keys independently under the same store', async () => {
-      const limit = 3;
-      const windowMs = 10_000;
-
-      // Exhaust a sliding key
-      for (let i = 0; i < limit; i++) {
-        await checkRateLimit('shared-sliding:1.1.1.1', { limit, windowMs, algorithm: 'sliding' });
-      }
-      const slidingLimited = await checkRateLimit('shared-sliding:1.1.1.1', {
-        limit,
-        windowMs,
-        algorithm: 'sliding',
-      });
-      expect(slidingLimited.limited).toBe(true);
-
-      // A fixed-window key with a different namespace is unaffected
-      const fixedResult = await checkRateLimit('shared-fixed:1.1.1.1', { limit, windowMs });
-      expect(fixedResult.limited).toBe(false);
-    });
+    expect(_getInMemoryStoreSizeForTests()).toBe(1);
   });
 
-  // ── Redis sliding window ─────────────────────────────────────────────────
-
-  describe('Redis store', () => {
-    beforeEach(() => {
-      process.env.UPSTASH_REDIS_REST_URL = 'https://fake-upstash.example.com';
-      process.env.UPSTASH_REDIS_REST_TOKEN = 'fake-token';
-    });
-
-    it('limits after `limit` requests within a single window (Redis)', async () => {
-      // Same >= semantics as in-memory: limit-1 admitted before first rejection.
-      const limit = 5;
-      const windowMs = 10_000;
-      const key = 'redis-sliding:10.0.0.1';
-
-      let admitted = 0;
-      for (let i = 0; i < limit + 3; i++) {
-        const result = await checkRateLimit(key, { limit, windowMs, algorithm: 'sliding' });
-        if (!result.limited) admitted++;
-      }
-
-      expect(admitted).toBe(limit - 1);
-    });
-
-    it('bounds boundary burst to ~limit (not 2× limit) in Redis store', async () => {
-      const limit = 10;
-      const windowMs = 10_000;
-      const key = 'redis-boundary:10.0.0.2';
-
-      jest.setSystemTime(0);
-
-      // Fill the previous window to the limit
-      for (let i = 0; i < limit; i++) {
-        await checkRateLimit(key, { limit, windowMs, algorithm: 'sliding' });
-      }
-
-      // Confirm exhausted
-      const atEnd = await checkRateLimit(key, { limit, windowMs, algorithm: 'sliding' });
-      expect(atEnd.limited).toBe(true);
-
-      // Jump to start of next window — previous window still contributes
-      jest.setSystemTime(windowMs);
-      _resetRateLimitStoreForTests();
-
-      // Re-set env after store reset
-      process.env.UPSTASH_REDIS_REST_URL = 'https://fake-upstash.example.com';
-      process.env.UPSTASH_REDIS_REST_TOKEN = 'fake-token';
-
-      const firstOfNewWindow = await checkRateLimit(key, {
-        limit,
-        windowMs,
-        algorithm: 'sliding',
-      });
-      expect(firstOfNewWindow.limited).toBe(true);
-    });
-
-    it('returns a positive retryAfterSec when limited (Redis)', async () => {
-      const limit = 3;
-      const windowMs = 10_000;
-      const key = 'redis-retry:10.0.0.3';
-
-      for (let i = 0; i < limit; i++) {
-        await checkRateLimit(key, { limit, windowMs, algorithm: 'sliding' });
-      }
-
-      const limited = await checkRateLimit(key, { limit, windowMs, algorithm: 'sliding' });
-      expect(limited.limited).toBe(true);
-      expect(limited.retryAfterSec).toBeDefined();
-      expect(limited.retryAfterSec!).toBeGreaterThan(0);
-    });
-
-    it('algorithm defaults to fixed when not specified', async () => {
-      const limit = 5;
-      const windowMs = 10_000;
-      const key = 'default-fixed:10.0.0.4';
-
-      let admitted = 0;
-      for (let i = 0; i < limit + 2; i++) {
-        // No algorithm field — should use fixed window
-        const result = await checkRateLimit(key, { limit, windowMs });
-        if (!result.limited) admitted++;
-      }
-
-      expect(admitted).toBe(limit);
-    });
+  it('caps the number of tracked keys', async () => {
+    const longWindow = { limit: 5, windowMs: 60 * 60_000 };
+    for (let i = 0; i < IN_MEMORY_MAX_ENTRIES + 500; i++) {
+      await checkRateLimit(`k:${i}`, longWindow);
+    }
+    expect(_getInMemoryStoreSizeForTests()).toBe(IN_MEMORY_MAX_ENTRIES);
   });
 });

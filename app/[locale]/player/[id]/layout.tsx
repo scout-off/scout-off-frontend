@@ -4,13 +4,14 @@ import Script from 'next/script';
 import { fetchPlayerProfile } from '@/lib/api';
 import { getBaseUrl } from '@/lib/seo';
 import type { Player } from '@/types';
+import { getExplorerAccountUrl } from '@/lib/network';
 
 interface PlayerProfileLayoutProps {
   children: ReactNode;
-  params: {
+  params: Promise<{
     locale: string;
     id: string;
-  };
+  }>;
 }
 
 /**
@@ -20,10 +21,13 @@ interface PlayerProfileLayoutProps {
  * <script type="application/ld+json"> tag so search engines can
  * understand the page as representing a person/athlete.
  */
-export default async function PlayerProfileLayout({
-  children,
-  params,
-}: PlayerProfileLayoutProps) {
+export default async function PlayerProfileLayout(
+  props: PlayerProfileLayoutProps,
+) {
+  const params = await props.params;
+
+  const { children } = props;
+
   let player: Player | null = null;
 
   try {
@@ -43,12 +47,7 @@ export default async function PlayerProfileLayout({
   const sameAs: string[] = [];
 
   // Link to the Stellar account explorer for the player's wallet
-  const network =
-    process.env.NEXT_PUBLIC_NETWORK === 'public' ||
-    process.env.NEXT_PUBLIC_NETWORK === 'mainnet'
-      ? 'public'
-      : 'testnet';
-  const stellarUrl = `https://stellar.expert/explorer/${network}/account/${player.wallet}`;
+  const stellarUrl = getExplorerAccountUrl(player.wallet);
   sameAs.push(stellarUrl);
 
   // The profile page itself (also listed in sameAs for discoverability)
@@ -84,9 +83,10 @@ export default async function PlayerProfileLayout({
  * The parent `app/[locale]/layout.tsx` already provides a canonical URL
  * via `seoMetadata()`, so we don't need to duplicate it here.
  */
-export async function generateMetadata({
-  params,
-}: PlayerProfileLayoutProps): Promise<Metadata> {
+export async function generateMetadata(
+  props: PlayerProfileLayoutProps,
+): Promise<Metadata> {
+  const params = await props.params;
   let player: Player | null = null;
 
   try {
@@ -101,6 +101,8 @@ export async function generateMetadata({
 
   const baseUrl = getBaseUrl();
   const profileUrl = `${baseUrl}/${params.locale}/player/${params.id}`;
+  // Dynamically generated per-player card — see ./opengraph-image.tsx
+  const ogImageUrl = `${profileUrl}/opengraph-image`;
 
   return {
     title: `${player.vitals.name} — Player Profile — ScoutOff`,
@@ -110,26 +112,20 @@ export async function generateMetadata({
       description: `${player.vitals.position} · ${player.vitals.region} · Level ${player.progressLevel} · Verified on-chain milestones.`,
       url: profileUrl,
       type: 'profile',
-      images: player.ipfsHash
-        ? [
-            {
-              url: `${process.env.NEXT_PUBLIC_IPFS_GATEWAY || 'https://gateway.pinata.cloud/ipfs'}/${player.ipfsHash}`,
-              width: 1200,
-              height: 630,
-              alt: `${player.vitals.name} — ScoutOff Player Profile`,
-            },
-          ]
-        : undefined,
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: `${player.vitals.name} — ScoutOff Player Profile`,
+        },
+      ],
     },
     twitter: {
       card: 'summary_large_image',
       title: `${player.vitals.name} — ScoutOff Player Profile`,
       description: `${player.vitals.position} · ${player.vitals.region} · Level ${player.progressLevel} · Verified on-chain milestones.`,
-      images: player.ipfsHash
-        ? [
-            `${process.env.NEXT_PUBLIC_IPFS_GATEWAY || 'https://gateway.pinata.cloud/ipfs'}/${player.ipfsHash}`,
-          ]
-        : undefined,
+      images: [ogImageUrl],
     },
   };
 }

@@ -12,6 +12,19 @@
  * secrets) since it's imported from client components. Signed-URL generation
  * lives in lib/mediaUrlSigning.ts, which is server-only.
  */
-export function getMediaProxyUrl(cid: string): string {
-  return `/api/media/${encodeURIComponent(cid)}`;
+export interface MediaProxyUrlOptions {
+  /** Client retry counter — cache-busts the proxy URL on playback recovery. */
+  retry?: number;
+}
+
+export function getMediaProxyUrl(
+  cid: string,
+  options?: MediaProxyUrlOptions,
+): string {
+  const base = `/api/media/${encodeURIComponent(cid)}`;
+  const retry = options?.retry;
+  if (retry !== undefined && retry > 0) {
+    return `${base}?retry=${retry}`;
+  }
+  return base;
 }

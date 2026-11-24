@@ -94,7 +94,9 @@ describe('GET /api/players/search', () => {
     const res = await GET(makeRequest('Alice', 'ip-backend-down'));
 
     expect(res.status).toBe(503);
-    expect(await res.json()).toEqual({ error: 'Failed to search players' });
+    expect(await res.json()).toEqual({
+      error: { code: 'UPSTREAM_FAILED', message: 'Failed to search players' },
+    });
   });
 
   it('rate limits after exceeding 20 requests from the same IP within the window', async () => {
@@ -109,7 +111,10 @@ describe('GET /api/players/search', () => {
     expect(lastRes!.status).toBe(429);
     const body = await lastRes!.json();
     expect(body).toEqual({
-      error: 'Too many search requests. Please slow down.',
+      error: {
+        code: 'RATE_LIMITED',
+        message: 'Too many search requests. Please slow down.',
+      },
     });
     expect(lastRes!.headers.get('Retry-After')).toBeTruthy();
   });
@@ -136,5 +141,28 @@ describe('GET /api/players/search', () => {
     const res = await GET(req);
 
     expect(res.status).toBe(200);
+  });
+});
+
+describe('GET /api/players/search — server-side inputValidation parity (issue #1143)', () => {
+  beforeEach(() => {
+    mockGet.mockReset();
+  });
+
+  it('returns 400 when the name param exceeds 100 characters', async () => {
+    const res = await GET(makeRequest('a'.repeat(101), 'ip-toolong'));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe('QUERY_TOO_LONG');
+    expect(body.error.params).toEqual({ max: 100 });
+  });
+
+  it('accepts a name at exactly 100 characters and proxies normally', async () => {
+    mockGet.mockResolvedValueOnce({ data: [] });
+    const res = await GET(makeRequest('a'.repeat(100), 'ip-atlimit'));
+    expect(res.status).toBe(200);
+    expect(mockGet).toHaveBeenCalledWith('/players/search', {
+      params: { name: 'a'.repeat(100) },
+    });
   });
 });

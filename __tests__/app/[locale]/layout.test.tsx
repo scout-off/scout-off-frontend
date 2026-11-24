@@ -9,6 +9,16 @@ const setRequestLocale = jest.fn();
 
 jest.mock('next-intl/server', () => ({
   setRequestLocale: (...args: unknown[]) => setRequestLocale(...args),
+  getTranslations: async ({
+    locale,
+    namespace,
+  }: {
+    locale: string;
+    namespace: string;
+  }) => {
+    const messages = require(`@/messages/${locale}.json`);
+    return (key: string) => messages[namespace][key];
+  },
 }));
 
 const mockHeaders = new Map<string, string>();
@@ -19,6 +29,12 @@ jest.mock('next/headers', () => ({
   })),
 }));
 
+// LocaleLayout is an async server component (params is a Promise as of
+// Next 15), so resolve it to its element tree before rendering.
+async function renderLayout(locale: string, children: React.ReactNode) {
+  render(await LocaleLayout({ params: Promise.resolve({ locale }), children }));
+}
+
 describe('LocaleLayout', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -26,22 +42,26 @@ describe('LocaleLayout', () => {
     process.env.NEXT_PUBLIC_APP_URL = 'https://scoutoff.app';
   });
 
-  it('renders its children unchanged', () => {
-    render(
-      <LocaleLayout params={{ locale: 'fr' }}>
-        <p>Locale-scoped content</p>
-      </LocaleLayout>,
-    );
+  it('renders its children unchanged', async () => {
+    await renderLayout('fr', <p>Locale-scoped content</p>);
 
     expect(screen.getByText('Locale-scoped content')).toBeInTheDocument();
   });
 
-  it('sets the request locale from params', () => {
-    render(
-      <LocaleLayout params={{ locale: 'sw' }}>
-        <p>content</p>
-      </LocaleLayout>,
-    );
+  it('sets lang="fr" on the locale root for French', async () => {
+    await renderLayout('fr', <p>Bonjour</p>);
+
+    expect(screen.getByTestId('locale-lang')).toHaveAttribute('lang', 'fr');
+  });
+
+  it('sets lang="sw" on the locale root for Swahili', async () => {
+    await renderLayout('sw', <p>Habari</p>);
+
+    expect(screen.getByTestId('locale-lang')).toHaveAttribute('lang', 'sw');
+  });
+
+  it('sets the request locale from params', async () => {
+    await renderLayout('sw', <p>content</p>);
 
     expect(setRequestLocale).toHaveBeenCalledWith('sw');
   });
@@ -55,12 +75,44 @@ describe('LocaleLayout', () => {
   });
 
   describe('generateMetadata', () => {
+    it('returns localized title, description, Open Graph and Twitter fields', async () => {
+      mockHeaders.set('x-pathname', '/fr/scout');
+
+      const metadata = await generateMetadata({
+        params: Promise.resolve({ locale: 'fr' }),
+      });
+
+      const fr = require('@/messages/fr.json').meta;
+      expect(metadata).toMatchObject({
+        title: fr.title,
+        description: fr.description,
+        openGraph: {
+          title: fr.title,
+          description: fr.description,
+          url: 'https://scoutoff.app/fr/scout',
+          siteName: 'ScoutOff',
+          type: 'website',
+          locale: 'fr_FR',
+          alternateLocale: ['en_US', 'sw_KE'],
+        },
+        twitter: {
+          card: 'summary_large_image',
+          title: fr.title,
+          description: fr.description,
+        },
+      });
+      // The raster OG image comes from app/[locale]/opengraph-image.tsx.
+      expect(JSON.stringify(metadata)).not.toMatch(/\.svg/);
+    });
+
     it('returns canonical URL and hreflang alternates from x-pathname header', async () => {
       mockHeaders.set('x-pathname', '/en/scout/abc123');
 
-      const metadata = await generateMetadata();
+      const metadata = await generateMetadata({
+        params: Promise.resolve({ locale: 'en' }),
+      });
 
-      expect(metadata).toEqual({
+      expect(metadata).toMatchObject({
         alternates: {
           canonical: 'https://scoutoff.app/en/scout/abc123',
           languages: {
@@ -74,9 +126,11 @@ describe('LocaleLayout', () => {
     });
 
     it('falls back to root when x-pathname header is absent', async () => {
-      const metadata = await generateMetadata();
+      const metadata = await generateMetadata({
+        params: Promise.resolve({ locale: 'en' }),
+      });
 
-      expect(metadata).toEqual({
+      expect(metadata).toMatchObject({
         alternates: {
           canonical: 'https://scoutoff.app/',
           languages: {
@@ -93,9 +147,11 @@ describe('LocaleLayout', () => {
       process.env.NEXT_PUBLIC_APP_URL = 'https://example.com';
       mockHeaders.set('x-pathname', '/fr/player/42');
 
-      const metadata = await generateMetadata();
+      const metadata = await generateMetadata({
+        params: Promise.resolve({ locale: 'en' }),
+      });
 
-      expect(metadata).toEqual({
+      expect(metadata).toMatchObject({
         alternates: {
           canonical: 'https://example.com/fr/player/42',
           languages: {

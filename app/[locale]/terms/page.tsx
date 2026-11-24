@@ -1,0 +1,62 @@
+import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
+import LegalPageLayout from '@/components/ui/LegalPageLayout';
+
+interface TermsPageProps {
+  params: Promise<{
+    locale: string;
+  }>;
+}
+
+export async function generateMetadata(
+  props: TermsPageProps,
+): Promise<Metadata> {
+  const params = await props.params;
+  const locale = params.locale;
+  const t = await getTranslations({ locale, namespace: 'terms' });
+
+  const { buildPageMetadata } = await import('@/lib/seo');
+  return buildPageMetadata({
+    title: `${t('page_title')} | ScoutOff`,
+    description: t('page_description'),
+    path: `/${locale}/terms`,
+  });
+}
+
+export default async function TermsPage(props: TermsPageProps) {
+  const params = await props.params;
+  const locale = params.locale;
+  const t = await getTranslations({ locale, namespace: 'terms' });
+
+  return (
+    <LegalPageLayout
+      locale={locale}
+      backToHomeLabel={t('back_to_home')}
+      eyebrow={t('eyebrow')}
+      title={t('page_title')}
+      description={t('page_description')}
+      lastUpdated={t('last_updated')}
+    >
+      <h2>{t('section1_title')}</h2>
+      <p>{t('section1_content')}</p>
+
+      <h2>{t('section2_title')}</h2>
+      <p>{t('section2_content')}</p>
+
+      <h2>{t('section3_title')}</h2>
+      <p>{t('section3_content')}</p>
+
+      <h2>{t('section4_title')}</h2>
+      <p>{t('section4_content')}</p>
+
+      <h2>{t('section5_title')}</h2>
+      <p>{t('section5_content')}</p>
+
+      <h2>{t('section6_title')}</h2>
+      <p>{t('section6_content')}</p>
+
+      <h2>{t('section7_title')}</h2>
+      <p>{t('section7_content')}</p>
+    </LegalPageLayout>
+  );
+}

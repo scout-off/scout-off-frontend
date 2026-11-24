@@ -1,43 +1,49 @@
-import { NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { requireAdminWallet } from '@/lib/adminAuth';
+import { getSessionWallet } from '@/lib/session';
+import { privateJson } from '@/lib/httpResponses';
+import { ENV_MANIFEST, isRequiredInProduction } from '@/lib/envManifest';
 
-// Define the list of environment variables we care about
-type ConfigVar = {
-  name: string;
-  required: boolean;
-};
+// Driven by lib/envManifest.ts (issue #1327). Only reports presence — never
+// return secret values.
+export async function GET(req: NextRequest) {
+  if (!requireAdminWallet(req)) {
+    return getSessionWallet(req)
+      ? privateJson({ error: 'Forbidden' }, { status: 403 })
+      : privateJson({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-const CONFIG_VARS: ConfigVar[] = [
-  // Required vars (based on .env.example comments)
-  { name: 'NEXT_PUBLIC_CONTRACT_ID', required: true },
-  { name: 'NEXT_PUBLIC_NETWORK', required: true },
-  { name: 'NEXT_PUBLIC_HORIZON_URL', required: true },
-  { name: 'NEXT_PUBLIC_SOROBAN_RPC', required: true },
-  { name: 'NEXT_PUBLIC_IPFS_GATEWAY', required: true },
-  { name: 'NEXT_PUBLIC_API_URL', required: true },
-  { name: 'STELLAR_SECRET_KEY', required: true },
-  { name: 'NEXT_PUBLIC_DOMAIN', required: true },
-  { name: 'NEXT_PUBLIC_ADMIN_ADDRESS', required: true },
-  // Optional vars
-  { name: 'PINATA_API_KEY', required: false },
-  { name: 'PINATA_SECRET', required: false },
-  { name: 'NEXT_PUBLIC_SENTRY_DSN', required: false },
-  { name: 'SENTRY_ORG', required: false },
-  { name: 'SENTRY_PROJECT', required: false },
-  { name: 'SENTRY_AUTH_TOKEN', required: false },
-  { name: 'SENTRY_RELEASE', required: false },
-  { name: 'PLATFORM_CONTACT_FEE_XLM', required: false },
-  { name: 'NEXT_PUBLIC_STATUS_PAGE_URL', required: false },
-  { name: 'NEXT_PUBLIC_APP_URL', required: false },
-  { name: 'SEP10_SERVER_KEY', required: false },
-  { name: 'SEP10_HOME_DOMAIN', required: false },
-];
-
-export async function GET() {
-  const result = CONFIG_VARS.map((v) => {
+  const result = ENV_MANIFEST.map((v) => {
     const value = process.env[v.name];
     const present = typeof value === 'string' && value.trim().length > 0;
-    return { name: v.name, required: v.required, present };
+    return {
+      name: v.name,
+      required: isRequiredInProduction(v),
+      secret: v.secret,
+      present,
+    };
   });
 
-  return NextResponse.json(result);
+  const siteKeySet = Boolean(
+    process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim(),
+  );
+  const secretSet = Boolean(process.env.TURNSTILE_SECRET_KEY?.trim());
+  // Both set or both unset is consistent; a mismatch means the widget renders
+  // without server verification, or the server verifies without a widget.
+  const turnstile = {
+    configured: siteKeySet && secretSet,
+    mismatched: siteKeySet !== secretSet,
+  };
+
+  // Appended as an extra row so the existing array response shape is unchanged.
+  return privateJson([
+    ...result,
+    {
+      name: 'TURNSTILE',
+      required: false,
+      secret: false,
+      present: !turnstile.mismatched,
+      turnstile,
+    },
+  ]);
 }

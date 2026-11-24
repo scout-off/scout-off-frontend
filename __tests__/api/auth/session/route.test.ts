@@ -1,6 +1,9 @@
 /** @jest-environment node */
 import { GET } from '../../../../app/api/auth/session/route';
 import { NextRequest } from 'next/server';
+import { _resetRateLimitStoreForTests } from '@/lib/rateLimit';
+import { createSessionToken } from '@/lib/session';
+import { SessionStore } from '@/lib/sessionStore';
 
 // The session route now uses the shared lib/rateLimit. We mock it here so
 // rate-limit behavior is independently tested in __tests__/lib/rateLimit.test.ts
@@ -33,6 +36,34 @@ function makeRequest(cookieHeader?: string, ip?: string): NextRequest {
   });
 }
 
+let sidCounter = 0;
+
+// Builds a `session=<token>` cookie header for an access token whose `sid`
+// is also registered in the session store as active — i.e. what a real
+// SEP-10 login produces. See #1179: getSessionWallet (which this route now
+// delegates to) checks the store in addition to the token's signature, so
+// a cookie with no matching store row is correctly treated the same as an
+// unsigned one by every test below that expects success.
+function accessCookie(publicKey: string, ttlSec = 20 * 60): string {
+  const sid = `sid-${sidCounter++}`;
+  const token = createSessionToken(publicKey, 'access', ttlSec, { sid });
+  SessionStore.getInstance().create(
+    sid,
+    publicKey,
+    Date.now() + 60 * 60 * 1000,
+  );
+  return `session=${token}`;
+}
+
+beforeEach(() => {
+  SessionStore.resetInstance();
+  _resetRateLimitStoreForTests();
+});
+
+afterEach(() => {
+  SessionStore.resetInstance();
+});
+
 describe('GET /api/auth/session', () => {
   beforeEach(() => {
     mockCheckRateLimit.mockResolvedValue({ limited: false });
@@ -45,18 +76,73 @@ describe('GET /api/auth/session', () => {
     expect(await res.json()).toEqual({ authenticated: false });
   });
 
-  it('returns 200 with authenticated: true and the public key when a session cookie is present', async () => {
+  it('returns 200 with authenticated: true and the public key when a valid signed session cookie is present', async () => {
     const publicKey =
       'GPUBLICKEY0000000000000000000000000000000000000000000000';
-    const res = await GET(
-      makeRequest(`session=${publicKey}`, 'ip-basic-200'),
-    );
+    const res = await GET(makeRequest(accessCookie(publicKey), 'ip-basic-200'));
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
       authenticated: true,
       publicKey,
     });
+  });
+
+  it('returns 401 when the cookie is a hand-crafted, unsigned address rather than a real session token (see #778)', async () => {
+    // Adversarial test: pre-#778, the `session` cookie's value WAS the
+    // caller's plaintext public key, so this exact request would have
+    // authenticated as the attacker-chosen address with no SEP-10 flow at
+    // all. Setting the same raw value now must be rejected.
+    const forgedAddress =
+      'GATTACKERCHOSEN00000000000000000000000000000000000000000';
+    const res = await GET(
+      makeRequest(`session=${forgedAddress}`, 'ip-forged-cookie'),
+    );
+
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ authenticated: false });
+  });
+
+  it('returns 401 when the session cookie signature has been tampered with', async () => {
+    const publicKey =
+      'GPUBLICKEY0000000000000000000000000000000000000000000000';
+    const token = createSessionToken(publicKey, 'access', 20 * 60);
+    const [payloadB64] = token.split('.');
+    const tampered = `${payloadB64}.tamperedsignature`;
+
+    const res = await GET(
+      makeRequest(`session=${tampered}`, 'ip-tampered-cookie'),
+    );
+
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ authenticated: false });
+  });
+
+  it('returns 401 once the access token has expired', async () => {
+    const publicKey =
+      'GPUBLICKEY0000000000000000000000000000000000000000000000';
+    // Negative TTL: already expired the instant it's created — simulates
+    // "a request made after expiry" without needing real clock injection.
+    const res = await GET(
+      makeRequest(accessCookie(publicKey, -1), 'ip-expired-cookie'),
+    );
+
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ authenticated: false });
+  });
+
+  it('returns 401 when a refresh token is presented as an access token', async () => {
+    // Type confusion guard: a `session_refresh` token must never be
+    // accepted where an access token is expected.
+    const publicKey =
+      'GPUBLICKEY0000000000000000000000000000000000000000000000';
+    const refreshToken = createSessionToken(publicKey, 'refresh', 60 * 60 * 24);
+    const res = await GET(
+      makeRequest(`session=${refreshToken}`, 'ip-wrong-type-cookie'),
+    );
+
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ authenticated: false });
   });
 
   it('allows requests under the rate limit to proceed normally', async () => {

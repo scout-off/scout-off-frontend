@@ -12,11 +12,16 @@ const mockFetchAcademies = jest.fn();
 const mockCreateAcademy = jest.fn();
 const mockAddAcademyMember = jest.fn();
 const mockRemoveAcademyMember = jest.fn();
+const mockFetchAcademyMilestoneRollup = jest.fn();
+const mockSetAcademyQuorum = jest.fn();
 jest.mock('@/lib/api', () => ({
   fetchAcademies: (...args: unknown[]) => mockFetchAcademies(...args),
   createAcademy: (...args: unknown[]) => mockCreateAcademy(...args),
   addAcademyMember: (...args: unknown[]) => mockAddAcademyMember(...args),
   removeAcademyMember: (...args: unknown[]) => mockRemoveAcademyMember(...args),
+  fetchAcademyMilestoneRollup: (...args: unknown[]) =>
+    mockFetchAcademyMilestoneRollup(...args),
+  setAcademyQuorum: (...args: unknown[]) => mockSetAcademyQuorum(...args),
 }));
 
 const mockCheckIsValidator = jest.fn();
@@ -36,12 +41,25 @@ const ACADEMY = {
   name: 'FC Sahel',
   ownerWallet: OWNER,
   createdAt: 1_700_000_000,
-  members: [{ wallet: OWNER, academyId: 'academy-1', addedAt: 1_700_000_000, addedBy: 'GADMIN' }],
+  members: [
+    {
+      wallet: OWNER,
+      academyId: 'academy-1',
+      addedAt: 1_700_000_000,
+      addedBy: 'GADMIN',
+    },
+  ],
+  quorum: null,
 };
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockCheckIsValidator.mockResolvedValue(true);
+  mockFetchAcademyMilestoneRollup.mockResolvedValue({
+    range: { start: 0, end: 1 },
+    indexerAvailable: true,
+    academies: [],
+  });
 });
 
 describe('AcademyManager', () => {
@@ -51,7 +69,9 @@ describe('AcademyManager', () => {
     render(<AcademyManager />);
 
     expect(screen.getByText(/loading academies/i)).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText('FC Sahel')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('FC Sahel')).toBeInTheDocument(),
+    );
     expect(screen.getByText('1 signer')).toBeInTheDocument();
   });
 
@@ -61,9 +81,13 @@ describe('AcademyManager', () => {
 
     render(<AcademyManager />);
 
-    await waitFor(() => expect(screen.getByText(/failed to load academies/i)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText(/failed to load academies/i)).toBeInTheDocument(),
+    );
     await userEvent.click(screen.getByText('Retry'));
-    await waitFor(() => expect(screen.getByText('FC Sahel')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('FC Sahel')).toBeInTheDocument(),
+    );
   });
 
   it('creates an academy and shows a success toast', async () => {
@@ -71,12 +95,17 @@ describe('AcademyManager', () => {
     mockCreateAcademy.mockResolvedValue(ACADEMY);
 
     render(<AcademyManager />);
-    await waitFor(() => expect(screen.getByText(/no academies created/i)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText(/no academies created/i)).toBeInTheDocument(),
+    );
 
     const createButton = screen.getByRole('button', { name: 'Create' });
     expect(createButton).toBeDisabled();
 
-    await userEvent.type(screen.getByPlaceholderText('Academy name'), 'FC Sahel');
+    await userEvent.type(
+      screen.getByPlaceholderText('Academy name'),
+      'FC Sahel',
+    );
     await userEvent.type(
       screen.getByPlaceholderText(/owner's stellar public key/i),
       OWNER,
@@ -91,7 +120,9 @@ describe('AcademyManager', () => {
     expect(mockShow).toHaveBeenCalledWith(
       expect.objectContaining({ variant: 'success' }),
     );
-    await waitFor(() => expect(screen.getByText('FC Sahel')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('FC Sahel')).toBeInTheDocument(),
+    );
   });
 
   it('adds a signer wallet to an academy after confirming', async () => {
@@ -100,23 +131,36 @@ describe('AcademyManager', () => {
       ...ACADEMY,
       members: [
         ...ACADEMY.members,
-        { wallet: COACH, academyId: 'academy-1', addedAt: 1, addedBy: 'GADMIN' },
+        {
+          wallet: COACH,
+          academyId: 'academy-1',
+          addedAt: 1,
+          addedBy: 'GADMIN',
+        },
       ],
     };
     mockAddAcademyMember.mockResolvedValue(updated);
 
     render(<AcademyManager />);
-    await waitFor(() => expect(screen.getByText('FC Sahel')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('FC Sahel')).toBeInTheDocument(),
+    );
 
-    const academyCard = screen.getByText('FC Sahel').closest('li') as HTMLElement;
+    const academyCard = screen
+      .getByText('FC Sahel')
+      .closest('li') as HTMLElement;
     await userEvent.type(
       within(academyCard).getByPlaceholderText(/add signer wallet/i),
       COACH,
     );
-    await userEvent.click(within(academyCard).getByRole('button', { name: 'Add' }));
+    await userEvent.click(
+      within(academyCard).getByRole('button', { name: 'Add' }),
+    );
 
     // Confirm dialog appears; confirm the action.
-    const confirmButton = await screen.findByRole('button', { name: 'Add Signer' });
+    const confirmButton = await screen.findByRole('button', {
+      name: 'Add Signer',
+    });
     await userEvent.click(confirmButton);
 
     await waitFor(() =>
@@ -129,19 +173,28 @@ describe('AcademyManager', () => {
       ...ACADEMY,
       members: [
         ...ACADEMY.members,
-        { wallet: COACH, academyId: 'academy-1', addedAt: 1, addedBy: 'GADMIN' },
+        {
+          wallet: COACH,
+          academyId: 'academy-1',
+          addedAt: 1,
+          addedBy: 'GADMIN',
+        },
       ],
     };
     mockFetchAcademies.mockResolvedValue([academyWithCoach]);
     mockRemoveAcademyMember.mockResolvedValue(undefined);
 
     render(<AcademyManager />);
-    await waitFor(() => expect(screen.getByText('FC Sahel')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('FC Sahel')).toBeInTheDocument(),
+    );
 
     const removeButtons = screen.getAllByRole('button', { name: 'Remove' });
     await userEvent.click(removeButtons[removeButtons.length - 1]);
 
-    const confirmButton = await screen.findByRole('button', { name: 'Remove Signer' });
+    const confirmButton = await screen.findByRole('button', {
+      name: 'Remove Signer',
+    });
     await userEvent.click(confirmButton);
 
     await waitFor(() =>
@@ -155,6 +208,76 @@ describe('AcademyManager', () => {
 
     render(<AcademyManager />);
 
-    await waitFor(() => expect(screen.getByText('not on-chain')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('not on-chain')).toBeInTheDocument(),
+    );
+  });
+
+  // ── Milestone-verification quorum (issue #1185) ───────────────────────────
+
+  it('shows "Not configured" for an academy with no quorum set', async () => {
+    mockFetchAcademies.mockResolvedValue([ACADEMY]);
+    render(<AcademyManager />);
+
+    await waitFor(() =>
+      expect(screen.getByText('FC Sahel')).toBeInTheDocument(),
+    );
+    expect(screen.getByText('Not configured')).toBeInTheDocument();
+  });
+
+  it('saves a new quorum value', async () => {
+    mockFetchAcademies.mockResolvedValue([ACADEMY]);
+    mockSetAcademyQuorum.mockResolvedValue({ ...ACADEMY, quorum: 2 });
+
+    render(<AcademyManager />);
+    await waitFor(() =>
+      expect(screen.getByText('FC Sahel')).toBeInTheDocument(),
+    );
+
+    const input = screen.getByLabelText(/milestone-verification quorum/i);
+    await userEvent.clear(input);
+    await userEvent.type(input, '2');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() =>
+      expect(mockSetAcademyQuorum).toHaveBeenCalledWith('academy-1', 2),
+    );
+    expect(await screen.findByText('2 signers required')).toBeInTheDocument();
+  });
+
+  it('clearing the quorum input and saving sends null', async () => {
+    mockFetchAcademies.mockResolvedValue([{ ...ACADEMY, quorum: 3 }]);
+    mockSetAcademyQuorum.mockResolvedValue({ ...ACADEMY, quorum: null });
+
+    render(<AcademyManager />);
+    await waitFor(() =>
+      expect(screen.getByText('FC Sahel')).toBeInTheDocument(),
+    );
+
+    const input = screen.getByLabelText(/milestone-verification quorum/i);
+    expect(input).toHaveValue(3);
+    await userEvent.clear(input);
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() =>
+      expect(mockSetAcademyQuorum).toHaveBeenCalledWith('academy-1', null),
+    );
+  });
+
+  it('rejects a non-positive quorum without calling the API', async () => {
+    mockFetchAcademies.mockResolvedValue([ACADEMY]);
+    render(<AcademyManager />);
+    await waitFor(() =>
+      expect(screen.getByText('FC Sahel')).toBeInTheDocument(),
+    );
+
+    const input = screen.getByLabelText(/milestone-verification quorum/i);
+    await userEvent.type(input, '0');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(mockSetAcademyQuorum).not.toHaveBeenCalled();
+    expect(mockShow).toHaveBeenCalledWith(
+      expect.objectContaining({ variant: 'error' }),
+    );
   });
 });

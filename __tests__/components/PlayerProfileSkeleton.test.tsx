@@ -8,16 +8,22 @@ describe('PlayerProfileSkeleton', () => {
     expect(() => render(<PlayerProfileSkeleton />)).not.toThrow();
   });
 
+  it('has role="status" for screen-reader loading announcement', () => {
+    const { container } = render(<PlayerProfileSkeleton />);
+    const root = container.firstChild as HTMLElement;
+    expect(root).toHaveAttribute('role', 'status');
+  });
+
   it('has aria-busy="true" for accessible loading indicator', () => {
     const { container } = render(<PlayerProfileSkeleton />);
     const root = container.firstChild as HTMLElement;
     expect(root).toHaveAttribute('aria-busy', 'true');
   });
 
-  it('has aria-label describing loading state', () => {
+  it('has a localized aria-label from common.loading', () => {
     const { container } = render(<PlayerProfileSkeleton />);
     const root = container.firstChild as HTMLElement;
-    expect(root).toHaveAttribute('aria-label', 'Loading player profile');
+    expect(root).toHaveAttribute('aria-label', 'Loading...');
   });
 
   it('renders avatar, name, and stat placeholders', () => {

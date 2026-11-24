@@ -29,9 +29,7 @@ describe('analyzeReferralAbuse — self-redemption', () => {
     const codes: ReferralCode[] = [
       { code: 'A', scoutWallet: 'S1', createdAt: 0, usedBy: 'R1', usedAt: 10 },
     ];
-    expect(hasFlag(analyzeReferralAbuse(codes), 'self_redemption')).toBe(
-      false,
-    );
+    expect(hasFlag(analyzeReferralAbuse(codes), 'self_redemption')).toBe(false);
   });
 });
 
@@ -133,11 +131,21 @@ describe('analyzeReferralAbuse — cross-scout redeemer ring', () => {
 });
 
 function contactEvent(actor: string, timestampSec: number): ActivityEvent {
-  return { id: `${actor}-${timestampSec}`, type: 'player_contacted', timestamp: timestampSec, actor };
+  return {
+    id: `${actor}-${timestampSec}`,
+    type: 'player_contacted',
+    timestamp: timestampSec,
+    actor,
+  };
 }
 
 function subscribeEvent(actor: string, timestampSec: number): ActivityEvent {
-  return { id: `${actor}-sub-${timestampSec}`, type: 'scout_subscribed', timestamp: timestampSec, actor };
+  return {
+    id: `${actor}-sub-${timestampSec}`,
+    type: 'scout_subscribed',
+    timestamp: timestampSec,
+    actor,
+  };
 }
 
 describe('analyzePayToContactAbuse — rapid contact burst', () => {
@@ -146,7 +154,11 @@ describe('analyzePayToContactAbuse — rapid contact burst', () => {
       contactEvent('SCOUT-BOT', i * 30),
     );
     expect(
-      hasFlag(analyzePayToContactAbuse(events), 'rapid_contact_burst', 'SCOUT-BOT'),
+      hasFlag(
+        analyzePayToContactAbuse(events),
+        'rapid_contact_burst',
+        'SCOUT-BOT',
+      ),
     ).toBe(true);
   });
 
@@ -184,7 +196,11 @@ describe('analyzePayToContactAbuse — subscription cycling', () => {
       contactEvent('CASUAL', 20),
     ];
     expect(
-      hasFlag(analyzePayToContactAbuse(events), 'subscription_cycling', 'CASUAL'),
+      hasFlag(
+        analyzePayToContactAbuse(events),
+        'subscription_cycling',
+        'CASUAL',
+      ),
     ).toBe(false);
   });
 });

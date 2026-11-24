@@ -1,4 +1,11 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
+jest.unmock('next-intl');
+
+import {
+  render,
+  screen,
+  fireEvent,
+  act,
+} from '@/__tests__/setup-providers-intl';
 import '@testing-library/jest-dom';
 import IPFSMediaGallery from '@/components/player/IPFSMediaGallery';
 import { useVideoPosterFrame } from '@/hooks/useVideoPosterFrame';
@@ -37,8 +44,14 @@ jest.mock('next/image', () => ({
 let observerCallbacks: IntersectionObserverCallback[] = [];
 
 beforeEach(() => {
+  // Moderation denylist lookup (#1320) — nothing removed by default.
+  global.fetch = jest
+    .fn()
+    .mockResolvedValue({ ok: true, json: async () => ({ denylisted: [] }) });
   observerCallbacks = [];
   mockUseVideoPosterFrame.mockReturnValue(null);
+  HTMLMediaElement.prototype.load = jest.fn();
+  HTMLMediaElement.prototype.play = jest.fn(() => Promise.resolve());
   global.IntersectionObserver = class {
     private cb: IntersectionObserverCallback;
     constructor(cb: IntersectionObserverCallback) {
@@ -68,6 +81,29 @@ function fireIntersection(index: number, isIntersecting: boolean) {
 }
 
 describe('IPFSMediaGallery', () => {
+  it('shows a removed placeholder instead of denylisted media (#1320)', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({ denylisted: ['QmRemoved'] }),
+    });
+    render(<IPFSMediaGallery cids={['QmRemoved', 'QmKept.jpg']} />);
+
+    expect(
+      await screen.findByRole('img', { name: 'Media removed by moderation' }),
+    ).toBeInTheDocument();
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/media/denylist?cids=QmRemoved%2CQmKept.jpg',
+    );
+    expect(screen.getByAltText('IPFS media QmKept.jpg')).toBeInTheDocument();
+  });
+
+  it('only shows the Report control when a playerId is given', () => {
+    const { rerender } = render(<IPFSMediaGallery cids={['QmA.jpg']} />);
+    expect(screen.queryByRole('button', { name: 'Report' })).toBeNull();
+    rerender(<IPFSMediaGallery cids={['QmA.jpg']} playerId="p1" />);
+    expect(screen.getByRole('button', { name: 'Report' })).toBeInTheDocument();
+  });
+
   it('renders nothing when cids is empty', () => {
     const { container } = render(<IPFSMediaGallery cids={[]} />);
     expect(container).toBeEmptyDOMElement();
@@ -201,5 +237,89 @@ describe('IPFSMediaGallery', () => {
   it('renders independent observers per tile for multiple CIDs', () => {
     render(<IPFSMediaGallery cids={['QmA.mp4', 'QmB.webm']} />);
     expect(observerCallbacks.length).toBe(2);
+  });
+
+  it('calls video.load() when playback starts', () => {
+    const { container } = render(<IPFSMediaGallery cids={['QmClip.mp4']} />);
+    fireIntersection(0, true);
+    fireEvent.click(screen.getByRole('button', { name: /play video/i }));
+    expect(HTMLMediaElement.prototype.load).toHaveBeenCalled();
+    expect(container.querySelector('source')).toBeInTheDocument();
+  });
+
+  it('shows reconnecting UI and retries with a cache-busted URL on video error', async () => {
+    const { container } = render(<IPFSMediaGallery cids={['QmClip.mp4']} />);
+    fireIntersection(0, true);
+    fireEvent.click(screen.getByRole('button', { name: /play video/i }));
+
+    const video = container.querySelector('video')!;
+    expect(container.querySelector('source')).toHaveAttribute(
+      'src',
+      '/api/media/QmClip.mp4',
+    );
+
+    await act(async () => {
+      fireEvent.error(video);
+    });
+
+    expect(screen.getByText(/reconnecting/i)).toBeInTheDocument();
+    expect(container.querySelector('source')).toHaveAttribute(
+      'src',
+      '/api/media/QmClip.mp4?retry=1',
+    );
+  });
+
+  it('shows unavailable retry UI after max automatic retries', async () => {
+    const { container } = render(<IPFSMediaGallery cids={['QmClip.mp4']} />);
+    fireIntersection(0, true);
+    fireEvent.click(screen.getByRole('button', { name: /play video/i }));
+
+    const video = container.querySelector('video')!;
+
+    await act(async () => {
+      fireEvent.error(video);
+      fireEvent.error(video);
+      fireEvent.error(video);
+    });
+
+    expect(
+      screen.getByRole('button', { name: /unavailable — retry/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('recovers playback when the user clicks unavailable retry', async () => {
+    const { container } = render(<IPFSMediaGallery cids={['QmClip.mp4']} />);
+    fireIntersection(0, true);
+    fireEvent.click(screen.getByRole('button', { name: /play video/i }));
+
+    const video = container.querySelector('video')!;
+    await act(async () => {
+      fireEvent.error(video);
+      fireEvent.error(video);
+      fireEvent.error(video);
+    });
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /unavailable — retry/i }),
+    );
+
+    expect(screen.queryByText(/unavailable/i)).not.toBeInTheDocument();
+    expect(HTMLMediaElement.prototype.load).toHaveBeenCalled();
+    expect(container.querySelector('source')).toBeInTheDocument();
+  });
+
+  it('renders accessible names in Swahili', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({ denylisted: ['QmRemoved'] }),
+    });
+    render(<IPFSMediaGallery cids={['QmRemoved', 'QmKept.jpg']} />, {
+      locale: 'sw',
+    });
+
+    expect(
+      await screen.findByRole('img', { name: 'Media imeondolewa na udhibiti' }),
+    ).toBeInTheDocument();
+    expect(screen.getByAltText('Media ya IPFS QmKept.jpg')).toBeInTheDocument();
   });
 });

@@ -1,5 +1,12 @@
+jest.unmock('next-intl');
+
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import {
+  render,
+  screen,
+  waitFor,
+  fireEvent,
+} from '@/__tests__/setup-providers-intl';
 import ReferralPanel from '@/components/scout/ReferralPanel';
 import {
   generateReferralCode,
@@ -72,7 +79,7 @@ describe('ReferralPanel toast errors', () => {
     });
   });
 
-  it('shows an error toast and clears generating state when invite-link generation fails', async () => {
+  it('shows an inline error and clears generating state when invite-link generation fails', async () => {
     mockGenerateReferralCode.mockRejectedValueOnce(
       new Error('generate failed'),
     );
@@ -88,13 +95,49 @@ describe('ReferralPanel toast errors', () => {
     expect(generateButton).toBeDisabled();
 
     await waitFor(() => {
-      expect(mockShow).toHaveBeenCalledWith({
-        message: 'Failed to generate an invite link. Please try again.',
-        variant: 'error',
-      });
+      expect(
+        screen.getByText(
+          'Failed to generate an invite link. Please try again.',
+        ),
+      ).toBeInTheDocument();
     });
 
     await waitFor(() => expect(generateButton).not.toBeDisabled());
+  });
+
+  it('surfaces the server-provided error message when generation is rejected by the API', async () => {
+    const axios = require('axios');
+    const apiError = Object.assign(
+      new Error('Request failed with status code 400'),
+      {
+        isAxiosError: true,
+        response: {
+          status: 400,
+          data: {
+            error:
+              'Bot-protection challenge is required. Please complete the challenge and try again.',
+          },
+        },
+      },
+    );
+    jest.spyOn(axios, 'isAxiosError').mockReturnValue(true);
+    mockGenerateReferralCode.mockRejectedValueOnce(apiError);
+
+    render(<ReferralPanel />);
+
+    const generateButton = await screen.findByRole('button', {
+      name: 'Generate Invite Link',
+    });
+
+    fireEvent.click(generateButton);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          'Bot-protection challenge is required. Please complete the challenge and try again.',
+        ),
+      ).toBeInTheDocument();
+    });
   });
 });
 
@@ -298,5 +341,17 @@ describe('ReferralPanel pagination', () => {
     expect(
       screen.queryByRole('button', { name: /show more/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it('renders the panel in French', async () => {
+    render(<ReferralPanel />, { locale: 'fr' });
+
+    expect(screen.getByText('Parrainer un collègue')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Générer un lien d’invitation' }),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('0 parrainage')).toBeInTheDocument();
+    });
   });
 });

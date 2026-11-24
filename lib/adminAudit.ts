@@ -11,6 +11,10 @@ export const ADMIN_AUDIT_ACTION_TYPES = [
   'fee_withdrawal',
   'pause',
   'unpause',
+  'fraud_flag_dismiss',
+  'media_approve',
+  'media_deny',
+  'media_reinstate',
 ] as const;
 
 export type AdminAuditActionType = (typeof ADMIN_AUDIT_ACTION_TYPES)[number];
@@ -52,6 +56,8 @@ export interface AdminAuditQueryFilter {
   to?: number;
   /** Keyset cursor: only entries with id strictly less than this. */
   before?: number;
+  /** Only entries whose `data.userId` equals this value. */
+  dataUserId?: string;
   limit?: number;
 }
 
@@ -66,6 +72,10 @@ export const ADMIN_AUDIT_ACTION_LABELS: Record<AdminAuditActionType, string> = {
   fee_withdrawal: 'Fees Withdrawn',
   pause: 'Contract Paused',
   unpause: 'Contract Unpaused',
+  fraud_flag_dismiss: 'Fraud Flag Dismissed',
+  media_approve: 'Reported Media Approved',
+  media_deny: 'Media Denylisted',
+  media_reinstate: 'Media Reinstated',
 };
 
 export interface ReconciliationMismatch {
@@ -81,5 +91,22 @@ export interface ReconciliationResult {
   checkedAt: number;
   mismatches: ReconciliationMismatch[];
   /** Sections of the reconciliation that couldn't run (e.g. indexer unreachable). */
+  skipped: string[];
+}
+
+/**
+ * One persisted reconciliation run (issue #1188). Defined here rather than
+ * in lib/reconciliationHistoryStore.ts (server-only, imports better-sqlite3)
+ * for the same reason the rest of this file is split out of
+ * lib/adminAuditStore.ts — so client components/hooks can import the shape
+ * without pulling a native module into client bundles.
+ */
+export interface ReconciliationRun {
+  id: number;
+  /** Unix seconds — matches ReconciliationResult.checkedAt for this run. */
+  checkedAt: number;
+  mismatches: ReconciliationMismatch[];
+  /** Count of `mismatches` that were NOT present in the immediately preceding run. */
+  newMismatchCount: number;
   skipped: string[];
 }

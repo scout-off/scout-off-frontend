@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Player } from '@/types';
 import { useWallet } from '@/hooks/useWallet';
 import useIsPaused from '@/hooks/useIsPaused';
@@ -22,10 +23,16 @@ export default function UpdateProfileForm({
   const { publicKey, signAndSubmit } = useWallet();
   const { show } = useToast();
   const isPaused = useIsPaused();
+  const tContractStatus = useTranslations('contract_status');
   const [newCid, setNewCid] = useState<string>('');
   const [fileError, setFileError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inlineError, setInlineError] = useState<string | null>(null);
+  // Whether a replacement highlight-reel upload is currently in flight (see
+  // #1184) — kept separately from `newCid` so the submit button can show a
+  // distinct "uploading" state rather than looking identical to "no file
+  // chosen yet".
+  const [isUploadInProgress, setIsUploadInProgress] = useState(false);
 
   if (!publicKey || publicKey !== player.wallet) {
     return null;
@@ -35,6 +42,18 @@ export default function UpdateProfileForm({
     setNewCid(cid);
     setInlineError(null);
     setFileError(null);
+  };
+
+  // Fires the instant a new upload begins — including replacing a CID from
+  // an already-completed upload earlier in this same form session. Clearing
+  // `newCid` immediately (rather than only once the new upload resolves) is
+  // what closes the race in issue #1184: `canSubmit` below requires a
+  // non-empty `newCid`, so for as long as the replacement upload is in
+  // flight, submission is impossible — it can never send the CID from the
+  // upload attempt this one is superseding.
+  const handleUploadStart = () => {
+    setNewCid('');
+    setInlineError(null);
   };
 
   const handleValidationError = (error: string | null) => {
@@ -56,7 +75,7 @@ export default function UpdateProfileForm({
       });
       return;
     }
-    if (!newCid || fileError || isSubmitting) return;
+    if (!newCid || fileError || isSubmitting || isUploadInProgress) return;
 
     setIsSubmitting(true);
     setInlineError(null);
@@ -83,8 +102,14 @@ export default function UpdateProfileForm({
   const ipfsMediaUrl = `${ipfsGateway}/${player.ipfsHash}`;
   const truncatedCid = `${player.ipfsHash.slice(0, 8)}…${player.ipfsHash.slice(-8)}`;
 
-  // Submit is only enabled when there is a valid CID and no pending file error
-  const canSubmit = Boolean(newCid) && !fileError && !isSubmitting && !isPaused;
+  // Submit is only enabled when there is a valid, fully-uploaded CID, no
+  // pending file error, and no replacement upload still in flight (#1184).
+  const canSubmit =
+    Boolean(newCid) &&
+    !fileError &&
+    !isSubmitting &&
+    !isUploadInProgress &&
+    !isPaused;
 
   return (
     <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 space-y-6">
@@ -119,6 +144,8 @@ export default function UpdateProfileForm({
 
         <VideoUpload
           onUpload={handleUpload}
+          onUploadStart={handleUploadStart}
+          onUploadingChange={setIsUploadInProgress}
           onValidationError={handleValidationError}
         />
         {fileError && <p className="text-sm text-red-400 mt-1">{fileError}</p>}
@@ -135,9 +162,11 @@ export default function UpdateProfileForm({
           )}
           <Button
             type="submit"
-            disabled={!canSubmit}
+            disabled={!canSubmit || isUploadInProgress}
             isLoading={isSubmitting}
-            title={isPaused ? 'Contract is currently paused' : undefined}
+            disabledReason={
+              isPaused ? tContractStatus('paused_hint') : undefined
+            }
             className="w-full"
           >
             Update Profile

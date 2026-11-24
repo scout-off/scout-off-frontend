@@ -31,7 +31,7 @@ Browser                          Next.js app                      Pinata
   ├──────────────────────────────────▶  keyed by sessionId+index      │
   │  ◀── repeat per chunk ─────────────                               │
   │                                   │                               │
-  │  POST /api/ipfs/upload/complete   │  concatenates all chunks,     │
+  │  POST /api/ipfs/upload/complete   │  streams all chunks,          │
   ├──────────────────────────────────▶  validates (MIME + magic       │
   │                                   │  bytes), then makes ONE        │
   │                                   │  pinFileToIPFS call ──────────▶
@@ -59,14 +59,52 @@ Browser                          Next.js app                      Pinata
   in every chunk. Both checks are the same logic `app/api/ipfs/upload`
   already used (extracted to `lib/fileSignature.ts` so it isn't duplicated).
   Client-side `validateFile` in `VideoUpload.tsx` is unchanged.
-- **Chunk-store persistence**: `lib/chunkedUploadStore.ts` keeps an
-  in-memory session map (mirroring the existing in-memory rate-limit Map in
-  `app/api/ipfs/upload`) and writes each chunk to `os.tmpdir()`. This
-  assumes a single, long-running Node process — consistent with what
-  already exists in this app — not a stateless multi-instance/serverless
-  deployment. If that ever changes, this store is the piece that would need
-  to move to shared storage (e.g. one of the SQLite services already used
-  elsewhere in this repo) so a chunk request can land on any instance.
+- **`/complete` assembles by streaming, not concatenating (issues #1294,
+  #1295)**: the old `assembleFile()` path did `Buffer.concat` over every
+  chunk and then made further full-size copies (`Uint8Array`, `File`, plus a
+  second copy from the gateway re-download during verification) — ~300-400 MB
+  peak RSS for a 100 MB upload, so a few concurrent completes could OOM a
+  1 GB serverless function. `/complete` now uses
+  `prepareStreamedAssembly()` in `lib/chunkedUploadStore.ts`: it validates
+  the session, asserts the SQLite byte aggregate equals the declared
+  `fileSize` (issue #1294 — a client used to be able to declare 1 MB and
+  stream gigabytes into the chunk store), and computes the sha256 plus the
+  leading 12 bytes for the magic-byte gate in a single pass that reads one
+  chunk at a time. It then hands `lib/streamingMultipart.ts` a generator
+  yielding one chunk at a time, which builds the `pinFileToIPFS` multipart
+  body lazily and sends it with `fetch(..., { body: stream, duplex: 'half' })`,
+  so Pinata still receives exactly one complete file. Integrity verification
+  streams the gateway response through the same hash
+  (`verifyUploadedDigest`) instead of buffering it. Peak residency is one
+  chunk (~1 MB). `assembleFile()` is retained as the buffered reference path
+  that the issue-#1294 size-mismatch tests assert against; no route calls it.
+  Memory is measured by `__tests__/api/ipfs/upload/streamingMemory.test.ts`,
+  run with `npm run test:memory`, which seeds a real 100 MB / 100-chunk
+  session and asserts live-memory growth stays under the issue's 64 MB
+  budget (currently ~3 MB).
+- **Chunk-store persistence (fixed in issue #1175)**: `lib/chunkedUploadStore.ts`
+  used to keep an in-memory session map and write each chunk to a given
+  instance's own `os.tmpdir()` — correct only for a single, long-running
+  Node process, not a stateless multi-instance/serverless deployment. It now
+  splits into two shared-storage pieces, mirroring `lib/rateLimit.ts`'s
+  Redis-with-in-memory-fallback pattern for the metadata half:
+  - **Session metadata** (which chunks a session has received, its expiry)
+    is backed by Upstash Redis when `UPSTASH_REDIS_REST_URL` /
+    `UPSTASH_REDIS_REST_TOKEN` are configured, with an in-memory,
+    single-instance-only fallback when they're not — same tradeoff
+    `lib/rateLimit.ts` documents for its own counter.
+  - **Chunk bytes** are larger binary payloads than a Redis counter, so
+    they go to `lib/chunkedUploadChunkStore.ts` — a `better-sqlite3` table
+    with a `BLOB` column, following this repo's existing SQLite-store
+    convention (`lib/sqliteDb.ts`). This requires the SQLite database file
+    itself to live on storage reachable from every instance (a shared
+    volume) — see `CHUNKED_UPLOAD_DB_PATH` in `.env.example`. On a
+    stateless serverless deployment with no shared volume at all, this
+    would need to move to object storage instead; that's an explicit,
+    documented gap, not a silent one.
+    Either way, `GET /api/ipfs/upload/status` and a chunk landing on any
+    instance now answer correctly regardless of which instance received an
+    earlier chunk in the same session.
 - **Rate limiting**: `/init` and `/complete` share the whole-file route's
   scale (20/min); `/chunk` gets a much higher ceiling (600/min) since one
   legitimate upload issues many small chunk requests — sized generously

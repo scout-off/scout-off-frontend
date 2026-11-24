@@ -119,6 +119,33 @@ describe('useWatchlist', () => {
     expect(mockRemove).not.toHaveBeenCalled();
   });
 
+  test('second remove call for the same pending entry does not double-commit (issue #1132)', async () => {
+    // Acceptance criterion: removing the same entry twice while the first
+    // removal is still within its undo window must not fire two DELETE calls.
+    const { result } = renderHook(() => useWatchlist('GSCOUT'), { wrapper });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    act(() => {
+      result.current.remove(ENTRY);
+      result.current.remove(ENTRY); // second call while timer is pending
+    });
+
+    // Only one toast shown — the second call was a no-op
+    expect(show).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // DELETE fired exactly once, not twice
+    expect(mockRemove).toHaveBeenCalledTimes(1);
+  });
+
   test('add calls the API and refetches', async () => {
     const { result } = renderHook(() => useWatchlist('GSCOUT'), { wrapper });
     await act(async () => {
