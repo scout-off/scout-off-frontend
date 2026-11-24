@@ -13,6 +13,7 @@ import {
   submitAndConfirmApproval,
   type ApprovalPhase,
 } from '@/lib/confirmApprovalSubmission';
+import { reconcilePlayerCache } from '@/hooks/useCacheReconciler';
 import { PROGRESS_LABELS } from '@/types';
 import type { Player } from '@/types';
 import TransactionStatus, { TxStatus } from '@/components/ui/TransactionStatus';
@@ -156,6 +157,11 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
       } else {
         setSubmitError(null);
       }
+
+      // Invalidate the SWR caches for this player so ProgressBar and
+      // PlayerCard update without a manual page reload.
+      reconcilePlayerCache(playerId.trim()).catch(() => {});
+
       onSuccess();
 
       // Auto-record this approving validator's own endorsement (issue
