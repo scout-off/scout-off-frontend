@@ -1,3 +1,4 @@
+/** @jest-environment node */
 /**
  * Tests that the Next.js indexer proxy blocks /metrics and allows /health.
  *
@@ -40,6 +41,7 @@ describe('proxy — /health is forwarded', () => {
     // in a plain Node jest environment.
     const fakeResponse = {
       status: 200,
+      ok: true,
       text: async () =>
         JSON.stringify({ status: 'ok', lastLedger: 0, uptime: 1 }),
       headers: { get: (h: string) => (h === 'content-type' ? 'application/json' : null) },
@@ -78,9 +80,9 @@ describe('proxy — upstream errors', () => {
     jest.restoreAllMocks();
   });
 
-  test('returns 503 when indexer is unreachable', async () => {
+  test('returns 502 when indexer is unreachable', async () => {
     const req = makeRequest(['health']);
     const res = await GET(req, { params: { path: ['health'] } });
-    expect(res.status).toBe(503);
+    expect(res.status).toBe(502);
   });
 });
