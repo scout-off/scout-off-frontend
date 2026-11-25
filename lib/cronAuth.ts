@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { timingSafeEqual } from 'crypto';
+import { timingSafeEqual, createHmac } from 'crypto';
 
 /**
  * Fail-closed cron authentication helper (#1490).
@@ -49,6 +49,54 @@ export function verifyCronRequest(req: NextRequest): NextResponse | null {
 
   if (!authorized) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  return null;
+}
+
+/**
+ * Constant-time string comparison that does not leak length information.
+ * Returns false when either value is empty.
+ */
+export function safeEqual(a: string, b: string): boolean {
+  if (!a || !b) return false;
+  const aBuf = Uint8Array.from(Buffer.from(a));
+  const bBuf = Uint8Array.from(Buffer.from(b));
+  return aBuf.length === bBuf.length && timingSafeEqual(aBuf, bBuf);
+}
+
+/**
+ * Verify an HMAC-signed webhook body (#1672).
+ *
+ * The indexer signs the raw request body with `REVALIDATE_SECRET` and sends
+ * the hex digest in the `x-revalidate-signature` header. We recompute the
+ * digest over the raw body and compare in constant time.
+ *
+ * Returns null when the request is authorized, or a NextResponse (401/500) to
+ * be returned immediately when it is not.
+ */
+export function verifyHmacSignature(
+  rawBody: string,
+  signature: string | null,
+): NextResponse | null {
+  const configuredSecret = process.env.REVALIDATE_SECRET;
+  if (!configuredSecret) {
+    return NextResponse.json(
+      { error: 'REVALIDATE_SECRET is not configured' },
+      { status: 500 },
+    );
+  }
+
+  if (!signature) {
+    return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
+  }
+
+  const expected = createHmac('sha256', configuredSecret)
+    .update(rawBody)
+    .digest('hex');
+
+  if (!safeEqual(signature, expected)) {
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
 
   return null;

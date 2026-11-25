@@ -49,11 +49,54 @@ function useDenylistedCids(cids: string[]): Set<string> {
   return denylisted;
 }
 
+/**
+ * Fetches the HLS master playlist URL for each original CID (issue #1674).
+ * CIDs without a completed rendition ladder are omitted so the player falls
+ * back to the original file.
+ */
+function useHlsRenditions(cids: string[]): Record<string, string> {
+  const [renditions, setRenditions] = useState<Record<string, string>>({});
+  const key = cids.join(',');
+
+  useEffect(() => {
+    if (!key) return;
+    let cancelled = false;
+    fetch(`/api/media/renditions?cids=${encodeURIComponent(key)}`)
+      .then((res) => (res.ok ? res.json() : { renditions: {} }))
+      .then((body: { renditions?: Record<string, string> }) => {
+        if (!cancelled) setRenditions(body.renditions ?? {});
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [key]);
+
+  return renditions;
+}
+
+/**
+ * True when the browser reports Save-Data or a 2g/3g effective connection type.
+ * Used to start HLS playback on the lowest rung (issue #1674).
+ */
+function prefersLowestRung(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const conn = (
+    navigator as Navigator & {
+      connection?: { saveData?: boolean; effectiveType?: string };
+    }
+  ).connection;
+  if (!conn) return false;
+  if (conn.saveData) return true;
+  return conn.effectiveType === '2g' || conn.effectiveType === '3g';
+}
+
 export default function IPFSMediaGallery({
   cids,
   playerId,
 }: IPFSMediaGalleryProps) {
   const denylisted = useDenylistedCids(cids);
+  const renditions = useHlsRenditions(cids);
 
   if (cids.length === 0) {
     return null;
@@ -66,7 +109,7 @@ export default function IPFSMediaGallery({
           <RemovedMediaItem key={cid} />
         ) : (
           <div key={cid} className="relative">
-            <IPFSMediaItem cid={cid} />
+            <IPFSMediaItem cid={cid} hlsUrl={renditions[cid]} />
             {playerId && <MediaReportButton cid={cid} playerId={playerId} />}
           </div>
         ),
@@ -90,9 +133,11 @@ function RemovedMediaItem() {
 
 interface IPFSMediaItemProps {
   cid: string;
+  /** HLS master playlist URL when adaptive renditions exist (issue #1674). */
+  hlsUrl?: string;
 }
 
-function IPFSMediaItem({ cid }: IPFSMediaItemProps) {
+function IPFSMediaItem({ cid, hlsUrl }: IPFSMediaItemProps) {
   const t = useTranslations('player_profile.mediaGallery');
   const [isVisible, setIsVisible] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -103,6 +148,7 @@ function IPFSMediaItem({ cid }: IPFSMediaItemProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const retryCountRef = useRef(0);
   const stuckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hlsRef = useRef<{ destroy: () => void } | null>(null);
 
   useEffect(() => {
     observerRef.current = new IntersectionObserver(
@@ -216,15 +262,83 @@ function IPFSMediaItem({ cid }: IPFSMediaItemProps) {
     handlePlaybackError,
   ]);
 
+  // Attach HLS playback (issue #1674). Native HLS on Safari, lazy-loaded
+  // hls.js elsewhere. Falls back to the original file when no renditions
+  // exist or HLS cannot be attached.
   useEffect(() => {
-    if (!isVisible || !isPlaying) return;
+    if (!isVisible || !isPlaying || !isVideo) return;
 
     const video = videoRef.current;
     if (!video) return;
 
-    video.load();
-    video.play().catch(() => {});
-  }, [isVisible, isPlaying, mediaUrl, sourceKey]);
+    let cancelled = false;
+
+    const attachOriginal = () => {
+      if (cancelled) return;
+      video.src = mediaUrl;
+      video.load();
+      video.play().catch(() => {});
+    };
+
+    if (!hlsUrl) {
+      attachOriginal();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const canPlayNativeHls =
+      video.canPlayType('application/vnd.apple.mpegurl') !== '';
+
+    if (canPlayNativeHls) {
+      video.src = hlsUrl;
+      video.load();
+      video.play().catch(() => {});
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    let hlsInstance: { destroy: () => void } | null = null;
+
+    import('hls.js')
+      .then(({ default: Hls }) => {
+        if (cancelled) return;
+        if (!Hls.isSupported()) {
+          attachOriginal();
+          return;
+        }
+        const hls = new Hls({
+          startLevel: prefersLowestRung() ? 0 : -1,
+          capLevelToPlayerSize: true,
+        });
+        hlsInstance = hls;
+        hlsRef.current = hls;
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          if (data.fatal) {
+            hls.destroy();
+            hlsRef.current = null;
+            attachOriginal();
+          }
+        });
+        hls.loadSource(hlsUrl);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          video.play().catch(() => {});
+        });
+      })
+      .catch(() => {
+        attachOriginal();
+      });
+
+    return () => {
+      cancelled = true;
+      if (hlsInstance) {
+        hlsInstance.destroy();
+        hlsRef.current = null;
+      }
+    };
+  }, [isVisible, isPlaying, isVideo, hlsUrl, mediaUrl, sourceKey]);
 
   if (isVideo) {
     return (
@@ -239,7 +353,7 @@ function IPFSMediaItem({ cid }: IPFSMediaItemProps) {
           controls
           onClick={() => setIsPlaying(!isPlaying)}
         >
-          {isVisible && isPlaying && (
+          {isVisible && isPlaying && !hlsUrl && (
             <source key={sourceKey} src={mediaUrl} type={videoMime} />
           )}
         </video>
@@ -265,27 +379,18 @@ function IPFSMediaItem({ cid }: IPFSMediaItemProps) {
           </button>
         )}
         {isPlaying && playbackState === 'reconnecting' && (
-          <div
-            className="absolute inset-0 flex items-center justify-center bg-black/50 pointer-events-none"
-            role="status"
-            aria-live="polite"
-          >
-            <span className="text-white text-sm font-medium">
-              {t('reconnecting')}
-            </span>
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+            <span className="text-sm text-white">{t('reconnecting')}</span>
           </div>
         )}
         {isPlaying && playbackState === 'error' && (
-          <div
-            className="absolute inset-0 flex items-center justify-center bg-black/50"
-            role="alert"
-          >
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 gap-2">
+            <span className="text-sm text-white">{t('playbackError')}</span>
             <button
-              type="button"
               onClick={handleManualRetry}
-              className="rounded-lg bg-brand-green px-4 py-2 text-sm font-medium text-black hover:bg-brand-green/90"
+              className="px-3 py-1 rounded bg-brand-green text-black text-sm"
             >
-              {t('unavailableRetry')}
+              {t('retry')}
             </button>
           </div>
         )}
@@ -298,25 +403,17 @@ function IPFSMediaItem({ cid }: IPFSMediaItemProps) {
       ref={containerRef}
       className="aspect-square bg-gray-800 rounded-xl overflow-hidden relative"
     >
-      {/*
-       * next/image with fill layout:
-       *   - Avoids CLS: the parent div establishes aspect-square dimensions
-       *     before the image loads, so layout is stable.
-       *   - placeholder="blur": shows the inline blurDataURL immediately,
-       *     giving perceived performance on slow connections.
-       *   - sizes: tells the browser which rendered width to expect at each
-       *     breakpoint so it downloads the right srcset candidate.
-       *   - No unoptimized: Next.js resizes, converts to WebP, and lazy-loads.
-       */}
-      <Image
-        src={getMediaProxyUrl(cid)}
-        alt={t('imageAlt', { cid })}
-        fill
-        className="object-cover"
-        placeholder="blur"
-        blurDataURL={BLUR_DATA_URL}
-        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-      />
+      {isVisible && (
+        <Image
+          src={mediaUrl}
+          alt=""
+          fill
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          className="object-cover"
+          placeholder="blur"
+          blurDataURL={BLUR_DATA_URL}
+        />
+      )}
     </div>
   );
 }
