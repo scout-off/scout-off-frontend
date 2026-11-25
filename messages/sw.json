@@ -1,4 +1,11 @@
 {
+  "not_found": {
+    "title": "Ukurasa Haujapatikana — ScoutOff",
+    "heading": "Ukurasa haujapatikana",
+    "body": "Ukurasa unaoutafuta haupo au huenda umehamishwa.",
+    "backToHome": "Rudi kwenye ukurasa wa nyumbani",
+    "browsePlayers": "Tafuta wachezaji"
+  },
   "admin": {
     "title": "Dashibodi ya Msimamizi",
     "contract": "Mkataba",
