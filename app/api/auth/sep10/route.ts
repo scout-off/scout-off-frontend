@@ -121,6 +121,12 @@ async function postSep10(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
+  // Step-up re-authentication (#1676): when `?purpose=step_up`, the caller
+  // proves wallet presence with a fresh SEP-10 signature and we refresh
+  // `auth_time` on the *existing* session id — no new session is minted.
+  const purpose = req.nextUrl.searchParams.get('purpose');
+  const isStepUp = purpose === 'step_up';
+
   let body: { signedXdr?: string; publicKey?: string; rememberMe?: boolean };
   try {
     body = await req.json();
@@ -141,6 +147,43 @@ async function postSep10(req: NextRequest) {
 
   if (typeof publicKey !== 'string' || !isValidStellarAddress(publicKey)) {
     return NextResponse.json({ error: 'Invalid publicKey' }, { status: 400 });
+  }
+
+  // For step-up we must resolve the existing session up front so we can
+  // verify the signer matches the session owner and update its auth_time.
+  let stepUpSid: string | null = null;
+  if (isStepUp) {
+    const token = req.cookies.get(SESSION_COOKIE)?.value;
+    const payload = token ? verifySessionToken(token, 'access') : null;
+    if (!payload?.sid) {
+      return withRequestId(
+        apiError(
+          ApiErrorCode.REAUTH_REQUIRED,
+          401,
+          'Re-authentication required',
+        ),
+        log.requestId,
+      );
+    }
+    if (!SessionStore.getInstance().isActive(payload.sid)) {
+      return withRequestId(
+        apiError(
+          ApiErrorCode.REAUTH_REQUIRED,
+          401,
+          'Re-authentication required',
+        ),
+        log.requestId,
+      );
+    }
+    // The fresh signature must come from the same wallet that owns the
+    // session — otherwise a different keypair could refresh auth_time.
+    if (payload.sub !== publicKey) {
+      return withRequestId(
+        apiError(ApiErrorCode.INVALID_SIGNATURE, 401, 'Verification failed'),
+        log.requestId,
+      );
+    }
+    stepUpSid = payload.sid;
   }
 
   const config = getSep10Config();
@@ -193,6 +236,16 @@ async function postSep10(req: NextRequest) {
       log.error('SEP-10 replay attempt detected', { xdrHash });
       return withRequestId(
         apiError(ApiErrorCode.INVALID_SIGNATURE, 401, 'Verification failed'),
+        log.requestId,
+      );
+    }
+
+    // Step-up path: refresh auth_time on the existing session and return
+    // without minting new tokens or touching cookies.
+    if (isStepUp && stepUpSid) {
+      SessionStore.getInstance().markReauthenticated(stepUpSid);
+      return withRequestId(
+        NextResponse.json({ ok: true, purpose: 'step_up' }),
         log.requestId,
       );
     }

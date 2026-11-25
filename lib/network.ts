@@ -29,3 +29,13 @@ export const getExplorerTxUrl = (hash: string): string =>
 
 export const getExplorerAccountUrl = (account: string): string =>
   `https://stellar.expert/explorer/${explorerNetwork()}/account/${account}`;
+
+/**
+ * Sponsorship pledge flow (claimable-balance escrow, #1678).
+ *
+ * The prototype is gated behind a feature flag and is hard-disabled on
+ * mainnet until compliance sign-off (amount caps, age check, guardian
+ * consent for minors). See docs/adr/0001-sponsorship-pledge-escrow.md.
+ */
+export const isSponsorshipPledgeEnabled = (): boolean =>
+  process.env.NEXT_PUBLIC_SPONSORSHIP_PLEDGE_ENABLED === 'true' && !isMainnet();
