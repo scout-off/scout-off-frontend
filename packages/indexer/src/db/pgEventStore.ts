@@ -19,14 +19,11 @@ import type {
   Checkpoint,
   EventRecord,
   IndexerStore,
-  PlayerFilter,
-  PlayerRecord,
-  PlayerResult,
   QueryFilter,
   QueryResult,
   WalletApprovalWindow,
 } from './eventStore';
-import { MAX_LIMIT, MAX_PLAYERS_LIMIT } from './eventStore';
+import { MAX_LIMIT } from './eventStore';
 
 export interface PgQueryable {
   query(
@@ -106,16 +103,6 @@ function rowToRecord(row: Record<string, any>): EventRecord {
     timestamp: Number(row.timestamp),
     data: typeof row.data === 'string' ? JSON.parse(row.data) : row.data,
     eventId: row.event_id,
-  };
-}
-
-function rowToPlayer(row: Record<string, any>): PlayerRecord {
-  return {
-    playerId: row.player_id,
-    region: row.region ?? null,
-    position: row.position ?? null,
-    level: row.level === null || row.level === undefined ? null : Number(row.level),
-    createdAt: Number(row.created_at),
   };
 }
 
@@ -211,84 +198,6 @@ export class PgEventStore implements IndexerStore {
     filter: Omit<QueryFilter, 'playerId'> = {},
   ): Promise<QueryResult> {
     return this.getEvents({ ...filter, playerId });
-  }
-
-  /**
-   * Players projection equivalent to the SQLite `getPlayers`: one row per
-   * `player_registered` event, filtered by region/position/minLevel/
-   * createdAfter, ordered by `created_at DESC, player_id DESC` with cursor
-   * pagination on `(created_at, player_id)`.
-   */
-  async getPlayers(filter: PlayerFilter = {}): Promise<PlayerResult> {
-    const limit = Math.min(filter.limit ?? DEFAULT_LIMIT, MAX_PLAYERS_LIMIT);
-    const clauses: string[] = ["event_type = 'player_registered'", 'player_id IS NOT NULL'];
-    const params: unknown[] = [];
-    const add = (sql: string, value: unknown) => {
-      params.push(value);
-      clauses.push(sql.replace('?', `$${params.length}`));
-    };
-
-    if (filter.region) add("data->>'region' = ?", filter.region);
-    if (filter.position) add("data->>'position' = ?", filter.position);
-    if (filter.minLevel !== undefined) add("COALESCE((data->>'level')::int, 0) >= ?", filter.minLevel);
-    if (filter.createdAfter !== undefined) add('timestamp > ?', filter.createdAfter);
-    if (filter.cursor) {
-      params.push(filter.cursor.createdAt);
-      const createdAtParam = `$${params.length}`;
-      params.push(filter.cursor.playerId);
-      const playerIdParam = `$${params.length}`;
-      clauses.push(
-        `(timestamp < ${createdAtParam} OR (timestamp = ${createdAtParam} AND player_id < ${playerIdParam}))`,
-      );
-    }
-
-    params.push(limit + 1);
-    const where = `WHERE ${clauses.join(' AND ')}`;
-    const { rows } = await this.pool.query(
-      `SELECT player_id, data->>'region' AS region, data->>'position' AS position,
-              (data->>'level')::int AS level, timestamp AS created_at
-       FROM events ${where}
-       ORDER BY timestamp DESC, player_id DESC
-       LIMIT $${params.length}`,
-      params,
-    );
-
-    const hasMore = rows.length > limit;
-    const page = (hasMore ? rows.slice(0, limit) : rows).map(rowToPlayer);
-    const last = page[page.length - 1];
-    return {
-      players: page,
-      nextCursor:
-        hasMore && last
-          ? { createdAt: last.createdAt, playerId: last.playerId }
-          : null,
-    };
-  }
-
-  /**
-   * In-process notifications only. In replica mode the leader's process
-   * receives live events; followers poll via `getEvents` (cross-replica
-   * fan-out with LISTEN/NOTIFY is tracked separately).
-   */
-  subscribe(listener: (event: EventRecord) => void): () => void {
-    this.listeners.add(listener);
-    return () => {
-      this.listeners.delete(listener);
-    };
-  }
-
-  /** Notifies in-process subscribers after a successful insert. */
-  private notify(events: EventRecord[]): void {
-    if (this.listeners.size === 0) return;
-    for (const event of events) {
-      for (const listener of this.listeners) {
-        try {
-          listener(event);
-        } catch {
-          // A misbehaving subscriber must not break ingestion.
-        }
-      }
-    }
   }
 
   async getApprovalCountsForWallets(

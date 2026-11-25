@@ -204,23 +204,127 @@ async function postSep10(req: NextRequest) {
       sid,
     });
 
-    // Record the refresh token's `jti` as the session's current refresh
-    // token so /api/auth/refresh can detect reuse of a rotated token (#1292).
-    // The absolute lifetime caps how long the session can be extended by
-    // repeated refreshes; past it the user must sign a fresh challenge.
-    const refreshPayload = verifySessionToken(refreshToken, 'refresh');
-    const now = Date.now();
     SessionStore.getInstance().create(
       sid,
       publicKey,
-      now + maxAge * 1000,
+      Date.now() + maxAge * 1000,
       req.headers.get('user-agent'),
-      refreshPayload?.jti,
-      now + maxAge * 1000,
     );
 
     // Opportunistically evict expired nonces. This runs after the session is
     // already committed so it's on the non-critical path — a failure here
-    // would not
+    // would not affect the response. In practice the table is tiny (one row
+    // per challenge consumed; rows expire with the 300 s challenge window),
+    // so sweeping synchronously is negligible.
+    try {
+      Sep10NonceStore.getInstance().sweepExpired();
+    } catch {
+      // Best-effort; a sweep failure must not abort an otherwise-successful
+      // login.
+    }
 
-/* … truncated 3700 chars — edit only what you need near the top … */
+    const response = NextResponse.json({ success: true, maxAge });
+    setSessionCookies(response, {
+      accessToken,
+      refreshToken,
+      refreshMaxAge: maxAge,
+    });
+    return withRequestId(response, log.requestId);
+  } catch (error) {
+    log.error('SEP-10 verification failed', {
+      reason: error instanceof Error ? error.message : String(error),
+    });
+    return withRequestId(
+      apiError(ApiErrorCode.INVALID_SIGNATURE, 401, 'Verification failed'),
+      log.requestId,
+    );
+  }
+}
+
+async function getSep10(req: NextRequest) {
+  const log = createRequestLogger(req);
+  const account = req.nextUrl.searchParams.get('account');
+  if (!account) {
+    return NextResponse.json(
+      { error: 'Missing account parameter' },
+      { status: 400 },
+    );
+  }
+
+  if (!isValidStellarAddress(account)) {
+    return NextResponse.json(
+      { error: 'Invalid account parameter' },
+      { status: 400 },
+    );
+  }
+
+  const config = getSep10Config();
+  if (!config) return serverNotConfigured();
+  const { serverKey, homeDomain } = config;
+  const network = getNetworkPassphrase();
+
+  try {
+    const serverKeypair = Keypair.fromSecret(serverKey);
+    const challengeXdr = WebAuth.buildChallengeTx(
+      serverKeypair,
+      account,
+      homeDomain,
+      CHALLENGE_TIMEOUT_SEC,
+      network,
+      homeDomain,
+    );
+    return NextResponse.json({ transaction: challengeXdr });
+  } catch (error) {
+    log.error('SEP-10 challenge generation failed', {
+      reason: error instanceof Error ? error.message : String(error),
+    });
+    return withRequestId(
+      NextResponse.json(
+        { error: 'Failed to generate challenge' },
+        { status: 500 },
+      ),
+      log.requestId,
+    );
+  }
+}
+
+/**
+ * DELETE /api/auth/sep10
+ *
+ * Logs the caller out: clears both session cookies AND revokes the
+ * session's row server-side (see #1179), so a copy of the cookie captured
+ * before this call (a stale browser tab, a proxy log, XSS exfiltration)
+ * stops working immediately instead of remaining valid until its natural
+ * `exp`. Called by context/WalletContext.tsx's disconnect().
+ *
+ * The `sid` is read from whichever of the two cookies still verifies —
+ * `session` (access token) is usually present, but a caller whose access
+ * token already expired and hasn't refreshed yet still has a chance to
+ * revoke via `session_refresh`. Best-effort: an unreadable/absent sid just
+ * means there's nothing server-side left to revoke, but the cookies are
+ * still cleared either way.
+ */
+async function deleteSep10(req: NextRequest) {
+  const accessToken = req.cookies.get(SESSION_COOKIE)?.value;
+  const refreshToken = req.cookies.get(REFRESH_COOKIE)?.value;
+  const sid =
+    (accessToken && verifySessionToken(accessToken, 'access')?.sid) ||
+    (refreshToken && verifySessionToken(refreshToken, 'refresh')?.sid) ||
+    null;
+
+  if (sid) {
+    try {
+      SessionStore.getInstance().revoke(sid);
+    } catch {
+      // Best-effort — cookies are still cleared below regardless.
+    }
+  }
+
+  const response = NextResponse.json({ success: true });
+  clearSessionCookies(response);
+  return response;
+}
+
+export const POST = withRouteTelemetry(postSep10, '/api/auth/sep10');
+export const GET = withRouteTelemetry(getSep10, '/api/auth/sep10');
+export const DELETE = withRouteTelemetry(deleteSep10, '/api/auth/sep10');
