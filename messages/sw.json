@@ -945,7 +945,15 @@
       "progress_label": "{name} – Kiwango cha maendeleo",
       "milestones": "Hatua",
       "milestones_label": "{name} – Hatua",
-      "milestone_count": "{count, plural, one {hatua #} other {hatua #}}"
+      "milestone_count": "{count, plural, one {hatua #} other {hatua #}}",
+      "best": "Bora zaidi",
+      "best_progress": "Kiwango cha juu cha maendeleo",
+      "copy_link": "Nakili kiungo",
+      "link_copied": "Kiungo cha ulinganisho kimenakiliwa.",
+      "link_copy_failed": "Imeshindwa kunakili. Shiriki kiungo hiki: {url}",
+      "download_csv": "Pakua CSV",
+      "csv_downloaded": "CSV ya ulinganisho imepakuliwa.",
+      "attribute": "Sifa"
     },
     "profile": {
       "title": "Wasifu wa skauti",
@@ -1051,5 +1059,10 @@
       "copied": "Imenakiliwa!",
       "showMore": "Onyesha zaidi ({count} zimebaki)"
     }
+  },
+  "dataTable": {
+    "sorted_ascending": "Imepangwa kwa {column}, kupanda",
+    "sorted_descending": "Imepangwa kwa {column}, kushuka",
+    "scroll_region": "{caption} (inasogezeka)"
   }
 }

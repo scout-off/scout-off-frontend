@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import DataTable from '@/components/ui/DataTable';
 
 interface AutomatedModerationEntry {
   id: string;
@@ -200,58 +201,73 @@ export default function AutomatedModerationLog() {
       )}
 
       {!loading && !error && filteredEntries.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-gray-700">
-                <th className="py-2 pr-4 font-medium text-gray-400">Time</th>
-                <th className="py-2 pr-4 font-medium text-gray-400">
-                  Severity
-                </th>
-                <th className="py-2 pr-4 font-medium text-gray-400">Rule</th>
-                <th className="py-2 pr-4 font-medium text-gray-400">User</th>
-                <th className="py-2 pr-4 font-medium text-gray-400">Thread</th>
-                <th className="py-2 font-medium text-gray-400">Context</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredEntries.map((entry) => {
+        <DataTable
+          caption="Automated moderation entries"
+          captionHidden
+          className="w-full text-left text-sm"
+          headerRowClassName="border-b border-gray-700 text-gray-400"
+          bodyClassName=""
+          rowClassName="border-b border-gray-700/50 hover:bg-gray-800/50"
+          rows={filteredEntries}
+          rowKey={(entry) => entry.id}
+          columns={[
+            {
+              key: 'timestamp',
+              header: 'Time',
+              headerClassName: 'py-2 pr-4 font-medium',
+              className: 'py-2 pr-4 text-gray-300',
+              render: (entry) => formatDate(entry.timestamp),
+            },
+            {
+              key: 'severity',
+              header: 'Severity',
+              headerClassName: 'py-2 pr-4 font-medium',
+              render: (entry) => {
                 const severity = entry.data?.severity as string | undefined;
                 return (
-                  <tr
-                    key={entry.id}
-                    className="border-b border-gray-700/50 hover:bg-gray-800/50"
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${getSeverityColor(severity)}`}
                   >
-                    <td className="py-2 pr-4 text-gray-300">
-                      {formatDate(entry.timestamp)}
-                    </td>
-                    <td className="py-2 pr-4">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${getSeverityColor(severity)}`}
-                      >
-                        {getSeverityLabel(severity)}
-                      </span>
-                    </td>
-                    <td className="py-2 pr-4 text-gray-200 font-medium">
-                      {(entry.data?.rule as string | undefined) ?? 'Unknown'}
-                    </td>
-                    <td className="py-2 pr-4 text-gray-300 font-mono">
-                      {entry.data?.userId as string | undefined}
-                    </td>
-                    <td className="py-2 pr-4 text-gray-300 font-mono">
-                      {entry.target ?? '-'}
-                    </td>
-                    <td className="py-2 text-gray-300">
-                      <pre className="text-xs text-gray-400 overflow-x-auto whitespace-pre-wrap max-w-md">
-                        {JSON.stringify(entry.data?.context ?? {}, null, 2)}
-                      </pre>
-                    </td>
-                  </tr>
+                    {getSeverityLabel(severity)}
+                  </span>
                 );
-              })}
-            </tbody>
-          </table>
-        </div>
+              },
+            },
+            {
+              key: 'rule',
+              header: 'Rule',
+              headerClassName: 'py-2 pr-4 font-medium',
+              className: 'py-2 pr-4 text-gray-200 font-medium',
+              render: (entry) =>
+                (entry.data?.rule as string | undefined) ?? 'Unknown',
+            },
+            {
+              key: 'user',
+              header: 'User',
+              headerClassName: 'py-2 pr-4 font-medium',
+              className: 'py-2 pr-4 text-gray-300 font-mono',
+              render: (entry) => entry.data?.userId as string | undefined,
+            },
+            {
+              key: 'thread',
+              header: 'Thread',
+              headerClassName: 'py-2 pr-4 font-medium',
+              className: 'py-2 pr-4 text-gray-300 font-mono',
+              render: (entry) => entry.target ?? '-',
+            },
+            {
+              key: 'context',
+              header: 'Context',
+              headerClassName: 'py-2 font-medium',
+              className: 'py-2 text-gray-300',
+              render: (entry) => (
+                <pre className="text-xs text-gray-400 overflow-x-auto whitespace-pre-wrap max-w-md">
+                  {JSON.stringify(entry.data?.context ?? {}, null, 2)}
+                </pre>
+              ),
+            },
+          ]}
+        />
       )}
 
       {!loading && nextCursor !== null && (

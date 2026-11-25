@@ -945,7 +945,15 @@
       "progress_label": "{name} – Niveau de progression",
       "milestones": "Jalons",
       "milestones_label": "{name} – Jalons",
-      "milestone_count": "{count, plural, one {# jalon} other {# jalons}}"
+      "milestone_count": "{count, plural, one {# jalon} other {# jalons}}",
+      "best": "Meilleur",
+      "best_progress": "Niveau de progression le plus élevé",
+      "copy_link": "Copier le lien",
+      "link_copied": "Lien de comparaison copié dans le presse-papiers.",
+      "link_copy_failed": "Copie automatique impossible. Partagez ce lien : {url}",
+      "download_csv": "Télécharger le CSV",
+      "csv_downloaded": "CSV de comparaison téléchargé.",
+      "attribute": "Attribut"
     },
     "profile": {
       "title": "Profil du recruteur",
@@ -1051,5 +1059,10 @@
       "copied": "Copié !",
       "showMore": "Afficher plus ({count} restants)"
     }
+  },
+  "dataTable": {
+    "sorted_ascending": "Trié par {column}, ordre croissant",
+    "sorted_descending": "Trié par {column}, ordre décroissant",
+    "scroll_region": "{caption} (défilable)"
   }
 }

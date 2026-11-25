@@ -22,6 +22,7 @@
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md,mdx}\"",
     "prepare": "node -e \"if (process.env.CI !== 'true') { require('child_process').execSync('husky install', {stdio: 'inherit'}) }\"",
     "postbuild": "next-sitemap",
+    "changelog:draft": "node scripts/draft-changelog.js",
     "backtest:fraud": "node --experimental-strip-types scripts/backtest-fraud.mts",
     "a11y:audit": "node scripts/a11y-audit.mjs",
     "generate:icons": "node scripts/generate-icons.js",
