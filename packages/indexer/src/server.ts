@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 import * as http from 'http';
 import { IndexerMetrics } from './metrics/IndexerMetrics';
 import { getLastLedgerInfo, getLedgerLag, getRole } from './ledgerTracker';
@@ -92,6 +93,14 @@ export function setPollerState(
 function isPollerRunning(): boolean {
   return poller?.isRunning() ?? false;
 }
+
+/** When set, /metrics is served only on this internal port (404 on the main port). */
+const METRICS_PORT: number | null = (() => {
+  const n = Number.parseInt(process.env.METRICS_PORT ?? '', 10);
+  return Number.isInteger(n) && n > 0 ? n : null;
+})();
+/** When set, /metrics on the main port requires `Authorization: Bearer <token>`. */
+const METRICS_BEARER_TOKEN = process.env.METRICS_BEARER_TOKEN ?? '';
 
 /**
  * Returns true when the request is authorised to access /metrics.
