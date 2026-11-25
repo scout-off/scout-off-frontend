@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 
 interface TruncatedAddressProps {
@@ -16,6 +16,16 @@ export default function TruncatedAddress({
 }: TruncatedAddressProps) {
   const t = useTranslations('common');
   const [copied, setCopied] = useState(false);
+  // #1780: keep the reset timer so it can be cleared on unmount and before
+  // a repeated copy restarts it.
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (resetTimer.current !== null) clearTimeout(resetTimer.current);
+    },
+    [],
+  );
 
   if (!address) return null;
 
@@ -30,7 +40,11 @@ export default function TruncatedAddress({
     try {
       await navigator.clipboard.writeText(address);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (resetTimer.current !== null) clearTimeout(resetTimer.current);
+      resetTimer.current = setTimeout(() => {
+        resetTimer.current = null;
+        setCopied(false);
+      }, 2000);
     } catch (err) {
       console.error('Failed to copy address:', err);
     }
@@ -42,13 +56,16 @@ export default function TruncatedAddress({
 
   return (
     <button
+      type="button"
       onClick={handleCopy}
       className={`inline-flex items-center gap-1 ${className}`}
       title={copied ? t('address_copied') : t('copy_address')}
+      aria-label={t('copy_address_full', { address })}
     >
       <span className="font-mono">{truncated}</span>
       {copied ? (
         <svg
+          aria-hidden="true"
           className="w-4 h-4 text-green-500"
           fill="none"
           stroke="currentColor"
@@ -63,6 +80,7 @@ export default function TruncatedAddress({
         </svg>
       ) : (
         <svg
+          aria-hidden="true"
           className="w-4 h-4 text-gray-400"
           fill="none"
           stroke="currentColor"
@@ -76,6 +94,9 @@ export default function TruncatedAddress({
           />
         </svg>
       )}
+      <span role="status" aria-live="polite" className="sr-only">
+        {copied ? t('address_copied') : ''}
+      </span>
     </button>
   );
 }

@@ -4,6 +4,7 @@
  * Same-origin fetch calls to the Next.js proxy routes — not the external
  * backend directly.
  */
+import { normalizeReferralCode } from '../referralCode';
 import { fetchWithRetry } from '../fetchWithRetry';
 import type { FraudFlag, FraudThrottle, FraudFlagDismissal } from '@/types';
 
@@ -41,7 +42,7 @@ export const redeemReferralCode = async (
     return false;
   }
   return api
-    .post('/referrals/redeem', { code, usedBy })
+    .post('/referrals/redeem', { code: normalizeReferralCode(code), usedBy })
     .then(() => true)
     .catch(() => false);
 };
