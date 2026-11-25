@@ -19,7 +19,7 @@ export default function StepIndicator({
               <div className="flex flex-col items-center flex-shrink-0">
                 <div
                   aria-current={isCurrent ? 'step' : undefined}
-                  aria-label={`Step ${step.id} of ${STEPS.length}: ${step.label}`}
+                  aria-label={`Step ${step.id} of ${STEPS.length}: ${step.label}${isCompleted ? ' (completed)' : ''}`}
                   className={[
                     'w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold motion-safe:transition-colors',
                     isCompleted
