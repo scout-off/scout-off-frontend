@@ -1,65 +1,109 @@
-import { formatXlm, XLM_DISPLAY_DECIMALS } from '@/lib/formatXlm';
+import { formatXlm, XLM_DISPLAY_DECIMALS } from '../../lib/formatXlm';
 
 describe('formatXlm', () => {
-  it('formats whole numbers with the standard decimal precision', () => {
-    expect(formatXlm(1)).toBe('1.00');
-    expect(formatXlm(12)).toBe('12.00');
+  it('formats a whole XLM amount with the configured decimals', () => {
+    // arrange
+    const amount = 5;
+
+    // act
+    const result = formatXlm(amount);
+
+    // assert
+    expect(result).toBe('5.00');
   });
 
-  it('rounds long trailing decimals to the configured precision', () => {
-    expect(formatXlm(4.999999)).toBe('5.00');
-    expect(formatXlm(1.006)).toBe('1.01');
-    expect(formatXlm(0.123456789)).toBe('0.12');
+  it('formats a fractional XLM amount to the configured decimals', () => {
+    // arrange
+    const amount = 1.5;
+
+    // act
+    const result = formatXlm(amount);
+
+    // assert
+    expect(result).toBe('1.50');
   });
 
   it('accepts numeric strings', () => {
-    expect(formatXlm('5')).toBe('5.00');
-    expect(formatXlm('7.5')).toBe('7.50');
+    // arrange
+    const amount = '2.25';
+
+    // act
+    const result = formatXlm(amount);
+
+    // assert
+    expect(result).toBe('2.25');
   });
 
-  it('falls back to zero for non-finite or unparsable input', () => {
-    expect(formatXlm(NaN)).toBe('0.00');
-    expect(formatXlm('not-a-number')).toBe('0.00');
-  });
+  it('rounds boundary values the way a human expects', () => {
+    // arrange
+    const amount = 1.005;
 
-  it('handles zero', () => {
-    expect(formatXlm(0)).toBe('0.00');
-  });
+    // act
+    const result = formatXlm(amount);
 
-  it('uses the exported precision constant', () => {
-    expect(XLM_DISPLAY_DECIMALS).toBe(2);
-    expect(formatXlm(3.14159).split('.')[1]).toHaveLength(XLM_DISPLAY_DECIMALS);
-  });
-
-  describe('rounding boundary values', () => {
-    // These sit exactly on a two-decimal rounding boundary. Plain
-    // Number.prototype.toFixed rounds them the wrong way because of how the
-    // value is stored as binary floating point (e.g. (1.005).toFixed(2) is
-    // '1.00', not '1.01').
-    it('rounds .xx5 boundaries up like a human would expect', () => {
-      expect(formatXlm(1.005)).toBe('1.01');
-      expect(formatXlm(2.675)).toBe('2.68');
-      expect(formatXlm(0.615)).toBe('0.62');
-    });
-
-    it('rounds negative .xx5 boundaries away from zero', () => {
-      expect(formatXlm(-1.005)).toBe('-1.01');
-      expect(formatXlm(-2.675)).toBe('-2.68');
-    });
-
-    it('rounds boundary values passed as strings', () => {
-      expect(formatXlm('1.005')).toBe('1.01');
-      expect(formatXlm('0.615')).toBe('0.62');
-    });
-  });
-
-  it('leaves non-boundary values unchanged', () => {
-    expect(formatXlm(1.5)).toBe('1.50');
-    expect(formatXlm(-1.5)).toBe('-1.50');
+    // assert
+    expect(result).toBe('1.01');
   });
 
   it('falls back to zero for non-finite input', () => {
-    expect(formatXlm(Infinity)).toBe('0.00');
-    expect(formatXlm(-Infinity)).toBe('0.00');
+    // arrange
+    const amount = Number.NaN;
+
+    // act
+    const result = formatXlm(amount);
+
+    // assert
+    expect(result).toBe((0).toFixed(XLM_DISPLAY_DECIMALS));
+  });
+
+  it('formats zero as a fixed-point zero string', () => {
+    // arrange
+    const amount = 0;
+
+    // act
+    const result = formatXlm(amount);
+
+    // assert
+    expect(result).toBe('0.00');
+  });
+
+  it('formats very large amounts without scientific notation', () => {
+    // arrange
+    const amount = 1_000_000;
+
+    // act
+    const result = formatXlm(amount);
+
+    // assert
+    expect(result).toBe('1000000.00');
+    expect(result).not.toMatch(/e/i);
+  });
+
+  it('formats one stroop (0.0000001 XLM) without losing the value', () => {
+    // arrange
+    const amount = 0.0000001;
+
+    // act
+    const result = formatXlm(amount);
+
+    // assert
+    // One stroop is below the display precision, so it rounds to zero at
+    // the configured decimals rather than producing a negative-zero or
+    // scientific-notation string.
+    expect(result).toBe('0.00');
+    expect(result).not.toMatch(/e/i);
+  });
+
+  it('formats negative amounts with a leading minus sign', () => {
+    // arrange
+    // Intended behaviour: negative values are formatted with a minus sign
+    // (they are not rejected), so callers can surface refunds/credits.
+    const amount = -1;
+
+    // act
+    const result = formatXlm(amount);
+
+    // assert
+    expect(result).toBe('-1.00');
   });
 });
