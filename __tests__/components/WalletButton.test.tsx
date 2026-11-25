@@ -137,6 +137,24 @@ describe('WalletButton — disconnected state', () => {
     expect(button).toBeDisabled();
   });
 
+  it('connect button aria-label reflects current connection state', () => {
+    // Idle — aria-label should be the "connect" translation value.
+    renderWalletButton();
+    const idle = screen.getByRole('button', { name: 'Connect Wallet' });
+    expect(idle).toHaveAttribute('aria-label', 'Connect Wallet');
+  });
+
+  it('connect button aria-label updates to connecting when in progress', () => {
+    mockUseWallet.mockReturnValue({
+      ...DISCONNECTED_STATE,
+      showWalletModal: false,
+      isConnecting: true,
+    });
+    renderWalletButton();
+    const btn = screen.getByRole('button', { name: 'Connecting…' });
+    expect(btn).toHaveAttribute('aria-label', 'Connecting…');
+  });
+
   it('lets the user pick a provider from the wallet selection modal', async () => {
     const user = userEvent.setup();
     mockUseWallet.mockReturnValue(DISCONNECTED_STATE);
