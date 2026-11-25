@@ -888,7 +888,11 @@
     "level0": "Haijathibitishwa",
     "level1": "Imethibitishwa",
     "level2": "Utendaji",
-    "level3": "Bora"
+    "level3": "Bora",
+    "level0_label": "Haijathibitishwa",
+    "level1_label": "Utambulisho Uliothibitishwa",
+    "level2_label": "Hatua za Utendaji",
+    "level3_label": "Kiwango cha Juu"
   },
   "recovery": {
     "title": "Urejeshaji wa Akaunti",

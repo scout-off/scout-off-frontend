@@ -10,28 +10,29 @@ describe('PROGRESS_LEVELS', () => {
     expect(PROGRESS_LEVELS.map((p) => p.level)).toEqual([0, 1, 2, 3]);
   });
 
-  it('each entry has a non-empty label and color', () => {
+  it('each entry has a non-empty key and color', () => {
     for (const entry of PROGRESS_LEVELS) {
-      expect(entry.label).toBeTruthy();
+      expect(entry.key).toBeTruthy();
+      expect(entry.badgeKey).toBeTruthy();
       expect(entry.color).toBeTruthy();
     }
   });
 });
 
 describe('getProgressLabel', () => {
-  it('returns "Unverified" for level 0', () => {
+  it('returns English fallback "Unverified" for level 0', () => {
     expect(getProgressLabel(0)).toBe('Unverified');
   });
 
-  it('returns "Verified Identity" for level 1', () => {
+  it('returns English fallback "Verified Identity" for level 1', () => {
     expect(getProgressLabel(1)).toBe('Verified Identity');
   });
 
-  it('returns "Performance Milestones" for level 2', () => {
+  it('returns English fallback "Performance Milestones" for level 2', () => {
     expect(getProgressLabel(2)).toBe('Performance Milestones');
   });
 
-  it('returns "Elite Tier" for level 3', () => {
+  it('returns English fallback "Elite Tier" for level 3', () => {
     expect(getProgressLabel(3)).toBe('Elite Tier');
   });
 

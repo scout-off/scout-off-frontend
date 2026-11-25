@@ -14,7 +14,6 @@ import {
   type ApprovalPhase,
 } from '@/lib/confirmApprovalSubmission';
 import { reconcilePlayerCache } from '@/hooks/useCacheReconciler';
-import { PROGRESS_LABELS } from '@/types';
 import type { Player } from '@/types';
 import TransactionStatus, { TxStatus } from '@/components/ui/TransactionStatus';
 import Input from '@/components/ui/Input';
@@ -53,6 +52,7 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
   const { isValidator, checking, approveMilestone } = useValidator(publicKey);
   const isPaused = useIsPaused();
   const tContractStatus = useTranslations('contract_status');
+  const tLevels = useTranslations('progress_levels');
   const [playerId, setPlayerId] = useState('');
   const [description, setDescription] = useState('');
   const [evidenceUrl, setEvidenceUrl] = useState('');
@@ -296,7 +296,7 @@ export default function ApproveForm({ onSuccess }: ApproveFormProps) {
           </p>
           <p>
             <span className="text-gray-400">Level:</span>{' '}
-            {PROGRESS_LABELS[player.progressLevel]}
+            {tLevels(`level${player.progressLevel}_label`)}
           </p>
           <p>
             <span className="text-gray-400">Last milestone:</span>{' '}

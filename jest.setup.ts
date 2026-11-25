@@ -60,6 +60,7 @@ const mockTranslatedNamespaces = [
   // Localized in the #1630s i18n batch.
   'session_mismatch_warning',
   'contract_status',
+  'progress_levels',
   'spending_summary',
   'service_worker_update_banner',
   'saved_searches_menu',

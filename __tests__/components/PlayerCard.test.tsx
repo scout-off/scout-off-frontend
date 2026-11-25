@@ -148,7 +148,7 @@ describe('PlayerCard — rendering', () => {
     const progressLabel = screen.getByRole('status');
     expect(progressLabel).toBeInTheDocument();
     expect(progressLabel).toHaveTextContent(
-      PROGRESS_LABELS[mockPlayer.progressLevel],
+      `level${mockPlayer.progressLevel}`,
     );
     expect(progressLabel).toHaveClass('text-yellow-800');
   });

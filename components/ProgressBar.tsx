@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl';
 import type { ProgressLevel } from '@/types';
 import {
   PROGRESS_LEVELS,
@@ -21,6 +22,7 @@ import {
  */
 
 export default function ProgressBar({ level }: { level: ProgressLevel }) {
+  const t = useTranslations('progress_levels');
   const clampedLevel = Number.isFinite(level)
     ? Math.min(3, Math.max(0, level))
     : 0;
@@ -29,12 +31,12 @@ export default function ProgressBar({ level }: { level: ProgressLevel }) {
   return (
     <div className="w-full">
       <div className="flex justify-between mb-1">
-        {PROGRESS_LEVELS.map(({ level: step, label }) => (
+        {PROGRESS_LEVELS.map(({ level: step, key }) => (
           <span
             key={step}
             className={`text-xs ${step <= clampedLevel ? 'text-gray-50' : 'text-gray-400'}`}
           >
-            {label}
+            {t(key)}
           </span>
         ))}
       </div>

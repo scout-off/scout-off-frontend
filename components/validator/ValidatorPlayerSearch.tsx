@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { getPlayer } from '@/lib/contract';
-import { PROGRESS_LABELS } from '@/types';
 import type { Player } from '@/types';
 import EmptyState from '@/components/ui/EmptyState';
 import Button from '@/components/ui/Button';
@@ -16,6 +16,7 @@ export default function ValidatorPlayerSearch({
   onSelect,
 }: ValidatorPlayerSearchProps) {
   const locale = useLocale();
+  const t = useTranslations('progress_levels');
   const [query, setQuery] = useState('');
   const [player, setPlayer] = useState<Player | null>(null);
   const [loading, setLoading] = useState(false);
@@ -108,7 +109,7 @@ export default function ValidatorPlayerSearch({
                 {player.vitals.position} · {player.vitals.region}
               </p>
               <span className="inline-block mt-1 text-xs text-brand-green font-medium">
-                {PROGRESS_LABELS[player.progressLevel]}
+                {t(`level${player.progressLevel}`)}
               </span>
               {lastMilestoneDate && (
                 <p className="text-xs text-gray-400 mt-0.5">

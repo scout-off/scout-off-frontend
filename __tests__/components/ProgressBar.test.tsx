@@ -29,8 +29,8 @@ describe('ProgressBar', () => {
   it('renders every step label', () => {
     render(<ProgressBar level={1} />);
 
-    PROGRESS_LEVELS.forEach(({ label }) => {
-      expect(screen.getByText(label)).toBeInTheDocument();
+    PROGRESS_LEVELS.forEach(({ level }) => {
+      expect(screen.getByText(getProgressLabel(level))).toBeInTheDocument();
     });
   });
 

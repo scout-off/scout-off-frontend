@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { Milestone, MilestoneDispute, ProgressLevel } from '@/types';
-import { PROGRESS_LABELS } from '@/types';
 import Badge from '@/components/ui/Badge';
 import Tooltip from '@/components/ui/Tooltip';
 import ValidatorChip from '@/components/player/ValidatorChip';
@@ -87,6 +86,7 @@ export default function MilestoneTimeline({
   onDisputeMilestone,
   playerId,
 }: MilestoneTimelineProps) {
+  const tLevels = useTranslations('progress_levels');
   const [expanded, setExpanded] = useState<ProgressLevel | null>(null);
   const t = useTranslations('player_profile.milestoneTimeline');
   const locale = useLocale() as Locale;
@@ -127,12 +127,12 @@ export default function MilestoneTimeline({
             aria-label={
               isCompleted && milestone
                 ? t('levelAchieved', {
-                    level: PROGRESS_LABELS[level],
+                    level: tLevels(`${BADGE_VARIANT[level]}_label`),
                     date: fmt(milestone.timestamp),
                   })
                 : isCompleted
-                  ? PROGRESS_LABELS[level]
-                  : t('levelNotReached', { level: PROGRESS_LABELS[level] })
+                  ? tLevels(`${BADGE_VARIANT[level]}_label`)
+                  : t('levelNotReached', { level: tLevels(`${BADGE_VARIANT[level]}_label`) })
             }
             className="relative flex flex-row items-start gap-3 pb-8 sm:flex-col sm:items-center sm:flex-1 sm:pb-0"
           >
@@ -162,11 +162,11 @@ export default function MilestoneTimeline({
               aria-label={
                 milestone
                   ? t(isExpanded ? 'collapseAchieved' : 'expandAchieved', {
-                      level: PROGRESS_LABELS[level],
+                      level: tLevels(`${BADGE_VARIANT[level]}_label`),
                       date: fmt(milestone.timestamp),
                     })
                   : t(isExpanded ? 'collapseLevel' : 'expandLevel', {
-                      level: PROGRESS_LABELS[level],
+                      level: tLevels(`${BADGE_VARIANT[level]}_label`),
                     })
               }
               className={[
@@ -222,14 +222,14 @@ export default function MilestoneTimeline({
                 >
                   <Badge
                     variant={BADGE_VARIANT[level]}
-                    label={PROGRESS_LABELS[level]}
+                    label={tLevels(`${BADGE_VARIANT[level]}_label`)}
                     size="sm"
                   />
                 </Tooltip>
               ) : (
                 <Badge
                   variant={BADGE_VARIANT[level]}
-                  label={PROGRESS_LABELS[level]}
+                  label={tLevels(`${BADGE_VARIANT[level]}_label`)}
                   size="sm"
                 />
               )}
@@ -255,7 +255,7 @@ export default function MilestoneTimeline({
               <div
                 id={`timeline-detail-${level}`}
                 role="region"
-                aria-label={t('detailsFor', { level: PROGRESS_LABELS[level] })}
+                aria-label={t('detailsFor', { level: tLevels(`${BADGE_VARIANT[level]}_label`) })}
                 className="sm:absolute sm:top-full sm:mt-2 sm:left-1/2 sm:-translate-x-1/2 sm:w-56 z-20 rounded-xl border border-gray-700 bg-brand-card p-3 text-xs text-gray-300 flex flex-col gap-1 shadow-2xl"
               >
                 {level === 0 && <p>{t('profileCreated')}</p>}
