@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import type { Player } from '@/types';
 import { PROGRESS_LABELS } from '@/types';
 import { FOOTBALL_POSITIONS } from '@/lib/positions';
@@ -147,9 +147,7 @@ describe('PlayerCard — rendering', () => {
     render(<PlayerCard player={mockPlayer} />);
     const progressLabel = screen.getByRole('status');
     expect(progressLabel).toBeInTheDocument();
-    expect(progressLabel).toHaveTextContent(
-      `level${mockPlayer.progressLevel}`,
-    );
+    expect(progressLabel).toHaveTextContent('Performance');
     expect(progressLabel).toHaveClass('text-yellow-800');
   });
 
@@ -208,7 +206,7 @@ describe('PlayerCard — position tooltip', () => {
     );
   });
 
-  it('hides the tooltip on blur', () => {
+  it('hides the tooltip on blur', async () => {
     const playerWithKnownPosition: Player = {
       ...mockPlayer,
       vitals: { ...mockPlayer.vitals, position: 'CB' },
@@ -219,7 +217,9 @@ describe('PlayerCard — position tooltip', () => {
     expect(screen.getByRole('tooltip')).toBeInTheDocument();
 
     fireEvent.blur(screen.getByText('CB'));
-    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument(),
+    );
   });
 
   it('falls back to the raw position value when abbreviation is not in the map', () => {
@@ -255,7 +255,7 @@ describe('PlayerCard — position Tooltip', () => {
     expect(screen.getByRole('tooltip')).toHaveTextContent(expectedLabel);
   });
 
-  it('hides the tooltip after mouseLeave', () => {
+  it('hides the tooltip after mouseLeave', async () => {
     const stPlayer: Player = {
       ...mockPlayer,
       vitals: { ...mockPlayer.vitals, position: 'ST' },
@@ -267,7 +267,9 @@ describe('PlayerCard — position Tooltip', () => {
     expect(screen.getByRole('tooltip')).toBeInTheDocument();
 
     fireEvent.mouseLeave(positionEl);
-    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument(),
+    );
   });
 
   it('falls back to the raw abbreviation text when the position is not in the map', () => {

@@ -1,3 +1,4 @@
+/** @jest-environment node */
 /**
  * Issue #1699: per-policy failure modes when the shared rate-limit store
  * (Upstash Redis) is unavailable, plus the circuit breaker and bounded logs.

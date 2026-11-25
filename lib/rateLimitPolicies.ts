@@ -26,7 +26,7 @@ import {
   getClientIp,
   type RateLimitOptions,
 } from './rateLimit';
-import { getSessionWallet } from './auth/session';
+import { getSessionWallet } from './session';
 
 // ── Policy definition ─────────────────────────────────────────────────────────
 

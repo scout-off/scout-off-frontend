@@ -1,4 +1,10 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  act,
+  waitFor,
+} from '@testing-library/react';
 import Tooltip from '@/components/ui/Tooltip';
 
 describe('Tooltip', () => {
@@ -12,7 +18,7 @@ describe('Tooltip', () => {
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   });
 
-  it('shows the tooltip on hover and hides it on mouse leave', () => {
+  it('shows the tooltip on hover and hides it on mouse leave', async () => {
     render(
       <Tooltip content="Extra info">
         <span>Hover me</span>
@@ -24,10 +30,14 @@ describe('Tooltip', () => {
     expect(screen.getByRole('tooltip')).toHaveTextContent('Extra info');
 
     fireEvent.mouseLeave(trigger);
-    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    // Hidden after a short grace period so the pointer can move onto the
+    // tooltip itself (WCAG 1.4.13 hoverable).
+    await waitFor(() =>
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument(),
+    );
   });
 
-  it('shows the tooltip on focus and hides it on blur', () => {
+  it('shows the tooltip on focus and hides it on blur', async () => {
     render(
       <Tooltip content="Extra info">
         <span>Hover me</span>
@@ -39,10 +49,12 @@ describe('Tooltip', () => {
     expect(screen.getByRole('tooltip')).toBeInTheDocument();
 
     fireEvent.blur(trigger);
-    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument(),
+    );
   });
 
-  it('auto-hides the tooltip after the timeout elapses', () => {
+  it('stays visible while hovered instead of auto-hiding (WCAG 1.4.13 persistent)', () => {
     jest.useFakeTimers();
     render(
       <Tooltip content="Extra info">
@@ -56,7 +68,7 @@ describe('Tooltip', () => {
     act(() => {
       jest.advanceTimersByTime(5000);
     });
-    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
 
     jest.useRealTimers();
   });

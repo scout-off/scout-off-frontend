@@ -1,7 +1,7 @@
 jest.unmock('next-intl');
 
 import React from 'react';
-import { render, screen, fireEvent } from '@/__tests__/setup-providers-intl';
+import { render, screen, fireEvent, waitFor } from '@/__tests__/setup-providers-intl';
 import '@testing-library/jest-dom';
 import MilestoneTimeline from '@/components/player/MilestoneTimeline';
 import type { Milestone, MilestoneDispute } from '@/types';
@@ -197,13 +197,15 @@ describe('MilestoneTimeline — badge tooltip (issue #1129)', () => {
     expect(tooltip.textContent).toMatch(/Approved:/);
   });
 
-  it('hides the badge tooltip on mouse leave', () => {
+  it('hides the badge tooltip on mouse leave', async () => {
     render(<MilestoneTimeline milestones={MS} currentLevel={2} />);
     const badge = screen.getByText('Verified Identity');
     fireEvent.mouseEnter(badge);
     expect(screen.getByRole('tooltip')).toBeInTheDocument();
     fireEvent.mouseLeave(badge);
-    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument(),
+    );
   });
 
   it('does not attach a tooltip to a badge for a level with no milestone data', () => {
