@@ -4,14 +4,25 @@
 
 Current CSP configuration (see `next.config.js` / `middleware.ts`) allows `'unsafe-inline'` for scripts, which weakens XSS protection.
 
-## Proposed fix
+## Implemented fix
 
-1. In `middleware.ts`, generate a per-request nonce (e.g. `crypto.randomUUID()` or `crypto.randomBytes(16).toString('base64')`).
-2. Pass the nonce to the response via a request header (e.g. `x-nonce`) so it can be read in Server Components/`_document`.
-3. Update the `Content-Security-Policy` header to use `script-src 'self' 'nonce-<value>'` instead of `'unsafe-inline'`.
-4. Apply the nonce attribute to all first-party inline `<script>` tags (e.g. any inline analytics/bootstrap scripts).
-5. Keep `'unsafe-inline'` as a fallback only for browsers that don't support nonces if strict backwards compatibility is required (optional, not recommended long-term).
+1. `middleware.ts` generates a per-request nonce (`crypto.randomUUID()` base64-encoded) and builds the CSP via `buildCsp({ nonce })` in `lib/csp.ts`.
+2. The nonce is forwarded to the app as `x-nonce` **and** the full `Content-Security-Policy` header is set on the forwarded request headers. Next.js only stamps its own framework/RSC inline scripts (`self.__next_f.push(...)`) with a nonce when it can read the CSP header from the request, so setting it on the request is required for a production build to work.
+3. The same CSP (same nonce) is set on the response so the browser enforces it.
+4. `app/layout.tsx` reads `x-nonce` and applies it to the no-flash theme bootstrap script. Sentry and Vercel Analytics inline scripts inherit the nonce from the request CSP header.
+5. `script-src` uses `'self' 'nonce-<value>' 'strict-dynamic'` in production. `'unsafe-inline'` is **not** used in production; it is only present in development where Next.js requires it for HMR.
 
-## Status
+## Dynamic rendering and nonces
 
-Documented as a plan only — no changes made to `next.config.js` or `middleware.ts` in this pass to avoid touching existing behavior without review/testing. Implementation should be picked up as a follow-up ticket.
+A per-request nonce cannot be baked into cached HTML, so any route that renders inline scripts must be rendered dynamically (or use a documented hash-based policy). The following routes are forced dynamic for this reason:
+
+- `/` and locale-prefixed pages (`/[locale]`) — render the theme bootstrap and framework scripts.
+- `/player/[id]` — previously ISR (`revalidate = 60`); now dynamic so the nonce is fresh per request.
+- `/scout`, `/sponsorship` — dynamic for the same reason.
+
+If a route must remain statically optimized/ISR, it needs a hash-based `script-src` policy instead of a nonce; that is not currently used.
+
+## Verification
+
+- `__tests__/lib/csp*.test.ts` cover the dev vs prod `script-src` and the Sentry origin resolution (`NEXT_PUBLIC_SENTRY_DSN`).
+- `e2e/csp.spec.ts` runs against the production build in the existing `e2e` CI job, listens for `securitypolicyviolation` and console CSP errors on `/en`, `/en/player/<fixture>`, `/en/scout`, and `/en/sponsorship`, and asserts that no reports were posted to `/api/csp-report` during the run.

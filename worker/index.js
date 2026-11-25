@@ -11,11 +11,12 @@
  * This is the always-loaded home for:
  *  - the player-onboarding-wizard background sync (issue #1181): finishing
  *    a *signed* registration transaction's broadcast to Soroban RPC even
- *    after the tab — or the whole installed PWA — has been closed, and
+ *    after the tab — or the whole installed PWA — has been closed,
  *  - the pre-existing generic offline-queue sync relay, wired in here via
  *    importScripts since public/sw-offline-queue.js was previously never
  *    reachable by the generated service worker at all (see that file's
- *    header comment, updated alongside this change).
+ *    header comment, updated alongside this change), and
+ *  - the Web Push `push` / `notificationclick` handlers (issue #1666).
  *
  * Note on why a *signed* transaction is what gets queued, not the raw form
  * data: registration is a Soroban smart-contract call, and signing it
@@ -191,34 +192,71 @@ self.addEventListener('message', function (event) {
   }
 });
 
-// ── Milestone-approval Web Push (issue #558) ───────────────────────────────
-// The backend sends a VAPID-signed push with a JSON payload shaped like
-// `{ type: 'milestone_approved', playerId, milestone, validatorName? }` to
-// subscriptions registered via components/PushNotificationToggle.tsx.
-// Permission is only ever requested from that explicit opt-in button.
+// ── Web Push (issue #1666) ─────────────────────────────────────────────────
+// The backend (POST /push/subscriptions) sends a VAPID-signed push whose
+// JSON payload carries a *message key* and params — never English text and
+// never contact details — e.g.
+//   { type: 'milestone_approved', messageKey: 'push.milestoneApproved',
+//     params: { milestone: 'Goals' }, url: '/players/abc' }
+// The service worker localizes the key here so the same payload works for
+// every locale the user has selected.
+
+var PUSH_MESSAGES = {
+  'push.milestoneApproved': {
+    title: 'Milestone approved',
+    body: 'Your milestone “{milestone}” was approved.',
+  },
+  'push.playerContacted': {
+    title: 'A scout contacted you',
+    body: 'A scout reached out about your profile.',
+  },
+  'push.disputeUpdate': {
+    title: 'Dispute update',
+    body: 'There is an update on your dispute.',
+  },
+  'push.subscriptionExpiring': {
+    title: 'Subscription expiring',
+    body: 'Your subscription expires soon — renew to keep access.',
+  },
+};
+
+function interpolate(template, params) {
+  if (!params) return template;
+  return template.replace(/\{(\w+)\}/g, function (match, key) {
+    return params[key] != null ? String(params[key]) : match;
+  });
+}
+
+function localizePush(payload) {
+  var key = payload && payload.messageKey;
+  var entry = (key && PUSH_MESSAGES[key]) || null;
+  if (!entry) {
+    return { title: 'Player Scout', body: '' };
+  }
+  return {
+    title: entry.title,
+    body: interpolate(entry.body, payload.params),
+  };
+}
+
 self.addEventListener('push', function (event) {
-  var data = {};
+  var payload = {};
   try {
-    data = event.data ? event.data.json() : {};
+    payload = event.data ? event.data.json() : {};
   } catch {
-    data = { body: event.data ? event.data.text() : '' };
+    payload = {};
   }
 
-  var milestone = data.milestone || data.milestoneDescription || '';
-  var approver = data.validatorName ? ' by ' + data.validatorName : '';
-  var title = data.title || 'Milestone approved';
-  var body =
-    data.body ||
-    (milestone
-      ? '“' + milestone + '” was approved' + approver + '.'
-      : 'One of your milestones was approved' + approver + '.');
-  var url = data.url || (data.playerId ? '/player/' + data.playerId : '/');
+  var localized = localizePush(payload);
+  var tag = payload.tag || payload.type || 'push';
+  var url = typeof payload.url === 'string' ? payload.url : '/';
 
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body: body,
-      tag: 'milestone-' + (data.milestoneId || data.playerId || 'approved'),
+    self.registration.showNotification(localized.title, {
+      body: localized.body,
+      tag: tag,
       icon: '/icons/icon-192x192.png',
+      badge: '/icons/icon-192x192.png',
       data: { url: url },
     }),
   );
@@ -226,28 +264,28 @@ self.addEventListener('push', function (event) {
 
 self.addEventListener('notificationclick', function (event) {
   event.notification.close();
-  var target = new URL(
-    (event.notification.data && event.notification.data.url) || '/',
-    self.location.origin,
-  ).href;
+  var targetUrl =
+    (event.notification.data && event.notification.data.url) || '/';
 
   event.waitUntil(
-    (async function () {
-      var clients = await self.clients.matchAll({
-        type: 'window',
-        includeUncontrolled: true,
-      });
-      for (var i = 0; i < clients.length; i++) {
-        var client = clients[i];
-        if (client.url === target && 'focus' in client) return client.focus();
-      }
-      for (var j = 0; j < clients.length; j++) {
-        if ('navigate' in clients[j]) {
-          await clients[j].navigate(target);
-          return clients[j].focus();
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then(function (clientList) {
+        for (var i = 0; i < clientList.length; i++) {
+          var client = clientList[i];
+          if ('focus' in client) {
+            if (client.url === targetUrl) return client.focus();
+            if ('navigate' in client) {
+              return client.navigate(targetUrl).then(function (c) {
+                return c && 'focus' in c ? c.focus() : undefined;
+              });
+            }
+            return client.focus();
+          }
         }
-      }
-      return self.clients.openWindow(target);
-    })(),
+        if (self.clients.openWindow) {
+          return self.clients.openWindow(targetUrl);
+        }
+      }),
   );
 });
