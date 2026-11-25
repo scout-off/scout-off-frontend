@@ -16,6 +16,7 @@ import {
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import type { Player } from '@/types';
 import { getExplorerTxUrl } from '@/lib/network';
+import { reconcilePlayerCache } from '@/hooks/useCacheReconciler';
 
 interface RevokeFormProps {
   player?: Player;
@@ -93,6 +94,9 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
         });
         // Wait a moment before resetting so UI shows success
         setTimeout(() => {
+          // Invalidate the SWR caches for this player so ProgressBar and
+          // PlayerCard update without a manual page reload.
+          reconcilePlayerCache(player.id).catch(() => {});
           onSuccess();
           setRevokeState({
             txHash: null,
@@ -356,6 +360,9 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
           error: null,
         });
         setTimeout(() => {
+          // Invalidate the SWR caches for this player so ProgressBar and
+          // PlayerCard update without a manual page reload.
+          reconcilePlayerCache(playerId).catch(() => {});
           onSuccess();
           setPlayerId('');
           setMilestoneId('');

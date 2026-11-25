@@ -14,6 +14,14 @@ export interface FeedEvent {
   version: number;
   createdAt: string | number;
   payload?: Record<string, unknown>;
+  /**
+   * Horizon paging_token for this operation — a monotonically increasing
+   * ledger-sequence number (zero-padded numeric string, e.g.
+   * "179539373969612800").  Used by the reconciliation layer to detect and
+   * discard out-of-order or replayed events.  Absent on events sourced from
+   * the SSE stream before the paging_token field was added.
+   */
+  pagingToken?: string;
 }
 
 const HORIZON_URL =
@@ -54,6 +62,7 @@ function toFeedEvent(op: Record<string, unknown>): FeedEvent | null {
     version: decoded.version,
     createdAt: raw.created_at ?? new Date().toISOString(),
     payload: { ...decoded.data, txHash: raw.transaction_hash },
+    pagingToken: raw.paging_token ? String(raw.paging_token) : undefined,
   };
 }
 
