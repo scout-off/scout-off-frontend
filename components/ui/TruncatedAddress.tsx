@@ -54,13 +54,19 @@ export default function TruncatedAddress({
     return <span className={className}>{truncated}</span>;
   }
 
+  // aria-label carries the full address for screen readers and, like the
+  // tooltip, switches to the copied state after a click (#868).
+  const ariaLabel = copied
+    ? t('address_copied')
+    : t('copy_address_full', { address });
+
   return (
     <button
       type="button"
       onClick={handleCopy}
       className={`inline-flex items-center gap-1 ${className}`}
       title={copied ? t('address_copied') : t('copy_address')}
-      aria-label={t('copy_address_full', { address })}
+      aria-label={ariaLabel}
     >
       <span className="font-mono">{truncated}</span>
       {copied ? (
