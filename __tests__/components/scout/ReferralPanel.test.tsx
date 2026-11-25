@@ -213,7 +213,8 @@ describe('ReferralPanel CSV export', () => {
       fireEvent.click(exportButton);
 
       expect(createObjectURLSpy).toHaveBeenCalledTimes(1);
-      expect(revokeObjectURLSpy).toHaveBeenCalledTimes(1);
+      // Revocation is deferred by lib/download so the download is not cancelled.
+      expect(revokeObjectURLSpy).not.toHaveBeenCalled();
       expect(clickSpy).toHaveBeenCalledTimes(1);
 
       const blob = createObjectURLSpy.mock.calls[0][0] as Blob;

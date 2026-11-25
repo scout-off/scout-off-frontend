@@ -14,6 +14,7 @@ import { buildReferralCodesCsv } from '@/lib/referralCsv';
 import { useToast } from '@/components/ui/Toast';
 import Spinner from '@/components/ui/Spinner';
 import Turnstile from '@/components/ui/Turnstile';
+import { downloadCsv } from '@/lib/download';
 
 const COPIED_RESET_MS = 2000;
 const PAGE_SIZE = 5;
@@ -147,15 +148,7 @@ export default function ReferralPanel({ scoutId }: { scoutId?: string } = {}) {
     if (codes.length === 0) return;
 
     const csvContent = buildReferralCodesCsv(codes, baseUrl);
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = 'referral-codes.csv';
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
+    downloadCsv(csvContent, 'referral-codes.csv');
   }, [baseUrl, codes]);
 
   return (

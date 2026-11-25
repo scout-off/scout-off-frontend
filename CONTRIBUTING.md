@@ -288,7 +288,7 @@ Do not use `--no-verify` for PRs targeting `main`.
 
 - [ ] Tests pass locally
 - [ ] Environment validation passes (`node scripts/validate-env.js`)
-- [ ] Lighthouse CI passes (performance ≥ 80)
+- [ ] Lighthouse CI passes (performance ≥ 80, accessibility ≥ 95, best-practices ≥ 90, SEO ≥ 90 on public pages)
 - [ ] No secrets or credentials committed
 - [ ] New features include tests where applicable
 - [ ] Documentation updated where necessary
@@ -327,6 +327,26 @@ assignment is needed — GitHub applies CODEOWNERS rules on PR creation.
 - The frontend repository is configured for GitHub Actions in `.github/workflows/ci.yml`.
 - `npm run lint`, `npm run test`, and `node scripts/validate-env.js` are all part of the CI validation path.
 - Lighthouse CI runs on every PR as a `lighthouse` job — reports are uploaded as build artifacts.
+
+### Running Lighthouse CI locally (with auth)
+
+LHCI audits the public pages and the wallet-gated `/en/player`, `/en/scout`
+and `/en/validator` dashboards. `scripts/lhci-auth.js` signs a test wallet in
+by minting a session token and registering it in the server's SQLite session
+store, so the server and LHCI must share the same secret and DB:
+
+```bash
+export LHCI_TEST_AUTH=1
+export SESSION_SECRET=local-lhci-secret
+export SESSIONS_DB_PATH=/tmp/lhci-sessions.db
+npm run build
+npx lhci autorun
+```
+
+The script refuses to run unless `LHCI_TEST_AUTH=1` and neither `NODE_ENV`
+(of the LHCI process) nor `VERCEL_ENV` is `production`; nothing test-only is
+shipped in the app itself.
+
 - Storybook visual regression runs on every PR as the `visual-regression` job (`.github/workflows/visual-regression.yml`); see [docs/visual-regression.md](docs/visual-regression.md) for how to review a failing diff and update baselines for intentional changes.
 - If Husky hooks are not active after cloning, run `npm run prepare`.
 - For offline PR-body drafts used when opening cross-fork PRs against `scout-off/scout-off-frontend:main`, see [docs/pr-bodies/](docs/pr-bodies/) — each file matches a branch in the bulk-deploy stack and is passed to `gh pr create --body-file`.
