@@ -1,3 +1,4 @@
+const { systemLogger, errorFields } = require('../logger');
 const cors = require('cors');
 const helmet = require('helmet');
 const { rateLimit } = require('express-rate-limit');
@@ -67,7 +68,7 @@ function createStore(prefix) {
     const { createClient } = require('redis');
     redisClient = createClient({ url: process.env.REDIS_URL });
     redisClient.on('error', (err) =>
-      console.error('Rate-limit Redis error:', err.message),
+      systemLogger.error('rate-limit redis error', errorFields(err)),
     );
     redisClient.connect().catch(() => {});
   }

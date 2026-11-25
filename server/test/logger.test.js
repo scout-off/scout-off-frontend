@@ -11,6 +11,8 @@ const tmpDbPath = path.join(
 process.env.DB_PATH = tmpDbPath;
 
 const {
+  systemLogger,
+  errorFields,
   createRequestLogger,
   getOrCreateRequestId,
   REQUEST_ID_HEADER,
@@ -584,4 +586,68 @@ test('the app generates a fresh X-Request-Id when the client sends none', async 
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
+});
+
+// ── #1781: system logger for code outside a request ──────────────────────────
+
+function captureConsole(method, fn) {
+  const original = console[method];
+  const lines = [];
+  console[method] = (line) => lines.push(line);
+  try {
+    fn();
+  } finally {
+    console[method] = original;
+  }
+  return lines;
+}
+
+test('systemLogger writes one JSON line with the request-log shape', () => {
+  const [line] = captureConsole('log', () =>
+    systemLogger.info('server listening', { port: 4000 }),
+  );
+  const entry = JSON.parse(line);
+  assert.equal(entry.level, 'info');
+  assert.equal(entry.message, 'server listening');
+  assert.equal(entry.port, 4000);
+  assert.equal(entry.requestId, null);
+  assert.equal(entry.traceId, null);
+  assert.ok(!Number.isNaN(Date.parse(entry.timestamp)));
+});
+
+test('systemLogger.error writes to stderr as JSON and keeps only the error message', () => {
+  const err = new TypeError('connect ECONNREFUSED');
+  const [line] = captureConsole('error', () =>
+    systemLogger.error('rate-limit redis error', errorFields(err)),
+  );
+  const entry = JSON.parse(line);
+  assert.equal(entry.level, 'error');
+  assert.equal(entry.error, 'connect ECONNREFUSED');
+  assert.equal(entry.errorName, 'TypeError');
+  assert.equal(entry.stack, undefined);
+});
+
+test('no raw console calls remain in server/src outside the logger', () => {
+  const srcDir = path.join(__dirname, '..', 'src');
+  const offenders = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (
+        entry.name.endsWith('.js') &&
+        full !== path.join(srcDir, 'logger.js')
+      ) {
+        if (
+          /(^|[^.\w])console\.(log|info|warn|error|debug)\(/m.test(
+            fs.readFileSync(full, 'utf8'),
+          )
+        ) {
+          offenders.push(path.relative(srcDir, full));
+        }
+      }
+    }
+  };
+  walk(srcDir);
+  assert.deepEqual(offenders, []);
 });

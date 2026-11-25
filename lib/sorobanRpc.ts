@@ -84,7 +84,7 @@ export async function submitSignedTransaction(
 
     let body: {
       result?: SorobanSendTransactionResult;
-      error?: { message?: string };
+      error?: { code?: number; message?: string };
     };
     try {
       body = await res.json();
@@ -96,10 +96,7 @@ export async function submitSignedTransaction(
     }
 
     if (body.error) {
-      throw new SorobanRpcError(
-        body.error.message ?? 'Soroban RPC returned an error',
-        'network',
-      );
+      throw jsonRpcError(body.error);
     }
     if (!body.result) {
       throw new SorobanRpcError(
@@ -119,6 +116,32 @@ export async function submitSignedTransaction(
 }
 
 /** True for a failure worth queuing for background-sync retry. */
+/**
+ * JSON-RPC error codes that mean the request itself is wrong, so retrying the
+ * same submission can never succeed (#1782): invalid request, method not
+ * found and invalid params. Internal (-32603) and server (-32000..-32099)
+ * errors, and errors without a code, stay retryable.
+ */
+export const PERMANENT_JSON_RPC_CODES: ReadonlySet<number> = new Set([
+  -32600, -32601, -32602,
+]);
+
+/** Maps a JSON-RPC `error` object to a SorobanRpcError, keeping the code in the message. */
+export function jsonRpcError(error: {
+  code?: number;
+  message?: string;
+}): SorobanRpcError {
+  const detail = error.message ?? 'Soroban RPC returned an error';
+  const code = typeof error.code === 'number' ? error.code : undefined;
+  const message =
+    code === undefined ? detail : `Soroban RPC error ${code}: ${detail}`;
+  const kind =
+    code !== undefined && PERMANENT_JSON_RPC_CODES.has(code)
+      ? 'rejected'
+      : 'network';
+  return new SorobanRpcError(message, kind);
+}
+
 export function isNetworkError(err: unknown): boolean {
   if (err instanceof SorobanRpcError) return err.kind === 'network';
   // Defensive fallback for a raw fetch failure that somehow escapes

@@ -142,8 +142,31 @@ function createRequestLogger(req) {
   };
 }
 
+/**
+ * Logger for code that runs outside a request (startup, background clients)
+ * (#1781). Same JSON shape and redaction as request logs; the request fields
+ * are null.
+ */
+const systemLogger = {
+  info: (message, fields) =>
+    emit('info', null, null, null, null, message, fields),
+  warn: (message, fields) =>
+    emit('warn', null, null, null, null, message, fields),
+  error: (message, fields) =>
+    emit('error', null, null, null, null, message, fields),
+};
+
+/** JSON-safe description of a thrown value: its name and message only. */
+function errorFields(err) {
+  return err instanceof Error
+    ? { error: err.message, errorName: err.name }
+    : { error: String(err) };
+}
+
 module.exports = {
   REQUEST_ID_HEADER,
+  systemLogger,
+  errorFields,
   TRACEPARENT_HEADER,
   getOrCreateRequestId,
   getOrCreateTraceContext,
