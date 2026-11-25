@@ -107,4 +107,17 @@ function rateLimiters() {
   ];
 }
 
-module.exports = { securityHeaders, corsMiddleware, rateLimiters };
+/** Closes the shared rate-limit Redis client, if one was created (#1772). */
+async function closeRateLimitStore() {
+  if (!redisClient) return;
+  const client = redisClient;
+  redisClient = undefined;
+  if (client.isOpen) await client.quit();
+}
+
+module.exports = {
+  securityHeaders,
+  corsMiddleware,
+  rateLimiters,
+  closeRateLimitStore,
+};

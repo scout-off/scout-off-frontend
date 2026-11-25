@@ -1,3 +1,4 @@
+const { randomInt } = require('crypto');
 const db = require('./db');
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -32,7 +33,8 @@ function normalizeReferralCode(code) {
 function randomCode() {
   let code = 'SCOUT-';
   for (let i = 0; i < CODE_BODY_LENGTH; i++) {
-    code += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
+    // #1776: referral codes act as bearer tokens, so draw from a CSPRNG.
+    code += CODE_ALPHABET[randomInt(CODE_ALPHABET.length)];
   }
   return code;
 }

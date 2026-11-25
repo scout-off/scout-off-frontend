@@ -1,3 +1,4 @@
+const { getClientIp } = require('../clientIp');
 const express = require('express');
 const crypto = require('crypto');
 const sponsorshipService = require('../sponsorshipService');
@@ -43,10 +44,8 @@ router.post('/waitlist', verifyTurnstile, (req, res) => {
   }
 
   // ── IP hash for abuse tracking ──────────────────────────────────────────
-  const ip =
-    req.headers['x-forwarded-for']?.split(',')[0]?.trim() ??
-    req.socket?.remoteAddress ??
-    'unknown';
+  // #1775: Express's trusted req.ip, never the raw X-Forwarded-For header.
+  const ip = getClientIp(req);
 
   // ── Persist ─────────────────────────────────────────────────────────────
   const signup = sponsorshipService.addSignup(

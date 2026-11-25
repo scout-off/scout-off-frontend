@@ -167,3 +167,24 @@ test('GET /referrals/all returns every code across every scout', async () => {
   assert.ok(res.body.some((c) => c.scoutWallet === 'GSCOUT_F'));
   assert.ok(res.body.some((c) => c.scoutWallet === 'GSCOUT_G'));
 });
+
+// #1776: codes come from a CSPRNG and keep their format.
+test('generated referral codes use only the code alphabet', () => {
+  const referralService = require('../src/referralService');
+  for (let i = 0; i < 50; i += 1) {
+    const { code } = referralService.generateCode(`GFORMAT_${i}`);
+    assert.match(code, /^SCOUT-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/);
+  }
+  const source = require('fs').readFileSync(
+    require('path').join(__dirname, '..', 'src', 'referralService.js'),
+    'utf8',
+  );
+  assert.ok(
+    !source.includes('Math.random'),
+    'referral codes must not use Math.random',
+  );
+  assert.ok(
+    source.includes('randomInt('),
+    'referral codes must use crypto.randomInt',
+  );
+});

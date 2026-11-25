@@ -13,7 +13,15 @@ export async function withTimeoutSignal<T>(
     parentSignal?.addEventListener('abort', onParentAbort, { once: true });
   }
 
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  // #1778: abort with a TimeoutError reason (like AbortSignal.timeout) so
+  // callers can tell a timeout from a caller cancellation.
+  const timeout = setTimeout(
+    () =>
+      controller.abort(
+        new DOMException(`Timed out after ${timeoutMs} ms`, 'TimeoutError'),
+      ),
+    timeoutMs,
+  );
 
   try {
     return await run(controller.signal);
@@ -21,4 +29,12 @@ export async function withTimeoutSignal<T>(
     clearTimeout(timeout);
     parentSignal?.removeEventListener('abort', onParentAbort);
   }
+}
+
+/** Whether `err` is the abort reason of a timed-out `withTimeoutSignal` call. */
+export function isTimeoutError(err: unknown): boolean {
+  return (
+    (err instanceof Error || err instanceof DOMException) &&
+    err.name === 'TimeoutError'
+  );
 }
