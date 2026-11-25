@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { expect, fn, userEvent, within } from '@storybook/test';
+import { expect, fn, userEvent, waitFor, within } from '@storybook/test';
 import { useState } from 'react';
 import ConfirmDialog from './ConfirmDialog';
 import Button from './Button';
@@ -106,9 +106,116 @@ export const Interactive: Story = {
   },
 };
 
+/** Helper: renders a trigger button that opens ConfirmDialog so we can verify
+ *  focus restoration after Escape / Cancel. */
+function ConfirmDialogDemo({
+  onConfirm,
+  onCancel,
+}: {
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="p-8">
+      <Button data-testid="open-btn" variant="danger" onClick={() => setOpen(true)}>
+        Remove Validator
+      </Button>
+      <ConfirmDialog
+        isOpen={open}
+        onConfirm={() => { onConfirm(); setOpen(false); }}
+        onCancel={() => { onCancel(); setOpen(false); }}
+        title="Remove Validator"
+        message="This will permanently revoke validator privileges."
+        confirmLabel="Remove"
+        cancelLabel="Keep"
+      />
+    </div>
+  );
+}
+
+/**
+ * Verifies aria semantics for ConfirmDialog: role="dialog", aria-modal="true",
+ * aria-labelledby pointing at the visible h2 title, aria-describedby pointing
+ * at the message paragraph.
+ */
+export const AriaSemantics: Story = {
+  name: 'ARIA semantics (play)',
+  tags: ['play-fn'],
+  args: {
+    isOpen: true,
+    title: 'Remove Validator',
+    message: 'Remove this validator?',
+  },
+  play: async ({ canvasElement }) => {
+    const dialog = await within(canvasElement).findByRole('dialog');
+
+    await expect(dialog).toHaveAttribute('aria-modal', 'true');
+
+    const labelId = dialog.getAttribute('aria-labelledby');
+    await expect(labelId).toBeTruthy();
+    const labelEl = canvasElement.querySelector(`#${labelId}`);
+    await expect(labelEl).not.toBeNull();
+    await expect(labelEl).toHaveTextContent('Remove Validator');
+
+    const descId = dialog.getAttribute('aria-describedby');
+    await expect(descId).toBeTruthy();
+    const descEl = canvasElement.querySelector(`#${descId}`);
+    await expect(descEl).not.toBeNull();
+    await expect(descEl).toHaveTextContent('Remove this validator?');
+  },
+};
+
+/**
+ * Focus trap: Tab and Shift+Tab stay inside the dialog; Escape closes it and
+ * returns focus to the trigger button.
+ */
+export const FocusTrapPlay: Story = {
+  name: 'Focus trap and Escape (play)',
+  tags: ['play-fn'],
+  render: (args) => (
+    <ConfirmDialogDemo
+      onConfirm={args.onConfirm as () => void}
+      onCancel={args.onCancel as () => void}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const trigger = canvas.getByTestId('open-btn');
+
+    await userEvent.click(trigger);
+
+    const dialog = await canvas.findByRole('dialog');
+
+    // Initial focus lands inside the dialog after the opening rAF tick.
+    await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
+
+    // Tab forward — every step must keep focus inside.
+    const tabbable = within(dialog).getAllByRole('button');
+    for (let i = 0; i <= tabbable.length; i++) {
+      await userEvent.tab();
+      await expect(dialog.contains(document.activeElement)).toBe(true);
+    }
+
+    // Shift+Tab backward — same constraint.
+    for (let i = 0; i <= tabbable.length; i++) {
+      await userEvent.tab({ shift: true });
+      await expect(dialog.contains(document.activeElement)).toBe(true);
+    }
+
+    // Escape closes and restores focus to the trigger.
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() =>
+      expect(canvas.queryByRole('dialog')).not.toBeInTheDocument(),
+    );
+    await waitFor(() => expect(trigger).toHaveFocus());
+  },
+};
+
 /** Interaction test (issue #1322): Cancel, Escape and Confirm call the right handlers. */
 export const ConfirmCancelPlay: Story = {
   name: 'Confirm / cancel (play)',
+  tags: ['play-fn'],
   args: {
     isOpen: true,
     title: 'Remove Validator',
@@ -131,9 +238,76 @@ export const ConfirmCancelPlay: Story = {
   },
 };
 
+/**
+ * Confirm fires exactly once even when the button is pressed twice quickly —
+ * provided the caller puts the dialog in a loading state while the async
+ * handler runs. This story simulates that pattern with a stateful render.
+ *
+ * Without a loading state the button stays enabled between clicks, so a
+ * double-press would fire twice. If a useSubmissionGuard is added to
+ * ConfirmDialog itself, this story's render can be simplified to just args.
+ */
+export const ConfirmOncePlay: Story = {
+  name: 'Confirm fires once on double-press (play)',
+  tags: ['play-fn'],
+  render: () => {
+    function Demo() {
+      const [open, setOpen] = useState(true);
+      const [loading, setLoading] = useState(false);
+      const [callCount, setCallCount] = useState(0);
+
+      const handleConfirm = async () => {
+        setLoading(true);
+        setCallCount((n) => n + 1);
+        // Simulate an async operation (e.g. on-chain tx) keeping the button
+        // disabled so a second click cannot fire while the first is in flight.
+        await new Promise((r) => setTimeout(r, 200));
+        setLoading(false);
+        setOpen(false);
+      };
+
+      return (
+        <div className="p-8">
+          <p data-testid="call-count">{callCount}</p>
+          <ConfirmDialog
+            isOpen={open}
+            onConfirm={handleConfirm}
+            onCancel={() => setOpen(false)}
+            title="Archive Player"
+            message="Archive this player profile?"
+            confirmLabel="Archive"
+            cancelLabel="Cancel"
+            loading={loading}
+          />
+        </div>
+      );
+    }
+    return <Demo />;
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const dialog = within(await canvas.findByRole('dialog'));
+    const confirmBtn = dialog.getByRole('button', { name: 'Archive' });
+
+    // Click once — the button goes into a loading state immediately,
+    // so the second click hits a disabled button and cannot fire.
+    await userEvent.click(confirmBtn);
+    await userEvent.click(confirmBtn);
+
+    // Wait for the async handler to resolve and the dialog to close.
+    await waitFor(() =>
+      expect(canvas.queryByRole('dialog')).not.toBeInTheDocument(),
+    );
+
+    // The counter must be exactly 1.
+    await expect(canvas.getByTestId('call-count')).toHaveTextContent('1');
+  },
+};
+
 /** Interaction test: while loading, neither button can fire. */
 export const LoadingBlocksPlay: Story = {
   name: 'Loading blocks actions (play)',
+  tags: ['play-fn'],
   args: {
     isOpen: true,
     title: 'Confirm Withdrawal',
