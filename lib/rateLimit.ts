@@ -2,9 +2,18 @@ import { Redis } from '@upstash/redis';
 import type { NextRequest } from 'next/server';
 
 /**
- * Shared rate limiter used by API routes that need per-IP throttling
- * (app/api/players/search/route.ts, app/api/ipfs/upload/route.ts, and any
- * future route with the same need).
+ * Shared rate limiter used by API routes that need per-IP throttling.
+ *
+ * Supports two algorithms:
+ *   - 'fixed'   (default): fixed-window counter. Simple, allows up to 2× limit
+ *                          at window boundaries.
+ *   - 'sliding': sliding-window counter (two adjacent fixed windows blended by
+ *                elapsed time). Bounds the burst to roughly `limit` at all times.
+ *                Used for auth and contact routes where tighter control matters.
+ *
+ * Algorithm (sliding window counter):
+ *   estimated = count(current) + count(previous) × (1 − elapsedInCurrent / windowMs)
+ *   Reject if estimated >= limit.
  *
  * Why this file exists (issue #658): both routes used to keep their own
  * module-level `Map<string, ...>` as rate-limit state. On Vercel-style
@@ -12,13 +21,8 @@ import type { NextRequest } from 'next/server';
  * that module state. A client hammering the endpoint gets load-balanced
  * across N instances, each independently allowing up to `limit` requests —
  * so the *effective* limit becomes `limit * N`, not `limit`. That's a real
- * abuse-protection gap, not just a theoretical one.
- *
- * The fix: back the counter with Upstash Redis (a REST-based client, so it
- * works from serverless/edge runtimes without a persistent TCP connection)
- * when it's configured, so every instance increments the same counter. When
- * Redis isn't configured, fall back to an in-memory Map — see
- * `getStore()` below for exactly when that's acceptable and when it's not.
+ * abuse-protection gap. The fix: back the counter with Upstash Redis when
+ * it's configured, so every instance increments the same counter.
  */
 
 export interface RateLimitOptions {
@@ -26,6 +30,12 @@ export interface RateLimitOptions {
   limit: number;
   /** Window length in milliseconds. */
   windowMs: number;
+  /**
+   * Rate-limiting algorithm.
+   * - 'fixed'  (default): simple fixed-window counter. Allows up to 2× at boundary.
+   * - 'sliding': sliding-window counter. Bounds burst to ~limit at all times.
+   */
+  algorithm?: 'fixed' | 'sliding';
 }
 
 export interface RateLimitResult {
@@ -34,11 +44,23 @@ export interface RateLimitResult {
   retryAfterSec?: number;
 }
 
+interface FixedIncrementResult {
+  count: number;
+  ttlMs: number;
+}
+
+interface SlidingIncrementResult {
+  currentCount: number;
+  prevCount: number;
+  elapsedMs: number;
+  windowMs: number;
+}
+
 interface RateLimitStore {
   /**
-   * Increment the counter for `key`, creating a new window if none is
-   * active, and report the post-increment count plus how much of the
-   * current window remains.
+   * Increment the counter for `key` using fixed-window semantics, creating a
+   * new window if none is active, and report the post-increment count plus how
+   * much of the current window remains.
    */
   increment(
     key: string,
@@ -69,7 +91,7 @@ class InMemoryStore implements RateLimitStore {
     }
   }
 
-  async increment(key: string, windowMs: number) {
+  async increment(key: string, windowMs: number): Promise<FixedIncrementResult> {
     const now = Date.now();
 
     if (++this.callsSinceSweep >= IN_MEMORY_SWEEP_EVERY) {
@@ -94,9 +116,62 @@ class InMemoryStore implements RateLimitStore {
     entry.count += 1;
     return { count: entry.count, ttlMs: entry.resetAt - now };
   }
+
+  async incrementSliding(key: string, windowMs: number): Promise<SlidingIncrementResult> {
+    const now = Date.now();
+    const windowStart = Math.floor(now / windowMs) * windowMs;
+    const prevWindowStart = windowStart - windowMs;
+    const elapsedMs = now - windowStart;
+
+    const currentKey = `${key}:${windowStart}`;
+    const prevKey = `${key}:${prevWindowStart}`;
+
+    const prevEntry = this.map.get(prevKey);
+    const prevCount = prevEntry && now < prevEntry.resetAt ? prevEntry.count : 0;
+
+    const currentEntry = this.map.get(currentKey);
+    let currentCount: number;
+    if (!currentEntry || now >= currentEntry.resetAt) {
+      this.map.set(currentKey, { count: 1, resetAt: windowStart + windowMs });
+      currentCount = 1;
+    } else {
+      currentEntry.count += 1;
+      currentCount = currentEntry.count;
+    }
+
+    // Clean up old entries periodically to avoid unbounded memory growth.
+    if (Math.random() < 0.01) {
+      for (const [k, v] of this.map.entries()) {
+        if (now >= v.resetAt + windowMs) {
+          this.map.delete(k);
+        }
+      }
+    }
+
+    return { currentCount, prevCount, elapsedMs, windowMs };
+  }
 }
 
 // ── Redis store (production / shared across instances) ─────────────────────
+
+// Lua script for atomic sliding-window increment.
+// Increments the current-window key (setting a 2× TTL so it outlives the
+// window overlap), reads the previous-window key, and returns
+// [currentCount, prevCount] in a single round trip.
+const SLIDING_WINDOW_LUA = `
+local curr_key = KEYS[1]
+local prev_key = KEYS[2]
+local ttl = tonumber(ARGV[1])
+
+local curr = redis.call('INCR', curr_key)
+if curr == 1 then
+  redis.call('EXPIRE', curr_key, ttl)
+end
+
+local prev = tonumber(redis.call('GET', prev_key)) or 0
+
+return {curr, prev}
+`;
 
 class RedisStore implements RateLimitStore {
   constructor(private redis: Redis) {}
@@ -129,15 +204,9 @@ return { count, math.floor(ttl / 1000) }`;
     // set an EXPIRE so it resets after `windowMs`.
     //
     // Tradeoff vs. a sliding window: fixed windows allow up to 2x `limit`
-    // requests across a window boundary (e.g. `limit` requests in the last
-    // instant of one window plus `limit` more in the first instant of the
-    // next). A sliding-log or sliding-window-counter algorithm avoids that
-    // at the cost of extra Redis calls/state (a sorted set per key, or two
-    // counters blended by elapsed-time weight). For per-IP abuse protection
-    // on these routes, admitting up to 2x `limit` for a brief instant at a
-    // window boundary is an acceptable tradeoff for the simplicity of a
-    // single INCR/EXPIRE pair — revisit if these limits ever need to be
-    // exact rather than "good enough to stop scripted abuse."
+    // requests across a window boundary. For per-IP abuse protection on
+    // bulk-upload and search routes that level of precision is acceptable;
+    // auth routes use the sliding algorithm instead.
     const windowSec = Math.max(1, Math.ceil(windowMs / 1000));
     const result = await this.redis.eval(
       RedisStore.INCR_EXPIRE_SCRIPT,
@@ -150,6 +219,27 @@ return { count, math.floor(ttl / 1000) }`;
     const ttlSec = Number(arr[1]);
     const ttlMs = ttlSec > 0 ? ttlSec * 1000 : windowMs;
     return { count, ttlMs };
+  }
+
+  async incrementSliding(key: string, windowMs: number): Promise<SlidingIncrementResult> {
+    const now = Date.now();
+    const windowStart = Math.floor(now / windowMs) * windowMs;
+    const prevWindowStart = windowStart - windowMs;
+    const elapsedMs = now - windowStart;
+
+    const currentKey = `${key}:${windowStart}`;
+    const prevKey = `${key}:${prevWindowStart}`;
+    // TTL = 2× window so both windows remain readable during the overlap
+    const ttlSec = Math.max(1, Math.ceil((windowMs * 2) / 1000));
+
+    const result = (await this.redis.eval(SLIDING_WINDOW_LUA, [currentKey, prevKey], [
+      String(ttlSec),
+    ])) as [number, number];
+
+    const currentCount = result[0];
+    const prevCount = result[1] ?? 0;
+
+    return { currentCount, prevCount, elapsedMs, windowMs };
   }
 }
 
@@ -170,17 +260,10 @@ function buildStore(): RateLimitStore {
   // NODE_ENV !== 'production' — where a single process is the only
   // "instance" anyway, so an in-memory Map is fully authoritative.
   //
-  // In production, though, this in-memory fallback is NOT globally
-  // authoritative: it's scoped to a single serverless instance, which is
-  // exactly the bug this file exists to fix (see the file-level comment
-  // above). We intentionally do NOT hard-fail the request or fail closed
-  // (treating every request as rate-limited) here — an outage of the rate
-  // limiter shouldn't take down the whole route. Instead we log loudly
-  // (once, not per-request) so the misconfiguration is visible in
-  // production logs/alerts, and degrade to best-effort, per-instance
-  // limiting rather than no limiting at all. Configure
-  // UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN to get the real,
-  // shared-across-instances guarantee back.
+  // In production this in-memory fallback is NOT globally authoritative.
+  // We intentionally do NOT fail closed — an outage of the rate limiter
+  // shouldn't take down the whole route. Instead we log loudly (once, not
+  // per-request) so the misconfiguration is visible in production logs.
   if (process.env.NODE_ENV === 'production' && !warnedMissingRedisInProd) {
     warnedMissingRedisInProd = true;
     console.error(

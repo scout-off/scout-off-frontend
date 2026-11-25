@@ -5,7 +5,10 @@ import {
   useEffect,
   useId,
   useCallback,
+  isValidElement,
+  cloneElement,
   type ReactNode,
+  type ReactElement,
 } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -21,7 +24,7 @@ interface Position {
 }
 
 const FLIP_THRESHOLD = 80;
-const AUTO_HIDE_MS = 5000;
+const HIDE_DELAY_MS = 100;
 
 function computePosition(trigger: HTMLElement): Position {
   const rect = trigger.getBoundingClientRect();
@@ -49,19 +52,50 @@ export default function Tooltip({ content, children }: TooltipProps) {
     }
   }, []);
 
-  const show = useCallback(() => {
-    clearHideTimer();
+  const updatePosition = useCallback(() => {
     if (triggerRef.current) {
       setPosition(computePosition(triggerRef.current));
     }
+  }, []);
+
+  const show = useCallback(() => {
+    clearHideTimer();
+    updatePosition();
     setVisible(true);
-    hideTimer.current = setTimeout(() => setVisible(false), AUTO_HIDE_MS);
+  }, [clearHideTimer, updatePosition]);
+
+  const scheduleHide = useCallback(() => {
+    clearHideTimer();
+    hideTimer.current = setTimeout(() => setVisible(false), HIDE_DELAY_MS);
   }, [clearHideTimer]);
 
   const hide = useCallback(() => {
     clearHideTimer();
     setVisible(false);
   }, [clearHideTimer]);
+
+  // Escape key dismissal
+  useEffect(() => {
+    if (!visible) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        hide();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [visible, hide]);
+
+  // Reposition on scroll/resize while visible
+  useEffect(() => {
+    if (!visible) return;
+    window.addEventListener('scroll', updatePosition, { passive: true, capture: true });
+    window.addEventListener('resize', updatePosition, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', updatePosition, { capture: true } as EventListenerOptions);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [visible, updatePosition]);
 
   useEffect(() => () => clearHideTimer(), [clearHideTimer]);
 
@@ -73,24 +107,35 @@ export default function Tooltip({ content, children }: TooltipProps) {
       }
     : { top: position.top, left: position.left, transform: 'translateX(-50%)' };
 
+  // Clone the child element to add aria-describedby directly on the focusable trigger.
+  // Fall back to the wrapper span for non-element children (e.g. plain strings).
+  const triggerChild =
+    isValidElement(children) && visible
+      ? cloneElement(children as ReactElement<Record<string, unknown>>, {
+          'aria-describedby': tooltipId,
+        })
+      : children;
+
   return (
     <span className="inline-flex" ref={triggerRef}>
       <span
-        aria-describedby={visible ? tooltipId : undefined}
+        aria-describedby={visible && !isValidElement(children) ? tooltipId : undefined}
         onMouseEnter={show}
-        onMouseLeave={hide}
+        onMouseLeave={scheduleHide}
         onFocus={show}
-        onBlur={hide}
+        onBlur={scheduleHide}
         className="cursor-default outline-none"
       >
-        {children}
+        {triggerChild}
       </span>
       {visible &&
         createPortal(
           <span
             id={tooltipId}
             role="tooltip"
-            className="fixed z-[9999] w-max max-w-xs rounded-lg bg-gray-900 border border-gray-700 px-3 py-2 text-xs text-gray-200 shadow-xl pointer-events-none"
+            onMouseEnter={show}
+            onMouseLeave={scheduleHide}
+            className="fixed z-[9999] w-max max-w-xs rounded-lg bg-gray-900 border border-gray-700 px-3 py-2 text-xs text-gray-200 shadow-xl"
             style={tooltipStyle}
           >
             {content}

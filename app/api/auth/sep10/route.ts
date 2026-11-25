@@ -88,6 +88,22 @@ function getAllowedOrigins(): string[] {
 
 async function postSep10(req: NextRequest) {
   const log = createRequestLogger(req);
+  const ip = getClientIp(req);
+
+  const rl = await checkRateLimit(`auth-sep10:${ip}`, {
+    limit: RATE_LIMIT,
+    windowMs: WINDOW_MS,
+    algorithm: 'sliding',
+  });
+  if (rl.limited) {
+    log.warn('SEP-10 rate limit exceeded', { ip });
+    const retryAfter = rl.retryAfterSec ?? Math.ceil(WINDOW_MS / 1000);
+    return NextResponse.json(
+      { error: 'Too many requests. Please slow down.' },
+      { status: 429, headers: { 'Retry-After': String(retryAfter) } },
+    );
+  }
+
   const origin = req.headers.get('origin');
   const allowedOrigins = getAllowedOrigins();
 
@@ -243,6 +259,22 @@ async function postSep10(req: NextRequest) {
 
 async function getSep10(req: NextRequest) {
   const log = createRequestLogger(req);
+  const ip = getClientIp(req);
+
+  const rl = await checkRateLimit(`auth-sep10:${ip}`, {
+    limit: RATE_LIMIT,
+    windowMs: WINDOW_MS,
+    algorithm: 'sliding',
+  });
+  if (rl.limited) {
+    log.warn('SEP-10 rate limit exceeded', { ip });
+    const retryAfter = rl.retryAfterSec ?? Math.ceil(WINDOW_MS / 1000);
+    return NextResponse.json(
+      { error: 'Too many requests. Please slow down.' },
+      { status: 429, headers: { 'Retry-After': String(retryAfter) } },
+    );
+  }
+
   const account = req.nextUrl.searchParams.get('account');
   if (!account) {
     return NextResponse.json(

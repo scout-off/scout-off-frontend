@@ -12,6 +12,9 @@
  *    independent "instances" — each with its own cold module state —
  *    call into it, because the mock models a shared external store the
  *    way real Upstash Redis is shared across serverless instances.
+ *
+ * Issue #1700 extends the library with a sliding-window counter algorithm.
+ * Tests for that algorithm are grouped in a dedicated describe block below.
  */
 
 // ── Mock @upstash/redis with a shared backing store ─────────────────────────

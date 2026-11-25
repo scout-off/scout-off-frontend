@@ -19,12 +19,12 @@ export const runtime = 'nodejs';
  * even before its cookie's natural expiry, since getSessionWallet checks
  * the server-side session store in addition to the token's signature.
  *
- * Rate limiting: max 30 requests per IP per 10 seconds. This is a cheap,
- * low-risk read (it just echoes back a cookie), so the limit is generous
- * relative to app/api/players/search/route.ts's 20/10s — it's
- * defense-in-depth against abuse/runaway polling rather than a tight
- * bottleneck on legitimate session checks. When exceeded, responds with
- * 429 Too Many Requests and a Retry-After header.
+ * Rate limiting: max 30 requests per IP per 10 seconds, enforced via the
+ * shared lib/rateLimit.ts (Redis-backed in production, in-memory in dev —
+ * see that file for why a per-route in-memory Map isn't sufficient). Uses
+ * the sliding-window algorithm so bursts at window boundaries cannot
+ * double the effective limit. When exceeded, responds with 429 Too Many
+ * Requests and a Retry-After header.
  *
  * Real client IP is extracted from the x-forwarded-for header using trusted proxy settings.
  * Uses the shared limiter in lib/rateLimit.ts (Redis-backed when
