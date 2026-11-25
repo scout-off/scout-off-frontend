@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   ShieldAlert,
@@ -22,7 +22,30 @@ interface DataDeletionModalProps {
   wallet?: string | null;
 }
 
-type RequestStatus = 'idle' | 'confirming' | 'submitting' | 'success' | 'error';
+type RequestStatus =
+  | 'idle'
+  | 'confirming'
+  | 'submitting'
+  | 'pending'
+  | 'success'
+  | 'error';
+
+interface DeletionStepStatus {
+  name: string;
+  status: 'pending' | 'completed' | 'failed';
+  attempts?: number;
+  lastError?: string | null;
+}
+
+interface DeletionRequestStatus {
+  id: string;
+  status: 'pending' | 'completed' | 'failed';
+  steps: DeletionStepStatus[];
+  completedAt?: string | null;
+  deadlineAt?: string | null;
+}
+
+const POLL_INTERVAL_MS = 4000;
 
 export default function DataDeletionModal({
   isOpen,
@@ -32,6 +55,61 @@ export default function DataDeletionModal({
   const t = useTranslations('dataDeletion');
   const { show } = useToast();
   const [status, setStatus] = useState<RequestStatus>('idle');
+  const [requestId, setRequestId] = useState<string | null>(null);
+  const [requestStatus, setRequestStatus] =
+    useState<DeletionRequestStatus | null>(null);
+  const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const stopPolling = useCallback(() => {
+    if (pollTimer.current) {
+      clearTimeout(pollTimer.current);
+      pollTimer.current = null;
+    }
+  }, []);
+
+  const pollStatus = useCallback(
+    async (id: string) => {
+      try {
+        const res = await fetch(`/api/data-deletion/request/${id}`, {
+          cache: 'no-store',
+        });
+        if (!res.ok) throw new Error('Status fetch failed');
+        const body = (await res.json()) as DeletionRequestStatus;
+        setRequestStatus(body);
+
+        if (body.status === 'completed') {
+          setStatus('success');
+          show({
+            message: t('success_toast'),
+            variant: 'success',
+            duration: 6000,
+          });
+          return;
+        }
+        if (body.status === 'failed') {
+          setStatus('error');
+          return;
+        }
+        // Still pending — keep polling until the cron job finishes.
+        pollTimer.current = setTimeout(() => {
+          void pollStatus(id);
+        }, POLL_INTERVAL_MS);
+      } catch {
+        // Transient network error — retry on the next tick.
+        pollTimer.current = setTimeout(() => {
+          void pollStatus(id);
+        }, POLL_INTERVAL_MS);
+      }
+    },
+    [show, t],
+  );
+
+  useEffect(() => {
+    if (!isOpen) {
+      stopPolling();
+    }
+    return stopPolling;
+  }, [isOpen, stopPolling]);
 
   const handleRequestDeletion = async () => {
     setStatus('submitting');
@@ -46,6 +124,10 @@ export default function DataDeletionModal({
         throw new Error((body as { error?: string }).error ?? 'Request failed');
       }
 
+      const body = (await res.json().catch(() => ({}))) as {
+        requestId?: string;
+      };
+
       // The server-side cascade (app/api/data-deletion/request) purges
       // every store it can reach, but unlocked contact details live only in
       // this tab's in-memory SWR cache (see lib/contactDetailsCache.ts) —
@@ -56,12 +138,19 @@ export default function DataDeletionModal({
       // Same for a pending offline onboarding submission (browser IndexedDB).
       if (wallet) await deleteOnboardingSubmission(wallet);
 
-      setStatus('success');
-      show({
-        message: t('success_toast'),
-        variant: 'success',
-        duration: 6000,
-      });
+      if (body.requestId) {
+        setRequestId(body.requestId);
+        setStatus('pending');
+        void pollStatus(body.requestId);
+      } else {
+        // Fallback for older servers that still process synchronously.
+        setStatus('success');
+        show({
+          message: t('success_toast'),
+          variant: 'success',
+          duration: 6000,
+        });
+      }
     } catch (err: unknown) {
       setStatus('error');
       show({
@@ -73,9 +162,16 @@ export default function DataDeletionModal({
   };
 
   const handleClose = () => {
+    stopPolling();
     setStatus('idle');
+    setRequestId(null);
+    setRequestStatus(null);
     onClose();
   };
+
+  const completedSteps =
+    requestStatus?.steps.filter((s) => s.status === 'completed').length ?? 0;
+  const totalSteps = requestStatus?.steps.length ?? 0;
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title={t('modal_title')}>
@@ -132,6 +228,62 @@ export default function DataDeletionModal({
               className="mt-1 w-full"
             >
               {t('done')}
+            </Button>
+          </div>
+        ) : status === 'pending' ? (
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col items-center gap-3 py-2 text-center">
+              <Loader2
+                size={36}
+                className="animate-spin text-brand-green"
+                aria-hidden="true"
+              />
+              <p className="text-sm font-semibold text-white">
+                {t('pending_title')}
+              </p>
+              <p className="text-xs text-gray-400">{t('pending_message')}</p>
+              {totalSteps > 0 && (
+                <p className="text-xs text-gray-500">
+                  {t('pending_progress', {
+                    completed: completedSteps,
+                    total: totalSteps,
+                  })}
+                </p>
+              )}
+            </div>
+            {requestStatus && requestStatus.steps.length > 0 && (
+              <ul className="flex flex-col gap-1.5 rounded-xl border border-white/10 bg-white/5 p-3">
+                {requestStatus.steps.map((step) => (
+                  <li
+                    key={step.name}
+                    className="flex items-center justify-between gap-2 text-xs"
+                  >
+                    <span className="truncate text-gray-300">{step.name}</span>
+                    <span
+                      className={
+                        step.status === 'completed'
+                          ? 'text-brand-green'
+                          : step.status === 'failed'
+                            ? 'text-red-400'
+                            : 'text-gray-500'
+                      }
+                    >
+                      {step.status === 'completed'
+                        ? t('step_completed')
+                        : step.status === 'failed'
+                          ? t('step_failed')
+                          : t('step_pending')}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Button
+              variant="secondary"
+              onClick={handleClose}
+              className="w-full"
+            >
+              {t('close')}
             </Button>
           </div>
         ) : status === 'confirming' ? (
@@ -195,7 +347,12 @@ export default function DataDeletionModal({
               <Button
                 variant="default"
                 onClick={() => {
-                  setStatus('confirming');
+                  if (requestId) {
+                    setStatus('pending');
+                    void pollStatus(requestId);
+                  } else {
+                    setStatus('confirming');
+                  }
                 }}
                 className="flex-1"
               >
