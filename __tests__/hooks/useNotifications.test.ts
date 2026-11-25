@@ -18,6 +18,7 @@ jest.mock('@/lib/notificationsClient', () => ({
     mockFetchReadNotificationIds(...args),
   markNotificationsRead: (...args: unknown[]) =>
     mockMarkNotificationsRead(...args),
+  fetchSavedSearchAlertNotifications: () => Promise.resolve([]),
 }));
 
 jest.mock('@/hooks/useNotificationPreferences', () => ({

@@ -21,6 +21,9 @@ interface StoryIndex {
  * new stories get visual coverage automatically without touching this file.
  */
 test('storybook stories render consistently', async ({ page, baseURL }) => {
+  // Set per project in playwright.visual.config.ts (#1704).
+  const locale = (test.info().project.metadata?.locale as string) ?? 'en';
+
   const res = await page.request.get(`${baseURL}/index.json`);
   const { entries }: StoryIndex = await res.json();
 
@@ -47,7 +50,9 @@ test('storybook stories render consistently', async ({ page, baseURL }) => {
 
   for (const id of storyIds) {
     await test.step(id, async () => {
-      await page.goto(`/iframe.html?id=${id}&viewMode=story`);
+      await page.goto(
+        `/iframe.html?id=${id}&viewMode=story&globals=locale:${locale}`,
+      );
       // Not 'networkidle': Storybook's dev server keeps an HMR socket open,
       // so the network never truly goes idle and that wait can hang until
       // the test timeout. 'load' only covers the outer iframe document,

@@ -14,6 +14,7 @@ import {
   classifySorobanError,
 } from '@/lib/sorobanTx';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import Input from '@/components/ui/Input';
 import type { Player } from '@/types';
 import { getExplorerTxUrl } from '@/lib/network';
 import { reconcilePlayerCache } from '@/hooks/useCacheReconciler';
@@ -409,50 +410,26 @@ export default function RevokeForm({ player, onSuccess }: RevokeFormProps) {
     <>
       <form onSubmit={handleSubmit} className="space-y-4">
         {renderConfirmationStatus()}
-        <div>
-          <label
-            htmlFor="revoke-player-id"
-            className="block text-sm font-medium text-gray-300 mb-1"
-          >
-            Player ID
-          </label>
-          <input
-            id="revoke-player-id"
-            type="text"
-            value={playerId}
-            onChange={(e) => setPlayerId(e.target.value)}
-            disabled={revokeState.confirmationState === 'confirming'}
-            className={`input ${validationErrors.playerId ? 'border-red-500' : ''}`}
-            placeholder="Enter player ID"
-          />
-          {validationErrors.playerId && (
-            <p className="text-sm text-red-500 mt-1">
-              {validationErrors.playerId}
-            </p>
-          )}
-        </div>
-        <div>
-          <label
-            htmlFor="revoke-milestone-id"
-            className="block text-sm font-medium text-gray-300 mb-1"
-          >
-            Milestone ID
-          </label>
-          <input
-            id="revoke-milestone-id"
-            type="text"
-            value={milestoneId}
-            onChange={(e) => setMilestoneId(e.target.value)}
-            disabled={revokeState.confirmationState === 'confirming'}
-            className={`input ${validationErrors.milestoneId ? 'border-red-500' : ''}`}
-            placeholder="Enter milestone ID"
-          />
-          {validationErrors.milestoneId && (
-            <p className="text-sm text-red-500 mt-1">
-              {validationErrors.milestoneId}
-            </p>
-          )}
-        </div>
+        <Input
+          id="revoke-player-id"
+          label="Player ID"
+          type="text"
+          value={playerId}
+          onChange={(e) => setPlayerId(e.target.value)}
+          disabled={revokeState.confirmationState === 'confirming'}
+          error={validationErrors.playerId}
+          placeholder="Enter player ID"
+        />
+        <Input
+          id="revoke-milestone-id"
+          label="Milestone ID"
+          type="text"
+          value={milestoneId}
+          onChange={(e) => setMilestoneId(e.target.value)}
+          disabled={revokeState.confirmationState === 'confirming'}
+          error={validationErrors.milestoneId}
+          placeholder="Enter milestone ID"
+        />
 
         {error && <p className="text-sm text-red-500">{error}</p>}
 

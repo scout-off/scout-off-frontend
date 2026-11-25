@@ -908,7 +908,12 @@
       "milestone_approvals_label": "Idhini za hatua",
       "milestone_approvals_description": "Nijulishe mthibitishaji anapoidhinisha mojawapo ya hatua zangu.",
       "contact_unlocks_label": "Kufungua mawasiliano",
-      "contact_unlocks_description": "Nijulishe ninapofungua maelezo ya mawasiliano ya mchezaji."
+      "contact_unlocks_description": "Nijulishe ninapofungua maelezo ya mawasiliano ya mchezaji.",
+      "saved_search_matches_label": "Zinazolingana na utafutaji uliohifadhiwa",
+      "saved_search_matches_description": "Nijulishe mchezaji aliyesajiliwa au kuthibitishwa hivi karibuni anapolingana na mojawapo ya utafutaji wangu uliohifadhiwa.",
+      "saved_search_delivery_label": "Utumaji",
+      "saved_search_delivery_instant": "Papo hapo",
+      "saved_search_delivery_daily": "Muhtasari wa kila siku"
     },
     "push": {
       "unsupported": "Arifa za push hazitumiki kwenye kivinjari hiki.",

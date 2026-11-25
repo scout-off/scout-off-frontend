@@ -228,6 +228,14 @@ export class SavedSearchStore {
   }
 
   /** Returns the number of saved searches owned by scoutWallet. */
+  /** Every saved search across all scouts — used by the saved-search alert cron. */
+  listAll(): SavedSearch[] {
+    const rows = this.db
+      .prepare('SELECT * FROM saved_search ORDER BY id ASC')
+      .all() as SavedSearchRow[];
+    return rows.map(rowToEntry);
+  }
+
   count(scoutWallet: string): number {
     const row = this.db
       .prepare('SELECT COUNT(*) AS n FROM saved_search WHERE scout_wallet = ?')

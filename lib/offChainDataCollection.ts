@@ -45,6 +45,10 @@
 
 import { WatchlistStore } from './watchlistStore';
 import { SavedSearchStore } from './savedSearchStore';
+import {
+  SavedSearchAlertStore,
+  type SavedSearchAlert,
+} from './savedSearchAlertStore';
 import { NotificationPreferencesStore } from './notificationPreferencesStore';
 import { NotificationReadStore } from './notificationReadStore';
 import { MilestoneDisputeStore } from './milestoneDisputeStore';
@@ -67,13 +71,14 @@ import type {
   WatchlistEntry,
   SavedSearch,
   NotificationPreferences,
+  SavedSearchAlertPreferences,
   MilestoneDispute,
   MilestoneEndorsement,
   RecentlyViewedEntry,
 } from '@/types';
 import { getExplorerAccountUrl } from './network';
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 /**
  * lib/*Store.ts modules holding wallet-keyed data that collectUserData
@@ -82,6 +87,7 @@ const SCHEMA_VERSION = 2;
 export const WALLET_DATA_STORES = [
   'watchlistStore',
   'savedSearchStore',
+  'savedSearchAlertStore',
   'notificationPreferencesStore',
   'notificationReadStore',
   'milestoneDisputeStore',
@@ -151,6 +157,8 @@ export interface CollectedUserData {
   sections: {
     watchlist: WatchlistEntry[];
     savedSearches: SavedSearch[];
+    savedSearchAlerts: SavedSearchAlert[];
+    savedSearchAlertPreferences: SavedSearchAlertPreferences;
     notificationPreferences: NotificationPreferences;
     notificationReadIds: number[];
     milestoneDisputes: MilestoneDispute[];
@@ -192,6 +200,8 @@ export async function collectUserData(
   const sections: CollectedUserData['sections'] = {
     watchlist: [],
     savedSearches: [],
+    savedSearchAlerts: [],
+    savedSearchAlertPreferences: { enabled: true, delivery: 'instant' },
     notificationPreferences: { milestoneApprovals: true, contactUnlocks: true },
     notificationReadIds: [],
     milestoneDisputes: [],
@@ -250,6 +260,15 @@ export async function collectUserData(
     );
   }
   const syncSections: [keyof typeof sections, () => unknown][] = [
+    [
+      'savedSearchAlerts',
+      () => SavedSearchAlertStore.getInstance().listForWallet(wallet),
+    ],
+    [
+      'savedSearchAlertPreferences',
+      () =>
+        NotificationPreferencesStore.getInstance().getSavedSearchAlerts(wallet),
+    ],
     ['recentlyViewed', () => RecentlyViewedStore.getInstance().list(wallet)],
     ['sessions', () => SessionStore.getInstance().listForWallet(wallet)],
     [
@@ -361,6 +380,8 @@ export async function deleteUserData(wallet: string): Promise<{
 
   removed.watchlist = WatchlistStore.getInstance().clearForWallet(wallet);
   removed.savedSearches = SavedSearchStore.getInstance().clearForWallet(wallet);
+  removed.savedSearchAlerts =
+    SavedSearchAlertStore.getInstance().clearForWallet(wallet);
   removed.notificationPreferences =
     NotificationPreferencesStore.getInstance().clearForWallet(wallet);
   removed.notificationReadIds =

@@ -4,6 +4,7 @@ import { useCallback, useMemo } from 'react';
 import useSWR from 'swr';
 import {
   fetchReadNotificationIds,
+  fetchSavedSearchAlertNotifications,
   markNotificationsRead,
 } from '@/lib/notificationsClient';
 import {
@@ -57,14 +58,32 @@ export function useNotifications(wallet: string | null) {
 
   // Derive notifications by combining the event cache with the read-id set.
   // useMemo keeps this stable across re-renders when neither input changes.
+  // Saved-search match alerts (issue #1705) are produced server-side by the
+  // saved-search-alerts cron rather than derived from indexer events.
+  const { data: alertNotifications } = useSWR(
+    wallet ? `saved-search-alerts:${wallet}` : null,
+    fetchSavedSearchAlertNotifications,
+    {
+      dedupingInterval: 15_000,
+      revalidateOnFocus: false,
+      refreshInterval: 60_000,
+      errorRetryCount: 2,
+    },
+  );
+
   const allNotifications = useMemo<Notification[]>(() => {
     if (!wallet) return [];
     const readSet = new Set(readIds ?? []);
-    return deriveNotifications(eventCache.events, wallet).map((n) => ({
-      ...n,
-      read: readSet.has(n.id),
-    }));
-  }, [eventCache.events, readIds, wallet]);
+    return [
+      ...deriveNotifications(eventCache.events, wallet),
+      ...(alertNotifications ?? []),
+    ]
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .map((n) => ({
+        ...n,
+        read: readSet.has(n.id),
+      }));
+  }, [eventCache.events, alertNotifications, readIds, wallet]);
 
   const notifications = applyNotificationPreferences(
     allNotifications,
