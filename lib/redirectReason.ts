@@ -18,3 +18,26 @@ export function isRedirectReason(
 ): value is RedirectReason {
   return typeof value === 'string' && value in REDIRECT_REASONS;
 }
+
+/**
+ * Validates a `returnTo` query param so it can only point at a same-origin
+ * path. Returns the safe path, or null for anything that could be used as an
+ * open redirect (`//evil.com`, `/\evil.com`, `https://…`, `javascript:` …).
+ */
+export function getSafeReturnTo(
+  value: string | string[] | null | undefined,
+  origin: string,
+): string | null {
+  if (typeof value !== 'string' || !value.startsWith('/')) return null;
+  if (value.startsWith('//') || value.startsWith('/\\')) return null;
+  if (/^[a-z][a-z\d+.-]*:/i.test(value) || /[\u0000-\u001f]/.test(value)) {
+    return null;
+  }
+  try {
+    const url = new URL(value, origin);
+    if (url.origin !== new URL(origin).origin) return null;
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return null;
+  }
+}

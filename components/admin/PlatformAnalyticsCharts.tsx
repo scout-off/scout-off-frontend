@@ -19,6 +19,8 @@ import DataFreshnessBadge from '@/components/ui/DataFreshnessBadge';
 import ChartDataTable from '@/components/admin/ChartDataTable';
 import { summarizeCumulative, summarizeWeekly } from '@/lib/chartSummary';
 import { formatNumber } from '@/lib/localeFormat';
+import type { Locale } from '@/lib/locales';
+import { useLocale, useTranslations } from 'next-intl';
 
 const BRAND_GREEN = '#00C853';
 const BRAND_BLUE = '#3B82F6';
@@ -68,6 +70,8 @@ function CumulativeChart({
   data: DailyPoint[];
   color: string;
 }) {
+  const t = useTranslations('admin.analytics');
+  const locale = useLocale() as Locale;
   return (
     <figure className="flex flex-col gap-2">
       <h3 className="text-sm font-medium text-gray-300">{title}</h3>
@@ -75,9 +79,7 @@ function CumulativeChart({
         {summarizeCumulative(title, data)}
       </figcaption>
       {data.length === 0 ? (
-        <p className="text-sm text-gray-500 py-8 text-center">
-          No data in this range.
-        </p>
+        <p className="text-sm text-gray-500 py-8 text-center">{t('no_data')}</p>
       ) : (
         <>
           <ResponsiveContainer width="100%" height={220}>
@@ -115,8 +117,11 @@ function CumulativeChart({
             rows={data}
             rowKey={(p) => p.date}
             columns={[
-              { header: 'Date', render: (p) => p.date },
-              { header: 'Total', render: (p) => formatNumber(p.count, 'en') },
+              { header: t('date'), render: (p) => p.date },
+              {
+                header: t('total'),
+                render: (p) => formatNumber(p.count, locale),
+              },
             ]}
           />
         </>
@@ -125,9 +130,10 @@ function CumulativeChart({
   );
 }
 
-const MILESTONES_TITLE = 'Milestones Approved Per Week';
-
 function MilestonesPerWeekChart({ data }: { data: WeeklyPoint[] }) {
+  const t = useTranslations('admin.analytics');
+  const locale = useLocale() as Locale;
+  const MILESTONES_TITLE = t('milestones_per_week');
   return (
     <figure className="flex flex-col gap-2">
       <h3 className="text-sm font-medium text-gray-300">{MILESTONES_TITLE}</h3>
@@ -135,9 +141,7 @@ function MilestonesPerWeekChart({ data }: { data: WeeklyPoint[] }) {
         {summarizeWeekly(MILESTONES_TITLE, data)}
       </figcaption>
       {data.length === 0 ? (
-        <p className="text-sm text-gray-500 py-8 text-center">
-          No data in this range.
-        </p>
+        <p className="text-sm text-gray-500 py-8 text-center">{t('no_data')}</p>
       ) : (
         <>
           <ResponsiveContainer width="100%" height={220}>
@@ -169,10 +173,10 @@ function MilestonesPerWeekChart({ data }: { data: WeeklyPoint[] }) {
             rows={data}
             rowKey={(p) => p.weekStart}
             columns={[
-              { header: 'Week starting', render: (p) => p.weekStart },
+              { header: t('week_starting'), render: (p) => p.weekStart },
               {
-                header: 'Approved',
-                render: (p) => formatNumber(p.count, 'en'),
+                header: t('approved'),
+                render: (p) => formatNumber(p.count, locale),
               },
             ]}
           />
@@ -183,6 +187,8 @@ function MilestonesPerWeekChart({ data }: { data: WeeklyPoint[] }) {
 }
 
 export default function PlatformAnalyticsCharts() {
+  const t = useTranslations('admin.analytics');
+  const tAdmin = useTranslations('admin');
   const { data, loading, error } = usePlatformAnalytics();
   const [fromInput, setFromInput] = useState('');
   const [toInput, setToInput] = useState('');
@@ -217,17 +223,14 @@ export default function PlatformAnalyticsCharts() {
   return (
     <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
       <div>
-        <h2 className="text-lg font-semibold text-white">Platform Analytics</h2>
-        <p className="text-sm text-gray-400 mt-1">
-          Registration and milestone-approval trends, sourced from indexed
-          contract history.
-        </p>
+        <h2 className="text-lg font-semibold text-white">{t('title')}</h2>
+        <p className="text-sm text-gray-400 mt-1">{t('description')}</p>
         <DataFreshnessBadge className="mt-2" />
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 text-xs text-gray-400">
-          From
+          {t('from')}
           <input
             type="date"
             className="input"
@@ -236,7 +239,7 @@ export default function PlatformAnalyticsCharts() {
           />
         </label>
         <label className="flex flex-col gap-1 text-xs text-gray-400">
-          To
+          {t('to')}
           <input
             type="date"
             className="input"
@@ -252,34 +255,34 @@ export default function PlatformAnalyticsCharts() {
             }}
             className="px-4 py-2 rounded-lg border border-gray-700 text-gray-300 hover:border-brand-green transition text-sm"
           >
-            Clear
+            {t('clear')}
           </button>
         )}
       </div>
 
       {loading ? (
-        <p className="text-sm text-gray-400">Loading…</p>
+        <p className="text-sm text-gray-400">{tAdmin('loading')}</p>
       ) : error ? (
         <p role="alert" className="text-sm text-red-400">
-          Failed to load analytics. The indexer may be unavailable.
+          {t('load_failed')}
         </p>
       ) : !filtered ||
         (filtered.playersCumulative.length === 0 &&
           filtered.scoutsCumulative.length === 0 &&
           filtered.milestonesPerWeek.length === 0) ? (
         <EmptyState
-          title="No analytics data yet"
-          description="Charts will populate as players register, scouts engage, and milestones are approved."
+          title={t('empty_title')}
+          description={t('empty_description')}
         />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <CumulativeChart
-            title="Cumulative Players Registered"
+            title={t('players_cumulative')}
             data={filtered.playersCumulative}
             color={BRAND_GREEN}
           />
           <CumulativeChart
-            title="Cumulative Scouts Registered"
+            title={t('scouts_cumulative')}
             data={filtered.scoutsCumulative}
             color={BRAND_BLUE}
           />

@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import DataTable from '@/components/ui/DataTable';
+import { useLocale, useTranslations } from 'next-intl';
+import { formatDate as formatLocaleDate } from '@/lib/localeFormat';
+import type { Locale } from '@/lib/locales';
 
 interface AutomatedModerationEntry {
   id: string;
@@ -28,6 +31,10 @@ interface AuditEntry {
 }
 
 export default function AutomatedModerationLog() {
+  const t = useTranslations('admin.auto_moderation');
+  const tSeverity = useTranslations('admin.severity');
+  const tLogs = useTranslations('admin.logs');
+  const locale = useLocale() as Locale;
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +60,7 @@ export default function AutomatedModerationLog() {
     const res = await fetch(
       `/api/admin/automated-moderation-log${query ? `?${query}` : ''}`,
     );
-    if (!res.ok) throw new Error('Failed to load entries');
+    if (!res.ok) throw new Error(t('load_failed'));
     return (await res.json()) as {
       entries?: AuditEntry[];
       nextCursor?: number | null;
@@ -68,7 +75,7 @@ export default function AutomatedModerationLog() {
       setEntries(data.entries ?? []);
       setNextCursor(data.nextCursor ?? null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load entries');
+      setError(err instanceof Error ? err.message : t('load_failed'));
     } finally {
       setLoading(false);
     }
@@ -83,7 +90,7 @@ export default function AutomatedModerationLog() {
       setEntries((prev) => [...prev, ...(data.entries ?? [])]);
       setNextCursor(data.nextCursor ?? null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load entries');
+      setError(err instanceof Error ? err.message : t('load_failed'));
     } finally {
       setLoadingMore(false);
     }
@@ -102,13 +109,11 @@ export default function AutomatedModerationLog() {
   const getSeverityLabel = (severity: string | undefined): string => {
     switch (severity) {
       case 'high':
-        return 'High';
       case 'medium':
-        return 'Medium';
       case 'low':
-        return 'Low';
+        return tSeverity(severity);
       default:
-        return 'Unknown';
+        return tSeverity('unknown');
     }
   };
 
@@ -126,7 +131,8 @@ export default function AutomatedModerationLog() {
   };
 
   const formatDate = (timestamp: number): string => {
-    return new Date(timestamp * 1000).toLocaleString('en-US', {
+    return formatLocaleDate(timestamp * 1000, locale, {
+      dateStyle: undefined,
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -139,10 +145,10 @@ export default function AutomatedModerationLog() {
   return (
     <div className="bg-brand-card border border-gray-800 rounded-xl p-5 flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-white">
-          Automated Moderation Log
-        </h2>
-        <span className="text-sm text-gray-400">{entries.length} entries</span>
+        <h2 className="text-lg font-semibold text-white">{t('title')}</h2>
+        <span className="text-sm text-gray-400">
+          {t('entries', { count: entries.length })}
+        </span>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -151,7 +157,7 @@ export default function AutomatedModerationLog() {
             htmlFor="moderation-filter-severity"
             className="text-sm text-gray-400"
           >
-            Filter severity:
+            {t('filter_severity')}
           </label>
           <select
             id="moderation-filter-severity"
@@ -159,10 +165,10 @@ export default function AutomatedModerationLog() {
             onChange={(e) => setFilter(e.target.value as typeof filter)}
             className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-green"
           >
-            <option value="all">All</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
+            <option value="all">{tLogs('all')}</option>
+            <option value="high">{tSeverity('high')}</option>
+            <option value="medium">{tSeverity('medium')}</option>
+            <option value="low">{tSeverity('low')}</option>
           </select>
         </div>
 
@@ -171,7 +177,7 @@ export default function AutomatedModerationLog() {
             htmlFor="moderation-filter-user"
             className="text-sm text-gray-400"
           >
-            Filter user:
+            {t('filter_user')}
           </label>
           <input
             id="moderation-filter-user"
@@ -181,7 +187,7 @@ export default function AutomatedModerationLog() {
             onKeyDown={(e) => {
               if (e.key === 'Enter') loadEntries();
             }}
-            placeholder="User ID..."
+            placeholder={t('user_placeholder')}
             className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-green w-48"
           />
         </div>
@@ -190,15 +196,11 @@ export default function AutomatedModerationLog() {
           onClick={loadEntries}
           className="px-3 py-1.5 rounded-lg bg-brand-green text-black text-sm font-medium hover:opacity-90 transition"
         >
-          Refresh
+          {t('refresh')}
         </button>
       </div>
 
-      {loading && (
-        <p className="text-sm text-gray-400">
-          Loading automated moderation entries...
-        </p>
-      )}
+      {loading && <p className="text-sm text-gray-400">{t('loading')}</p>}
 
       {error && (
         <p role="alert" className="text-sm text-red-400">
@@ -207,9 +209,7 @@ export default function AutomatedModerationLog() {
       )}
 
       {!loading && !error && filteredEntries.length === 0 && (
-        <p className="text-sm text-gray-400">
-          No automated moderation entries found.
-        </p>
+        <p className="text-sm text-gray-400">{t('empty')}</p>
       )}
 
       {!loading && !error && filteredEntries.length > 0 && (
@@ -225,14 +225,14 @@ export default function AutomatedModerationLog() {
           columns={[
             {
               key: 'timestamp',
-              header: 'Time',
+              header: tLogs('time'),
               headerClassName: 'py-2 pr-4 font-medium',
               className: 'py-2 pr-4 text-gray-300',
               render: (entry) => formatDate(entry.timestamp),
             },
             {
               key: 'severity',
-              header: 'Severity',
+              header: t('severity'),
               headerClassName: 'py-2 pr-4 font-medium',
               render: (entry) => {
                 const severity = entry.data?.severity as string | undefined;
@@ -247,29 +247,29 @@ export default function AutomatedModerationLog() {
             },
             {
               key: 'rule',
-              header: 'Rule',
+              header: t('rule'),
               headerClassName: 'py-2 pr-4 font-medium',
               className: 'py-2 pr-4 text-gray-200 font-medium',
               render: (entry) =>
-                (entry.data?.rule as string | undefined) ?? 'Unknown',
+                (entry.data?.rule as string | undefined) ?? tSeverity('unknown'),
             },
             {
               key: 'user',
-              header: 'User',
+              header: t('user'),
               headerClassName: 'py-2 pr-4 font-medium',
               className: 'py-2 pr-4 text-gray-300 font-mono',
               render: (entry) => entry.data?.userId as string | undefined,
             },
             {
               key: 'thread',
-              header: 'Thread',
+              header: t('thread'),
               headerClassName: 'py-2 pr-4 font-medium',
               className: 'py-2 pr-4 text-gray-300 font-mono',
               render: (entry) => entry.target ?? '-',
             },
             {
               key: 'context',
-              header: 'Context',
+              header: t('context'),
               headerClassName: 'py-2 font-medium',
               className: 'py-2 text-gray-300',
               render: (entry) => (
@@ -288,17 +288,14 @@ export default function AutomatedModerationLog() {
           disabled={loadingMore}
           className="self-center px-3 py-1.5 rounded-lg border border-gray-700 text-sm text-white hover:bg-gray-800 transition disabled:opacity-50"
         >
-          {loadingMore ? 'Loading...' : 'Load more'}
+          {loadingMore ? t('loading_more') : t('load_more')}
         </button>
       )}
 
       <div className="flex items-center justify-between text-sm text-gray-400 pt-2 border-t border-gray-700">
-        <p>
-          Record automated moderation decisions for admin review. Missing
-          entries may indicate a connectivity issue with the chat service.
-        </p>
+        <p>{t('footer')}</p>
         <Link href="/admin" className="text-brand-green hover:underline">
-          Back to Admin Dashboard
+          {t('back')}
         </Link>
       </div>
     </div>

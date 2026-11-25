@@ -7,13 +7,10 @@ import TruncatedAddress from '@/components/ui/TruncatedAddress';
 import DataTable from '@/components/ui/DataTable';
 import EmptyState from '@/components/ui/EmptyState';
 import DataFreshnessBadge from '@/components/ui/DataFreshnessBadge';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { downloadCsv } from '@/lib/download';
-
-const ACTION_LABELS = {
-  approved: 'Approved',
-  revoked: 'Revoked',
-} as const;
+import { formatDateTime } from '@/lib/localeFormat';
+import type { Locale } from '@/lib/locales';
 
 function toUnixSeconds(dateInputValue: string): number | undefined {
   if (!dateInputValue) return undefined;
@@ -22,7 +19,10 @@ function toUnixSeconds(dateInputValue: string): number | undefined {
 }
 
 export default function ValidatorActionLog() {
-  const locale = useLocale();
+  const locale = useLocale() as Locale;
+  const t = useTranslations('admin.validator_log');
+  const tLogs = useTranslations('admin.logs');
+  const tAdmin = useTranslations('admin');
   const { entries, validators, loading, error, filter, setFilter } =
     useValidatorActionLog();
 
@@ -47,19 +47,14 @@ export default function ValidatorActionLog() {
   return (
     <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
       <div>
-        <h2 className="text-lg font-semibold text-white">
-          Validator Action Log
-        </h2>
-        <p className="text-sm text-gray-400 mt-1">
-          Milestone approve/revoke actions across all players, sourced from
-          indexed contract events.
-        </p>
+        <h2 className="text-lg font-semibold text-white">{t('title')}</h2>
+        <p className="text-sm text-gray-400 mt-1">{t('description')}</p>
         <DataFreshnessBadge className="mt-2" />
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 text-xs text-gray-400">
-          Validator
+          {tLogs('validator')}
           <select
             className="input"
             value={filter.validator ?? ''}
@@ -67,7 +62,7 @@ export default function ValidatorActionLog() {
               setFilter({ ...filter, validator: e.target.value || undefined })
             }
           >
-            <option value="">All</option>
+            <option value="">{tLogs('all')}</option>
             {validators.map((v) => (
               <option key={v} value={v}>
                 {v.slice(0, 4)}…{v.slice(-4)}
@@ -77,7 +72,7 @@ export default function ValidatorActionLog() {
         </label>
 
         <label className="flex flex-col gap-1 text-xs text-gray-400">
-          From
+          {tLogs('from')}
           <input
             type="date"
             className="input"
@@ -87,7 +82,7 @@ export default function ValidatorActionLog() {
         </label>
 
         <label className="flex flex-col gap-1 text-xs text-gray-400">
-          To
+          {tLogs('to')}
           <input
             type="date"
             className="input"
@@ -100,7 +95,7 @@ export default function ValidatorActionLog() {
           onClick={applyDateFilter}
           className="px-4 py-2 rounded-lg border border-gray-700 text-gray-300 hover:border-brand-green transition text-sm"
         >
-          Apply
+          {tLogs('apply')}
         </button>
 
         <button
@@ -108,20 +103,20 @@ export default function ValidatorActionLog() {
           disabled={loading || entries.length === 0}
           className="ml-auto px-4 py-2 rounded-lg bg-brand-green text-black font-semibold hover:opacity-90 transition text-sm disabled:opacity-40"
         >
-          Export as CSV
+          {tLogs('export_csv')}
         </button>
       </div>
 
       {loading ? (
-        <p className="text-sm text-gray-400">Loading…</p>
+        <p className="text-sm text-gray-400">{tAdmin('loading')}</p>
       ) : error ? (
         <p role="alert" className="text-sm text-red-400">
-          Failed to load validator action log. The indexer may be unavailable.
+          {t('load_failed')}
         </p>
       ) : entries.length === 0 ? (
         <EmptyState
-          title="No validator actions recorded"
-          description="Milestone approvals and revocations will appear here as validators act on players."
+          title={t('empty_title')}
+          description={t('empty_description')}
         />
       ) : (
         <DataTable
@@ -133,17 +128,16 @@ export default function ValidatorActionLog() {
           columns={[
             {
               key: 'timestamp',
-              header: 'Time',
+              header: tLogs('time'),
               sortable: true,
               className: 'py-2 pr-4 text-gray-400 whitespace-nowrap',
-              render: (entry) =>
-                new Date(entry.timestamp * 1000).toLocaleString(locale),
+              render: (entry) => formatDateTime(entry.timestamp * 1000, locale),
             },
             {
               key: 'action',
-              header: 'Action',
+              header: tLogs('action'),
               sortable: true,
-              sortValue: (entry) => ACTION_LABELS[entry.action],
+              sortValue: (entry) => t(`actions.${entry.action}`),
               render: (entry) => (
                 <span
                   className={
@@ -152,13 +146,13 @@ export default function ValidatorActionLog() {
                       : 'text-brand-green'
                   }
                 >
-                  {ACTION_LABELS[entry.action]}
+                  {t(`actions.${entry.action}`)}
                 </span>
               ),
             },
             {
               key: 'validator',
-              header: 'Validator',
+              header: tLogs('validator'),
               sortable: true,
               className: 'py-2 pr-4 font-mono',
               render: (entry) =>
@@ -173,7 +167,7 @@ export default function ValidatorActionLog() {
             },
             {
               key: 'playerId',
-              header: 'Player',
+              header: tLogs('player'),
               sortable: true,
               className: 'py-2 pr-4 text-gray-300 truncate max-w-[10rem]',
               render: (entry) =>
@@ -181,7 +175,7 @@ export default function ValidatorActionLog() {
             },
             {
               key: 'milestoneId',
-              header: 'Milestone',
+              header: tLogs('milestone'),
               sortable: true,
               className: 'py-2 pr-4 text-gray-300 truncate max-w-[10rem]',
               render: (entry) =>

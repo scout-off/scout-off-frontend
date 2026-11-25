@@ -6,7 +6,17 @@ const mockReplace = jest.fn();
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ replace: mockReplace }),
+  usePathname: () => '/fr/scout/compare',
+  useSearchParams: () => new URLSearchParams('ids=1,2&ref=abc'),
 }));
+
+jest.mock('next-intl', () => ({
+  useLocale: () => 'fr',
+}));
+
+const EXPECTED_REDIRECT = `/fr/?reason=wallet-required&returnTo=${encodeURIComponent(
+  '/fr/scout/compare?ids=1%2C2&ref=abc',
+)}`;
 
 const mockWalletContext = {
   isAuthenticated: false,
@@ -30,7 +40,7 @@ describe('useRequireWallet', () => {
 
   it('redirects to home with a reason when unauthenticated and not connecting', () => {
     renderHook(() => useRequireWallet());
-    expect(mockReplace).toHaveBeenCalledWith('/?reason=wallet-required');
+    expect(mockReplace).toHaveBeenCalledWith(EXPECTED_REDIRECT);
   });
 
   it('does not redirect when authenticated', () => {
@@ -47,7 +57,7 @@ describe('useRequireWallet', () => {
 
   it('uses router.replace (not push) to prevent back-navigation', () => {
     renderHook(() => useRequireWallet());
-    expect(mockReplace).toHaveBeenCalledWith('/?reason=wallet-required');
+    expect(mockReplace).toHaveBeenCalledWith(EXPECTED_REDIRECT);
     expect(mockReplace).not.toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),
@@ -89,6 +99,15 @@ describe('useRequireWallet', () => {
     mockWalletContext.isRestoringSession = true;
     renderHook(() => useRequireWallet());
     expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('keeps the locale and preserves the query string in returnTo', () => {
+    renderHook(() => useRequireWallet());
+    const url = new URL(mockReplace.mock.calls[0][0], 'http://localhost');
+    expect(url.pathname).toBe('/fr/');
+    expect(url.searchParams.get('returnTo')).toBe(
+      '/fr/scout/compare?ids=1%2C2&ref=abc',
+    );
   });
 
   it('returns the walletAddress from publicKey', () => {

@@ -36,6 +36,14 @@ export interface RateLimitOptions {
    * - 'sliding': sliding-window counter. Bounds burst to ~limit at all times.
    */
   algorithm?: 'fixed' | 'sliding';
+  /**
+   * What to do when the shared store (Redis) fails (issue #1699):
+   * - `'allow'` (default): fail open, the request is allowed.
+   * - `'deny'`: fail closed with a short `retryAfterSec`.
+   * - `'local'`: fall back to a process-local in-memory limiter with the
+   *   same key and limits (per-instance, but still protective).
+   */
+  onStoreError?: 'allow' | 'deny' | 'local';
 }
 
 export interface RateLimitResult {
@@ -306,6 +314,53 @@ export function _getInMemoryStoreSizeForTests(): number | null {
   return cachedStore instanceof InMemoryStore ? cachedStore.size : null;
 }
 
+// ── Store failure handling (issue #1699) ─────────────────────────────────────
+
+/** Consecutive store failures that open the circuit breaker. */
+export const BREAKER_FAILURE_THRESHOLD = 3;
+/** How long the breaker stays open (store skipped) once tripped. */
+export const BREAKER_OPEN_MS = 10_000;
+/** Minimum interval between store-failure log lines. */
+export const STORE_ERROR_LOG_INTERVAL_MS = 60_000;
+/** `retryAfterSec` returned by `onStoreError: 'deny'`. */
+export const DENY_RETRY_AFTER_SEC = 5;
+
+let consecutiveFailures = 0;
+let breakerOpenUntil = 0;
+let storeErrorCount = 0;
+let lastStoreErrorLogAt = 0;
+let localFallbackStore: InMemoryStore | null = null;
+
+function getLocalFallbackStore(): InMemoryStore {
+  if (!localFallbackStore) localFallbackStore = new InMemoryStore();
+  return localFallbackStore;
+}
+
+function recordStoreError(err: unknown) {
+  storeErrorCount += 1;
+  consecutiveFailures += 1;
+  if (consecutiveFailures >= BREAKER_FAILURE_THRESHOLD) {
+    breakerOpenUntil = Date.now() + BREAKER_OPEN_MS;
+  }
+  const now = Date.now();
+  if (now - lastStoreErrorLogAt >= STORE_ERROR_LOG_INTERVAL_MS) {
+    lastStoreErrorLogAt = now;
+    console.error(
+      `[rateLimit] store.increment failed (rate_limit_store_errors_total=${storeErrorCount}):`,
+      err,
+    );
+  }
+}
+
+/** Test-only: resets breaker, failure counters and the local fallback store. */
+export function _resetRateLimitBreakerForTests(): void {
+  consecutiveFailures = 0;
+  breakerOpenUntil = 0;
+  storeErrorCount = 0;
+  lastStoreErrorLogAt = 0;
+  localFallbackStore = null;
+}
+
 // ── Public API ────────────────────────────────────────────────────────────
 
 /**
@@ -316,11 +371,10 @@ export function _getInMemoryStoreSizeForTests(): number | null {
  * `players-search:<ip>` and `ipfs-upload:<ip>` so the two routes' limits
  * never collide with each other in a shared store.
  *
- * Fail-open on store errors (issue #1493): the file's stated policy is that
- * a limiter outage "shouldn't take down the whole route." If the underlying
- * store throws (e.g. a Redis/Upstash blip), we log the error and allow the
- * request through rather than surfacing a 500 — consistent with the
- * in-memory fallback used when Redis is unconfigured.
+ * Store errors are handled per `opts.onStoreError` (default `'allow'`,
+ * i.e. fail open as in issue #1493). Failures are logged at a bounded rate,
+ * and after repeated failures a circuit breaker skips the store for
+ * `BREAKER_OPEN_MS` instead of retrying it on every request (issue #1699).
  */
 export async function checkRateLimit(
   key: string,
@@ -331,14 +385,24 @@ export async function checkRateLimit(
   let count: number;
   let ttlMs: number;
   try {
+    if (Date.now() < breakerOpenUntil) {
+      throw new Error('rate-limit store circuit breaker open');
+    }
     ({ count, ttlMs } = await store.increment(key, opts.windowMs));
+    consecutiveFailures = 0;
   } catch (err) {
-    // Rate-limiter outage — fail open so the route stays available.
-    console.error(
-      '[rateLimit] store.increment failed; allowing request (fail-open):',
-      err,
-    );
-    return { limited: false };
+    if (Date.now() >= breakerOpenUntil) recordStoreError(err);
+    const mode = opts.onStoreError ?? 'allow';
+    if (mode === 'deny') {
+      return { limited: true, retryAfterSec: DENY_RETRY_AFTER_SEC };
+    }
+    if (mode === 'allow' || store instanceof InMemoryStore) {
+      return { limited: false };
+    }
+    ({ count, ttlMs } = await getLocalFallbackStore().increment(
+      key,
+      opts.windowMs,
+    ));
   }
 
   if (count > opts.limit) {

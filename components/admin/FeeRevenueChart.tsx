@@ -13,20 +13,21 @@ import {
 } from 'recharts';
 import { useFeeRevenue } from '@/hooks/useFeeRevenue';
 import { useFeeDriftDetection } from '@/hooks/useFeeDriftDetection';
-import { formatXlm } from '@/lib/formatXlm';
 import EmptyState from '@/components/ui/EmptyState';
 import ChartDataTable from '@/components/admin/ChartDataTable';
 import { summarizeFeeRevenue } from '@/lib/chartSummary';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { formatDate, formatNumber } from '@/lib/localeFormat';
+import type { Locale } from '@/lib/locales';
 
 const BRAND_GREEN = '#00C853';
 const BRAND_BLUE = '#3B82F6';
 
 const PERIODS = [
-  { key: '7', label: '7d', days: 7 },
-  { key: '30', label: '30d', days: 30 },
-  { key: '90', label: '90d', days: 90 },
-  { key: 'all', label: 'All-time', days: null },
+  { key: '7', days: 7 },
+  { key: '30', days: 30 },
+  { key: '90', days: 90 },
+  { key: 'all', days: null },
 ] as const;
 
 type PeriodKey = (typeof PERIODS)[number]['key'];
@@ -46,8 +47,9 @@ const TOOLTIP_STYLE = {
 // viewer's locale conventions (month/day order, abbreviation) while pinning
 // `timeZone: 'UTC'` so the calendar day shown never shifts away from the
 // UTC bucket it represents.
-function formatBucketLabel(dateKey: string, locale: string): string {
-  return new Date(`${dateKey}T00:00:00Z`).toLocaleDateString(locale, {
+function formatBucketLabel(dateKey: string, locale: Locale): string {
+  return formatDate(new Date(`${dateKey}T00:00:00Z`), locale, {
+    dateStyle: undefined,
     month: 'short',
     day: 'numeric',
     timeZone: 'UTC',
@@ -55,7 +57,15 @@ function formatBucketLabel(dateKey: string, locale: string): string {
 }
 
 export default function FeeRevenueChart() {
-  const locale = useLocale();
+  const locale = useLocale() as Locale;
+  const t = useTranslations('admin.fee_chart');
+  const tAdmin = useTranslations('admin');
+  const formatXlm = (value: number) =>
+    formatNumber(value, locale, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  const xlm = (value: number) => t('xlm_amount', { amount: formatXlm(value) });
   const { data, loading, error } = useFeeRevenue();
   const { hasDrift, warningMessage } = useFeeDriftDetection();
   const [period, setPeriod] = useState<PeriodKey>('30');
@@ -103,11 +113,8 @@ export default function FeeRevenueChart() {
     <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-white">Fee Revenue</h2>
-          <p className="text-sm text-gray-400 mt-1">
-            Pay-to-contact and subscription fees, sourced from indexed
-            fee-payment events.
-          </p>
+          <h2 className="text-lg font-semibold text-white">{t('title')}</h2>
+          <p className="text-sm text-gray-400 mt-1">{t('description')}</p>
         </div>
         <div className="flex gap-1 rounded-lg border border-gray-700 p-1">
           {PERIODS.map((p) => (
@@ -122,7 +129,7 @@ export default function FeeRevenueChart() {
                   : 'text-gray-300 hover:bg-gray-800'
               }`}
             >
-              {p.label}
+              {t(`periods.${p.key}`)}
             </button>
           ))}
         </div>
@@ -140,35 +147,35 @@ export default function FeeRevenueChart() {
       )}
 
       {loading ? (
-        <p className="text-sm text-gray-400">Loading…</p>
+        <p className="text-sm text-gray-400">{tAdmin('loading')}</p>
       ) : error ? (
         <p role="alert" className="text-sm text-red-400">
-          Failed to load fee revenue. The indexer may be unavailable.
+          {t('load_failed')}
         </p>
       ) : filtered.length === 0 ? (
         <EmptyState
-          title="No fee revenue in this period"
-          description="Contact-fee and subscription payments will appear here as they occur."
+          title={t('empty_title')}
+          description={t('empty_description')}
         />
       ) : (
         <>
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-gray-900 rounded-lg p-4 text-center">
-              <p className="text-xs text-gray-500 mb-1">Contact Fees</p>
+              <p className="text-xs text-gray-500 mb-1">{t('contact_fees')}</p>
               <p className="text-lg font-semibold text-white">
-                {formatXlm(totals.contactFeeXlm)} XLM
+                {xlm(totals.contactFeeXlm)}
               </p>
             </div>
             <div className="bg-gray-900 rounded-lg p-4 text-center">
-              <p className="text-xs text-gray-500 mb-1">Subscriptions</p>
+              <p className="text-xs text-gray-500 mb-1">{t('subscriptions')}</p>
               <p className="text-lg font-semibold text-white">
-                {formatXlm(totals.subscriptionXlm)} XLM
+                {xlm(totals.subscriptionXlm)}
               </p>
             </div>
             <div className="bg-gray-900 rounded-lg p-4 text-center">
-              <p className="text-xs text-gray-500 mb-1">Total</p>
+              <p className="text-xs text-gray-500 mb-1">{t('total')}</p>
               <p className="text-lg font-semibold text-white">
-                {formatXlm(totals.totalXlm)} XLM
+                {xlm(totals.totalXlm)}
               </p>
             </div>
           </div>
@@ -227,14 +234,14 @@ export default function FeeRevenueChart() {
                 <Legend wrapperStyle={{ fontSize: 12, color: '#9CA3AF' }} />
                 <Bar
                   dataKey="contactFeeXlm"
-                  name="Contact Fees"
+                  name={t('contact_fees')}
                   stackId="fees"
                   fill={BRAND_GREEN}
                   legendType="square"
                 />
                 <Bar
                   dataKey="subscriptionXlm"
-                  name="Subscriptions"
+                  name={t('subscriptions')}
                   stackId="fees"
                   fill={`url(#${SUBSCRIPTION_PATTERN_ID})`}
                   legendType="diamond"
@@ -243,23 +250,23 @@ export default function FeeRevenueChart() {
               </BarChart>
             </ResponsiveContainer>
             <ChartDataTable
-              caption="Daily fee revenue (XLM)"
+              caption={t('table_caption')}
               rows={filtered}
               rowKey={(d) => d.date}
               columns={[
                 {
-                  header: 'Date',
+                  header: t('date'),
                   render: (d) => formatBucketLabel(d.date, locale),
                 },
                 {
-                  header: 'Contact Fees',
+                  header: t('contact_fees'),
                   render: (d) => formatXlm(d.contactFeeXlm),
                 },
                 {
-                  header: 'Subscriptions',
+                  header: t('subscriptions'),
                   render: (d) => formatXlm(d.subscriptionXlm),
                 },
-                { header: 'Total', render: (d) => formatXlm(d.totalXlm) },
+                { header: t('total'), render: (d) => formatXlm(d.totalXlm) },
               ]}
             />
           </figure>

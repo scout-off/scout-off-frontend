@@ -153,27 +153,9 @@ function extractPlaceholders(value) {
  * names, language endonyms, and proper nouns. Listed here so the
  * untranslated-copy check doesn't flag them as missing translations.
  */
-const UNTRANSLATED_ALLOWLIST = new Set([
-  'app_title', // Brand name "ScoutOff"
-  'language.english', // Endonym shown in the language picker
-  'language.french',
-  'language.swahili',
-  'trial_offer.message', // Generic "Message" label
-  'status.dependency_frontend', // "Frontend"
-  'status.dependency_rpc', // "Soroban RPC / Horizon" (product name)
-  'progress_levels.level2', // "Performance" (proper-noun badge label)
-  'admin.code_singular', // "code" / "codes" (very short, ambiguous)
-  'admin.code_plural',
-  'actions.refresh', // Single short word, same in all three locales
-  'settings.contact.telegram_label', // "Telegram" (proper noun)
-  'scout.subscribe.tiers.pro.title', // "Pro" / "Elite" tier names
-  'scout.subscribe.tiers.elite.title',
-  // Short / borrowed terms identical in French and Swahili:
-  'academy.bulkImport.columns.bio', // "Bio" (identical in fr/sw)
-  'academy.bulkImport.pause', // "Pause" (identical in fr/sw)
-  'notifications.title', // "Notifications" (identical in fr/sw)
-  'privacy.section1_title', // "1. Introduction" (heading + number, identical in fr)
-]);
+const UNTRANSLATED_ALLOWLIST = new Set(
+  Object.keys(require('./i18n-identical-allowlist.json')),
+);
 
 module.exports = { flattenKeys, flattenValues, extractPlaceholders };
 
@@ -295,8 +277,8 @@ if (require.main === module) {
       '\nLocale check failed: ' +
         untranslatedCount +
         ' value(s) appear to be untranslated copies of English. ' +
-        'Translate them, or add the key to UNTRANSLATED_ALLOWLIST in ' +
-        'scripts/check-locale-keys.js if the identical value is intentional.',
+        'Translate them, or add the key (with a reason) to ' +
+        'scripts/i18n-identical-allowlist.json if the identical value is intentional.',
     );
     process.exit(1);
   }

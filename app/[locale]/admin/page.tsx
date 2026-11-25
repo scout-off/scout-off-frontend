@@ -17,7 +17,9 @@ import FraudFlagsStalenessBadge from '@/components/admin/FraudFlagsStalenessBadg
 import AdminLoadError from '@/components/admin/AdminLoadError';
 import { useAdminConfirm } from '@/components/admin/useAdminConfirm';
 import { useAdminContractState } from '@/hooks/useAdminContractState';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { formatDateTime } from '@/lib/localeFormat';
+import type { Locale } from '@/lib/locales';
 
 // Admin-only components lazy-loaded to avoid bundling into shared chunks
 // for the much larger player/scout user base (issue #967).
@@ -50,22 +52,15 @@ function copyToClipboard(text: string) {
   }
 }
 
-const EVENT_LABELS: Record<ActivityEventType, string> = {
-  player_registered: 'Player Registered',
-  milestone_approved: 'Milestone Approved',
-  milestone_revoked: 'Milestone Revoked',
-  scout_subscribed: 'Scout Subscribed',
-  player_contacted: 'Player Contacted',
-  fees_withdrawn: 'Fees Withdrawn',
-};
-
 /**
  * /admin — overview: contract info, circuit breaker, runtime config,
  * activity and platform analytics. Each other admin area has its own route
  * (see components/admin/AdminNav.tsx); the admin guard lives in the layout.
  */
 export default function AdminOverviewPage() {
-  const locale = useLocale();
+  const locale = useLocale() as Locale;
+  const t = useTranslations('admin');
+  const eventLabel = (type: ActivityEventType) => t(`overview.events.${type}`);
   const { publicKey, signAndSubmit } = useWallet();
   const { show } = useToast();
   const { paused, setPaused, loading, fetchError, reload } =
@@ -105,17 +100,17 @@ export default function AdminOverviewPage() {
         setActivityTotal(total);
       })
       .catch(() =>
-        show({ message: 'Failed to load activity.', variant: 'error' }),
+        show({ message: t('overview.load_activity_failed'), variant: 'error' }),
       )
       .finally(() => setActivityLoading(false));
-  }, [activityPage, show]);
+  }, [activityPage, show, t]);
 
   function togglePause() {
     if (!publicKey) return;
     if (paused) {
       confirm({
-        label: 'Unpause Contract',
-        message: 'Are you sure you want to unpause the contract?',
+        label: t('unpause_contract'),
+        message: t('unpause_confirm'),
         run: async () => {
           const txHash = await signAndSubmit(
             await buildUnpauseContract(publicKey),
@@ -126,14 +121,16 @@ export default function AdminOverviewPage() {
             status: 'submitted',
           }).catch(() => {});
           setPaused(false);
-          show({ message: 'Contract unpaused.', variant: 'success' });
+          show({
+            message: t('overview.contract_unpaused'),
+            variant: 'success',
+          });
         },
       });
     } else {
       confirm({
-        label: 'Pause Contract',
-        message:
-          'Are you sure you want to pause the contract? All operations will halt.',
+        label: t('pause_contract'),
+        message: t('pause_confirm'),
         run: async () => {
           const txHash = await signAndSubmit(
             await buildPauseContract(publicKey),
@@ -144,7 +141,7 @@ export default function AdminOverviewPage() {
             status: 'submitted',
           }).catch(() => {});
           setPaused(true);
-          show({ message: 'Contract paused.', variant: 'warning' });
+          show({ message: t('overview.contract_paused'), variant: 'warning' });
         },
       });
     }
@@ -158,32 +155,34 @@ export default function AdminOverviewPage() {
   return (
     <div className="max-w-3xl flex flex-col gap-8">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
+        <h1 className="text-3xl font-bold text-white">{t('title')}</h1>
         <FraudFlagsStalenessBadge />
       </div>
 
       {/* Contract Info */}
       <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
-        <h2 className="text-lg font-semibold text-white">Contract</h2>
+        <h2 className="text-lg font-semibold text-white">{t('contract')}</h2>
         <div className="flex items-center gap-2">
           <code className="flex-1 text-sm text-gray-300 truncate">
             {CONTRACT_ID}
           </code>
           <button
             onClick={handleCopyContractId}
-            aria-label="Copy contract ID to clipboard"
+            aria-label={t('copy_contract_id')}
             className="shrink-0 rounded px-2 py-1 text-xs font-medium transition bg-gray-700 text-gray-300 hover:bg-gray-600"
           >
-            {contractIdCopied ? 'Copied!' : 'Copy'}
+            {contractIdCopied ? t('copied') : t('copy')}
           </button>
         </div>
       </section>
 
       {/* Circuit Breaker */}
       <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
-        <h2 className="text-lg font-semibold text-white">Circuit Breaker</h2>
+        <h2 className="text-lg font-semibold text-white">
+          {t('circuit_breaker')}
+        </h2>
         <p className="text-sm text-gray-400">
-          Status:{' '}
+          {t('overview.status')}{' '}
           <span
             className={
               paused
@@ -191,14 +190,14 @@ export default function AdminOverviewPage() {
                 : 'text-brand-green font-medium'
             }
           >
-            {paused ? 'Paused' : 'Active'}
+            {paused ? t('paused') : t('active')}
           </span>
         </p>
         <button
           onClick={togglePause}
           className={`w-fit px-5 py-2 rounded-lg font-semibold transition ${paused ? 'bg-brand-green text-black hover:opacity-90' : 'bg-red-600 text-white hover:bg-red-700'}`}
         >
-          {paused ? 'Unpause Contract' : 'Pause Contract'}
+          {paused ? t('unpause_contract') : t('pause_contract')}
         </button>
       </section>
 
@@ -207,13 +206,13 @@ export default function AdminOverviewPage() {
 
       {/* Activity Feed */}
       <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
-        <h2 className="text-lg font-semibold text-white">Activity</h2>
+        <h2 className="text-lg font-semibold text-white">{t('activity')}</h2>
         {activityLoading ? (
-          <p className="text-sm text-gray-400">Loading…</p>
+          <p className="text-sm text-gray-400">{t('loading')}</p>
         ) : activity.length === 0 ? (
           <EmptyState
-            title="No activity yet"
-            description="Contract events will appear here once transactions are recorded."
+            title={t('no_activity_title')}
+            description={t('no_activity_description')}
           />
         ) : (
           <>
@@ -224,7 +223,7 @@ export default function AdminOverviewPage() {
                   className="flex items-center gap-4 py-3 text-sm first:pt-0 last:pb-0"
                 >
                   <span className="text-gray-200 shrink-0">
-                    {EVENT_LABELS[event.type]}
+                    {eventLabel(event.type)}
                   </span>
                   <span className="font-mono text-gray-400 truncate">
                     <TruncatedAddress
@@ -241,7 +240,7 @@ export default function AdminOverviewPage() {
                     </span>
                   )}
                   <span className="text-gray-400 shrink-0 ml-auto">
-                    {new Date(event.timestamp * 1000).toLocaleString(locale)}
+                    {formatDateTime(event.timestamp * 1000, locale)}
                   </span>
                 </li>
               ))}
@@ -253,10 +252,13 @@ export default function AdminOverviewPage() {
                   disabled={activityPage <= 1}
                   className="px-4 py-2 rounded-lg border border-gray-700 text-gray-300 disabled:opacity-40 hover:border-brand-green transition"
                 >
-                  Previous
+                  {t('previous')}
                 </button>
                 <span className="text-sm text-gray-400">
-                  Page {activityPage} of {activityTotalPages}
+                  {t('page_of', {
+                    page: activityPage,
+                    total: activityTotalPages,
+                  })}
                 </span>
                 <button
                   onClick={() =>
@@ -265,7 +267,7 @@ export default function AdminOverviewPage() {
                   disabled={activityPage >= activityTotalPages}
                   className="px-4 py-2 rounded-lg border border-gray-700 text-gray-300 disabled:opacity-40 hover:border-brand-green transition"
                 >
-                  Next
+                  {t('next')}
                 </button>
               </div>
             )}

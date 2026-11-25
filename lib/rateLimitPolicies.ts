@@ -68,6 +68,7 @@ export const POLICIES = {
    *  wallet enumeration, so we still limit it. */
   authSep10: {
     slug: 'auth-sep10',
+    onStoreError: 'local',
     limit: 20,
     windowMs: 60_000,
     message: 'Too many authentication requests. Please try again shortly.',
@@ -77,6 +78,7 @@ export const POLICIES = {
    *  legitimate; a burst signals a loop or abuse. */
   authRefresh: {
     slug: 'auth-refresh',
+    onStoreError: 'local',
     limit: 10,
     windowMs: 60_000,
     message: 'Too many session refresh requests.',
@@ -86,6 +88,7 @@ export const POLICIES = {
   /** Logout-all terminates every active session — should be rare. */
   authLogoutAll: {
     slug: 'auth-logout-all',
+    onStoreError: 'local',
     limit: 5,
     windowMs: 60_000,
     message: 'Too many logout requests. Please wait before trying again.',
@@ -190,6 +193,7 @@ export const POLICIES = {
   /** Contact details release — involves on-chain verification per call. */
   contactRelease: {
     slug: 'contact-release',
+    onStoreError: 'local',
     limit: 30,
     windowMs: 60_000,
     message: 'Too many contact requests. Please try again shortly.',
@@ -199,6 +203,7 @@ export const POLICIES = {
   /** Contact vault upload (encrypted contact details). */
   contactVaultUpload: {
     slug: 'contact-vault',
+    onStoreError: 'local',
     limit: 10,
     windowMs: 60_000,
     message: 'Too many vault upload requests. Please try again shortly.',
@@ -410,6 +415,7 @@ export async function applyRateLimit(
   const result = await checkRateLimit(key, {
     limit: policy.limit,
     windowMs: policy.windowMs,
+    onStoreError: policy.onStoreError,
   });
 
   if (result.allowed) {

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import DataTable from '@/components/ui/DataTable';
+import { useTranslations } from 'next-intl';
 
 type ConfigEntry = {
   name: string;
@@ -9,6 +10,7 @@ type ConfigEntry = {
 };
 
 export default function ConfigStatus() {
+  const t = useTranslations('admin.config');
   const [config, setConfig] = useState<ConfigEntry[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [unauthorized, setUnauthorized] = useState(false);
@@ -33,22 +35,16 @@ export default function ConfigStatus() {
   }, []);
 
   if (loading) {
-    return <p className="text-sm text-gray-400">Loading config status…</p>;
+    return <p className="text-sm text-gray-400">{t('loading')}</p>;
   }
 
   if (unauthorized) {
-    return (
-      <p className="text-sm text-gray-400">
-        Admin session required to view config status.
-      </p>
-    );
+    return <p className="text-sm text-gray-400">{t('unauthorized')}</p>;
   }
 
   return (
     <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
-      <h2 className="text-lg font-semibold text-white">
-        Runtime Configuration Status
-      </h2>
+      <h2 className="text-lg font-semibold text-white">{t('title')}</h2>
       <DataTable
         caption="Runtime configuration variables"
         captionHidden
@@ -62,7 +58,7 @@ export default function ConfigStatus() {
         columns={[
           {
             key: 'name',
-            header: 'Variable',
+            header: t('variable'),
             sortable: true,
             headerClassName: 'pr-4',
             className: 'py-2 text-gray-300',
@@ -70,16 +66,16 @@ export default function ConfigStatus() {
           },
           {
             key: 'required',
-            header: 'Required',
+            header: t('required'),
             sortable: true,
             sortValue: (c) => (c.required ? 1 : 0),
             headerClassName: 'pr-4',
             className: 'py-2 text-gray-300',
-            render: (c) => (c.required ? 'Yes' : 'No'),
+            render: (c) => (c.required ? t('yes') : t('no')),
           },
           {
             key: 'present',
-            header: 'Present',
+            header: t('present_header'),
             sortable: true,
             sortValue: (c) => (c.present ? 1 : 0),
             headerClassName: 'pr-4',
@@ -88,19 +84,21 @@ export default function ConfigStatus() {
               c.turnstile ? (
                 c.turnstile.mismatched ? (
                   <span className="text-red-400 font-medium">
-                    Mismatched (site key / secret)
+                    {t('mismatched')}
                   </span>
                 ) : c.turnstile.configured ? (
-                  <span className="text-green-400 font-medium">Configured</span>
+                  <span className="text-green-400 font-medium">
+                    {t('configured')}
+                  </span>
                 ) : (
                   <span className="text-gray-400 font-medium">
-                    Unconfigured
+                    {t('unconfigured')}
                   </span>
                 )
               ) : c.present ? (
-                <span className="text-green-400 font-medium">Present</span>
+                <span className="text-green-400 font-medium">{t('present')}</span>
               ) : (
-                <span className="text-red-400 font-medium">Missing</span>
+                <span className="text-red-400 font-medium">{t('missing')}</span>
               ),
           },
         ]}

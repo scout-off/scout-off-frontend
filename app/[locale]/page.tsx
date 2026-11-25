@@ -11,6 +11,7 @@ import {
   Radio,
 } from 'lucide-react';
 import RedirectReasonBanner from '@/components/ui/RedirectReasonBanner';
+import ReturnToRedirect from '@/components/ui/ReturnToRedirect';
 import CookieSettingsLink from '@/components/ui/CookieSettingsLink';
 
 // ── Feature card data ─────────────────────────────────────────────────────────
@@ -43,7 +44,10 @@ const features = [
 
 export default async function HomePage(props: {
   params: Promise<{ locale: string }>;
-  searchParams?: Promise<{ reason?: string | string[] }>;
+  searchParams?: Promise<{
+    reason?: string | string[];
+    returnTo?: string | string[];
+  }>;
 }) {
   const searchParams = await props.searchParams;
   const params = await props.params;
@@ -59,6 +63,9 @@ export default async function HomePage(props: {
         <div className="px-4">
           <RedirectReasonBanner reason={searchParams.reason} />
         </div>
+      )}
+      {searchParams?.reason === 'wallet-required' && searchParams.returnTo && (
+        <ReturnToRedirect returnTo={searchParams.returnTo} />
       )}
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section

@@ -1,5 +1,6 @@
 'use client';
 import dynamic from 'next/dynamic';
+import { useTranslations } from 'next-intl';
 
 const AcademyManager = dynamic(
   () => import('@/components/admin/AcademyManager'),
@@ -13,9 +14,10 @@ const AcademyManager = dynamic(
 
 /** /admin/academies — off-chain academy identities (issue #663; see docs/academy-validator-model.md). */
 export default function AdminAcademiesPage() {
+  const t = useTranslations('admin.pages');
   return (
     <div className="max-w-3xl flex flex-col gap-8">
-      <h1 className="text-3xl font-bold text-white">Academies</h1>
+      <h1 className="text-3xl font-bold text-white">{t('academies')}</h1>
       <AcademyManager />
     </div>
   );

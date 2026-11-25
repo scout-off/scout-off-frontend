@@ -28,13 +28,9 @@ import {
   setAcademyQuorum,
 } from '@/lib/api';
 import type { Academy, AcademyMilestoneRollupEntry } from '@/types';
+import { useTranslations } from 'next-intl';
 
-const ROLLUP_RANGE_OPTIONS: { value: number | 'all'; label: string }[] = [
-  { value: 7, label: 'Last 7 days' },
-  { value: 30, label: 'Last 30 days' },
-  { value: 90, label: 'Last 90 days' },
-  { value: 'all', label: 'All time' },
-];
+const ROLLUP_RANGE_OPTIONS: (number | 'all')[] = [7, 30, 90, 'all'];
 
 function isStellarAddress(value: string): boolean {
   return value.startsWith('G') && value.length === 56;
@@ -46,6 +42,7 @@ type DialogState =
   | null;
 
 export default function AcademyManager() {
+  const t = useTranslations('admin.academies');
   const { show } = useToast();
 
   const [academies, setAcademies] = useState<Academy[]>([]);
@@ -150,12 +147,12 @@ export default function AcademyManager() {
       setNewName('');
       setNewOwnerWallet('');
       show({
-        message: `Academy "${academy.name}" created.`,
+        message: t('created', { name: academy.name }),
         variant: 'success',
       });
     } catch (e: unknown) {
       show({
-        message: getErrorMessage(e, 'Failed to create academy.'),
+        message: getErrorMessage(e, t('create_failed')),
         variant: 'error',
       });
     } finally {
@@ -173,10 +170,10 @@ export default function AcademyManager() {
         list.map((a) => (a.id === academyId ? academy : a)),
       );
       setMemberInputs((s) => ({ ...s, [academyId]: '' }));
-      show({ message: 'Signer wallet added to academy.', variant: 'success' });
+      show({ message: t('member_added'), variant: 'success' });
     } catch (e: unknown) {
       show({
-        message: getErrorMessage(e, 'Failed to add signer wallet.'),
+        message: getErrorMessage(e, t('add_member_failed')),
         variant: 'error',
       });
     } finally {
@@ -197,12 +194,12 @@ export default function AcademyManager() {
         ),
       );
       show({
-        message: 'Signer wallet removed from academy.',
+        message: t('member_removed'),
         variant: 'success',
       });
     } catch (e: unknown) {
       show({
-        message: getErrorMessage(e, 'Failed to remove signer wallet.'),
+        message: getErrorMessage(e, t('remove_member_failed')),
         variant: 'error',
       });
     } finally {
@@ -225,8 +222,7 @@ export default function AcademyManager() {
     const quorum = raw === '' ? null : Number(raw);
     if (quorum !== null && (!Number.isInteger(quorum) || quorum < 1)) {
       show({
-        message:
-          'Quorum must be a positive whole number, or empty to clear it.',
+        message: t('quorum_invalid'),
         variant: 'error',
       });
       return;
@@ -246,13 +242,13 @@ export default function AcademyManager() {
       show({
         message:
           quorum === null
-            ? 'Quorum cleared.'
-            : `Quorum set to ${quorum} signer${quorum !== 1 ? 's' : ''}.`,
+            ? t('quorum_cleared')
+            : t('quorum_set', { count: quorum }),
         variant: 'success',
       });
     } catch (e: unknown) {
       show({
-        message: getErrorMessage(e, 'Failed to set quorum.'),
+        message: getErrorMessage(e, t('quorum_failed')),
         variant: 'error',
       });
     } finally {
@@ -261,15 +257,15 @@ export default function AcademyManager() {
   }
 
   if (loading) {
-    return <p className="text-sm text-gray-400">Loading academies…</p>;
+    return <p className="text-sm text-gray-400">{t('loading')}</p>;
   }
 
   if (error) {
     return (
       <p className="text-sm text-red-400">
-        Failed to load academies.{' '}
+        {t('load_failed')}{' '}
         <button onClick={load} className="underline hover:text-red-300">
-          Retry
+          {t('retry')}
         </button>
       </p>
     );
@@ -278,24 +274,20 @@ export default function AcademyManager() {
   return (
     <>
       <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
-        <h2 className="text-lg font-semibold text-white">Create Academy</h2>
-        <p className="text-xs text-gray-400">
-          Groups several signer wallets (head coach, assistant coaches, academy
-          director) under one institutional identity. Each signer must still be
-          added as a validator above for its milestone approvals to be
-          authorized on-chain — an academy record is an off-chain label, not a
-          replacement for validator authorization.
-        </p>
+        <h2 className="text-lg font-semibold text-white">
+          {t('create_title')}
+        </h2>
+        <p className="text-xs text-gray-400">{t('create_description')}</p>
         <div className="flex flex-col sm:flex-row gap-3">
           <input
             className="input flex-1"
-            placeholder="Academy name"
+            placeholder={t('name_placeholder')}
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
           />
           <input
             className="input flex-1"
-            placeholder="Owner's Stellar public key (G...)"
+            placeholder={t('owner_placeholder')}
             value={newOwnerWallet}
             onChange={(e) => setNewOwnerWallet(e.target.value)}
           />
@@ -308,7 +300,7 @@ export default function AcademyManager() {
             onClick={handleCreate}
             className="px-5 py-2 rounded-lg bg-brand-green text-black font-semibold hover:opacity-90 transition disabled:opacity-40"
           >
-            Create
+            {t('create')}
           </button>
         </div>
       </section>
@@ -316,11 +308,11 @@ export default function AcademyManager() {
       <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-white">
-            Academies ({academies.length})
+            {t('list_title', { count: academies.length })}
           </h2>
           {academies.length > 0 && (
             <label className="flex items-center gap-2 text-xs text-gray-400">
-              Milestones approved
+              {t('milestones_approved_label')}
               <select
                 className="input text-xs py-1"
                 value={String(rollupRangeDays)}
@@ -330,9 +322,9 @@ export default function AcademyManager() {
                   )
                 }
               >
-                {ROLLUP_RANGE_OPTIONS.map((opt) => (
-                  <option key={String(opt.value)} value={String(opt.value)}>
-                    {opt.label}
+                {ROLLUP_RANGE_OPTIONS.map((value) => (
+                  <option key={String(value)} value={String(value)}>
+                    {t(`ranges.${value}` as Parameters<typeof t>[0])}
                   </option>
                 ))}
               </select>
@@ -340,12 +332,10 @@ export default function AcademyManager() {
           )}
         </div>
         {academies.length > 0 && !rollupLoading && !rollupIndexerAvailable && (
-          <p className="text-xs text-amber-400">
-            Milestone counts are unavailable right now (indexer unreachable).
-          </p>
+          <p className="text-xs text-amber-400">{t('counts_unavailable')}</p>
         )}
         {academies.length === 0 ? (
-          <p className="text-sm text-gray-400">No academies created.</p>
+          <p className="text-sm text-gray-400">{t('empty')}</p>
         ) : (
           <ul className="flex flex-col gap-6">
             {academies.map((academy) => (
@@ -357,7 +347,7 @@ export default function AcademyManager() {
                   <div>
                     <p className="text-white font-semibold">{academy.name}</p>
                     <p className="text-xs text-gray-400">
-                      Owner:{' '}
+                      {t('owner')}{' '}
                       <TruncatedAddress
                         address={academy.ownerWallet}
                         className="text-gray-400"
@@ -366,8 +356,7 @@ export default function AcademyManager() {
                   </div>
                   <div className="text-right shrink-0">
                     <span className="text-xs text-gray-400 block">
-                      {academy.members.length} signer
-                      {academy.members.length !== 1 ? 's' : ''}
+                      {t('signers', { count: academy.members.length })}
                     </span>
                     {rollupIndexerAvailable &&
                       rollupByAcademy[academy.id]?.approvedMilestones !==
@@ -376,14 +365,13 @@ export default function AcademyManager() {
                         undefined && (
                         <span
                           className="text-xs text-brand-green block"
-                          title="Total milestones approved across this academy's registered signer wallets. Excludes approvals from before a wallet joined; see docs/academy-validator-model.md for the historical-attribution caveat on removed wallets."
+                          title={t('rollup_title')}
                         >
-                          {rollupByAcademy[academy.id]!.approvedMilestones}{' '}
-                          milestone
-                          {rollupByAcademy[academy.id]!.approvedMilestones !== 1
-                            ? 's'
-                            : ''}{' '}
-                          approved
+                          {t('milestones_approved', {
+                            count:
+                              rollupByAcademy[academy.id]!.approvedMilestones ??
+                              0,
+                          })}
                         </span>
                       )}
                   </div>
@@ -398,14 +386,14 @@ export default function AcademyManager() {
                     htmlFor={`quorum-${academy.id}`}
                     className="text-xs text-gray-400 shrink-0"
                   >
-                    Milestone-verification quorum
+                    {t('quorum_label')}
                   </label>
                   <input
                     id={`quorum-${academy.id}`}
                     type="number"
                     min={1}
                     step={1}
-                    placeholder="Not configured"
+                    placeholder={t('not_configured')}
                     className="input w-28 text-sm"
                     value={quorumDraftFor(academy)}
                     onChange={(e) =>
@@ -420,16 +408,15 @@ export default function AcademyManager() {
                     disabled={quorumSaving === academy.id}
                     className="px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 hover:border-brand-green transition text-xs disabled:opacity-40 shrink-0"
                   >
-                    {quorumSaving === academy.id ? 'Saving…' : 'Save'}
+                    {quorumSaving === academy.id ? t('saving') : t('save')}
                   </button>
                   {academy.quorum ? (
                     <span className="text-xs text-emerald-400 shrink-0">
-                      {academy.quorum} signer
-                      {academy.quorum !== 1 ? 's' : ''} required
+                      {t('signers_required', { count: academy.quorum })}
                     </span>
                   ) : (
                     <span className="text-xs text-gray-500 shrink-0">
-                      Not configured
+                      {t('not_configured')}
                     </span>
                   )}
                 </div>
@@ -441,7 +428,7 @@ export default function AcademyManager() {
                       <div className="relative flex-1">
                         <input
                           className="input w-full text-sm pl-9"
-                          placeholder="Search by wallet address"
+                          placeholder={t('search_placeholder')}
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -467,7 +454,7 @@ export default function AcademyManager() {
                             ${showOnlyNotOnChain ? 'bg-amber-400' : 'bg-gray-600'}
                           `}
                         />
-                        Not on-chain only
+                        {t('not_on_chain_only')}
                       </button>
                     </div>
 
@@ -503,9 +490,9 @@ export default function AcademyManager() {
                               {onChainStatus[m.wallet] === false && (
                                 <span
                                   className="text-xs text-amber-400"
-                                  title="Not currently authorized on-chain — add via the Validators section above"
+                                  title={t('not_on_chain_title')}
                                 >
-                                  not on-chain
+                                  {t('not_on_chain')}
                                 </span>
                               )}
                             </div>
@@ -519,7 +506,7 @@ export default function AcademyManager() {
                               }
                               className="text-red-400 hover:text-red-300 transition text-xs shrink-0"
                             >
-                              Remove
+                              {t('remove')}
                             </button>
                           </li>
                         ))}
@@ -538,7 +525,7 @@ export default function AcademyManager() {
                       return matchesSearch && matchesStatusFilter;
                     }).length === 0 && (
                       <p className="text-xs text-gray-500 py-2">
-                        No members match your search/filter criteria.
+                        {t('no_match')}
                       </p>
                     )}
                   </>
@@ -547,7 +534,7 @@ export default function AcademyManager() {
                 <div className="flex gap-2">
                   <input
                     className="input flex-1 text-sm"
-                    placeholder="Add signer wallet (G...)"
+                    placeholder={t('add_member_placeholder')}
                     value={memberInputs[academy.id] ?? ''}
                     onChange={(e) =>
                       setMemberInputs((s) => ({
@@ -570,7 +557,7 @@ export default function AcademyManager() {
                     }
                     className="px-4 py-2 rounded-lg bg-brand-green text-black text-sm font-semibold hover:opacity-90 transition disabled:opacity-40 shrink-0"
                   >
-                    Add
+                    {t('add')}
                   </button>
                 </div>
               </li>
@@ -584,16 +571,20 @@ export default function AcademyManager() {
           isOpen
           title={
             dialog.action === 'add-member'
-              ? 'Add Signer Wallet'
-              : 'Remove Signer Wallet'
+              ? t('add_member_title')
+              : t('remove_member_title')
           }
           message={
             dialog.action === 'add-member'
-              ? `Add ${dialog.wallet} as a signer wallet for this academy?`
-              : `Remove ${dialog.wallet.slice(0, 4)}…${dialog.wallet.slice(-4)} from this academy?`
+              ? t('add_member_confirm', { wallet: dialog.wallet })
+              : t('remove_member_confirm', {
+                  wallet: `${dialog.wallet.slice(0, 4)}…${dialog.wallet.slice(-4)}`,
+                })
           }
           confirmLabel={
-            dialog.action === 'add-member' ? 'Add Signer' : 'Remove Signer'
+            dialog.action === 'add-member'
+              ? t('add_signer')
+              : t('remove_signer')
           }
           loading={actionLoading}
           onConfirm={() =>

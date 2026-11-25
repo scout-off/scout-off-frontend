@@ -56,6 +56,8 @@ jobs:
       - name: Check generated API client is up to date (#1708)
         run: npm run generate:api && git diff --exit-code lib/generated
       - run: npm run lint
+      - name: i18n hard-coded string check (warning mode)
+        run: node scripts/check-hardcoded-strings.js
       - run: npm run type-check
       - run: npm run test
       # Explicit, named accessibility gate: existing *.a11y.test.tsx specs
