@@ -12,7 +12,14 @@ import { formatDate as formatLocaleDate } from '@/lib/localeFormat';
 import type { Locale } from '@/lib/locales';
 
 // Translation keys under player_profile.milestoneTimeline.
-const DISPUTE_STATUS_KEY: Record<MilestoneDispute['status'], string> = {
+const DISPUTE_STATUS_KEY: Record<
+  MilestoneDispute['status'],
+  | 'disputePending'
+  | 'disputeUnderReview'
+  | 'disputeEscalated'
+  | 'disputeUpheld'
+  | 'disputeReversed'
+> = {
   pending: 'disputePending',
   under_review: 'disputeUnderReview',
   escalated: 'disputeEscalated',

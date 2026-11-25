@@ -439,6 +439,7 @@ export default function ScoutDashboardContent() {
           </label>
           <input
             id="name-search"
+            role="combobox"
             className="input"
             placeholder="e.g. Amara Diallo"
             value={nameQuery}

@@ -1,15 +1,16 @@
+import type { Locale } from 'next-intl';
 import { getRequestConfig } from 'next-intl/server';
 
-const locales = ['en', 'fr', 'sw'];
-const defaultLocale = 'en';
+const locales: Locale[] = ['en', 'fr', 'sw'];
+const defaultLocale: Locale = 'en';
 
 export default getRequestConfig(async ({ requestLocale }) => {
-  let locale = await requestLocale;
+  const requested = await requestLocale;
 
   // Fallback to default if undefined or unsupported
-  if (!locale || !locales.includes(locale)) {
-    locale = defaultLocale;
-  }
+  let locale: Locale = locales.includes(requested as Locale)
+    ? (requested as Locale)
+    : defaultLocale;
 
   let messages: Record<string, unknown>;
   try {

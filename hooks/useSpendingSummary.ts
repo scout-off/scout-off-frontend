@@ -133,7 +133,7 @@ export function useSpendingSummary(): {
       }
     }
 
-    load();
+    void load();
     return () => {
       cancelled = true;
     };

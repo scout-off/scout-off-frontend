@@ -35,7 +35,7 @@ const SEEN_BADGES_STORAGE_PREFIX = 'scoutoff_seen_badges_';
 
 type TabId = 'register' | 'profile';
 
-const TABS: { id: TabId; labelKey: string }[] = [
+const TABS: { id: TabId; labelKey: 'tab_register' | 'tab_profile' }[] = [
   { id: 'register', labelKey: 'tab_register' },
   { id: 'profile', labelKey: 'tab_profile' },
 ] as const;

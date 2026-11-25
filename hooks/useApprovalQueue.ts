@@ -89,7 +89,7 @@ export function useApprovalQueue(validatorAddress: string | null) {
   useEffect(() => {
     mountedRef.current = true;
     setLoaded(false);
-    refresh();
+    void refresh();
     return () => {
       mountedRef.current = false;
     };
@@ -232,11 +232,11 @@ export function useApprovalQueue(validatorAddress: string | null) {
 
   useEffect(() => {
     const handleOnline = () => {
-      registerSync();
-      refresh();
+      void registerSync();
+      void refresh();
     };
     const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'APPROVAL_SYNC_READY') refresh();
+      if (event.data?.type === 'APPROVAL_SYNC_READY') void refresh();
     };
     window.addEventListener('online', handleOnline);
     if ('serviceWorker' in navigator) {

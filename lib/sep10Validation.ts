@@ -145,7 +145,7 @@ export function validateSep10Challenge(
     parsed &&
     typeof parsed === 'object' &&
     'innerTransaction' in parsed &&
-    (parsed as FeeBumpTransaction).innerTransaction
+    parsed.innerTransaction
   ) {
     return fail('Challenge must not be a fee-bump transaction');
   }

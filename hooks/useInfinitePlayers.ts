@@ -128,7 +128,7 @@ export function useInfinitePlayers(
   const players = data ? data.flatMap((page) => page.players) : [];
 
   const loadMore = useCallback(() => {
-    setSize(size + 1);
+    void setSize(size + 1);
   }, [setSize, size]);
 
   const refetch = useCallback(async () => {

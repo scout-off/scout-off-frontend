@@ -102,7 +102,7 @@ export function useNotifications(wallet: string | null) {
   const markRead = useCallback(
     async (id: number) => {
       // Optimistic update: flip the targeted notification to read in-cache.
-      mutateReadIds((current) => {
+      void mutateReadIds((current) => {
         const existing = current ?? [];
         return existing.includes(id) ? existing : [...existing, id];
       }, false);
@@ -110,7 +110,7 @@ export function useNotifications(wallet: string | null) {
         await markNotificationsRead([id]);
       } finally {
         // Re-validate to sync server state.
-        mutateReadIds();
+        void mutateReadIds();
       }
     },
     [mutateReadIds],
@@ -120,7 +120,7 @@ export function useNotifications(wallet: string | null) {
     const unreadIds = notifications.filter((n) => !n.read).map((n) => n.id);
     if (unreadIds.length === 0) return;
     // Optimistic update: add all unread IDs to the read set.
-    mutateReadIds((current) => {
+    void mutateReadIds((current) => {
       const existing = current ?? [];
       const toAdd = unreadIds.filter((id) => !existing.includes(id));
       return toAdd.length > 0 ? [...existing, ...toAdd] : existing;
@@ -128,7 +128,7 @@ export function useNotifications(wallet: string | null) {
     try {
       await markNotificationsRead(unreadIds);
     } finally {
-      mutateReadIds();
+      void mutateReadIds();
     }
   }, [notifications, mutateReadIds]);
 

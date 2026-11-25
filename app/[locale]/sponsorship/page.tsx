@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import type { Locale } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
 import SponsorshipClient from './SponsorshipClient';
 
@@ -13,7 +14,10 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const params = await props.params;
   const locale = params.locale;
-  const t = await getTranslations({ locale, namespace: 'sponsorship' });
+  const t = await getTranslations({
+    locale: locale as Locale,
+    namespace: 'sponsorship',
+  });
 
   const { buildPageMetadata } = await import('@/lib/seo');
   return buildPageMetadata({

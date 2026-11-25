@@ -1,12 +1,24 @@
 import type { WatchlistEntry } from '@/types';
 import { fetchWithRetry, fetchWithTimeout } from '@/lib/fetchWithRetry';
+import * as api from '@/lib/generated/apiClient';
 
-/** Client for app/api/watchlist — same-origin, cookie-authenticated. */
+/**
+ * Client for app/api/watchlist — same-origin, cookie-authenticated. Thin
+ * wrapper over the generated client (lib/generated/apiClient.ts, #1708).
+ */
+
+/** Keeps this client's historical error messages for non-2xx responses. */
+function failWith(message: string) {
+  return (err: unknown): never => {
+    if (err instanceof api.ApiError) throw new Error(message);
+    throw err;
+  };
+}
 
 export async function fetchWatchlist(): Promise<WatchlistEntry[]> {
-  const res = await fetchWithRetry('/api/watchlist');
-  if (!res.ok) throw new Error('Failed to fetch watchlist');
-  return res.json();
+  return api
+    .getWatchlist({ fetcher: fetchWithRetry })
+    .catch(failWith('Failed to fetch watchlist'));
 }
 
 // addToWatchlist/removeFromWatchlist deliberately use fetchWithTimeout rather
@@ -17,20 +29,13 @@ export async function fetchWatchlist(): Promise<WatchlistEntry[]> {
 export async function addToWatchlist(
   playerId: string,
 ): Promise<WatchlistEntry> {
-  const res = await fetchWithTimeout('/api/watchlist', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ playerId }),
-  });
-  if (!res.ok) throw new Error('Failed to add to watchlist');
-  return res.json();
+  return api
+    .addToWatchlist(playerId, { fetcher: fetchWithTimeout })
+    .catch(failWith('Failed to add to watchlist'));
 }
 
 export async function removeFromWatchlist(id: number): Promise<void> {
-  const res = await fetchWithTimeout('/api/watchlist', {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id }),
-  });
-  if (!res.ok) throw new Error('Failed to remove from watchlist');
+  await api
+    .removeFromWatchlist(id, { fetcher: fetchWithTimeout })
+    .catch(failWith('Failed to remove from watchlist'));
 }

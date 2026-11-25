@@ -37,12 +37,12 @@ export function useNotificationPreferences(wallet: string | null) {
   const update = useCallback(
     async (next: NotificationPreferences) => {
       const previous = preferences;
-      mutate(next, false);
+      void mutate(next, false);
       try {
         const saved = await updateNotificationPreferences(next);
-        mutate(saved, false);
+        void mutate(saved, false);
       } catch (err) {
-        mutate(previous, false);
+        void mutate(previous, false);
         throw err;
       }
     },

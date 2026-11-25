@@ -74,6 +74,7 @@ export default function SavedSearchesMenu({
                       setRenamingId(null);
                     }
                   }}
+                  // eslint-disable-next-line jsx-a11y/no-autofocus -- the rename input only appears after the user clicks "Rename", so focus follows their action.
                   autoFocus
                 />
                 <button

@@ -118,7 +118,7 @@ export function withOutboundSpan<T>(
         throw error;
       }
     },
-  ) as T | Promise<T>;
+  );
 }
 
 export function telemetryFetch(

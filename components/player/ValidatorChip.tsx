@@ -100,7 +100,7 @@ export default function ValidatorChip({
     unknown: 'bg-gray-700/60 text-gray-400 border border-gray-600/60',
   };
 
-  const statusLabelKey: Record<Status, string> = {
+  const statusLabelKey: Record<Status, Status> = {
     loading: 'loading',
     active: 'active',
     former: 'former',

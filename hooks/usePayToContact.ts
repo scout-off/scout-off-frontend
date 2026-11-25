@@ -274,7 +274,7 @@ export function usePayToContact(
   /** Purges this player's cached contact details immediately. */
   const clear = useCallback(() => {
     if (!key) return;
-    purgeContactDetails(key);
+    void purgeContactDetails(key);
   }, [key]);
 
   return {

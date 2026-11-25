@@ -169,7 +169,7 @@ export async function fetchStrictReceiveQuote(
 function toSdkAsset(a: HorizonPathAsset): Asset {
   return a.asset_type === 'native'
     ? Asset.native()
-    : new Asset(a.asset_code!, a.asset_issuer!);
+    : new Asset(a.asset_code!, a.asset_issuer);
 }
 
 /**

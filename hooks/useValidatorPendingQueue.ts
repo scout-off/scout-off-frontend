@@ -71,7 +71,7 @@ export function useValidatorPendingQueue(validatorAddress: string | null) {
   }, [validatorAddress, hasMore, setSize, size]);
 
   const refetch = useCallback(() => {
-    if (validatorAddress) mutate(undefined, { revalidate: true });
+    if (validatorAddress) void mutate(undefined, { revalidate: true });
   }, [validatorAddress, mutate]);
 
   // Live presence: poll for lease changes while the queue is visible.

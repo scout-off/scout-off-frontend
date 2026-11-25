@@ -38,7 +38,7 @@ export function useDisputeQueue(status?: MilestoneDisputeStatus) {
       },
     ) => {
       const updated = await decideDispute(id, decision);
-      mutate(
+      void mutate(
         (current) => (current ?? []).filter((d) => d.id !== updated.id),
         false,
       );

@@ -1078,5 +1078,13 @@
     "sorted_ascending": "Trié par {column}, ordre croissant",
     "sorted_descending": "Trié par {column}, ordre décroissant",
     "scroll_region": "{caption} (défilable)"
+  },
+  "session": {
+    "expiringSoonTitle": "Session bientôt expirée",
+    "expiringSoonMessage": "Votre session expire dans {minutes} minutes.",
+    "dismiss": "Ignorer",
+    "reauthenticate": "Renouveler la session",
+    "renewedSuccess": "Session renouvelée avec succès.",
+    "renewFailed": "Échec du renouvellement de la session."
   }
 }

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { Locale } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
 import {
   MessageCircle,
@@ -47,7 +48,10 @@ export default async function HomePage(props: {
   const searchParams = await props.searchParams;
   const params = await props.params;
   const locale = params.locale;
-  const t = await getTranslations({ locale, namespace: 'footer' });
+  const t = await getTranslations({
+    locale: locale as Locale,
+    namespace: 'footer',
+  });
 
   return (
     <div className="flex flex-col gap-24 pb-20">

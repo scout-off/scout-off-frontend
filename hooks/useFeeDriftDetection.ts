@@ -44,7 +44,7 @@ export function useFeeDriftDetection(): FeeDriftState {
   }, []);
 
   useEffect(() => {
-    checkDrift();
+    void checkDrift();
   }, [checkDrift]);
 
   const hasDrift =
@@ -60,6 +60,6 @@ export function useFeeDriftDetection(): FeeDriftState {
     warningMessage,
     loading,
     error,
-    refetch: checkDrift,
+    refetch: () => void checkDrift(),
   };
 }

@@ -488,6 +488,23 @@ npm run lint
 
 ---
 
+## Generated API client (`lib/generated/`)
+
+`lib/generated/apiTypes.ts` and `lib/generated/apiClient.ts` are generated from `openapi/scout-off-api.yaml` and committed. Do not edit them by hand.
+
+When you change a route's request or response shape:
+
+1. Update `openapi/scout-off-api.yaml` to match the handler.
+2. Regenerate both files with `npm run generate:api`. This fetches `openapi-typescript@7.4.4` and `tsx` through `npx`, because openapi-typescript peers on TypeScript 5 and would break `npm ci`. For a change to the runtime client itself, edit the template in `scripts/generate-api-client.ts`.
+3. Commit the spec and `lib/generated/` together.
+
+Two CI checks catch drift:
+
+- The `lint` job reruns the generator and fails on `git diff --exit-code lib/generated` when the committed files are stale.
+- `__tests__/api/openapiContract.test.ts` calls the route handlers and validates their responses against the spec with ajv. Type generation alone can't detect a spec that disagrees with the handler. When you migrate another hand-written client, add its routes to this test.
+
+`lib/watchlistClient.ts`, `lib/savedSearchClient.ts` and `lib/recentlyViewedClient.ts` are thin wrappers over the generated client. They keep their exported names, so hooks don't change. They pass `fetchWithRetry` or `fetchWithTimeout` as the `fetcher` to keep the retry and timeout behaviour from #1508.
+
 ## Referral Links (`?ref=CODE`)
 
 The scout referral program passes a referral code between two independent parts of the app via a plain query string — there's no shared constant or type enforcing this contract, so it's easy to break by accident. This section documents the current, verified behavior end to end.

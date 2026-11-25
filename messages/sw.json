@@ -1078,5 +1078,13 @@
     "sorted_ascending": "Imepangwa kwa {column}, kupanda",
     "sorted_descending": "Imepangwa kwa {column}, kushuka",
     "scroll_region": "{caption} (inasogezeka)"
+  },
+  "session": {
+    "expiringSoonTitle": "Kipindi Kinaisha Muda Hivi Karibuni",
+    "expiringSoonMessage": "Kipindi chako kitaisha baada ya dakika {minutes}.",
+    "dismiss": "Funga",
+    "reauthenticate": "Sasisha Kipindi",
+    "renewedSuccess": "Kipindi kimesasishwa kikamilifu.",
+    "renewFailed": "Imeshindwa kusasisha kipindi."
   }
 }

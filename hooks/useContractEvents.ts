@@ -198,7 +198,7 @@ export function useContractEvents(contractId?: string) {
         }
       }
 
-      poll();
+      void poll();
       // Skip ticks while the tab is hidden (#1511) — no point fetching
       // events nobody can see; the next visible tick catches up via the cursor.
       pollTimer = setInterval(() => {
@@ -215,10 +215,7 @@ export function useContractEvents(contractId?: string) {
 
       es.addEventListener('message', (ev) => {
         try {
-          const op = JSON.parse((ev as MessageEvent).data) as Record<
-            string,
-            unknown
-          >;
+          const op = JSON.parse(ev.data) as Record<string, unknown>;
           const feedEv = toFeedEvent(op);
           if (feedEv) mergeEvents([feedEv]);
         } catch {

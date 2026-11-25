@@ -111,7 +111,7 @@ export function useOfflineQueue() {
 
       // If online, try to process right away
       if (navigator.onLine) {
-        processAll();
+        void processAll();
       }
 
       return id;
@@ -143,7 +143,7 @@ export function useOfflineQueue() {
   // Initialise counts on mount
   useEffect(() => {
     mountedRef.current = true;
-    refreshCounts();
+    void refreshCounts();
 
     return () => {
       mountedRef.current = false;
@@ -153,7 +153,7 @@ export function useOfflineQueue() {
   // Listen for online/offline events
   useEffect(() => {
     const handleOnline = () => {
-      processAll();
+      void processAll();
     };
     const handleOffline = () => {
       if (mountedRef.current) {
@@ -173,7 +173,7 @@ export function useOfflineQueue() {
   // Attempt to register background sync if available
   useEffect(() => {
     if ('serviceWorker' in navigator && 'sync' in navigator) {
-      navigator.serviceWorker.ready.then((registration) => {
+      void navigator.serviceWorker.ready.then((registration) => {
         const syncRegistration = registration as ServiceWorkerRegistration & {
           sync: { register(tag: string): Promise<void> };
         };
@@ -187,7 +187,7 @@ export function useOfflineQueue() {
     // (sent when a background sync event fires).
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === 'PROCESS_OFFLINE_QUEUE') {
-        processAll();
+        void processAll();
       }
     };
 
@@ -206,7 +206,7 @@ export function useOfflineQueue() {
   // previous session and connectivity has since been restored)
   useEffect(() => {
     if (navigator.onLine) {
-      processAll();
+      void processAll();
     }
     // Only on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps

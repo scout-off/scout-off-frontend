@@ -150,6 +150,7 @@ export default function OnboardingTour({
   return (
     <>
       {/* Backdrop */}
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- clicking the backdrop is a mouse shortcut for the keyboard-accessible Skip button and Escape. */}
       <div className="fixed inset-0 z-40 bg-black/70" onClick={onSkip} />
 
       {/* Highlight spotlight */}

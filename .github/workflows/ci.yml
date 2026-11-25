@@ -53,6 +53,8 @@ jobs:
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm run format:check
+      - name: Check generated API client is up to date (#1708)
+        run: npm run generate:api && git diff --exit-code lib/generated
       - run: npm run lint
       - run: npm run type-check
       - run: npm run test

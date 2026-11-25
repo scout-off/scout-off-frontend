@@ -37,7 +37,7 @@ export function useDisputeDetail(id: number | null) {
       if (id === null) throw new Error('No dispute id');
       const event = await addEvidence(id, params);
       // Optimistically append to the timeline, then revalidate.
-      mutate(
+      void mutate(
         (current) =>
           current
             ? { ...current, events: [...current.events, event] }

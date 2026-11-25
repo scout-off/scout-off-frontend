@@ -86,9 +86,9 @@ export async function POST(req: NextRequest) {
   try {
     const created = MediaModerationStore.getInstance().report({
       cid,
-      playerId: (playerId as string | undefined) ?? null,
+      playerId: playerId ?? null,
       reason,
-      details: (details as string | undefined)?.trim() || null,
+      details: details?.trim() || null,
       reporterKey: reporterKey(req, ip),
     });
     return privateJson(

@@ -230,7 +230,7 @@ export function initEventStream(wallet?: string): void {
   // Try to acquire the leader lock. The callback runs only for the tab that
   // wins. Other tabs stay in follower mode (setupFollower handles them).
   if ('locks' in navigator) {
-    navigator.locks.request(LOCK_NAME, { mode: 'exclusive' }, async () => {
+    void navigator.locks.request(LOCK_NAME, { mode: 'exclusive' }, async () => {
       connectLeader(wallet);
       // Hold the lock indefinitely (returning never releases it).
       return new Promise<void>(() => {});

@@ -51,7 +51,7 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 
 const VARIANT_META: Record<
   ToastVariant,
-  { border: string; iconClass: string; label: string }
+  { border: string; iconClass: string; label: ToastVariant }
 > = {
   success: {
     border: 'border-brand-green',

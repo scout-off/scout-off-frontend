@@ -227,6 +227,7 @@ export default function PlayerFilterForm({
                   }
                 }}
                 placeholder={t('save_search_placeholder')}
+                // eslint-disable-next-line jsx-a11y/no-autofocus -- the input only appears after the user clicks "Save search", so focus follows their action.
                 autoFocus
               />
             </div>

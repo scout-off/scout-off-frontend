@@ -14,7 +14,7 @@ import SkipToContent from '@/components/SkipToContent';
 import SessionExpiryWarning from '@/components/SessionExpiryWarning';
 import CookieConsentGate from '@/components/ui/CookieConsentGate';
 import A11yDevAudit from '@/components/A11yDevAudit';
-import { NextIntlClientProvider } from 'next-intl';
+import { NextIntlClientProvider, type Locale } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { validateConfig } from '@/lib/config';
 import { locales, defaultLocale } from '@/lib/locales';
@@ -133,7 +133,7 @@ export default async function RootLayout({
       <body>
         <A11yDevAudit />
         <ThemeProvider>
-          <NextIntlClientProvider locale={locale} messages={messages}>
+          <NextIntlClientProvider locale={locale as Locale} messages={messages}>
             <SkipToContent />
             <WalletProvider>
               <ToastProvider>
