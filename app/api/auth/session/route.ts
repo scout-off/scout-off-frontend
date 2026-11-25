@@ -41,6 +41,7 @@ export async function GET(req: NextRequest) {
   const rl = await checkRateLimit(`auth-session:${key}`, {
     limit: RATE_LIMIT,
     windowMs: WINDOW_MS,
+    algorithm: 'sliding',
   });
   if (rl.limited) {
     console.warn(`[session rate limit] Too many requests from: ${key}`);

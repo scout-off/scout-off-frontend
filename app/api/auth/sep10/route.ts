@@ -25,6 +25,12 @@ import { SessionStore } from '@/lib/sessionStore';
 import { Sep10NonceStore } from '@/lib/sep10NonceStore';
 import { withRouteTelemetry } from '@/lib/telemetry';
 import { getNetworkPassphrase } from '@/lib/network';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
+
+// Sliding-window limit for challenge + verify (#1700); same budget as the
+// authSep10 entry in lib/rateLimitPolicies.ts.
+const RATE_LIMIT = 20;
+const WINDOW_MS = 60_000;
 
 // better-sqlite3 (via lib/sessionStore.ts) is a native addon and needs the
 // Node.js runtime, not edge.

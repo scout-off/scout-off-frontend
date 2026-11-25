@@ -487,6 +487,8 @@ describe('POST /api/auth/sep10 — rate limiting (issue #1700)', () => {
       expect.objectContaining({ algorithm: 'sliding' }),
     );
   });
+});
+
 // ── SEP-10 replay protection (#1488) ────────────────────────────────────────
 describe('POST /api/auth/sep10 — nonce replay protection', () => {
   test('returns 200 for the first use of a signed XDR', async () => {

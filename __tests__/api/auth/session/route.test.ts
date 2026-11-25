@@ -21,6 +21,7 @@ jest.mock('@/lib/rateLimit', () => ({
     return 'unknown';
   }),
   checkRateLimit: jest.fn().mockResolvedValue({ limited: false }),
+  _resetRateLimitStoreForTests: jest.fn(),
 }));
 
 import { checkRateLimit } from '@/lib/rateLimit';
