@@ -132,7 +132,7 @@ async function recordMatches(
       searchName: search.name,
       playerId,
       eventId: event.id,
-      filter: search.filter as PlayerFilter,
+      filter: search.filter,
     });
     if (alert) recorded++;
   }

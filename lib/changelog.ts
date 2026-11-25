@@ -54,7 +54,7 @@ export function parseChangelogMarkdown(markdown: string): ChangelogEntry[] {
       }
       const type = line.slice(4).trim().toLowerCase();
       if (type === 'added' || type === 'improved' || type === 'fixed') {
-        currentSection = { type: type as ChangelogSectionType, items: [] };
+        currentSection = { type, items: [] };
         currentEntry.sections.push(currentSection);
       }
       continue;

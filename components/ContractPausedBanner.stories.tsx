@@ -41,6 +41,7 @@ function PausedBannerPreview({ onDismiss = fn() }: { onDismiss?: () => void }) {
             </a>{' '}
             <span>
               or{' '}
+              {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- static story markup */}
               <a href="/en/status" className="underline font-medium">
                 check status
               </a>

@@ -63,6 +63,9 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
         >
           Try Again
         </button>
+        {/* A full page load (not <Link>) is intentional: it discards the
+            client state that just threw. */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a
           href="/"
           className="border border-gray-700 text-gray-300 px-6 py-2.5 rounded-xl hover:border-gray-500 transition"

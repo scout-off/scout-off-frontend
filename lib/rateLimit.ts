@@ -232,9 +232,11 @@ return { count, math.floor(ttl / 1000) }`;
     // TTL = 2× window so both windows remain readable during the overlap
     const ttlSec = Math.max(1, Math.ceil((windowMs * 2) / 1000));
 
-    const result = (await this.redis.eval(SLIDING_WINDOW_LUA, [currentKey, prevKey], [
-      String(ttlSec),
-    ])) as [number, number];
+    const result = await this.redis.eval<string[], [number, number]>(
+      SLIDING_WINDOW_LUA,
+      [currentKey, prevKey],
+      [String(ttlSec)],
+    );
 
     const currentCount = result[0];
     const prevCount = result[1] ?? 0;

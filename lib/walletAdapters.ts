@@ -49,7 +49,7 @@ async function getWcClient(networkPassphrase: string) {
       icons: [],
     },
   });
-  _wcClient = provider as unknown as typeof _wcClient;
+  _wcClient = provider;
   _wcChainId = chainId;
   return _wcClient;
 }

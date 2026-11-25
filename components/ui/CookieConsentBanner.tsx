@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { ShieldCheck, X } from 'lucide-react';
 import { COOKIE_CONSENT_KEY } from '@/lib/storageKeys';
 import { useTranslations } from 'next-intl';
@@ -133,12 +134,12 @@ export default function CookieConsentBanner({
               We use Vercel Analytics to understand how our platform is used and
               Sentry for error monitoring. We never use third-party advertising
               trackers. Your data stays private — see our{' '}
-              <a
+              <Link
                 href="/privacy"
                 className="text-brand-green underline underline-offset-2 hover:text-green-400"
               >
                 Privacy Policy
-              </a>{' '}
+              </Link>{' '}
               for details.
             </p>
           </div>

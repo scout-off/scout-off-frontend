@@ -127,7 +127,7 @@
     "node": ">=24"
   },
   "overrides": {
-    "yaml": "^2.8.3",
+    "yaml": "$yaml",
     "postcss": "^8.5.26",
     "serialize-javascript": "^7.1.0",
     "tmp": "^0.2.7",
