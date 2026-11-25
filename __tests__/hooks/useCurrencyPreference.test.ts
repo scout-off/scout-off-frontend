@@ -85,4 +85,65 @@ describe('useCurrencyPreference — persisting a change', () => {
 
     expect(result.current.preference).toBe('fiat');
   });
+
+  it('shares state across consumers so a change in one updates the other', () => {
+    const first = renderHook(() => useCurrencyPreference());
+    const second = renderHook(() => useCurrencyPreference());
+
+    act(() => {
+      first.result.current.setCurrency('EUR');
+    });
+
+    expect(first.result.current.currency).toBe('EUR');
+    expect(second.result.current.currency).toBe('EUR');
+  });
+
+  it('updates the preference when a storage event arrives from another tab', () => {
+    const { result } = renderHook(() => useCurrencyPreference());
+
+    act(() => {
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: STORAGE_KEY,
+          newValue: 'GBP',
+        })
+      );
+    });
+
+    expect(result.current.currency).toBe('GBP');
+  });
+
+  it('ignores storage events for unrelated keys', () => {
+    const { result } = renderHook(() => useCurrencyPreference());
+
+    act(() => {
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: 'some_other_key',
+          newValue: 'JPY',
+        })
+      );
+    });
+
+    expect(result.current.currency).toBe('USD');
+  });
+
+  it('falls back to USD when a storage event carries an invalid value', () => {
+    const { result } = renderHook(() => useCurrencyPreference());
+
+    act(() => {
+      result.current.setCurrency('EUR');
+    });
+
+    act(() => {
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: STORAGE_KEY,
+          newValue: 'XYZ',
+        })
+      );
+    });
+
+    expect(result.current.currency).toBe('USD');
+  });
 });

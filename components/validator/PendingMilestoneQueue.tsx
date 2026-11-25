@@ -69,6 +69,19 @@ function phaseToItemStatus(phase: ApprovalPhase): ItemStatus | null {
   }
 }
 
+function truncateAddress(address: string): string {
+  if (address.length <= 10) return address;
+  return `${address.slice(0, 5)}…${address.slice(-4)}`;
+}
+
+function isLeaseActive(submission: MilestoneSubmission): boolean {
+  return (
+    !!submission.claimedBy &&
+    !!submission.leaseExpiresAt &&
+    submission.leaseExpiresAt > Date.now()
+  );
+}
+
 export default function PendingMilestoneQueue({
   validatorAddress,
 }: PendingMilestoneQueueProps) {
@@ -237,409 +250,262 @@ export default function PendingMilestoneQueue({
             }
             if (
               meta.message &&
-              (phase === 'failed' || phase === 'timeout' || phase === 'error')
+              (phase === 'failed' || phase === 'error' || phase === 'timeout')
             ) {
-              setItemError((prev) => ({
-                ...prev,
-                [id]: meta.message!,
-              }));
+              setItemError((prev) => ({ ...prev, [id]: meta.message! }));
             }
           },
         });
 
-        if (result.hash) {
-          setItemHash((prev) => ({ ...prev, [id]: result.hash! }));
-        }
-
-        if (isOnChainApproved(result.phase)) {
-          // Only notify the backend after ledger confirmation (or confirmed
-          // with indexer lag — on-chain state is still correct).
-          await decideMilestoneSubmission(id, 'approved', result.hash!);
-          setItemStatus((prev) => ({
-            ...prev,
-            [id]: result.phase === 'event_lag' ? 'event_lag' : 'success',
-          }));
-          if (result.phase === 'event_lag') {
-            setItemError((prev) => ({ ...prev, [id]: result.message }));
-          }
-          succeeded++;
+        if (result.status === 'success' || result.status === 'event_lag') {
+          succeeded += 1;
+          setItemStatus((prev) => ({ ...prev, [id]: 'success' }));
+          await decideMilestoneSubmission(id, 'approve').catch(() => {});
+        } else if (result.status === 'skipped') {
+          setItemStatus((prev) => ({ ...prev, [id]: 'skipped' }));
         } else {
-          setItemStatus((prev) => ({
-            ...prev,
-            [id]:
-              result.phase === 'timeout'
-                ? 'timeout'
-                : result.phase === 'failed'
-                  ? 'failed'
-                  : 'error',
-          }));
-          setItemError((prev) => ({ ...prev, [id]: result.message }));
-          failed++;
+          failed += 1;
         }
-      } catch (e) {
+      } catch (err) {
+        failed += 1;
         setItemStatus((prev) => ({ ...prev, [id]: 'error' }));
         setItemError((prev) => ({
           ...prev,
-          [id]: e instanceof Error ? e.message : 'Approval failed',
+          [id]: err instanceof Error ? err.message : String(err),
         }));
-        failed++;
+      } finally {
+        processedIds.add(id);
       }
-
-      processedIds.add(id);
     }
 
-    // Items never reached because the batch was stopped are neither
-    // succeeded nor failed — mark them distinctly and leave them selected
-    // so the validator can resume or retry them directly.
-    const skippedIds = ids.filter((id) => !processedIds.has(id));
-    if (skippedIds.length > 0) {
-      setItemStatus((prev) => ({
-        ...prev,
-        ...Object.fromEntries(skippedIds.map((id) => [id, 'skipped'])),
-      }));
-    }
-
-    setBulkSummary({ succeeded, failed, skipped: skippedIds.length });
+    setBulkSummary({ succeeded, failed, skipped: ids.length - succeeded - failed });
+    setBulkRunning(false);
+    setStopRequested(false);
     setSelectedIds((prev) => {
       const next = new Set(prev);
       processedIds.forEach((id) => next.delete(id));
       return next;
     });
-    setBulkRunning(false);
-    setStopRequested(false);
-    refetch(); // drop the now-approved items from the pending list; a
-    // cancelled batch may still have items that succeeded before it stopped
+    await refetch();
   }
 
-  const selectedCount = visibleIds.filter((id) => selectedIds.has(id)).length;
+  async function handleApproveOne(submission: MilestoneSubmission) {
+    if (!validatorAddress || isPaused) return;
+    const id = submission.id;
+
+    if (isLeaseActive(submission) && submission.claimedBy !== validatorAddress) {
+      setItemStatus((prev) => ({ ...prev, [id]: 'skipped' }));
+      setItemError((prev) => ({
+        ...prev,
+        [id]: `Being reviewed by ${truncateAddress(submission.claimedBy!)}`,
+      }));
+      return;
+    }
+
+    if (!isOnline) {
+      await approvalQueue.enqueueMany([
+        { playerId: submission.playerId, milestone: submission.description },
+      ]);
+      return;
+    }
+
+    setItemStatus((prev) => ({ ...prev, [id]: 'signing' }));
+    setItemError((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+
+    try {
+      const result = await submitAndConfirmApproval({
+        buildXdr: () =>
+          approveMilestone(submission.playerId, submission.description),
+        signAndSubmit,
+        playerId: submission.playerId,
+        validatorAddress,
+        confirmMaxAttempts: CONFIRM_MAX_ATTEMPTS,
+        confirmDelayMs: CONFIRM_POLL_INTERVAL_MS,
+        onPhase: (phase, meta) => {
+          const mapped = phaseToItemStatus(phase);
+          if (mapped) {
+            setItemStatus((prev) => ({ ...prev, [id]: mapped }));
+          }
+          if (meta.hash) {
+            setItemHash((prev) => ({ ...prev, [id]: meta.hash! }));
+          }
+          if (
+            meta.message &&
+            (phase === 'failed' || phase === 'error' || phase === 'timeout')
+          ) {
+            setItemError((prev) => ({ ...prev, [id]: meta.message! }));
+          }
+        },
+      });
+
+      if (result.status === 'success' || result.status === 'event_lag') {
+        setItemStatus((prev) => ({ ...prev, [id]: 'success' }));
+        await decideMilestoneSubmission(id, 'approve').catch(() => {});
+      } else if (result.status === 'skipped') {
+        setItemStatus((prev) => ({ ...prev, [id]: 'skipped' }));
+      }
+    } catch (err) {
+      setItemStatus((prev) => ({ ...prev, [id]: 'error' }));
+      setItemError((prev) => ({
+        ...prev,
+        [id]: err instanceof Error ? err.message : String(err),
+      }));
+    } finally {
+      await refetch();
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <EmptyState
+        title="Unable to load pending milestones"
+        description={error}
+      />
+    );
+  }
+
+  if (visibleSubmissions.length === 0) {
+    return (
+      <EmptyState
+        title="No pending milestones"
+        description="Milestone submissions awaiting validator approval will appear here."
+      />
+    );
+  }
 
   return (
-    <div className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="text-lg font-semibold text-white">Pending Milestones</h2>
-        {!loading && !error && (
-          <span className="text-sm text-gray-400">
-            {visibleSubmissions.length} pending
-          </span>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <Select
+          value={sortOrder}
+          onChange={(e) => setSortOrder(e.target.value as SortOrder)}
+          options={[
+            { value: 'oldest', label: 'Oldest first' },
+            { value: 'newest', label: 'Newest first' },
+          ]}
+        />
+        <Select
+          value={playerFilter}
+          onChange={(e) => setPlayerFilter(e.target.value as PlayerFilter)}
+          options={[
+            { value: 'all', label: 'All players' },
+            { value: 'previously-approved', label: 'Previously approved' },
+          ]}
+        />
+        <Button
+          variant="secondary"
+          onClick={toggleSelectAllVisible}
+          disabled={bulkRunning}
+        >
+          {allVisibleSelected ? 'Clear selection' : 'Select all'}
+        </Button>
+        <Button
+          onClick={handleBulkApprove}
+          disabled={bulkRunning || selectedIds.size === 0 || isPaused}
+        >
+          {bulkRunning ? 'Approving…' : `Approve selected (${selectedIds.size})`}
+        </Button>
+        {bulkRunning && (
+          <Button variant="secondary" onClick={handleCancelBulk}>
+            {stopRequested ? 'Stopping…' : 'Stop'}
+          </Button>
         )}
       </div>
 
-      <div className="flex flex-wrap gap-4">
-        <Select
-          id="pending-queue-sort"
-          label="Sort"
-          className="w-40"
-          value={sortOrder}
-          onChange={(e) => setSortOrder(e.target.value as SortOrder)}
-        >
-          <option value="oldest">Oldest first</option>
-          <option value="newest">Newest first</option>
-        </Select>
-
-        <Select
-          id="pending-queue-filter"
-          label="Filter"
-          className="w-56"
-          value={playerFilter}
-          onChange={(e) => setPlayerFilter(e.target.value as PlayerFilter)}
-        >
-          <option value="all">All players</option>
-          <option value="previously-approved">
-            Only players I&apos;ve previously approved
-          </option>
-        </Select>
-      </div>
-
-      {(approvalQueue.pending.length > 0 ||
-        approvalQueue.terminal.length > 0) && (
-        <section
-          aria-label="Offline approval queue"
-          className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="font-medium text-amber-200">
-                {approvalQueue.pending.length} approval
-                {approvalQueue.pending.length === 1 ? '' : 's'} ready to sign
-              </h3>
-              <p className="mt-1 text-xs text-amber-300/80">
-                Unsigned approvals are stored on this device. Review the batch
-                before opening your wallet.
-              </p>
-            </div>
-            <Button
-              variant="secondary"
-              onClick={approvalQueue.flush}
-              disabled={
-                approvalQueue.pending.length === 0 ||
-                approvalQueue.flushing ||
-                !isOnline ||
-                isPaused
-              }
-            >
-              {approvalQueue.flushing
-                ? 'Signing queued approvals…'
-                : `Sign ${approvalQueue.pending.length} queued approval${approvalQueue.pending.length === 1 ? '' : 's'}`}
-            </Button>
-          </div>
-          {approvalQueue.flushError && (
-            <p role="alert" className="mt-3 text-sm text-red-300">
-              {approvalQueue.flushError}
-            </p>
-          )}
-          <ul className="mt-3 space-y-2">
-            {[...approvalQueue.pending, ...approvalQueue.terminal].map(
-              (intent) => (
-                <li
-                  key={intent.idempotencyKey}
-                  className="flex items-start justify-between gap-3 rounded-md border border-gray-700/80 px-3 py-2 text-xs"
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate text-gray-200">
-                      {intent.playerId}: {intent.milestone}
-                    </span>
-                    <span
-                      className={`block mt-1 ${
-                        intent.status === 'confirmed'
-                          ? 'text-brand-green'
-                          : intent.status === 'invalid'
-                            ? 'text-red-300'
-                            : 'text-amber-300'
-                      }`}
-                    >
-                      {intent.errorReason ??
-                        (intent.status === 'confirmed'
-                          ? 'Confirmed on-chain'
-                          : intent.status === 'invalid'
-                            ? 'Approval is no longer valid'
-                            : 'Waiting for batch signing')}
-                    </span>
-                  </span>
-                  {(intent.status === 'confirmed' ||
-                    intent.status === 'invalid') && (
-                    <button
-                      type="button"
-                      className="shrink-0 text-gray-400 underline hover:text-white"
-                      onClick={() =>
-                        approvalQueue.dismiss(intent.idempotencyKey)
-                      }
-                    >
-                      Dismiss
-                    </button>
-                  )}
-                </li>
-              ),
-            )}
-          </ul>
-        </section>
-      )}
-
-      {loading && (
-        <div className="flex flex-col gap-3">
-          {[1, 2, 3].map((n) => (
-            <div
-              key={n}
-              className="h-16 rounded-lg bg-gray-800/50 animate-pulse"
-            />
-          ))}
+      {bulkSummary && (
+        <div className="rounded-md border border-gray-200 bg-gray-50 p-3 text-sm">
+          {bulkSummary.succeeded} approved · {bulkSummary.failed} failed ·{' '}
+          {bulkSummary.skipped} skipped
         </div>
       )}
 
-      {!loading && error && (
-        <div className="flex items-center justify-between">
-          <p className="text-red-400 text-sm">
-            Could not load pending milestones.
-          </p>
-          <Button variant="secondary" onClick={refetch}>
-            Retry
-          </Button>
-        </div>
-      )}
-
-      {!loading && !error && visibleSubmissions.length === 0 && (
-        <EmptyState
-          title="No pending milestones"
-          description={
-            playerFilter === 'previously-approved'
-              ? "No pending submissions from players you've previously approved."
-              : 'New submissions from players will appear here for review.'
-          }
-        />
-      )}
-
-      {!loading && !error && visibleSubmissions.length > 0 && (
-        <>
-          <div className="flex items-center justify-between gap-4 border-b border-gray-800 pb-3">
-            <label className="flex items-center gap-2 text-sm text-gray-300">
-              <input
-                type="checkbox"
-                checked={allVisibleSelected}
-                onChange={toggleSelectAllVisible}
-                disabled={bulkRunning}
-                aria-label="Select all visible pending milestones"
-              />
-              Select all
-            </label>
-            <div className="flex items-center gap-2">
-              {bulkRunning && (
-                <Button
-                  variant="danger"
-                  onClick={handleCancelBulk}
-                  disabled={stopRequested}
-                >
-                  {stopRequested ? 'Stopping…' : 'Stop'}
-                </Button>
-              )}
-              <Button
-                onClick={handleBulkApprove}
-                isLoading={bulkRunning}
-                disabled={
-                  selectedCount === 0 || bulkRunning || !validatorAddress
-                }
-                disabledReason={
-                  isPaused ? tContractStatus('paused_hint') : undefined
-                }
-              >
-                {!isOnline
-                  ? `Queue offline${selectedCount > 0 ? ` (${selectedCount})` : ''}`
-                  : bulkRunning
-                    ? `Approving ${selectedCount}…`
-                    : `Bulk Approve${selectedCount > 0 ? ` (${selectedCount})` : ''}`}
-              </Button>
-            </div>
-          </div>
-
-          {bulkSummary && (
-            <div
-              role="status"
-              aria-live="polite"
-              className={`rounded-md border p-3 text-sm ${
-                bulkSummary.failed > 0
-                  ? 'border-red-500 bg-red-950/30 text-red-300'
-                  : bulkSummary.skipped > 0
-                    ? 'border-amber-500 bg-amber-950/30 text-amber-300'
-                    : 'border-brand-green bg-brand-green/10 text-brand-green'
-              }`}
+      <ul className="space-y-3">
+        {visibleSubmissions.map((submission) => {
+          const id = submission.id;
+          const status = itemStatus[id];
+          const claimedByOther =
+            isLeaseActive(submission) && submission.claimedBy !== validatorAddress;
+          const hash = itemHash[id];
+          return (
+            <li
+              key={id}
+              className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
             >
-              {bulkSummary.skipped > 0
-                ? `${bulkSummary.succeeded} of ${bulkSummary.succeeded + bulkSummary.failed + bulkSummary.skipped} selected approvals completed before the batch was stopped — ${bulkSummary.succeeded} confirmed on-chain${bulkSummary.failed > 0 ? `, ${bulkSummary.failed} failed` : ''}, and ${bulkSummary.skipped} not attempted.`
-                : bulkSummary.failed > 0
-                  ? `${bulkSummary.succeeded} of ${bulkSummary.succeeded + bulkSummary.failed} approvals confirmed on-chain — ${bulkSummary.failed} failed and remain pending for retry.`
-                  : `All ${bulkSummary.succeeded} selected milestones were confirmed on-chain.`}
-            </div>
-          )}
-
-          <ul className="flex flex-col gap-3">
-            {visibleSubmissions.map((submission) => {
-              const status = itemStatus[submission.id];
-              const hash = itemHash[submission.id];
-              return (
-                <li
-                  key={submission.id}
-                  className="border border-gray-700 rounded-lg p-4 flex flex-col gap-1"
-                >
-                  <div className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      className="mt-1"
-                      checked={selectedIds.has(submission.id)}
-                      onChange={() => toggleSelected(submission.id)}
-                      disabled={bulkRunning}
-                      aria-label={`Select milestone for ${submission.playerName ?? submission.playerId}`}
-                    />
-                    <div className="flex-1 flex flex-col gap-1">
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="text-white font-medium">
-                          {submission.playerName ?? submission.playerId}
-                        </span>
-                        <span className="text-xs text-gray-400">
-                          {new Date(submission.createdAt).toLocaleDateString(
-                            undefined,
-                            {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                            },
-                          )}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-300">
-                        {submission.description}
-                      </p>
-                      {submission.evidenceUrl && (
-                        <a
-                          href={submission.evidenceUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-brand-green underline underline-offset-2 hover:opacity-80 w-fit"
-                        >
-                          View evidence
-                        </a>
-                      )}
-
-                      {status === 'signing' && (
-                        <span className="inline-flex items-center gap-1.5 text-xs text-yellow-300 mt-1">
-                          <Spinner size="sm" className="text-yellow-300" />
-                          Awaiting signature&hellip;
-                        </span>
-                      )}
-                      {status === 'confirming' && (
-                        <span className="inline-flex flex-wrap items-center gap-1.5 text-xs text-yellow-300 mt-1">
-                          <Spinner size="sm" className="text-yellow-300" />
-                          Submitted — confirming on-chain&hellip;
-                          {hash && (
-                            <a
-                              href={getExplorerTxUrl(hash)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-brand-green underline"
-                            >
-                              View tx
-                            </a>
-                          )}
-                        </span>
-                      )}
-                      {status === 'success' && (
-                        <span className="text-xs text-brand-green mt-1">
-                          ✓ Confirmed on-chain
-                        </span>
-                      )}
-                      {status === 'event_lag' && (
-                        <span className="text-xs text-amber-400 mt-1">
-                          ✓ Confirmed on-chain (feed lag)
-                          {itemError[submission.id]
-                            ? ` — ${itemError[submission.id]}`
-                            : ''}
-                        </span>
-                      )}
-                      {(status === 'failed' ||
-                        status === 'timeout' ||
-                        status === 'error') && (
-                        <span className="text-xs text-red-400 mt-1">
-                          ✕{' '}
-                          {status === 'timeout'
-                            ? 'Not confirmed in time'
-                            : status === 'failed'
-                              ? 'Failed on ledger'
-                              : 'Failed'}
-                          {itemError[submission.id]
-                            ? `: ${itemError[submission.id]}`
-                            : ''}
-                        </span>
-                      )}
-                      {status === 'skipped' && (
-                        <span className="text-xs text-gray-400 mt-1">
-                          Not attempted — batch was stopped
-                        </span>
-                      )}
-                    </div>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={selectedIds.has(id)}
+                    disabled={bulkRunning || claimedByOther}
+                    onChange={() => toggleSelected(id)}
+                    aria-label={`Select submission ${id}`}
+                  />
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {submission.description}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Player {truncateAddress(submission.playerId)}
+                    </p>
+                    {claimedByOther && (
+                      <span className="mt-1 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                        Being reviewed by {truncateAddress(submission.claimedBy!)}
+                      </span>
+                    )}
                   </div>
-                </li>
-              );
-            })}
-          </ul>
-        </>
-      )}
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <Button
+                    onClick={() => handleApproveOne(submission)}
+                    disabled={
+                      bulkRunning ||
+                      isPaused ||
+                      claimedByOther ||
+                      status === 'signing' ||
+                      status === 'confirming'
+                    }
+                  >
+                    Approve
+                  </Button>
+                  {status && (
+                    <span className="text-xs text-gray-500">
+                      {tContractStatus.has(status)
+                        ? tContractStatus(status)
+                        : status}
+                    </span>
+                  )}
+                  {hash && (
+                    <a
+                      href={getExplorerTxUrl(hash)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-blue-600 underline"
+                    >
+                      View tx
+                    </a>
+                  )}
+                  {itemError[id] && (
+                    <span className="text-xs text-red-600">{itemError[id]}</span>
+                  )}
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
