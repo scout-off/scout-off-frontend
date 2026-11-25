@@ -23,7 +23,7 @@ describe('chartSummary', () => {
     expect(
       summarizeFeeRevenue({ totalXlm: 1120, previousTotalXlm: 1000, days: 30 }),
     ).toBe(
-      'Fee revenue over the last 30 days: 1120.00 XLM total, up 12% from the previous period.',
+      'Fee revenue over the last 30 days: 1,120.00 XLM total, up 12% from the previous period.',
     );
     expect(
       summarizeFeeRevenue({ totalXlm: 38, previousTotalXlm: null, days: null }),

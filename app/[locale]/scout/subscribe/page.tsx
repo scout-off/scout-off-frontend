@@ -200,7 +200,7 @@ function SubscribeContent() {
         }
       }
       const plan = TIERS.find((p) => p.tier === tier);
-      setFeePaid(plan ? formatXlm(plan.priceXlm) : undefined);
+      setFeePaid(plan ? formatXlm(plan.priceXlm, locale) : undefined);
       setSuccessMessage(t('success', { tier: tierName(tier) }));
       setTxStatus('success');
       redirectTimer.current = window.setTimeout(() => {
