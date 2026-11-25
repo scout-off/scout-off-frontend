@@ -398,24 +398,25 @@ function DisputeCard({
                 day: 'numeric',
               })}
             </time>
-            {summary.status === 'pending' && (
-              <>
-                <span>·</span>
-                <span className="text-amber-400/80">
-                  {t('deadline', {
-                    date: formatDate(
-                      new Date(summary.responseDeadline),
-                      locale,
-                      {
-                        dateStyle: undefined,
-                        month: 'short',
-                        day: 'numeric',
-                      },
-                    ),
-                  })}
-                </span>
-              </>
-            )}
+            {summary.status === 'pending' &&
+              Number.isFinite(summary.responseDeadline) && (
+                <>
+                  <span>·</span>
+                  <span className="text-amber-400/80">
+                    {t('deadline', {
+                      date: formatDate(
+                        new Date(summary.responseDeadline),
+                        locale,
+                        {
+                          dateStyle: undefined,
+                          month: 'short',
+                          day: 'numeric',
+                        },
+                      ),
+                    })}
+                  </span>
+                </>
+              )}
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">

@@ -148,8 +148,8 @@ describe('FraudFlagsPanel', () => {
     expect(screen.getByText('Pay-to-Contact')).toBeInTheDocument();
 
     // Severity badges
-    expect(screen.getByText('high')).toBeInTheDocument();
-    expect(screen.getByText('medium')).toBeInTheDocument();
+    expect(screen.getByText('High')).toBeInTheDocument();
+    expect(screen.getByText('Medium')).toBeInTheDocument();
 
     // Heuristic names
     expect(screen.getByText('circular-referral-ring')).toBeInTheDocument();

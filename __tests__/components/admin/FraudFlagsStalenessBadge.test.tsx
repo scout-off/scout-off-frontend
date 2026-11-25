@@ -27,7 +27,7 @@ describe('FraudFlagsStalenessBadge', () => {
       highSeverityCount: 0,
     });
     render(<FraudFlagsStalenessBadge />);
-    const badge = await screen.findByText(/Fraud flags: 30m ago/);
+    const badge = await screen.findByText(/Fraud flags: 30 minutes ago/);
     expect(badge).not.toHaveTextContent('stale');
     expect(badge).toHaveClass('text-gray-400');
   });
@@ -38,7 +38,7 @@ describe('FraudFlagsStalenessBadge', () => {
       highSeverityCount: 2,
     });
     render(<FraudFlagsStalenessBadge />);
-    const badge = await screen.findByText(/Fraud flags: 1h ago/);
+    const badge = await screen.findByText(/Fraud flags: 1 hour ago/);
     expect(badge).toHaveTextContent('2 high');
     expect(badge).toHaveClass('text-red-400');
   });
@@ -49,7 +49,7 @@ describe('FraudFlagsStalenessBadge', () => {
       highSeverityCount: 0,
     });
     render(<FraudFlagsStalenessBadge />);
-    const badge = await screen.findByText(/Fraud flags: 7h ago/);
+    const badge = await screen.findByText(/Fraud flags: 7 hours ago/);
     expect(badge).toHaveTextContent('stale');
     expect(badge).toHaveClass('text-yellow-400');
   });
