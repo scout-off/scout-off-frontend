@@ -6,6 +6,7 @@ import {
   addToWatchlist,
   fetchWatchlist,
   removeFromWatchlist,
+  updateWatchlistNotes,
 } from '@/lib/watchlistClient';
 import { useUndoableRemoval } from './useUndoableRemoval';
 import type { WatchlistEntry } from '@/types';
@@ -75,6 +76,17 @@ export function useWatchlist(scoutWallet: string | null) {
     [undoableRemove, mutate],
   );
 
+  const updateNotes = useCallback(
+    async (id: number, note: string, tags: string[]) => {
+      const updated = await updateWatchlistNotes(id, note, tags);
+      mutate(
+        (current) => (current ?? []).map((e) => (e.id === id ? updated : e)),
+        false,
+      );
+    },
+    [mutate],
+  );
+
   const entries = data ?? [];
 
   return {
@@ -85,5 +97,6 @@ export function useWatchlist(scoutWallet: string | null) {
       entries.some((e) => e.playerId === playerId),
     add,
     remove,
+    updateNotes,
   };
 }

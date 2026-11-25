@@ -1504,5 +1504,19 @@
     "reauthenticate": "Renew Session",
     "renewedSuccess": "Session renewed successfully.",
     "renewFailed": "Failed to renew session."
+  },
+  "watchlist_notes": {
+    "edit": "Edit note & tags",
+    "no_note": "No private note yet.",
+    "note_label": "Private note (only you can see this)",
+    "note_counter": "{count}/{max}",
+    "tag_placeholder": "Add a tag and press Enter",
+    "remove_tag": "Remove tag {tag}",
+    "save": "Save",
+    "clear": "Clear",
+    "cancel": "Cancel",
+    "save_error": "Could not save. Check the limits and try again.",
+    "filter_label": "Filter by tag",
+    "filter_all": "All tags"
   }
 }

@@ -47,12 +47,18 @@ const ENTRY_1 = {
   scoutWallet: 'GSCOUT',
   playerId: 'player-1',
   createdAt: 0,
+  note: '',
+  tags: [],
+  updatedAt: null,
 };
 const ENTRY_2 = {
   id: 2,
   scoutWallet: 'GSCOUT',
   playerId: 'player-2',
   createdAt: 1,
+  note: '',
+  tags: [],
+  updatedAt: null,
 };
 
 const PLAYER_1 = { id: 'player-1', vitals: { name: 'Player One' } };

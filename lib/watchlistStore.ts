@@ -13,6 +13,7 @@ import type Database from 'better-sqlite3';
 import { openSqliteDb } from './sqliteDb';
 import { watchlistMigrations } from './migrations/watchlistMigrations';
 import { normalizeStellarAddress } from './stellar';
+import { sanitize } from './sanitize';
 import type { WatchlistEntry } from '@/types';
 
 /**
@@ -26,6 +27,21 @@ interface WatchlistRow {
   scout_wallet: string;
   player_id: string;
   created_at: number;
+  note: string | null;
+  tags: string | null;
+  updated_at: number | null;
+}
+
+function parseTags(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed)
+      ? parsed.filter((t): t is string => typeof t === 'string')
+      : [];
+  } catch {
+    return [];
+  }
 }
 
 function rowToEntry(row: WatchlistRow): WatchlistEntry {
@@ -34,6 +50,10 @@ function rowToEntry(row: WatchlistRow): WatchlistEntry {
     scoutWallet: row.scout_wallet,
     playerId: row.player_id,
     createdAt: row.created_at,
+    // Sanitized on output; the UI renders these as text only, never HTML.
+    note: sanitize(row.note ?? ''),
+    tags: parseTags(row.tags).map(sanitize),
+    updatedAt: row.updated_at ?? null,
   };
 }
 
@@ -94,6 +114,36 @@ export class WatchlistStore {
       .prepare('DELETE FROM watchlist WHERE id = ? AND scout_wallet = ?')
       .run(id, normalizedScoutWallet);
     return result.changes > 0;
+  }
+
+  /**
+   * Updates the note and tags of an entry scoped to its owner. Returns the
+   * updated entry, or null if not found or not owned by scoutWallet.
+   */
+  updateNotes(
+    scoutWallet: string,
+    id: number,
+    note: string,
+    tags: string[],
+  ): WatchlistEntry | null {
+    const normalizedScoutWallet = normalizeStellarAddress(scoutWallet);
+    const result = this.db
+      .prepare(
+        `UPDATE watchlist SET note = @note, tags = @tags, updated_at = @updated_at
+         WHERE id = @id AND scout_wallet = @scout_wallet`,
+      )
+      .run({
+        note: note || null,
+        tags: tags.length > 0 ? JSON.stringify(tags) : null,
+        updated_at: Date.now(),
+        id,
+        scout_wallet: normalizedScoutWallet,
+      });
+    if (result.changes === 0) return null;
+    const row = this.db
+      .prepare('SELECT * FROM watchlist WHERE id = ?')
+      .get(id) as WatchlistRow;
+    return rowToEntry(row);
   }
 
   /** Deletes every entry owned by scoutWallet. Returns the number of rows removed. */

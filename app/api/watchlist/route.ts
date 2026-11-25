@@ -4,6 +4,14 @@ import { WatchlistStore, MAX_WATCHLIST_ENTRIES } from '@/lib/watchlistStore';
 import { isValidStellarAddress, normalizeStellarAddress } from '@/lib/stellar';
 import { createRequestLogger } from '@/lib/logger';
 import { privateJson } from '@/lib/httpResponses';
+import { checkRateLimit } from '@/lib/rateLimit';
+
+/** Issue #1716 caps for scouts' private watchlist notes and tags. */
+export const WATCHLIST_NOTE_MAX_LENGTH = 1000;
+export const WATCHLIST_MAX_TAGS = 10;
+export const WATCHLIST_TAG_MAX_LENGTH = 32;
+
+const WATCHLIST_PATCH_RATE_LIMIT = { limit: 30, windowMs: 60_000 };
 
 export const runtime = 'nodejs';
 
@@ -132,6 +140,98 @@ export async function DELETE(req: NextRequest) {
     });
     return privateJson(
       { error: 'Failed to remove from watchlist' },
+      { status: 500 },
+    );
+  }
+}
+
+/**
+ * PATCH /api/watchlist
+ *
+ * Updates the private note and tags on one of the authenticated scout's
+ * watchlist entries. Body: { id, note, tags }. Pass an empty string / array
+ * to clear them. Entries owned by another scout return 404.
+ */
+export async function PATCH(req: NextRequest) {
+  const scoutWallet = getSessionWallet(req);
+  if (!scoutWallet) {
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const rl = await checkRateLimit(
+    `watchlist-patch:${scoutWallet}`,
+    WATCHLIST_PATCH_RATE_LIMIT,
+  );
+  if (rl.limited) {
+    return privateJson(
+      { error: 'Too many requests. Please slow down.' },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(rl.retryAfterSec ?? 60) },
+      },
+    );
+  }
+
+  const log = createRequestLogger(req);
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== 'object') {
+    return privateJson({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  const { id, note, tags } = body as Record<string, unknown>;
+  if (typeof id !== 'number') {
+    return privateJson({ error: 'id must be a number' }, { status: 400 });
+  }
+  if (typeof note !== 'string' || note.length > WATCHLIST_NOTE_MAX_LENGTH) {
+    return privateJson(
+      {
+        error: `note must be a string of at most ${WATCHLIST_NOTE_MAX_LENGTH} characters`,
+      },
+      { status: 400 },
+    );
+  }
+  if (
+    !Array.isArray(tags) ||
+    tags.length > WATCHLIST_MAX_TAGS ||
+    !tags.every(
+      (t) =>
+        typeof t === 'string' &&
+        t.trim().length > 0 &&
+        t.trim().length <= WATCHLIST_TAG_MAX_LENGTH,
+    )
+  ) {
+    return privateJson(
+      {
+        error: `tags must be an array of at most ${WATCHLIST_MAX_TAGS} non-empty strings of at most ${WATCHLIST_TAG_MAX_LENGTH} characters`,
+      },
+      { status: 400 },
+    );
+  }
+
+  const uniqueTags = Array.from(
+    new Set((tags as string[]).map((t) => t.trim())),
+  );
+
+  try {
+    const entry = WatchlistStore.getInstance().updateNotes(
+      scoutWallet,
+      id,
+      note.trim(),
+      uniqueTags,
+    );
+    if (!entry) {
+      return privateJson(
+        { error: 'Watchlist entry not found' },
+        { status: 404 },
+      );
+    }
+    return privateJson(entry);
+  } catch (err) {
+    log.error('Failed to update watchlist entry', {
+      reason: err instanceof Error ? err.message : String(err),
+    });
+    return privateJson(
+      { error: 'Failed to update watchlist entry' },
       { status: 500 },
     );
   }

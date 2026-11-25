@@ -477,6 +477,11 @@ export interface components {
             /** @description Unix epoch milliseconds. */
             createdAt: number;
             version?: number;
+            /** @description Private scout note (plain text, never shown to players). */
+            note: string;
+            tags: string[];
+            /** @description Unix epoch milliseconds of the last note/tag edit. */
+            updatedAt: number | null;
         };
         WatchlistResponse: components["schemas"]["WatchlistEntry"][];
         /** @description Arbitrary filter criteria for player search. */

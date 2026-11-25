@@ -3,7 +3,7 @@ version: '3.9'
 # Full local dev stack: frontend + indexer + mocked Soroban RPC + mocked
 # backend API. No external credentials (Pinata, real testnet keys) are
 # required — every service here is either this repo's own code or a small
-# local mock. See DEVELOPMENT.md's "Docker Compose Quick Start" section.
+# local mock. See docs/development/setup.md's "Docker Compose Quick Start" section.
 #
 # Quick start:
 #   docker compose up --build
@@ -98,6 +98,14 @@ services:
       # lib/api.ts.
       API_URL_INTERNAL: http://mock-api:4000
       INDEXER_API_URL_INTERNAL: http://indexer:3001
+    healthcheck:
+      test:
+        ['CMD', 'wget', '--spider', '-q', 'http://127.0.0.1:3000/api/healthz']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    stop_grace_period: 15s
     depends_on:
       mock-rpc:
         condition: service_healthy

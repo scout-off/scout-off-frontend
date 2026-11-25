@@ -22,4 +22,17 @@ export const watchlistMigrations: Migration[] = [
       `);
     },
   },
+  {
+    // Issue #1716: additive, nullable columns for scouts' private notes and
+    // tags. Existing rows keep NULLs, which read back as an empty note/tags.
+    version: 2,
+    name: 'notes_and_tags',
+    up: (db) => {
+      db.exec(`
+        ALTER TABLE watchlist ADD COLUMN note TEXT;
+        ALTER TABLE watchlist ADD COLUMN tags TEXT;
+        ALTER TABLE watchlist ADD COLUMN updated_at INTEGER;
+      `);
+    },
+  },
 ];

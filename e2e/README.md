@@ -215,7 +215,7 @@ away and silently calling that "reaching testnet". To run it for real:
 # 1. Fund the deterministic test wallet once (idempotent)
 curl "https://friendbot.stellar.org/?addr=<publicKey printed by the skipped test>"
 
-# 2. Deploy/initialize the contract per the root DEVELOPMENT.md, then:
+# 2. Deploy/initialize the contract per docs/development/setup.md, then:
 E2E_CONTRACT_ID=<deployed contract id> npm run test:e2e
 ```
 

@@ -13,5 +13,5 @@ jobs:
       - name: Run lychee link checker
         uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
         with:
-          args: "--no-progress --exclude 'mailto|github.com/.*#' README.md DEVELOPMENT.md DEPLOYMENT.md CONTRIBUTING.md packages/indexer/README.md"
+          args: "--no-progress --exclude 'mailto|github.com/.*#' README.md DEPLOYMENT.md CONTRIBUTING.md packages/indexer/README.md docs/README.md docs/development/*.md docs/guides/*.md"
           # The workflow will fail if any broken links are found.

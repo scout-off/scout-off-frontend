@@ -93,7 +93,7 @@ components:
     # Watchlist
     WatchlistEntry:
       type: object
-      required: [id, scoutWallet, playerId, createdAt]
+      required: [id, scoutWallet, playerId, createdAt, note, tags, updatedAt]
       properties:
         id:
           type: integer
@@ -106,6 +106,17 @@ components:
           description: Unix epoch milliseconds.
         version:
           type: integer
+        note:
+          type: string
+          description: Private scout note (plain text, never shown to players).
+        tags:
+          type: array
+          items:
+            type: string
+        updatedAt:
+          type: integer
+          nullable: true
+          description: Unix epoch milliseconds of the last note/tag edit.
 
     WatchlistResponse:
       type: array

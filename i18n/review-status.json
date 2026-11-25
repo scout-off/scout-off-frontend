@@ -1,0 +1,2148 @@
+{
+  "fr": {
+    "actions.download": {
+      "status": "machine"
+    },
+    "actions.export": {
+      "status": "machine"
+    },
+    "actions.import": {
+      "status": "machine"
+    },
+    "actions.refresh": {
+      "status": "machine"
+    },
+    "actions.upload": {
+      "status": "machine"
+    },
+    "actions.view_details": {
+      "status": "machine"
+    },
+    "actions.view_more": {
+      "status": "machine"
+    },
+    "admin.accumulated": {
+      "status": "machine"
+    },
+    "admin.active": {
+      "status": "machine"
+    },
+    "admin.activity": {
+      "status": "machine"
+    },
+    "admin.add": {
+      "status": "machine"
+    },
+    "admin.add_validator": {
+      "status": "machine"
+    },
+    "admin.circuit_breaker": {
+      "status": "machine"
+    },
+    "admin.code_plural": {
+      "status": "machine"
+    },
+    "admin.code_singular": {
+      "status": "machine"
+    },
+    "admin.codes_generated": {
+      "status": "machine"
+    },
+    "admin.contract": {
+      "status": "machine"
+    },
+    "admin.copied": {
+      "status": "machine"
+    },
+    "admin.copy": {
+      "status": "machine"
+    },
+    "admin.copy_contract_id": {
+      "status": "machine"
+    },
+    "admin.loading": {
+      "status": "machine"
+    },
+    "admin.next": {
+      "status": "machine"
+    },
+    "admin.no_activity_description": {
+      "status": "machine"
+    },
+    "admin.no_activity_title": {
+      "status": "machine"
+    },
+    "admin.no_referral_description": {
+      "status": "machine"
+    },
+    "admin.no_referral_title": {
+      "status": "machine"
+    },
+    "admin.no_validators": {
+      "status": "machine"
+    },
+    "admin.page_of": {
+      "status": "machine"
+    },
+    "admin.pause_confirm": {
+      "status": "machine"
+    },
+    "admin.pause_contract": {
+      "status": "machine"
+    },
+    "admin.paused": {
+      "status": "machine"
+    },
+    "admin.platform_fees": {
+      "status": "machine"
+    },
+    "admin.previous": {
+      "status": "machine"
+    },
+    "admin.recovery_failed": {
+      "status": "machine"
+    },
+    "admin.referral_program": {
+      "status": "machine"
+    },
+    "admin.referrals_plural": {
+      "status": "machine"
+    },
+    "admin.referrals_singular": {
+      "status": "machine"
+    },
+    "admin.remove": {
+      "status": "machine"
+    },
+    "admin.retry": {
+      "status": "machine"
+    },
+    "admin.successful_referrals": {
+      "status": "machine"
+    },
+    "admin.title": {
+      "status": "machine"
+    },
+    "admin.top_referrers": {
+      "status": "machine"
+    },
+    "admin.unauthorized_message": {
+      "status": "machine"
+    },
+    "admin.unpause_confirm": {
+      "status": "machine"
+    },
+    "admin.unpause_contract": {
+      "status": "machine"
+    },
+    "admin.validator_placeholder": {
+      "status": "machine"
+    },
+    "admin.validators": {
+      "status": "machine"
+    },
+    "admin.withdraw_confirm": {
+      "status": "machine"
+    },
+    "admin.withdraw_fees": {
+      "status": "machine"
+    },
+    "app_title": {
+      "status": "machine"
+    },
+    "changelog.added": {
+      "status": "machine"
+    },
+    "changelog.back_to_home": {
+      "status": "machine"
+    },
+    "changelog.empty_description": {
+      "status": "machine"
+    },
+    "changelog.empty_title": {
+      "status": "machine"
+    },
+    "changelog.english_notice": {
+      "status": "machine"
+    },
+    "changelog.eyebrow": {
+      "status": "machine"
+    },
+    "changelog.fixed": {
+      "status": "machine"
+    },
+    "changelog.improved": {
+      "status": "machine"
+    },
+    "changelog.page_description": {
+      "status": "machine"
+    },
+    "changelog.page_title": {
+      "status": "machine"
+    },
+    "common.back": {
+      "status": "machine"
+    },
+    "common.cancel": {
+      "status": "machine"
+    },
+    "common.clear": {
+      "status": "machine"
+    },
+    "common.close": {
+      "status": "machine"
+    },
+    "common.connect_wallet": {
+      "status": "machine"
+    },
+    "common.delete": {
+      "status": "machine"
+    },
+    "common.disconnect": {
+      "status": "machine"
+    },
+    "common.edit": {
+      "status": "machine"
+    },
+    "common.error": {
+      "status": "machine"
+    },
+    "common.filter": {
+      "status": "machine"
+    },
+    "common.info": {
+      "status": "machine"
+    },
+    "common.loading": {
+      "status": "machine"
+    },
+    "common.next": {
+      "status": "machine"
+    },
+    "common.previous": {
+      "status": "machine"
+    },
+    "common.save": {
+      "status": "machine"
+    },
+    "common.search": {
+      "status": "machine"
+    },
+    "common.sort": {
+      "status": "machine"
+    },
+    "common.submit": {
+      "status": "machine"
+    },
+    "common.success": {
+      "status": "machine"
+    },
+    "common.warning": {
+      "status": "machine"
+    },
+    "contractErrors.AlreadyAtLevel": {
+      "status": "machine"
+    },
+    "contractErrors.AlreadyInitialized": {
+      "status": "machine"
+    },
+    "contractErrors.ContractPaused": {
+      "status": "machine"
+    },
+    "contractErrors.InsufficientFee": {
+      "status": "machine"
+    },
+    "contractErrors.InvalidMilestone": {
+      "status": "machine"
+    },
+    "contractErrors.NoFeesToWithdraw": {
+      "status": "machine"
+    },
+    "contractErrors.NotInitialized": {
+      "status": "machine"
+    },
+    "contractErrors.Overflow": {
+      "status": "machine"
+    },
+    "contractErrors.PlayerNotFound": {
+      "status": "machine"
+    },
+    "contractErrors.SubscriptionExpired": {
+      "status": "machine"
+    },
+    "contractErrors.Unauthorized": {
+      "status": "machine"
+    },
+    "contractErrors.UnauthorizedValidator": {
+      "status": "machine"
+    },
+    "contractErrors.unknown": {
+      "status": "machine"
+    },
+    "cookieConsent.accept": {
+      "status": "machine"
+    },
+    "cookieConsent.decline": {
+      "status": "machine"
+    },
+    "cookieConsent.message": {
+      "status": "machine"
+    },
+    "cookieConsent.privacy_link": {
+      "status": "machine"
+    },
+    "cookieConsent.title": {
+      "status": "machine"
+    },
+    "dataDeletion.cancel": {
+      "status": "machine"
+    },
+    "dataDeletion.close": {
+      "status": "machine"
+    },
+    "dataDeletion.confirm_button": {
+      "status": "machine"
+    },
+    "dataDeletion.confirm_message": {
+      "status": "machine"
+    },
+    "dataDeletion.confirm_title": {
+      "status": "machine"
+    },
+    "dataDeletion.done": {
+      "status": "machine"
+    },
+    "dataDeletion.error_message": {
+      "status": "machine"
+    },
+    "dataDeletion.error_toast": {
+      "status": "machine"
+    },
+    "dataDeletion.modal_title": {
+      "status": "machine"
+    },
+    "dataDeletion.offchain_description": {
+      "status": "machine"
+    },
+    "dataDeletion.offchain_heading": {
+      "status": "machine"
+    },
+    "dataDeletion.onchain_description": {
+      "status": "machine"
+    },
+    "dataDeletion.onchain_heading": {
+      "status": "machine"
+    },
+    "dataDeletion.request_button": {
+      "status": "machine"
+    },
+    "dataDeletion.request_note": {
+      "status": "machine"
+    },
+    "dataDeletion.retry": {
+      "status": "machine"
+    },
+    "dataDeletion.submitting": {
+      "status": "machine"
+    },
+    "dataDeletion.success_message": {
+      "status": "machine"
+    },
+    "dataDeletion.success_title": {
+      "status": "machine"
+    },
+    "dataDeletion.success_toast": {
+      "status": "machine"
+    },
+    "errors.contract_error": {
+      "status": "machine"
+    },
+    "errors.forbidden": {
+      "status": "machine"
+    },
+    "errors.internal_error": {
+      "status": "machine"
+    },
+    "errors.network_error": {
+      "status": "machine"
+    },
+    "errors.not_found": {
+      "status": "machine"
+    },
+    "errors.unauthorized": {
+      "status": "machine"
+    },
+    "errors.wallet_error": {
+      "status": "machine"
+    },
+    "footer.changelog": {
+      "status": "machine"
+    },
+    "footer.cookie_settings": {
+      "status": "machine"
+    },
+    "footer.privacy": {
+      "status": "machine"
+    },
+    "footer.status": {
+      "status": "machine"
+    },
+    "footer.terms": {
+      "status": "machine"
+    },
+    "language.english": {
+      "status": "machine"
+    },
+    "language.french": {
+      "status": "machine"
+    },
+    "language.select_language": {
+      "status": "machine"
+    },
+    "language.swahili": {
+      "status": "machine"
+    },
+    "nav.maintenance_warning": {
+      "status": "machine"
+    },
+    "nav.player_dashboard": {
+      "status": "machine"
+    },
+    "nav.scout_dashboard": {
+      "status": "machine"
+    },
+    "nav.soon": {
+      "status": "machine"
+    },
+    "nav.sponsorship": {
+      "status": "machine"
+    },
+    "offline_queue.conflict_action_label": {
+      "status": "machine"
+    },
+    "offline_queue.conflict_desc": {
+      "status": "machine"
+    },
+    "offline_queue.conflict_discard_aria": {
+      "status": "machine"
+    },
+    "offline_queue.discard": {
+      "status": "machine"
+    },
+    "offline_queue.discard_all": {
+      "status": "machine"
+    },
+    "offline_queue.discard_aria": {
+      "status": "machine"
+    },
+    "offline_queue.failed": {
+      "status": "machine"
+    },
+    "offline_queue.failed_action_label": {
+      "status": "machine"
+    },
+    "offline_queue.failed_desc": {
+      "status": "machine"
+    },
+    "offline_queue.processing": {
+      "status": "machine"
+    },
+    "offline_queue.processing_desc": {
+      "status": "machine"
+    },
+    "offline_queue.queued": {
+      "status": "machine"
+    },
+    "offline_queue.queued_desc": {
+      "status": "machine"
+    },
+    "offline_queue.retry": {
+      "status": "machine"
+    },
+    "offline_queue.retry_aria": {
+      "status": "machine"
+    },
+    "player_dashboard.achievements": {
+      "status": "machine"
+    },
+    "player_dashboard.description": {
+      "status": "machine"
+    },
+    "player_dashboard.download_data": {
+      "status": "machine"
+    },
+    "player_dashboard.download_data_success": {
+      "status": "machine"
+    },
+    "player_dashboard.milestones": {
+      "status": "machine"
+    },
+    "player_dashboard.profile": {
+      "status": "machine"
+    },
+    "player_dashboard.progress": {
+      "status": "machine"
+    },
+    "player_dashboard.register_prompt": {
+      "status": "machine"
+    },
+    "player_dashboard.stats": {
+      "status": "machine"
+    },
+    "player_dashboard.tab_profile": {
+      "status": "machine"
+    },
+    "player_dashboard.tab_register": {
+      "status": "machine"
+    },
+    "player_dashboard.title": {
+      "status": "machine"
+    },
+    "player_dashboard.welcome": {
+      "status": "machine"
+    },
+    "player_profile.back_to_scout_dashboard": {
+      "status": "machine"
+    },
+    "privacy.back_to_home": {
+      "status": "machine"
+    },
+    "privacy.eyebrow": {
+      "status": "machine"
+    },
+    "privacy.last_updated": {
+      "status": "machine"
+    },
+    "privacy.page_description": {
+      "status": "machine"
+    },
+    "privacy.page_title": {
+      "status": "machine"
+    },
+    "privacy.section1_content": {
+      "status": "machine"
+    },
+    "privacy.section1_title": {
+      "status": "machine"
+    },
+    "privacy.section2_content": {
+      "status": "machine"
+    },
+    "privacy.section2_title": {
+      "status": "machine"
+    },
+    "privacy.section3_content": {
+      "status": "machine"
+    },
+    "privacy.section3_title": {
+      "status": "machine"
+    },
+    "privacy.section4_content": {
+      "status": "machine"
+    },
+    "privacy.section4_title": {
+      "status": "machine"
+    },
+    "privacy.section5_content": {
+      "status": "machine"
+    },
+    "privacy.section5_title": {
+      "status": "machine"
+    },
+    "privacy.section6_content": {
+      "status": "machine"
+    },
+    "privacy.section6_title": {
+      "status": "machine"
+    },
+    "privacy.section7_content": {
+      "status": "machine"
+    },
+    "privacy.section7_title": {
+      "status": "machine"
+    },
+    "progress_levels.level0": {
+      "status": "machine"
+    },
+    "progress_levels.level1": {
+      "status": "machine"
+    },
+    "progress_levels.level2": {
+      "status": "machine"
+    },
+    "progress_levels.level3": {
+      "status": "machine"
+    },
+    "recovery.back": {
+      "status": "machine"
+    },
+    "recovery.backToHome": {
+      "status": "machine"
+    },
+    "recovery.backupWalletConnected": {
+      "status": "machine"
+    },
+    "recovery.cancel": {
+      "status": "machine"
+    },
+    "recovery.connectBackupButton": {
+      "status": "machine"
+    },
+    "recovery.connectBackupDesc": {
+      "status": "machine"
+    },
+    "recovery.connectBackupTitle": {
+      "status": "machine"
+    },
+    "recovery.connected": {
+      "status": "machine"
+    },
+    "recovery.connecting": {
+      "status": "machine"
+    },
+    "recovery.errorConnectFailed": {
+      "status": "machine"
+    },
+    "recovery.errorEmptyAddress": {
+      "status": "machine"
+    },
+    "recovery.errorInvalidAddress": {
+      "status": "machine"
+    },
+    "recovery.errorNoAccountFound": {
+      "status": "machine"
+    },
+    "recovery.errorNotConnected": {
+      "status": "machine"
+    },
+    "recovery.errorRecoverFailed": {
+      "status": "machine"
+    },
+    "recovery.errorTitle": {
+      "status": "machine"
+    },
+    "recovery.howItWorks": {
+      "status": "machine"
+    },
+    "recovery.next": {
+      "status": "machine"
+    },
+    "recovery.noteLabel": {
+      "status": "machine"
+    },
+    "recovery.noteText": {
+      "status": "machine"
+    },
+    "recovery.primaryWalletLabel": {
+      "status": "machine"
+    },
+    "recovery.primaryWalletLost": {
+      "status": "machine"
+    },
+    "recovery.primaryWalletPlaceholder": {
+      "status": "machine"
+    },
+    "recovery.primaryWalletToRecover": {
+      "status": "machine"
+    },
+    "recovery.recoverButton": {
+      "status": "machine"
+    },
+    "recovery.step1": {
+      "status": "machine"
+    },
+    "recovery.step2": {
+      "status": "machine"
+    },
+    "recovery.step3": {
+      "status": "machine"
+    },
+    "recovery.subtitle": {
+      "status": "machine"
+    },
+    "recovery.successRedirect": {
+      "status": "machine"
+    },
+    "recovery.successTitle": {
+      "status": "machine"
+    },
+    "recovery.title": {
+      "status": "machine"
+    },
+    "recovery.troubleshooting": {
+      "status": "machine"
+    },
+    "recovery.troubleshootingTip1": {
+      "status": "machine"
+    },
+    "recovery.troubleshootingTip2": {
+      "status": "machine"
+    },
+    "recovery.troubleshootingTip3": {
+      "status": "machine"
+    },
+    "recovery.tryAgain": {
+      "status": "machine"
+    },
+    "recovery.verifyDesc": {
+      "status": "machine"
+    },
+    "recovery.verifyTitle": {
+      "status": "machine"
+    },
+    "recovery.verifying": {
+      "status": "machine"
+    },
+    "scout_dashboard.description": {
+      "status": "machine"
+    },
+    "scout_dashboard.milestones": {
+      "status": "machine"
+    },
+    "scout_dashboard.no_players": {
+      "status": "machine"
+    },
+    "scout_dashboard.player_not_found": {
+      "status": "machine"
+    },
+    "scout_dashboard.players": {
+      "status": "machine"
+    },
+    "scout_dashboard.recent_activity": {
+      "status": "machine"
+    },
+    "scout_dashboard.search_player": {
+      "status": "machine"
+    },
+    "scout_dashboard.statistics": {
+      "status": "machine"
+    },
+    "scout_dashboard.title": {
+      "status": "machine"
+    },
+    "scout_dashboard.trials": {
+      "status": "machine"
+    },
+    "scout_dashboard.welcome": {
+      "status": "machine"
+    },
+    "settings.back_to_home": {
+      "status": "machine"
+    },
+    "settings.connect_wallet_to_request": {
+      "status": "machine"
+    },
+    "settings.data_deletion_button": {
+      "status": "machine"
+    },
+    "settings.data_deletion_description": {
+      "status": "machine"
+    },
+    "settings.data_deletion_title": {
+      "status": "machine"
+    },
+    "settings.data_export_button": {
+      "status": "machine"
+    },
+    "settings.data_export_description": {
+      "status": "machine"
+    },
+    "settings.data_export_error": {
+      "status": "machine"
+    },
+    "settings.data_export_exporting": {
+      "status": "machine"
+    },
+    "settings.data_export_onchain_note": {
+      "status": "machine"
+    },
+    "settings.data_export_success": {
+      "status": "machine"
+    },
+    "settings.data_export_title": {
+      "status": "machine"
+    },
+    "settings.eyebrow": {
+      "status": "machine"
+    },
+    "settings.logout_all_button": {
+      "status": "machine"
+    },
+    "settings.logout_all_description": {
+      "status": "machine"
+    },
+    "settings.logout_all_error": {
+      "status": "machine"
+    },
+    "settings.logout_all_in_progress": {
+      "status": "machine"
+    },
+    "settings.logout_all_success": {
+      "status": "machine"
+    },
+    "settings.logout_all_title": {
+      "status": "machine"
+    },
+    "settings.page_description": {
+      "status": "machine"
+    },
+    "settings.page_title": {
+      "status": "machine"
+    },
+    "sponsorship.badge": {
+      "status": "machine"
+    },
+    "sponsorship.description": {
+      "status": "machine"
+    },
+    "sponsorship.howItWorksDescription": {
+      "status": "machine"
+    },
+    "sponsorship.howItWorksTitle": {
+      "status": "machine"
+    },
+    "sponsorship.metaDescription": {
+      "status": "machine"
+    },
+    "sponsorship.notice": {
+      "status": "machine"
+    },
+    "sponsorship.title": {
+      "status": "machine"
+    },
+    "status.back_to_home": {
+      "status": "machine"
+    },
+    "status.dependencies_title": {
+      "status": "machine"
+    },
+    "status.dependency_backend": {
+      "status": "machine"
+    },
+    "status.dependency_frontend": {
+      "status": "machine"
+    },
+    "status.dependency_rpc": {
+      "status": "machine"
+    },
+    "status.empty_description": {
+      "status": "machine"
+    },
+    "status.empty_title": {
+      "status": "machine"
+    },
+    "status.eyebrow": {
+      "status": "machine"
+    },
+    "status.incident_history_note": {
+      "status": "machine"
+    },
+    "status.live_status_cta": {
+      "status": "machine"
+    },
+    "status.live_status_description": {
+      "status": "machine"
+    },
+    "status.live_status_title": {
+      "status": "machine"
+    },
+    "status.page_description": {
+      "status": "machine"
+    },
+    "status.page_title": {
+      "status": "machine"
+    },
+    "terms.back_to_home": {
+      "status": "machine"
+    },
+    "terms.eyebrow": {
+      "status": "machine"
+    },
+    "terms.last_updated": {
+      "status": "machine"
+    },
+    "terms.page_description": {
+      "status": "machine"
+    },
+    "terms.page_title": {
+      "status": "machine"
+    },
+    "terms.section1_content": {
+      "status": "machine"
+    },
+    "terms.section1_title": {
+      "status": "machine"
+    },
+    "terms.section2_content": {
+      "status": "machine"
+    },
+    "terms.section2_title": {
+      "status": "machine"
+    },
+    "terms.section3_content": {
+      "status": "machine"
+    },
+    "terms.section3_title": {
+      "status": "machine"
+    },
+    "terms.section4_content": {
+      "status": "machine"
+    },
+    "terms.section4_title": {
+      "status": "machine"
+    },
+    "terms.section5_content": {
+      "status": "machine"
+    },
+    "terms.section5_title": {
+      "status": "machine"
+    },
+    "terms.section6_content": {
+      "status": "machine"
+    },
+    "terms.section6_title": {
+      "status": "machine"
+    },
+    "validator.access_only_description": {
+      "status": "machine"
+    },
+    "validator.access_only_title": {
+      "status": "machine"
+    },
+    "validator.find_player": {
+      "status": "machine"
+    },
+    "validator.roster_count_one": {
+      "status": "machine"
+    },
+    "validator.roster_count_other": {
+      "status": "machine"
+    },
+    "validator.roster_empty_description": {
+      "status": "machine"
+    },
+    "validator.roster_empty_title": {
+      "status": "machine"
+    },
+    "validator.roster_error": {
+      "status": "machine"
+    },
+    "validator.roster_retry": {
+      "status": "machine"
+    },
+    "validator.roster_title": {
+      "status": "machine"
+    },
+    "validator.title": {
+      "status": "machine"
+    },
+    "validator.verifying": {
+      "status": "machine"
+    },
+    "wallet.accountSwitchFailed": {
+      "status": "machine"
+    },
+    "wallet.accountSwitchMismatch": {
+      "status": "machine"
+    },
+    "wallet.accountSwitched": {
+      "status": "machine"
+    },
+    "wallet.accountSwitcherLabel": {
+      "status": "machine"
+    },
+    "wallet.address": {
+      "status": "machine"
+    },
+    "wallet.balance": {
+      "status": "machine"
+    },
+    "wallet.balanceError": {
+      "status": "machine"
+    },
+    "wallet.cancel": {
+      "status": "machine"
+    },
+    "wallet.comingSoon": {
+      "status": "machine"
+    },
+    "wallet.connect": {
+      "status": "machine"
+    },
+    "wallet.connected": {
+      "status": "machine"
+    },
+    "wallet.connecting": {
+      "status": "machine"
+    },
+    "wallet.connection_failed": {
+      "status": "machine"
+    },
+    "wallet.currentAccount": {
+      "status": "machine"
+    },
+    "wallet.disconnect": {
+      "status": "machine"
+    },
+    "wallet.forgetAllAccounts": {
+      "status": "machine"
+    },
+    "wallet.forgetAllConfirmMessage": {
+      "status": "machine"
+    },
+    "wallet.forgetAllConfirmTitle": {
+      "status": "machine"
+    },
+    "wallet.install": {
+      "status": "machine"
+    },
+    "wallet.installLink": {
+      "status": "machine"
+    },
+    "wallet.installMobile": {
+      "status": "machine"
+    },
+    "wallet.invalid_address": {
+      "status": "machine"
+    },
+    "wallet.ledgerConnect": {
+      "status": "machine"
+    },
+    "wallet.ledgerInstructions": {
+      "status": "machine"
+    },
+    "wallet.noWalletDetected": {
+      "status": "machine"
+    },
+    "wallet.noWalletInstalledBanner": {
+      "status": "machine"
+    },
+    "wallet.notInstalled": {
+      "status": "machine"
+    },
+    "wallet.removeAccountConfirmMessage": {
+      "status": "machine"
+    },
+    "wallet.removeAccountConfirmTitle": {
+      "status": "machine"
+    },
+    "wallet.selectProvider": {
+      "status": "machine"
+    },
+    "wallet.selectProviderHint": {
+      "status": "machine"
+    },
+    "wallet.switchAccountTitle": {
+      "status": "machine"
+    },
+    "watchlist_notes.cancel": {
+      "status": "machine"
+    },
+    "watchlist_notes.clear": {
+      "status": "machine"
+    },
+    "watchlist_notes.edit": {
+      "status": "machine"
+    },
+    "watchlist_notes.filter_all": {
+      "status": "machine"
+    },
+    "watchlist_notes.filter_label": {
+      "status": "machine"
+    },
+    "watchlist_notes.no_note": {
+      "status": "machine"
+    },
+    "watchlist_notes.note_counter": {
+      "status": "machine"
+    },
+    "watchlist_notes.note_label": {
+      "status": "machine"
+    },
+    "watchlist_notes.remove_tag": {
+      "status": "machine"
+    },
+    "watchlist_notes.save": {
+      "status": "machine"
+    },
+    "watchlist_notes.save_error": {
+      "status": "machine"
+    },
+    "watchlist_notes.tag_placeholder": {
+      "status": "machine"
+    }
+  },
+  "sw": {
+    "actions.download": {
+      "status": "machine"
+    },
+    "actions.export": {
+      "status": "machine"
+    },
+    "actions.import": {
+      "status": "machine"
+    },
+    "actions.refresh": {
+      "status": "machine"
+    },
+    "actions.upload": {
+      "status": "machine"
+    },
+    "actions.view_details": {
+      "status": "machine"
+    },
+    "actions.view_more": {
+      "status": "machine"
+    },
+    "admin.accumulated": {
+      "status": "machine"
+    },
+    "admin.active": {
+      "status": "machine"
+    },
+    "admin.activity": {
+      "status": "machine"
+    },
+    "admin.add": {
+      "status": "machine"
+    },
+    "admin.add_validator": {
+      "status": "machine"
+    },
+    "admin.circuit_breaker": {
+      "status": "machine"
+    },
+    "admin.code_plural": {
+      "status": "machine"
+    },
+    "admin.code_singular": {
+      "status": "machine"
+    },
+    "admin.codes_generated": {
+      "status": "machine"
+    },
+    "admin.contract": {
+      "status": "machine"
+    },
+    "admin.copied": {
+      "status": "machine"
+    },
+    "admin.copy": {
+      "status": "machine"
+    },
+    "admin.copy_contract_id": {
+      "status": "machine"
+    },
+    "admin.loading": {
+      "status": "machine"
+    },
+    "admin.next": {
+      "status": "machine"
+    },
+    "admin.no_activity_description": {
+      "status": "machine"
+    },
+    "admin.no_activity_title": {
+      "status": "machine"
+    },
+    "admin.no_referral_description": {
+      "status": "machine"
+    },
+    "admin.no_referral_title": {
+      "status": "machine"
+    },
+    "admin.no_validators": {
+      "status": "machine"
+    },
+    "admin.page_of": {
+      "status": "machine"
+    },
+    "admin.pause_confirm": {
+      "status": "machine"
+    },
+    "admin.pause_contract": {
+      "status": "machine"
+    },
+    "admin.paused": {
+      "status": "machine"
+    },
+    "admin.platform_fees": {
+      "status": "machine"
+    },
+    "admin.previous": {
+      "status": "machine"
+    },
+    "admin.recovery_failed": {
+      "status": "machine"
+    },
+    "admin.referral_program": {
+      "status": "machine"
+    },
+    "admin.referrals_plural": {
+      "status": "machine"
+    },
+    "admin.referrals_singular": {
+      "status": "machine"
+    },
+    "admin.remove": {
+      "status": "machine"
+    },
+    "admin.retry": {
+      "status": "machine"
+    },
+    "admin.successful_referrals": {
+      "status": "machine"
+    },
+    "admin.title": {
+      "status": "machine"
+    },
+    "admin.top_referrers": {
+      "status": "machine"
+    },
+    "admin.unauthorized_message": {
+      "status": "machine"
+    },
+    "admin.unpause_confirm": {
+      "status": "machine"
+    },
+    "admin.unpause_contract": {
+      "status": "machine"
+    },
+    "admin.validator_placeholder": {
+      "status": "machine"
+    },
+    "admin.validators": {
+      "status": "machine"
+    },
+    "admin.withdraw_confirm": {
+      "status": "machine"
+    },
+    "admin.withdraw_fees": {
+      "status": "machine"
+    },
+    "app_title": {
+      "status": "machine"
+    },
+    "changelog.added": {
+      "status": "machine"
+    },
+    "changelog.back_to_home": {
+      "status": "machine"
+    },
+    "changelog.empty_description": {
+      "status": "machine"
+    },
+    "changelog.empty_title": {
+      "status": "machine"
+    },
+    "changelog.english_notice": {
+      "status": "machine"
+    },
+    "changelog.eyebrow": {
+      "status": "machine"
+    },
+    "changelog.fixed": {
+      "status": "machine"
+    },
+    "changelog.improved": {
+      "status": "machine"
+    },
+    "changelog.page_description": {
+      "status": "machine"
+    },
+    "changelog.page_title": {
+      "status": "machine"
+    },
+    "common.back": {
+      "status": "machine"
+    },
+    "common.cancel": {
+      "status": "machine"
+    },
+    "common.clear": {
+      "status": "machine"
+    },
+    "common.close": {
+      "status": "machine"
+    },
+    "common.connect_wallet": {
+      "status": "machine"
+    },
+    "common.delete": {
+      "status": "machine"
+    },
+    "common.disconnect": {
+      "status": "machine"
+    },
+    "common.edit": {
+      "status": "machine"
+    },
+    "common.error": {
+      "status": "machine"
+    },
+    "common.filter": {
+      "status": "machine"
+    },
+    "common.info": {
+      "status": "machine"
+    },
+    "common.loading": {
+      "status": "machine"
+    },
+    "common.next": {
+      "status": "machine"
+    },
+    "common.previous": {
+      "status": "machine"
+    },
+    "common.save": {
+      "status": "machine"
+    },
+    "common.search": {
+      "status": "machine"
+    },
+    "common.sort": {
+      "status": "machine"
+    },
+    "common.submit": {
+      "status": "machine"
+    },
+    "common.success": {
+      "status": "machine"
+    },
+    "common.warning": {
+      "status": "machine"
+    },
+    "contractErrors.AlreadyAtLevel": {
+      "status": "machine"
+    },
+    "contractErrors.AlreadyInitialized": {
+      "status": "machine"
+    },
+    "contractErrors.ContractPaused": {
+      "status": "machine"
+    },
+    "contractErrors.InsufficientFee": {
+      "status": "machine"
+    },
+    "contractErrors.InvalidMilestone": {
+      "status": "machine"
+    },
+    "contractErrors.NoFeesToWithdraw": {
+      "status": "machine"
+    },
+    "contractErrors.NotInitialized": {
+      "status": "machine"
+    },
+    "contractErrors.Overflow": {
+      "status": "machine"
+    },
+    "contractErrors.PlayerNotFound": {
+      "status": "machine"
+    },
+    "contractErrors.SubscriptionExpired": {
+      "status": "machine"
+    },
+    "contractErrors.Unauthorized": {
+      "status": "machine"
+    },
+    "contractErrors.UnauthorizedValidator": {
+      "status": "machine"
+    },
+    "contractErrors.unknown": {
+      "status": "machine"
+    },
+    "cookieConsent.accept": {
+      "status": "machine"
+    },
+    "cookieConsent.decline": {
+      "status": "machine"
+    },
+    "cookieConsent.message": {
+      "status": "machine"
+    },
+    "cookieConsent.privacy_link": {
+      "status": "machine"
+    },
+    "cookieConsent.title": {
+      "status": "machine"
+    },
+    "dataDeletion.cancel": {
+      "status": "machine"
+    },
+    "dataDeletion.close": {
+      "status": "machine"
+    },
+    "dataDeletion.confirm_button": {
+      "status": "machine"
+    },
+    "dataDeletion.confirm_message": {
+      "status": "machine"
+    },
+    "dataDeletion.confirm_title": {
+      "status": "machine"
+    },
+    "dataDeletion.done": {
+      "status": "machine"
+    },
+    "dataDeletion.error_message": {
+      "status": "machine"
+    },
+    "dataDeletion.error_toast": {
+      "status": "machine"
+    },
+    "dataDeletion.modal_title": {
+      "status": "machine"
+    },
+    "dataDeletion.offchain_description": {
+      "status": "machine"
+    },
+    "dataDeletion.offchain_heading": {
+      "status": "machine"
+    },
+    "dataDeletion.onchain_description": {
+      "status": "machine"
+    },
+    "dataDeletion.onchain_heading": {
+      "status": "machine"
+    },
+    "dataDeletion.request_button": {
+      "status": "machine"
+    },
+    "dataDeletion.request_note": {
+      "status": "machine"
+    },
+    "dataDeletion.retry": {
+      "status": "machine"
+    },
+    "dataDeletion.submitting": {
+      "status": "machine"
+    },
+    "dataDeletion.success_message": {
+      "status": "machine"
+    },
+    "dataDeletion.success_title": {
+      "status": "machine"
+    },
+    "dataDeletion.success_toast": {
+      "status": "machine"
+    },
+    "errors.contract_error": {
+      "status": "machine"
+    },
+    "errors.forbidden": {
+      "status": "machine"
+    },
+    "errors.internal_error": {
+      "status": "machine"
+    },
+    "errors.network_error": {
+      "status": "machine"
+    },
+    "errors.not_found": {
+      "status": "machine"
+    },
+    "errors.unauthorized": {
+      "status": "machine"
+    },
+    "errors.wallet_error": {
+      "status": "machine"
+    },
+    "footer.changelog": {
+      "status": "machine"
+    },
+    "footer.cookie_settings": {
+      "status": "machine"
+    },
+    "footer.privacy": {
+      "status": "machine"
+    },
+    "footer.status": {
+      "status": "machine"
+    },
+    "footer.terms": {
+      "status": "machine"
+    },
+    "language.english": {
+      "status": "machine"
+    },
+    "language.french": {
+      "status": "machine"
+    },
+    "language.select_language": {
+      "status": "machine"
+    },
+    "language.swahili": {
+      "status": "machine"
+    },
+    "nav.maintenance_warning": {
+      "status": "machine"
+    },
+    "nav.player_dashboard": {
+      "status": "machine"
+    },
+    "nav.scout_dashboard": {
+      "status": "machine"
+    },
+    "nav.soon": {
+      "status": "machine"
+    },
+    "nav.sponsorship": {
+      "status": "machine"
+    },
+    "offline_queue.conflict_action_label": {
+      "status": "machine"
+    },
+    "offline_queue.conflict_desc": {
+      "status": "machine"
+    },
+    "offline_queue.conflict_discard_aria": {
+      "status": "machine"
+    },
+    "offline_queue.discard": {
+      "status": "machine"
+    },
+    "offline_queue.discard_all": {
+      "status": "machine"
+    },
+    "offline_queue.discard_aria": {
+      "status": "machine"
+    },
+    "offline_queue.failed": {
+      "status": "machine"
+    },
+    "offline_queue.failed_action_label": {
+      "status": "machine"
+    },
+    "offline_queue.failed_desc": {
+      "status": "machine"
+    },
+    "offline_queue.processing": {
+      "status": "machine"
+    },
+    "offline_queue.processing_desc": {
+      "status": "machine"
+    },
+    "offline_queue.queued": {
+      "status": "machine"
+    },
+    "offline_queue.queued_desc": {
+      "status": "machine"
+    },
+    "offline_queue.retry": {
+      "status": "machine"
+    },
+    "offline_queue.retry_aria": {
+      "status": "machine"
+    },
+    "player_dashboard.achievements": {
+      "status": "machine"
+    },
+    "player_dashboard.description": {
+      "status": "machine"
+    },
+    "player_dashboard.download_data": {
+      "status": "machine"
+    },
+    "player_dashboard.download_data_success": {
+      "status": "machine"
+    },
+    "player_dashboard.milestones": {
+      "status": "machine"
+    },
+    "player_dashboard.profile": {
+      "status": "machine"
+    },
+    "player_dashboard.progress": {
+      "status": "machine"
+    },
+    "player_dashboard.register_prompt": {
+      "status": "machine"
+    },
+    "player_dashboard.stats": {
+      "status": "machine"
+    },
+    "player_dashboard.tab_profile": {
+      "status": "machine"
+    },
+    "player_dashboard.tab_register": {
+      "status": "machine"
+    },
+    "player_dashboard.title": {
+      "status": "machine"
+    },
+    "player_dashboard.welcome": {
+      "status": "machine"
+    },
+    "player_profile.back_to_scout_dashboard": {
+      "status": "machine"
+    },
+    "privacy.back_to_home": {
+      "status": "machine"
+    },
+    "privacy.eyebrow": {
+      "status": "machine"
+    },
+    "privacy.last_updated": {
+      "status": "machine"
+    },
+    "privacy.page_description": {
+      "status": "machine"
+    },
+    "privacy.page_title": {
+      "status": "machine"
+    },
+    "privacy.section1_content": {
+      "status": "machine"
+    },
+    "privacy.section1_title": {
+      "status": "machine"
+    },
+    "privacy.section2_content": {
+      "status": "machine"
+    },
+    "privacy.section2_title": {
+      "status": "machine"
+    },
+    "privacy.section3_content": {
+      "status": "machine"
+    },
+    "privacy.section3_title": {
+      "status": "machine"
+    },
+    "privacy.section4_content": {
+      "status": "machine"
+    },
+    "privacy.section4_title": {
+      "status": "machine"
+    },
+    "privacy.section5_content": {
+      "status": "machine"
+    },
+    "privacy.section5_title": {
+      "status": "machine"
+    },
+    "privacy.section6_content": {
+      "status": "machine"
+    },
+    "privacy.section6_title": {
+      "status": "machine"
+    },
+    "privacy.section7_content": {
+      "status": "machine"
+    },
+    "privacy.section7_title": {
+      "status": "machine"
+    },
+    "progress_levels.level0": {
+      "status": "machine"
+    },
+    "progress_levels.level1": {
+      "status": "machine"
+    },
+    "progress_levels.level2": {
+      "status": "machine"
+    },
+    "progress_levels.level3": {
+      "status": "machine"
+    },
+    "recovery.back": {
+      "status": "machine"
+    },
+    "recovery.backToHome": {
+      "status": "machine"
+    },
+    "recovery.backupWalletConnected": {
+      "status": "machine"
+    },
+    "recovery.cancel": {
+      "status": "machine"
+    },
+    "recovery.connectBackupButton": {
+      "status": "machine"
+    },
+    "recovery.connectBackupDesc": {
+      "status": "machine"
+    },
+    "recovery.connectBackupTitle": {
+      "status": "machine"
+    },
+    "recovery.connected": {
+      "status": "machine"
+    },
+    "recovery.connecting": {
+      "status": "machine"
+    },
+    "recovery.errorConnectFailed": {
+      "status": "machine"
+    },
+    "recovery.errorEmptyAddress": {
+      "status": "machine"
+    },
+    "recovery.errorInvalidAddress": {
+      "status": "machine"
+    },
+    "recovery.errorNoAccountFound": {
+      "status": "machine"
+    },
+    "recovery.errorNotConnected": {
+      "status": "machine"
+    },
+    "recovery.errorRecoverFailed": {
+      "status": "machine"
+    },
+    "recovery.errorTitle": {
+      "status": "machine"
+    },
+    "recovery.howItWorks": {
+      "status": "machine"
+    },
+    "recovery.next": {
+      "status": "machine"
+    },
+    "recovery.noteLabel": {
+      "status": "machine"
+    },
+    "recovery.noteText": {
+      "status": "machine"
+    },
+    "recovery.primaryWalletLabel": {
+      "status": "machine"
+    },
+    "recovery.primaryWalletLost": {
+      "status": "machine"
+    },
+    "recovery.primaryWalletPlaceholder": {
+      "status": "machine"
+    },
+    "recovery.primaryWalletToRecover": {
+      "status": "machine"
+    },
+    "recovery.recoverButton": {
+      "status": "machine"
+    },
+    "recovery.step1": {
+      "status": "machine"
+    },
+    "recovery.step2": {
+      "status": "machine"
+    },
+    "recovery.step3": {
+      "status": "machine"
+    },
+    "recovery.subtitle": {
+      "status": "machine"
+    },
+    "recovery.successRedirect": {
+      "status": "machine"
+    },
+    "recovery.successTitle": {
+      "status": "machine"
+    },
+    "recovery.title": {
+      "status": "machine"
+    },
+    "recovery.troubleshooting": {
+      "status": "machine"
+    },
+    "recovery.troubleshootingTip1": {
+      "status": "machine"
+    },
+    "recovery.troubleshootingTip2": {
+      "status": "machine"
+    },
+    "recovery.troubleshootingTip3": {
+      "status": "machine"
+    },
+    "recovery.tryAgain": {
+      "status": "machine"
+    },
+    "recovery.verifyDesc": {
+      "status": "machine"
+    },
+    "recovery.verifyTitle": {
+      "status": "machine"
+    },
+    "recovery.verifying": {
+      "status": "machine"
+    },
+    "scout_dashboard.description": {
+      "status": "machine"
+    },
+    "scout_dashboard.milestones": {
+      "status": "machine"
+    },
+    "scout_dashboard.no_players": {
+      "status": "machine"
+    },
+    "scout_dashboard.player_not_found": {
+      "status": "machine"
+    },
+    "scout_dashboard.players": {
+      "status": "machine"
+    },
+    "scout_dashboard.recent_activity": {
+      "status": "machine"
+    },
+    "scout_dashboard.search_player": {
+      "status": "machine"
+    },
+    "scout_dashboard.statistics": {
+      "status": "machine"
+    },
+    "scout_dashboard.title": {
+      "status": "machine"
+    },
+    "scout_dashboard.trials": {
+      "status": "machine"
+    },
+    "scout_dashboard.welcome": {
+      "status": "machine"
+    },
+    "settings.back_to_home": {
+      "status": "machine"
+    },
+    "settings.connect_wallet_to_request": {
+      "status": "machine"
+    },
+    "settings.data_deletion_button": {
+      "status": "machine"
+    },
+    "settings.data_deletion_description": {
+      "status": "machine"
+    },
+    "settings.data_deletion_title": {
+      "status": "machine"
+    },
+    "settings.data_export_button": {
+      "status": "machine"
+    },
+    "settings.data_export_description": {
+      "status": "machine"
+    },
+    "settings.data_export_error": {
+      "status": "machine"
+    },
+    "settings.data_export_exporting": {
+      "status": "machine"
+    },
+    "settings.data_export_onchain_note": {
+      "status": "machine"
+    },
+    "settings.data_export_success": {
+      "status": "machine"
+    },
+    "settings.data_export_title": {
+      "status": "machine"
+    },
+    "settings.eyebrow": {
+      "status": "machine"
+    },
+    "settings.logout_all_button": {
+      "status": "machine"
+    },
+    "settings.logout_all_description": {
+      "status": "machine"
+    },
+    "settings.logout_all_error": {
+      "status": "machine"
+    },
+    "settings.logout_all_in_progress": {
+      "status": "machine"
+    },
+    "settings.logout_all_success": {
+      "status": "machine"
+    },
+    "settings.logout_all_title": {
+      "status": "machine"
+    },
+    "settings.page_description": {
+      "status": "machine"
+    },
+    "settings.page_title": {
+      "status": "machine"
+    },
+    "sponsorship.badge": {
+      "status": "machine"
+    },
+    "sponsorship.description": {
+      "status": "machine"
+    },
+    "sponsorship.howItWorksDescription": {
+      "status": "machine"
+    },
+    "sponsorship.howItWorksTitle": {
+      "status": "machine"
+    },
+    "sponsorship.metaDescription": {
+      "status": "machine"
+    },
+    "sponsorship.notice": {
+      "status": "machine"
+    },
+    "sponsorship.title": {
+      "status": "machine"
+    },
+    "status.back_to_home": {
+      "status": "machine"
+    },
+    "status.dependencies_title": {
+      "status": "machine"
+    },
+    "status.dependency_backend": {
+      "status": "machine"
+    },
+    "status.dependency_frontend": {
+      "status": "machine"
+    },
+    "status.dependency_rpc": {
+      "status": "machine"
+    },
+    "status.empty_description": {
+      "status": "machine"
+    },
+    "status.empty_title": {
+      "status": "machine"
+    },
+    "status.eyebrow": {
+      "status": "machine"
+    },
+    "status.incident_history_note": {
+      "status": "machine"
+    },
+    "status.live_status_cta": {
+      "status": "machine"
+    },
+    "status.live_status_description": {
+      "status": "machine"
+    },
+    "status.live_status_title": {
+      "status": "machine"
+    },
+    "status.page_description": {
+      "status": "machine"
+    },
+    "status.page_title": {
+      "status": "machine"
+    },
+    "terms.back_to_home": {
+      "status": "machine"
+    },
+    "terms.eyebrow": {
+      "status": "machine"
+    },
+    "terms.last_updated": {
+      "status": "machine"
+    },
+    "terms.page_description": {
+      "status": "machine"
+    },
+    "terms.page_title": {
+      "status": "machine"
+    },
+    "terms.section1_content": {
+      "status": "machine"
+    },
+    "terms.section1_title": {
+      "status": "machine"
+    },
+    "terms.section2_content": {
+      "status": "machine"
+    },
+    "terms.section2_title": {
+      "status": "machine"
+    },
+    "terms.section3_content": {
+      "status": "machine"
+    },
+    "terms.section3_title": {
+      "status": "machine"
+    },
+    "terms.section4_content": {
+      "status": "machine"
+    },
+    "terms.section4_title": {
+      "status": "machine"
+    },
+    "terms.section5_content": {
+      "status": "machine"
+    },
+    "terms.section5_title": {
+      "status": "machine"
+    },
+    "terms.section6_content": {
+      "status": "machine"
+    },
+    "terms.section6_title": {
+      "status": "machine"
+    },
+    "validator.access_only_description": {
+      "status": "machine"
+    },
+    "validator.access_only_title": {
+      "status": "machine"
+    },
+    "validator.find_player": {
+      "status": "machine"
+    },
+    "validator.roster_count_one": {
+      "status": "machine"
+    },
+    "validator.roster_count_other": {
+      "status": "machine"
+    },
+    "validator.roster_empty_description": {
+      "status": "machine"
+    },
+    "validator.roster_empty_title": {
+      "status": "machine"
+    },
+    "validator.roster_error": {
+      "status": "machine"
+    },
+    "validator.roster_retry": {
+      "status": "machine"
+    },
+    "validator.roster_title": {
+      "status": "machine"
+    },
+    "validator.title": {
+      "status": "machine"
+    },
+    "validator.verifying": {
+      "status": "machine"
+    },
+    "wallet.accountSwitchFailed": {
+      "status": "machine"
+    },
+    "wallet.accountSwitchMismatch": {
+      "status": "machine"
+    },
+    "wallet.accountSwitched": {
+      "status": "machine"
+    },
+    "wallet.accountSwitcherLabel": {
+      "status": "machine"
+    },
+    "wallet.address": {
+      "status": "machine"
+    },
+    "wallet.balance": {
+      "status": "machine"
+    },
+    "wallet.balanceError": {
+      "status": "machine"
+    },
+    "wallet.cancel": {
+      "status": "machine"
+    },
+    "wallet.comingSoon": {
+      "status": "machine"
+    },
+    "wallet.connect": {
+      "status": "machine"
+    },
+    "wallet.connected": {
+      "status": "machine"
+    },
+    "wallet.connecting": {
+      "status": "machine"
+    },
+    "wallet.connection_failed": {
+      "status": "machine"
+    },
+    "wallet.currentAccount": {
+      "status": "machine"
+    },
+    "wallet.disconnect": {
+      "status": "machine"
+    },
+    "wallet.forgetAllAccounts": {
+      "status": "machine"
+    },
+    "wallet.forgetAllConfirmMessage": {
+      "status": "machine"
+    },
+    "wallet.forgetAllConfirmTitle": {
+      "status": "machine"
+    },
+    "wallet.install": {
+      "status": "machine"
+    },
+    "wallet.installLink": {
+      "status": "machine"
+    },
+    "wallet.installMobile": {
+      "status": "machine"
+    },
+    "wallet.invalid_address": {
+      "status": "machine"
+    },
+    "wallet.ledgerConnect": {
+      "status": "machine"
+    },
+    "wallet.ledgerInstructions": {
+      "status": "machine"
+    },
+    "wallet.noWalletDetected": {
+      "status": "machine"
+    },
+    "wallet.noWalletInstalledBanner": {
+      "status": "machine"
+    },
+    "wallet.notInstalled": {
+      "status": "machine"
+    },
+    "wallet.removeAccountConfirmMessage": {
+      "status": "machine"
+    },
+    "wallet.removeAccountConfirmTitle": {
+      "status": "machine"
+    },
+    "wallet.selectProvider": {
+      "status": "machine"
+    },
+    "wallet.selectProviderHint": {
+      "status": "machine"
+    },
+    "wallet.switchAccountTitle": {
+      "status": "machine"
+    },
+    "watchlist_notes.cancel": {
+      "status": "machine"
+    },
+    "watchlist_notes.clear": {
+      "status": "machine"
+    },
+    "watchlist_notes.edit": {
+      "status": "machine"
+    },
+    "watchlist_notes.filter_all": {
+      "status": "machine"
+    },
+    "watchlist_notes.filter_label": {
+      "status": "machine"
+    },
+    "watchlist_notes.no_note": {
+      "status": "machine"
+    },
+    "watchlist_notes.note_counter": {
+      "status": "machine"
+    },
+    "watchlist_notes.note_label": {
+      "status": "machine"
+    },
+    "watchlist_notes.remove_tag": {
+      "status": "machine"
+    },
+    "watchlist_notes.save": {
+      "status": "machine"
+    },
+    "watchlist_notes.save_error": {
+      "status": "machine"
+    },
+    "watchlist_notes.tag_placeholder": {
+      "status": "machine"
+    }
+  }
+}
