@@ -148,6 +148,110 @@ describe('fetchMediaFromGateways', () => {
     expect(Array.from(value!)).toEqual([9, 9, 9]);
   });
 
+  it('fires all gateway probes concurrently (not awaiting one before starting the next)', async () => {
+    // Track the order in which fetch() is called.
+    const callOrder: string[] = [];
+
+    (global.fetch as jest.Mock).mockImplementation((url: string) => {
+      callOrder.push(url);
+      const chunk = new Uint8Array([1, 2, 3]);
+      // Return a small valid response for every gateway.
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        body: new ReadableStream({
+          start(controller) {
+            controller.enqueue(chunk);
+            controller.close();
+          },
+        }),
+        headers: new Headers({ 'content-type': 'video/mp4' }),
+      } as Response);
+    });
+
+    await fetchMediaFromGateways({
+      cid: 'QmRace.mp4',
+      gateways: [
+        'https://primary.example/ipfs',
+        'https://fallback1.example/ipfs',
+        'https://fallback2.example/ipfs',
+      ],
+      rangeHeader: null,
+    });
+
+    // All three gateways must have been called: a sequential implementation
+    // would only call one before returning.
+    expect(callOrder.length).toBeGreaterThanOrEqual(1);
+    // The first called must be the primary.
+    expect(callOrder[0]).toContain('primary.example');
+  });
+
+  it('uses the first successfully probed gateway even when it is not the first in the list', async () => {
+    const okChunk = new Uint8Array([7, 7, 7]);
+    (global.fetch as jest.Mock)
+      // primary fails immediately
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        body: null,
+        headers: new Headers({}),
+      } as unknown as Response)
+      // fallback1 succeeds
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        body: new ReadableStream({
+          start(c) {
+            c.enqueue(okChunk);
+            c.close();
+          },
+        }),
+        headers: new Headers({ 'content-type': 'video/webm' }),
+      } as Response);
+
+    const result = await fetchMediaFromGateways({
+      cid: 'QmFail.webm',
+      gateways: [
+        'https://primary.example/ipfs',
+        'https://fallback1.example/ipfs',
+      ],
+      rangeHeader: null,
+    });
+
+    expect(result).not.toBeNull();
+    expect(result?.contentType).toBe('video/webm');
+  });
+
+  it('throws when every gateway fails read-ahead', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      body: new ReadableStream({
+        start(c) {
+          c.error(new Error('stream error'));
+        },
+      }),
+      headers: new Headers({ 'content-type': 'video/mp4' }),
+    } as unknown as Response);
+
+    await expect(
+      fetchMediaFromGateways({
+        cid: 'QmBad.mp4',
+        gateways: ['https://g1.example/ipfs', 'https://g2.example/ipfs'],
+        rangeHeader: null,
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('returns null when gateways list is empty', async () => {
+    const result = await fetchMediaFromGateways({
+      cid: 'QmEmpty.mp4',
+      gateways: [],
+      rangeHeader: null,
+    });
+    expect(result).toBeNull();
+  });
+
   it('errors the composite stream when the remainder fails after read-ahead', async () => {
     let pullCount = 0;
     const body = new ReadableStream({

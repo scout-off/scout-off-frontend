@@ -165,85 +165,129 @@ export async function fetchMediaFromGateways(options: {
   rangeHeader: string | null;
 }): Promise<GatewayMediaResult | null> {
   const { cid, gateways, rangeHeader } = options;
+
+  if (gateways.length === 0) return null;
+
+  /**
+   * Race all gateways concurrently: fire one fetch per gateway, take the
+   * first to pass a read-ahead probe, and cancel the others.
+   *
+   * The read-ahead probe (bounded prefix read) must succeed before we
+   * commit to a gateway — a gateway that accepts the connection but then
+   * stalls is treated as failed so the next-fastest gateway wins instead.
+   */
+  const controllers = gateways.map(() => new AbortController());
+
+  async function tryGateway(
+    gateway: string,
+    idx: number,
+  ): Promise<GatewayMediaResult> {
+    const headers: HeadersInit = {};
+    if (rangeHeader) {
+      headers.Range = rangeHeader;
+    }
+
+    const upstream = await withOutboundSpan(
+      'ipfs.gateway.fetch',
+      {
+        dependency: 'ipfs-gateway',
+        gateway_index: idx,
+      },
+      () =>
+        fetch(`${gateway}/${encodeURIComponent(cid)}`, {
+          headers,
+          signal: controllers[idx].signal,
+        }),
+    );
+
+    if (!upstream.ok || !upstream.body) {
+      throw new Error(`Gateway ${gateway} returned ${upstream.status}`);
+    }
+
+    const contentType =
+      upstream.headers.get('content-type') ?? 'application/octet-stream';
+
+    const readAhead = await withOutboundSpan(
+      'ipfs.gateway.read-ahead',
+      {
+        dependency: 'ipfs-gateway',
+        operation: 'read-ahead',
+      },
+      async (span) => {
+        const startedAt = performance.now();
+        const result = await readAheadWithTimeout(
+          upstream.body!,
+          READ_AHEAD_BYTES,
+          READ_AHEAD_TIMEOUT_MS,
+        );
+        span.setAttribute(
+          'http.ttfb_ms',
+          Math.round(performance.now() - startedAt),
+        );
+        return result;
+      },
+    );
+
+    if (readAhead === 'error') {
+      throw new Error(
+        `Gateway ${gateway} stalled or failed during read-ahead`,
+      );
+    }
+
+    const { prefix, reader } = readAhead;
+    const contentRange = upstream.headers.get('content-range');
+    const contentLength = upstream.headers.get('content-length');
+    const acceptRanges = upstream.headers.get('accept-ranges') ?? 'bytes';
+
+    let expectedLength: number | undefined;
+    if (contentLength) {
+      const parsed = Number.parseInt(contentLength, 10);
+      if (Number.isFinite(parsed)) {
+        expectedLength = parsed;
+      }
+    }
+
+    const body = createCompositeStream(prefix, reader, expectedLength);
+
+    return {
+      body,
+      contentType,
+      status: upstream.status,
+      contentRange: contentRange ?? undefined,
+      contentLength: contentLength ?? undefined,
+      acceptRanges,
+    };
+  }
+
+  const probes = gateways.map((gateway, idx) =>
+    tryGateway(gateway, idx).then(
+      (result) => ({ ok: true as const, result, idx }),
+      (err) => ({ ok: false as const, error: err, idx }),
+    ),
+  );
+
+  // Work through the settled probes in arrival order: take the first
+  // successful one and cancel the remaining in-flight requests.
+  const remaining = new Set(gateways.map((_, i) => i));
   let lastError: unknown = null;
 
-  for (const gateway of gateways) {
-    try {
-      const headers: HeadersInit = {};
-      if (rangeHeader) {
-        headers.Range = rangeHeader;
-      }
+  while (remaining.size > 0) {
+    // Race the remaining probes — whichever resolves first wins this round.
+    const settled = await Promise.race(
+      [...remaining].map((idx) => probes[idx]),
+    );
 
-      const upstream = await withOutboundSpan(
-        'ipfs.gateway.fetch',
-        {
-          dependency: 'ipfs-gateway',
-          gateway_index: gateways.indexOf(gateway),
-        },
-        () => fetch(`${gateway}/${encodeURIComponent(cid)}`, { headers }),
-      );
-      if (!upstream.ok || !upstream.body) {
-        lastError = new Error(`Gateway ${gateway} returned ${upstream.status}`);
-        continue;
-      }
+    remaining.delete(settled.idx);
 
-      const contentType =
-        upstream.headers.get('content-type') ?? 'application/octet-stream';
-
-      const readAhead = await withOutboundSpan(
-        'ipfs.gateway.read-ahead',
-        {
-          dependency: 'ipfs-gateway',
-          operation: 'read-ahead',
-        },
-        async (span) => {
-          const startedAt = performance.now();
-          const result = await readAheadWithTimeout(
-            upstream.body!,
-            READ_AHEAD_BYTES,
-            READ_AHEAD_TIMEOUT_MS,
-          );
-          span.setAttribute(
-            'http.ttfb_ms',
-            Math.round(performance.now() - startedAt),
-          );
-          return result;
-        },
-      );
-
-      if (readAhead === 'error') {
-        lastError = new Error(
-          `Gateway ${gateway} stalled or failed during read-ahead`,
-        );
-        continue;
-      }
-
-      const { prefix, reader } = readAhead;
-      const contentRange = upstream.headers.get('content-range');
-      const contentLength = upstream.headers.get('content-length');
-      const acceptRanges = upstream.headers.get('accept-ranges') ?? 'bytes';
-
-      let expectedLength: number | undefined;
-      if (contentLength) {
-        const parsed = Number.parseInt(contentLength, 10);
-        if (Number.isFinite(parsed)) {
-          expectedLength = parsed;
-        }
-      }
-
-      const body = createCompositeStream(prefix, reader, expectedLength);
-
-      return {
-        body,
-        contentType,
-        status: upstream.status,
-        contentRange: contentRange ?? undefined,
-        contentLength: contentLength ?? undefined,
-        acceptRanges,
-      };
-    } catch (err) {
-      lastError = err;
+    if (settled.ok) {
+      // Cancel all still-in-flight gateway requests.
+      controllers.forEach((ctrl, i) => {
+        if (i !== settled.idx) ctrl.abort();
+      });
+      return settled.result;
     }
+
+    lastError = settled.error;
   }
 
   if (lastError) {

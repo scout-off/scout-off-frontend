@@ -12,8 +12,118 @@ const PRIMARY_GATEWAY =
  */
 export const DEFAULT_IPFS_FALLBACKS: string[] = [...IPFS_FALLBACK_GATEWAYS];
 
-/** Timeout per gateway attempt in milliseconds. */
-const ATTEMPT_TIMEOUT_MS = 8_000;
+/**
+ * Per-gateway race timeout. Each concurrent probe is aborted after this many
+ * milliseconds if it hasn't responded yet.
+ *
+ * 3 s is intentionally tighter than the sequential ATTEMPT_TIMEOUT_MS: in a
+ * concurrent race we can afford to cut slow gateways loose early because a
+ * working peer can win before this timeout fires. The constraint from the
+ * issue is first playable frame within 3 s on a healthy primary gateway, so
+ * the race probe must complete well within that budget.
+ */
+export const RACE_TIMEOUT_MS = 3_000;
+
+export interface RacedGatewayResult {
+  /** Fully-qualified URL for the CID on the winning gateway. */
+  url: string;
+  /** The winning gateway base URL. */
+  gateway: string;
+  /** Round-trip time in milliseconds from race start to first successful HEAD response. */
+  latencyMs: number;
+  /** True when the primary gateway won the race; false when a fallback gateway won. */
+  isPrimary: boolean;
+}
+
+/**
+ * Race all gateways concurrently for a CID and return the first to respond
+ * with a successful HEAD request.
+ *
+ * Unlike the sequential {@link ipfsUrl}, this fires all probes at once and
+ * cancels the losers as soon as the first winner responds. The latency budget
+ * is therefore bounded by the *fastest* available gateway rather than the
+ * sum of all failures.
+ *
+ * @param cid       - The IPFS content identifier to resolve.
+ * @param fallbacks - Optional ordered list of fallback gateway base URLs.
+ *                    Defaults to {@link DEFAULT_IPFS_FALLBACKS}.
+ * @param timeoutMs - Per-gateway HEAD-probe timeout in ms. Defaults to
+ *                    {@link RACE_TIMEOUT_MS}.
+ * @returns The URL and metadata for the fastest-responding gateway.
+ * @throws When no gateway responds successfully within the timeout.
+ */
+export async function raceGateways(
+  cid: string,
+  fallbacks: string[] = DEFAULT_IPFS_FALLBACKS,
+  timeoutMs: number = RACE_TIMEOUT_MS,
+): Promise<RacedGatewayResult> {
+  const gateways = [PRIMARY_GATEWAY, ...fallbacks];
+  const raceStart = performance.now();
+
+  // One AbortController per probe so we can cancel all losers once a winner
+  // is found. We deliberately do not share one controller: cancelling a
+  // shared signal would race with the winner's own teardown path.
+  const controllers = gateways.map(() => new AbortController());
+
+  const probes = gateways.map((gateway, idx): Promise<RacedGatewayResult> => {
+    const url = `${gateway}/${cid}`;
+    const controller = controllers[idx];
+
+    return new Promise<RacedGatewayResult>((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+        reject(new Error(`Gateway ${gateway} timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+
+      fetch(url, { method: 'HEAD', signal: controller.signal })
+        .then((res) => {
+          clearTimeout(timeoutId);
+          if (!res.ok) {
+            reject(
+              new Error(`Gateway ${gateway} returned HTTP ${res.status}`),
+            );
+            return;
+          }
+          resolve({
+            url,
+            gateway,
+            latencyMs: Math.round(performance.now() - raceStart),
+            isPrimary: idx === 0,
+          });
+        })
+        .catch((err) => {
+          clearTimeout(timeoutId);
+          reject(err);
+        });
+    });
+  });
+
+  try {
+    // Promise.any resolves with the first fulfilled probe and ignores all
+    // rejections unless every probe rejects (AggregateError path below).
+    const winner = await Promise.any(probes);
+
+    // Cancel all losing probes to free their connections.
+    controllers.forEach((ctrl, idx) => {
+      if (gateways[idx] !== winner.gateway) {
+        ctrl.abort();
+      }
+    });
+
+    if (!winner.isPrimary) {
+      console.warn(
+        `[ipfs] Fallback gateway won race (${winner.latencyMs}ms): ${winner.gateway}`,
+      );
+    }
+
+    return winner;
+  } catch (err) {
+    // AggregateError: every probe failed.
+    throw new Error(
+      `[ipfs] All gateways failed race for CID "${cid}". Tried: ${gateways.join(', ')}`,
+    );
+  }
+}
 
 /**
  * Upload a file to IPFS via the internal API route in a single request.
@@ -259,21 +369,22 @@ export async function uploadToIPFSChunked(
 }
 
 /**
- * Resolve a full URL for an IPFS CID, with automatic gateway fallback.
+ * Resolve a full URL for an IPFS CID using concurrent gateway racing.
  *
- * Tries the primary gateway first (`NEXT_PUBLIC_IPFS_GATEWAY`). If the request
- * returns a 4xx or 5xx status, or times out after 8 seconds, it retries with
- * each gateway in `fallbacks` (defaults to {@link DEFAULT_IPFS_FALLBACKS}).
+ * All gateways are probed simultaneously with HEAD requests. The first to
+ * return a successful response wins; the rest are cancelled. This replaces
+ * the former sequential loop (which tried one gateway at a time, waiting up
+ * to 8 s per failure before moving on) and is now the backing implementation
+ * used by both this function and the hooks that drive {@link IPFSMediaGallery}.
  *
- * A console warning is emitted whenever a fallback gateway is used.
+ * A console warning is emitted when the winning gateway is not the primary.
  *
  * @param cid       - The IPFS content identifier to resolve.
  * @param fallbacks - Optional ordered list of fallback gateway base URLs.
  *                    Defaults to {@link DEFAULT_IPFS_FALLBACKS}.
- * @returns The resolved URL string from the first gateway that responds successfully.
+ * @returns The resolved URL string from the fastest-responding gateway.
  *
- * @throws {Error} When all gateways (primary + all fallbacks) are exhausted without
- *                 a successful response.
+ * @throws {Error} When all gateways fail or time out without a successful response.
  *
  * @example
  * // Basic usage — uses default fallbacks
@@ -287,44 +398,6 @@ export async function ipfsUrl(
   cid: string,
   fallbacks: string[] = DEFAULT_IPFS_FALLBACKS,
 ): Promise<string> {
-  const gateways = [PRIMARY_GATEWAY, ...fallbacks];
-
-  for (let i = 0; i < gateways.length; i++) {
-    const gateway = gateways[i];
-    const url = `${gateway}/${cid}`;
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), ATTEMPT_TIMEOUT_MS);
-
-    try {
-      const response = await fetch(url, {
-        method: 'HEAD',
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        if (i > 0) {
-          console.warn(
-            `[ipfs] Primary gateway unavailable. Using fallback gateway: ${gateway}`,
-          );
-        }
-        return url;
-      }
-
-      // 4xx / 5xx — try next gateway
-      console.warn(
-        `[ipfs] Gateway ${gateway} returned ${response.status}. Trying next fallback…`,
-      );
-    } catch {
-      clearTimeout(timeoutId);
-      console.warn(
-        `[ipfs] Gateway ${gateway} failed (timeout or network error). Trying next fallback…`,
-      );
-    }
-  }
-
-  throw new Error(
-    `[ipfs] All gateways exhausted for CID "${cid}". Tried: ${gateways.join(', ')}`,
-  );
+  const result = await raceGateways(cid, fallbacks);
+  return result.url;
 }

@@ -1,6 +1,8 @@
 import axios from 'axios';
 import {
   ipfsUrl,
+  raceGateways,
+  RACE_TIMEOUT_MS,
   uploadToIPFS,
   uploadToIPFSChunked,
   getChunkedUploadStatus,
@@ -32,36 +34,162 @@ describe('lib/ipfs', () => {
     delete process.env.NEXT_PUBLIC_IPFS_GATEWAY;
   });
 
-  describe('ipfsUrl', () => {
-    it('returns primary gateway URL when primary is successful', async () => {
-      (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true });
+  // ── raceGateways ──────────────────────────────────────────────────────────
+  describe('raceGateways', () => {
+    it('returns the primary gateway URL when it responds first', async () => {
+      // All gateways succeed; primary is fastest (resolves first).
+      (global.fetch as jest.Mock).mockResolvedValue({ ok: true });
 
-      const result = await ipfsUrl(mockCid);
+      const result = await raceGateways(mockCid, [mockFallback1]);
 
-      expect(result).toBe(`${mockPrimaryGateway}/${mockCid}`);
-      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(result.url).toBe(`${mockPrimaryGateway}/${mockCid}`);
+      expect(result.isPrimary).toBe(true);
+      expect(typeof result.latencyMs).toBe('number');
     });
 
-    it('falls back to secondary gateway when primary returns 500', async () => {
+    it('returns a fallback URL when the primary gateway fails (5xx)', async () => {
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({ ok: false, status: 500 }) // primary
+        .mockResolvedValueOnce({ ok: true }); // fallback1
+
+      const result = await raceGateways(mockCid, [mockFallback1]);
+
+      expect(result.url).toBe(`${mockFallback1}/${mockCid}`);
+      expect(result.gateway).toBe(mockFallback1);
+      expect(result.isPrimary).toBe(false);
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining(mockFallback1),
+      );
+    });
+
+    it('returns a fallback URL when the primary gateway times out', async () => {
+      // Primary never resolves — simulate by returning a never-settling promise,
+      // but set a very short timeout so the test doesn't hang.
+      (global.fetch as jest.Mock)
+        .mockImplementationOnce(
+          () => new Promise(() => {}), // primary — never settles
+        )
+        .mockResolvedValueOnce({ ok: true }); // fallback1 wins
+
+      const result = await raceGateways(mockCid, [mockFallback1], 50);
+
+      // fallback1 wins because primary timed out at 50 ms.
+      expect(result.url).toBe(`${mockFallback1}/${mockCid}`);
+      expect(result.isPrimary).toBe(false);
+    });
+
+    it('returns a fallback URL when the primary gateway returns a network error', async () => {
+      (global.fetch as jest.Mock)
+        .mockRejectedValueOnce(new TypeError('Failed to fetch')) // primary
+        .mockResolvedValueOnce({ ok: true }); // fallback1
+
+      const result = await raceGateways(mockCid, [mockFallback1]);
+
+      expect(result.url).toBe(`${mockFallback1}/${mockCid}`);
+      expect(result.isPrimary).toBe(false);
+    });
+
+    it('fires all gateway probes concurrently (not sequentially)', async () => {
+      // Track call order to verify all three start before any resolves.
+      const callOrder: string[] = [];
+
+      (global.fetch as jest.Mock).mockImplementation(
+        (url: string) =>
+          new Promise<{ ok: boolean }>((resolve) => {
+            callOrder.push(url as string);
+            // All resolve in the next micro-task; primary isn't the only one that
+            // gets a chance — all are queued before any resolves.
+            Promise.resolve().then(() => resolve({ ok: true }));
+          }),
+      );
+
+      await raceGateways(mockCid, [mockFallback1, mockFallback2]);
+
+      // All three probes should have been issued.
+      expect(callOrder).toHaveLength(3);
+      expect(callOrder).toContain(`${mockPrimaryGateway}/${mockCid}`);
+      expect(callOrder).toContain(`${mockFallback1}/${mockCid}`);
+      expect(callOrder).toContain(`${mockFallback2}/${mockCid}`);
+    });
+
+    it('throws when all gateways fail', async () => {
       (global.fetch as jest.Mock)
         .mockResolvedValueOnce({ ok: false, status: 500 })
-        .mockResolvedValueOnce({ ok: true });
+        .mockResolvedValueOnce({ ok: false, status: 503 })
+        .mockResolvedValueOnce({ ok: false, status: 429 });
+
+      await expect(
+        raceGateways(mockCid, [mockFallback1, mockFallback2]),
+      ).rejects.toThrow(/All gateways failed race/);
+    });
+
+    it('exports a RACE_TIMEOUT_MS constant (startup latency budget assertion)', () => {
+      // Startup constraint from the issue: first playable frame within 3 s on
+      // a healthy primary gateway. The race timeout must be ≤ 3000 ms so the
+      // race itself cannot blow the budget on its own.
+      expect(RACE_TIMEOUT_MS).toBeLessThanOrEqual(3_000);
+    });
+
+    // Latency budget test: the race resolves within the stated budget even
+    // when the primary is slightly slow.
+    it('resolves within the startup latency budget when a fallback wins', async () => {
+      jest.useFakeTimers();
+
+      let primaryResolve!: (v: { ok: boolean }) => void;
+      let fallbackResolve!: (v: { ok: boolean }) => void;
+
+      (global.fetch as jest.Mock)
+        .mockImplementationOnce(
+          () => new Promise<{ ok: boolean }>((r) => { primaryResolve = r; }),
+        )
+        .mockImplementationOnce(
+          () => new Promise<{ ok: boolean }>((r) => { fallbackResolve = r; }),
+        );
+
+      const racePromise = raceGateways(mockCid, [mockFallback1], 3000);
+
+      // Fallback responds at t=200 ms (well within 3 s budget).
+      jest.advanceTimersByTime(200);
+      fallbackResolve({ ok: true });
+
+      const result = await racePromise;
+      expect(result.url).toBe(`${mockFallback1}/${mockCid}`);
+
+      // Clean up dangling primary.
+      primaryResolve({ ok: false, ok2: false } as unknown as { ok: boolean });
+      jest.useRealTimers();
+    });
+  });
+
+  // ── ipfsUrl ──────────────────────────────────────────────────────────────
+  describe('ipfsUrl', () => {
+    it('returns primary gateway URL when primary is successful', async () => {
+      (global.fetch as jest.Mock).mockResolvedValue({ ok: true });
 
       const result = await ipfsUrl(mockCid);
 
+      // With concurrent racing all probes fire; we just need the primary URL
+      // returned when it wins.
+      expect(result).toBe(`${mockPrimaryGateway}/${mockCid}`);
+    });
+
+    it('falls back to a secondary gateway when the primary returns 500', async () => {
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({ ok: false, status: 500 }) // primary
+        .mockResolvedValueOnce({ ok: true }); // fallback1
+
+      const result = await ipfsUrl(mockCid, [mockFallback1]);
+
       expect(result).toBe(`${mockFallback1}/${mockCid}`);
-      expect(global.fetch).toHaveBeenCalledTimes(2);
       expect(console.warn).toHaveBeenCalled();
     });
 
-    it('tries all gateways and throws error when all are exhausted', async () => {
-      (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({ ok: false, status: 500 })
-        .mockResolvedValueOnce({ ok: false, status: 500 })
-        .mockResolvedValueOnce({ ok: false, status: 500 });
+    it('throws when all gateways are exhausted', async () => {
+      (global.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 500 });
 
-      await expect(ipfsUrl(mockCid)).rejects.toThrow(/gateways exhausted/);
-      expect(global.fetch).toHaveBeenCalledTimes(3);
+      await expect(
+        ipfsUrl(mockCid, [mockFallback1, mockFallback2]),
+      ).rejects.toThrow(/gateways/i);
     });
   });
 
