@@ -190,4 +190,49 @@ describe('useUndoableRemoval', () => {
     expect(onOptimisticRemove).toHaveBeenCalledTimes(1);
     expect(show).toHaveBeenCalledTimes(1);
   });
+
+  it('commits pending removals on unmount instead of dropping them (#1684)', () => {
+    const { result, unmount } = renderHook(() => useUndoableRemoval());
+    const onCommit = jest.fn();
+
+    act(() => {
+      result.current({
+        id: 7,
+        message: 'Removed',
+        onOptimisticRemove: jest.fn(),
+        onRestore: jest.fn(),
+        onCommit,
+      });
+    });
+    expect(onCommit).not.toHaveBeenCalled();
+
+    unmount();
+    expect(onCommit).toHaveBeenCalledTimes(1);
+
+    // The cleared timer must not commit a second time.
+    act(() => {
+      jest.advanceTimersByTime(10_000);
+    });
+    expect(onCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it('commits pending removals on pagehide (#1684)', () => {
+    const { result } = renderHook(() => useUndoableRemoval());
+    const onCommit = jest.fn();
+
+    act(() => {
+      result.current({
+        id: 8,
+        message: 'Removed',
+        onOptimisticRemove: jest.fn(),
+        onRestore: jest.fn(),
+        onCommit,
+      });
+    });
+
+    act(() => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
+    expect(onCommit).toHaveBeenCalledTimes(1);
+  });
 });

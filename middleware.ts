@@ -5,6 +5,8 @@ import {
   defaultLocale,
   LOCALE_COOKIE,
   LOCALE_COOKIE_MAX_AGE,
+  LOCALE_LIKE_SEGMENT,
+  resolveSupportedLocale,
 } from '@/lib/locales';
 import { negotiateLocale } from '@/lib/negotiateLocale';
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
@@ -152,6 +154,25 @@ export async function middleware(request: NextRequest) {
   // Clone nextUrl rather than resolving a new path against request.url so
   // the query string (e.g. ?ref= referral codes) survives the redirect.
   const url = request.nextUrl.clone();
+
+  // A first segment that looks like a locale tag but isn't an exact match
+  // (/EN/scout, /fr-FR/scout, /de/scout) must be normalised or replaced
+  // rather than prefixed — otherwise /de/scout becomes /en/de/scout, a 404
+  // (#1687).
+  const firstSegment = pathname.split('/')[1] ?? '';
+  if (firstSegment && LOCALE_LIKE_SEGMENT.test(firstSegment)) {
+    const rest = pathname.slice(firstSegment.length + 1);
+    const supported = resolveSupportedLocale(firstSegment);
+    if (supported) {
+      // Case / region normalisation: /EN/scout, /fr-FR/scout -> /fr/scout
+      url.pathname = `/${supported}${rest}`;
+      return NextResponse.redirect(url, 301);
+    }
+    // Unsupported locale-like prefix: replace it with the negotiated locale.
+    url.pathname = `/${locale}${rest}`;
+    return NextResponse.redirect(url, 307);
+  }
+
   url.pathname = `/${locale}${pathname}`;
   const response = NextResponse.redirect(url);
 

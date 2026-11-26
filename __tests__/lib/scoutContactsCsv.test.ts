@@ -38,4 +38,31 @@ describe('buildScoutContactsCsv', () => {
     expect(lines[2]).toBe('p2,,,,');
     expect(lines[3]).toBe('C,,,Unverified,');
   });
+
+  it.each(['=', '+', '-', '@']) (
+    'neutralises formula injection for names starting with %s',
+    (prefix) => {
+      const csv = buildScoutContactsCsv([
+        { playerId: 'p1', name: `${prefix}HYPERLINK("https://evil","Click")` },
+      ]);
+      const lines = csv.split('\r\n');
+      expect(lines[1].startsWith(`'${prefix}`)).toBe(true);
+    },
+  );
+
+  it('neutralises formula injection in position and region', () => {
+    const csv = buildScoutContactsCsv([
+      { playerId: 'p1', position: '=cmd', region: '@SUM(A1)' },
+    ]);
+    const lines = csv.split('\r\n');
+    expect(lines[1]).toBe(",'=cmd,'@SUM(A1),,");
+  });
+
+  it('does not prefix purely numeric cells', () => {
+    const csv = buildScoutContactsCsv([
+      { playerId: 'p1', name: '-42', region: '123' },
+    ]);
+    const lines = csv.split('\r\n');
+    expect(lines[1]).toBe('-42,,123,,');
+  });
 });

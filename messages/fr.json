@@ -58,7 +58,8 @@
       "updated": "Mis à jour {time}",
       "updated_stale": "Mis à jour {time} · les données peuvent être obsolètes",
       "pending_write": "Votre modification peut prendre jusqu’à une minute pour apparaître"
-    }
+    },
+    "undo": "Annuler"
   },
   "language": {
     "select_language": "Sélectionner la langue",

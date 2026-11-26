@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { createHmac, timingSafeEqual, randomUUID } from 'crypto';
+import { createHmac, timingSafeEqual, randomUUID, createHash } from 'crypto';
 import { SessionStore } from './sessionStore';
 import { SESSION_COOKIE } from './sessionCookies';
 
@@ -7,15 +7,15 @@ import { SESSION_COOKIE } from './sessionCookies';
 //
 // SESSION_SECRET_KEYS (comma-separated) is the preferred variable for
 // production deployments that want zero-downtime rotation.  The *first* key
-// in the list is the "current" key (used to sign every new token and given
-// the key-id "0"); remaining keys are accepted for verification only, letting
+// in the list is the "current" key (used to sign every new token); its
+// key-id is derived from the secret (#1686). Remaining keys are accepted for verification only, letting
 // tokens that were signed before the rotation remain valid until they naturally
 // expire.  SESSION_SECRET is still accepted as a single-key alias so existing
 // deployments need no immediate migration.
 //
 // Rotation procedure:
-//   1. Prepend the new secret to SESSION_SECRET_KEYS (new key becomes id "0").
-//   2. Keep the old secret as id "1" (or "2", etc.) so live tokens verify.
+//   1. Prepend the new secret to SESSION_SECRET_KEYS.
+//   2. Keep the old secret(s) in the list so live tokens verify.
 //   3. After max(ACCESS_TOKEN_TTL_SEC, REMEMBER_ME_REFRESH_TTL_SEC) has passed,
 //      remove the old key from the list.
 //
@@ -41,15 +41,39 @@ function getSigningKeys(): SigningKey[] {
     if (keys.length === 0) {
       throw new Error('SESSION_SECRET_KEYS is set but contains no valid keys');
     }
-    return keys.map((secret, index) => ({ id: String(index), secret }));
+    return keys.map((secret) => ({ id: deriveKeyId(secret), secret }));
   }
 
   const single = process.env.SESSION_SECRET;
   if (single) {
-    return [{ id: '0', secret: single }];
+    return [{ id: deriveKeyId(single), secret: single }];
   }
 
   throw new Error('SESSION_SECRET (or SESSION_SECRET_KEYS) is not configured');
+}
+
+/**
+ * Derives a stable, content-addressed key id from a secret (#1686).
+ *
+ * Positional ids ("0", "1", ...) re-pointed every live token's `kid` at the
+ * wrong key whenever a new secret was prepended during rotation. A truncated
+ * hash of a domain-separated input is stable across reorderings and leaks
+ * nothing useful about the secret.
+ */
+function deriveKeyId(secret: string): string {
+  return createHash('sha256')
+    .update('scoutoff-session-kid:' + secret)
+    .digest('base64url')
+    .slice(0, 8);
+}
+
+/**
+ * True when `kid` looks like a legacy positional index minted before #1686.
+ * Only these may fall back to trying every key; an unknown non-numeric kid
+ * is a hard failure.
+ */
+function isLegacyPositionalKid(kid: string): boolean {
+  return /^\d{1,3}$/.test(kid);
 }
 
 /** Returns the current (signing) key. */
@@ -230,9 +254,15 @@ export function verifySessionToken(
     const allKeys = getSigningKeys();
     if (typeof rawPayload.kid === 'string') {
       const named = findKeyById(rawPayload.kid);
-      keysToTry = named
-        ? [named, ...allKeys.filter((k) => k.id !== named.id)]
-        : allKeys;
+      if (named) {
+        keysToTry = [named];
+      } else if (isLegacyPositionalKid(rawPayload.kid)) {
+        // Positional kid from before #1686 — no longer names a key after a
+        // rotation, so try every configured key.
+        keysToTry = allKeys;
+      } else {
+        return null;
+      }
     } else {
       keysToTry = allKeys;
     }

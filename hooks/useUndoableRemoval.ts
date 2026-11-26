@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/Toast';
 
 const DEFAULT_UNDO_WINDOW_MS = 5000;
@@ -17,23 +18,40 @@ interface UndoableRemovalParams {
   onCommit: () => void | Promise<void>;
 }
 
+interface PendingRemoval {
+  timer: ReturnType<typeof setTimeout>;
+  onCommit: () => void | Promise<void>;
+}
+
 /**
  * Reusable undo-toast pattern: applies a removal optimistically, then delays
  * the actual delete (onCommit) until `windowMs` has passed. An "Undo" action
  * on the toast cancels the pending delete and restores prior state; once the
  * window expires the removal is final.
+ *
+ * Issue #1684: if the component unmounts (or the page is hidden/unloaded)
+ * while removals are still pending, they are committed immediately instead
+ * of being silently dropped — otherwise the item would disappear from the UI
+ * and reappear on the next visit.
  */
 export function useUndoableRemoval(windowMs: number = DEFAULT_UNDO_WINDOW_MS) {
   const { show } = useToast();
-  const timersRef = useRef<Map<string | number, ReturnType<typeof setTimeout>>>(
-    new Map(),
-  );
+  const t = useTranslations('common');
+  const pendingRef = useRef<Map<string | number, PendingRemoval>>(new Map());
 
   useEffect(() => {
-    const timers = timersRef.current;
+    const pending = pendingRef.current;
+    const flush = () => {
+      pending.forEach(({ timer, onCommit }) => {
+        clearTimeout(timer);
+        void onCommit();
+      });
+      pending.clear();
+    };
+    window.addEventListener('pagehide', flush);
     return () => {
-      timers.forEach(clearTimeout);
-      timers.clear();
+      window.removeEventListener('pagehide', flush);
+      flush();
     };
   }, []);
 
@@ -43,31 +61,31 @@ export function useUndoableRemoval(windowMs: number = DEFAULT_UNDO_WINDOW_MS) {
 
       // A removal already pending for this id runs to completion untouched;
       // starting a second one for the same id would double-commit.
-      if (timersRef.current.has(id)) return;
+      if (pendingRef.current.has(id)) return;
 
       onOptimisticRemove();
       const timer = setTimeout(() => {
-        timersRef.current.delete(id);
+        pendingRef.current.delete(id);
         void onCommit();
       }, windowMs);
-      timersRef.current.set(id, timer);
+      pendingRef.current.set(id, { timer, onCommit });
 
       show({
         message,
         variant: 'info',
         duration: windowMs,
         action: {
-          label: 'Undo',
+          label: t('undo'),
           onClick: () => {
-            const pending = timersRef.current.get(id);
+            const pending = pendingRef.current.get(id);
             if (!pending) return; // window already expired
-            clearTimeout(pending);
-            timersRef.current.delete(id);
+            clearTimeout(pending.timer);
+            pendingRef.current.delete(id);
             onRestore();
           },
         },
       });
     },
-    [show, windowMs],
+    [show, t, windowMs],
   );
 }

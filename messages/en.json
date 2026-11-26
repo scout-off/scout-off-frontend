@@ -58,7 +58,8 @@
       "updated": "Updated {time}",
       "updated_stale": "Updated {time} · data may be out of date",
       "pending_write": "Your change may take up to a minute to appear"
-    }
+    },
+    "undo": "Undo"
   },
   "language": {
     "select_language": "Select Language",

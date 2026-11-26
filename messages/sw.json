@@ -516,7 +516,8 @@
       "updated": "Imesasishwa {time}",
       "updated_stale": "Imesasishwa {time} · data inaweza kuwa imepitwa na wakati",
       "pending_write": "Mabadiliko yako yanaweza kuchukua hadi dakika moja kuonekana"
-    }
+    },
+    "undo": "Tendua"
   },
   "language": {
     "select_language": "Chagua Lugha",

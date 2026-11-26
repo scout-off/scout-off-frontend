@@ -165,3 +165,83 @@ describe('middleware locale redirect', () => {
     ).toBe('https://scoutoff.app/sw/scout');
   });
 });
+
+describe('middleware unsupported locale prefixes (issue #1687)', () => {
+  async function redirectFor(
+    url: string,
+    headers: Record<string, string> = {},
+  ): Promise<{ location: string | null; status: number }> {
+    const res = await middleware(new NextRequest(url, { headers }));
+    return { location: res.headers.get('location'), status: res.status };
+  }
+
+  it('strips an unsupported locale prefix instead of nesting it', async () => {
+    expect(await redirectFor('https://scoutoff.app/de/scout')).toEqual({
+      location: 'https://scoutoff.app/en/scout',
+      status: 307,
+    });
+  });
+
+  it('strips the removed /pt locale prefix', async () => {
+    expect(await redirectFor('https://scoutoff.app/pt/player/123')).toEqual({
+      location: 'https://scoutoff.app/en/player/123',
+      status: 307,
+    });
+  });
+
+  it('uses the negotiated locale when stripping an unsupported prefix', async () => {
+    expect(
+      await redirectFor('https://scoutoff.app/de/scout', {
+        'accept-language': 'fr',
+      }),
+    ).toEqual({ location: 'https://scoutoff.app/fr/scout', status: 307 });
+  });
+
+  it('normalises casing to the canonical lowercase locale', async () => {
+    expect(await redirectFor('https://scoutoff.app/EN/scout')).toEqual({
+      location: 'https://scoutoff.app/en/scout',
+      status: 301,
+    });
+  });
+
+  it('normalises region tags to their base locale', async () => {
+    expect(await redirectFor('https://scoutoff.app/fr-FR/scout')).toEqual({
+      location: 'https://scoutoff.app/fr/scout',
+      status: 301,
+    });
+  });
+
+  it('preserves the query string when stripping an unsupported prefix', async () => {
+    expect(await redirectFor('https://scoutoff.app/de/scout?ref=TEST')).toEqual({
+      location: 'https://scoutoff.app/en/scout?ref=TEST',
+      status: 307,
+    });
+  });
+
+  it('preserves the query string when normalising casing', async () => {
+    expect(await redirectFor('https://scoutoff.app/EN/scout?ref=TEST')).toEqual({
+      location: 'https://scoutoff.app/en/scout?ref=TEST',
+      status: 301,
+    });
+  });
+});
+
+describe('top-level route guard (issue #1687)', () => {
+  it('has no two-letter top-level route under app/[locale]', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const localeDir = path.join(process.cwd(), 'app', '[locale]');
+
+    if (!fs.existsSync(localeDir)) {
+      return;
+    }
+
+    const twoLetter = fs
+      .readdirSync(localeDir, { withFileTypes: true })
+      .filter((entry: { isDirectory: () => boolean }) => entry.isDirectory())
+      .map((entry: { name: string }) => entry.name)
+      .filter((name: string) => /^[a-z]{2}(-[a-z]{2,4})?$/i.test(name));
+
+    expect(twoLetter).toEqual([]);
+  });
+});
