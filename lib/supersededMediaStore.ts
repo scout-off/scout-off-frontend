@@ -87,6 +87,31 @@ export function isCidStillReferenced(
   return false;
 }
 
+/**
+ * Re-checks a candidate record against the player's current on-chain state
+ * before it is unpinned. Returns a skip reason when the CID is still
+ * referenced (or ownership can no longer be confirmed), or null when it is
+ * safe to unpin.
+ *
+ * This runs at cleanup time so records written before the record-time
+ * ownership check (issue #1284) are still validated before unpinning.
+ */
+export function getUnpinSkipReason(
+  record: SupersededCidRecord,
+  current: { ipfsHash?: string | null; galleryCids?: string[] | null } | null,
+): string | null {
+  if (!current) {
+    return 'player state unavailable; refusing to unpin';
+  }
+  if (current.ipfsHash && current.ipfsHash === record.cid) {
+    return 'cid is still the current ipfsHash';
+  }
+  if (current.galleryCids && current.galleryCids.includes(record.cid)) {
+    return 'cid is still referenced by the player gallery';
+  }
+  return null;
+}
+
 /** Test-only reset. */
 export function __resetForTests(): void {
   records.clear();
