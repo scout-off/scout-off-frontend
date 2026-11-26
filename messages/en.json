@@ -1113,6 +1113,7 @@
     "MISSING_FIELDS": "One or more required fields are missing.",
     "FIELD_TOO_LONG": "The field \"{field}\" is too long (maximum {max} characters).",
     "INVALID_FIELD_VALUE": "The value for \"{field}\" is not valid.",
+    "VALIDATION_FAILED": "The request was invalid. Please check the highlighted fields and try again.",
     "NOT_FOUND": "The requested resource was not found.",
     "PLAYER_NOT_FOUND": "Player not found.",
     "DISPUTE_NOT_FOUND": "Dispute not found.",

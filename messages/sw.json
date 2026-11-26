@@ -1113,6 +1113,7 @@
     "MISSING_FIELDS": "Sehemu moja au zaidi zinazohitajika hazipo.",
     "FIELD_TOO_LONG": "Sehemu \"{field}\" ni ndefu mno (upeo ni herufi {max}).",
     "INVALID_FIELD_VALUE": "Thamani ya sehemu \"{field}\" si sahihi.",
+    "VALIDATION_FAILED": "Ombi si sahihi. Tafadhali kagua sehemu zilizoonyeshwa na ujaribu tena.",
     "NOT_FOUND": "Rasilimali iliyoombwa haikupatikana.",
     "PLAYER_NOT_FOUND": "Mchezaji hakupatikana.",
     "DISPUTE_NOT_FOUND": "Pingamizi halijapatikana.",

@@ -8,32 +8,23 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
   openAnalyzer: false,
 });
 
-const { tunedRuntimeCaching } = require('./lib/pwaCacheConfig.ts');
-
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
-/** @type {import('next').NextConfig} */
-const withPWA = require('next-pwa')({
-  dest: 'public',
+// Service worker (issue #1712): Serwist compiles worker/sw.ts — precache,
+// runtime caching from lib/pwaCacheConfig.ts, the offline fallback page,
+// background sync and push — into public/sw.js and injects the client-side
+// registration that exposes `window.serwist` (hooks/useServiceWorkerUpdate.ts).
+// @serwist/next is ESM-only; require() of ESM needs Node >= 20.19 (.nvmrc is 24).
+const withSerwist = require('@serwist/next').default({
+  swSrc: 'worker/sw.ts',
+  swDest: 'public/sw.js',
   disable: process.env.NODE_ENV === 'development',
   register: true,
-  // Keep `false`: an unconditional skipWaiting() activates every new build
-  // immediately, so the service worker never enters the "waiting" state the
-  // reload prompt (components/ServiceWorkerUpdateBanner.tsx) depends on to
-  // detect updates. With this off, workbox injects a SKIP_WAITING message
-  // listener instead, and the banner's "Reload" button triggers it.
-  skipWaiting: false,
-  runtimeCaching: tunedRuntimeCaching,
-  // Offline fallback document served to the service worker for navigation
-  // requests that fail while the device has no network (issue #1513). The
-  // file must live in public/ and is precached by next-pwa at build time.
-  fallbacks: {
-    document: '/offline.html',
-  },
 });
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+/** @type {import('next').NextConfig} */
 const nextConfig = {
   // Issue #1717: emit a self-contained server (.next/standalone) so the
   // production Docker image ships only traced dependencies, not the full
@@ -164,6 +155,6 @@ const sentryBuildOptions = {
 };
 
 module.exports = withSentryConfig(
-  withBundleAnalyzer(withNextIntl(withPWA(nextConfig))),
+  withBundleAnalyzer(withNextIntl(withSerwist(nextConfig))),
   sentryBuildOptions,
 );

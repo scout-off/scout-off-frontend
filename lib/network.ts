@@ -39,3 +39,6 @@ export const getExplorerAccountUrl = (account: string): string =>
  */
 export const isSponsorshipPledgeEnabled = (): boolean =>
   process.env.NEXT_PUBLIC_SPONSORSHIP_PLEDGE_ENABLED === 'true' && !isMainnet();
+
+export const getExplorerLedgerUrl = (ledger: number): string =>
+  `https://stellar.expert/explorer/${explorerNetwork()}/ledger/${ledger}`;

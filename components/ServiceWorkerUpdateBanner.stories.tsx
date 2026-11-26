@@ -4,11 +4,11 @@ import ServiceWorkerUpdateBanner from './ServiceWorkerUpdateBanner';
 
 const messageSkipWaiting = fn();
 
-// useServiceWorkerUpdate listens to next-pwa's `window.workbox`. Install a
+// useServiceWorkerUpdate listens to Serwist's `window.serwist`. Install a
 // stub that reports a waiting worker as soon as the hook subscribes, so the
 // banner renders deterministically without a real service worker.
 const withWaitingWorker: Decorator = (Story) => {
-  window.workbox = {
+  window.serwist = {
     addEventListener: (type, listener) => {
       if (type === 'waiting') queueMicrotask(listener);
     },
@@ -19,7 +19,7 @@ const withWaitingWorker: Decorator = (Story) => {
 };
 
 const withoutWorker: Decorator = (Story) => {
-  delete window.workbox;
+  delete window.serwist;
   return <Story />;
 };
 

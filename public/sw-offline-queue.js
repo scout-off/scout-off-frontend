@@ -1,12 +1,9 @@
 /**
  * Service worker — offline queue background sync handler.
  *
- * NOTE: next-pwa (workbox) generates the actual service worker at build
- * time. This file is now loaded by the generated SW via `worker/index.js`
- * — next-pwa's "custom worker" convention — which calls
- * `self.importScripts('/sw-offline-queue.js')` (see worker/index.js's
- * header comment for how that wiring works and why this file previously
- * wasn't reachable at all).
+ * NOTE: Serwist builds the actual service worker (public/sw.js) from
+ * worker/sw.ts at build time. That entry loads this file through Serwist's
+ * `importScripts: ['/sw-offline-queue.js']` option (see worker/sw.ts).
  *
  * The `online` event listener in `useOfflineQueue.ts` remains the primary
  * path — queued actions are retried as soon as the browser detects

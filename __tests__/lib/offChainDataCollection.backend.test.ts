@@ -6,6 +6,15 @@ import {
   isBackendUserDataConfigured,
 } from '@/lib/backendUserData';
 
+// The on-chain snapshot (issue #1715) is covered by
+// onChainDataCollection.test.ts; keep these tests off the network.
+jest.mock('@/lib/onChainDataCollection', () => ({
+  collectOnChainData: jest.fn().mockResolvedValue({
+    publicLedgerData: true,
+    player: { status: 'unavailable', reason: 'RPC unreachable' },
+  }),
+}));
+
 jest.mock('@/lib/backendUserData', () => ({
   isBackendUserDataConfigured: jest.fn(),
   fetchBackendUserData: jest.fn(),

@@ -14,7 +14,7 @@
  * Read and written from two different JS execution contexts that cannot
  * otherwise share state:
  *  - the main thread, via hooks/useOnboardingSync.ts, and
- *  - the background-sync service worker, worker/index.js — which has no
+ *  - the background-sync service worker, worker/sw.ts — which has no
  *    access to a live page's React state or to localStorage/sessionStorage,
  *    so IndexedDB is the only persistent storage both sides share.
  *

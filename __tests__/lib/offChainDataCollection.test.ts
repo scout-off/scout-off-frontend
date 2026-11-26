@@ -24,6 +24,15 @@ import { UploadTrackingStore } from '@/lib/uploadTrackingStore';
 import { SavedSearchAlertStore } from '@/lib/savedSearchAlertStore';
 import type { PlayerFilter } from '@/types';
 
+// The on-chain snapshot (issue #1715) is covered by
+// onChainDataCollection.test.ts; keep these tests off the network.
+jest.mock('@/lib/onChainDataCollection', () => ({
+  collectOnChainData: jest.fn().mockResolvedValue({
+    publicLedgerData: true,
+    player: { status: 'unavailable', reason: 'RPC unreachable' },
+  }),
+}));
+
 const WALLET = 'GEXPORT0000000000000000000000000000000000000000000000000000000';
 const OTHER = 'GOTHER000000000000000000000000000000000000000000000000000000000';
 

@@ -32,14 +32,14 @@ function supportsBackgroundSync(): boolean {
  *
  *  1. Best case — the browser supports the Background Sync API: the queued
  *     submission is persisted to IndexedDB and a `sync` event is
- *     registered. The service worker (worker/index.js) broadcasts it once
+ *     registered. The service worker (worker/sw.ts) broadcasts it once
  *     connectivity returns, even if this tab (or the whole installed PWA)
  *     has since been closed.
  *  2. No Background Sync API (Safari, at time of writing), but a service
  *     worker is active: fall back to an in-tab `online` listener that asks
  *     the SW to attempt the broadcast via postMessage. Only works while a
  *     tab is open, but still keeps the broadcast logic in one place.
- *  3. No service worker at all (e.g. local dev, where next-pwa is disabled
+ *  3. No service worker at all (e.g. local dev, where Serwist is disabled
  *     — see next.config.js) or it hasn't taken control yet: fall back
  *     further to retrying the broadcast directly from the main thread on
  *     the same `online` event.
@@ -185,7 +185,7 @@ export function useOnboardingSync(wallet: string | null) {
   }, [retryNow]);
 
   // React to the service worker announcing an onboarding sync outcome
-  // (fired from worker/index.js's processOnboardingSync) — keeps the UI
+  // (fired from worker/sw.ts's processOnboardingSync) — keeps the UI
   // live-updating without polling if the tab happens to be open when the
   // background sync actually completes.
   useEffect(() => {

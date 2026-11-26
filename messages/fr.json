@@ -1113,6 +1113,7 @@
     "MISSING_FIELDS": "Un ou plusieurs champs obligatoires sont manquants.",
     "FIELD_TOO_LONG": "Le champ \"{field}\" est trop long (maximum {max} caractères).",
     "INVALID_FIELD_VALUE": "La valeur du champ \"{field}\" n'est pas valide.",
+    "VALIDATION_FAILED": "La requête est invalide. Veuillez vérifier les champs indiqués et réessayer.",
     "NOT_FOUND": "La ressource demandée est introuvable.",
     "PLAYER_NOT_FOUND": "Joueur introuvable.",
     "DISPUTE_NOT_FOUND": "Contestation introuvable.",

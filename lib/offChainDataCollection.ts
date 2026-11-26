@@ -77,6 +77,10 @@ import type {
   RecentlyViewedEntry,
 } from '@/types';
 import { getExplorerAccountUrl } from './network';
+import {
+  collectOnChainData,
+  type OnChainSection,
+} from './onChainDataCollection';
 
 const SCHEMA_VERSION = 3;
 
@@ -174,8 +178,15 @@ export interface CollectedUserData {
     backend?: BackendUserData | null;
   };
   /**
-   * On-chain data is explicitly NOT part of this export (it is immutable and
-   * lives on the Stellar network). This explains where to find it.
+   * Best-effort, read-only snapshot of the wallet's public on-chain data
+   * (player record, milestones, subscription, indexed events) — issue #1715.
+   * Parts that could not be fetched carry `status: 'unavailable'`.
+   */
+  onChain: OnChainSection;
+  /**
+   * On-chain data is immutable and lives on the Stellar network, so it is
+   * outside the off-chain sections and can never be deleted. This explains
+   * where to verify it.
    */
   onChainExcluded: {
     explanation: string;
@@ -344,9 +355,10 @@ export async function collectUserData(
     wallet,
     exportedAt: new Date().toISOString(),
     sections,
+    onChain: await collectOnChainData(wallet),
     onChainExcluded: {
       explanation:
-        'On-chain data (your Stellar public key, transaction history, player registration, and payments) is stored permanently on the blockchain and is not included in this off-chain export. No one — including ScoutOff — can modify or delete it.',
+        'On-chain data (your Stellar public key, transaction history, player registration, and payments) is stored permanently on the blockchain. It is not part of the off-chain sections above; a read-only snapshot is included in `onChain` for portability. No one — including ScoutOff — can modify or delete it.',
       explorerUrl: explorerUrlFor(wallet),
     },
     excluded,
