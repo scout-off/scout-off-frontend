@@ -48,7 +48,7 @@ function seedVault() {
   ContactVaultStore.getInstance().upsert(
     PLAYER,
     PLAYER,
-    sealContactDetails(JSON.stringify(DETAILS)),
+    sealContactDetails(JSON.stringify(DETAILS), PLAYER),
   );
 }
 

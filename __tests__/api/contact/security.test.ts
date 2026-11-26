@@ -144,7 +144,7 @@ describe('issue #1301 — contact details are not stored in plaintext', () => {
     const row = ContactVaultStore.getInstance().get(PLAYER)!;
     expect(row.ciphertext).not.toContain(EMAIL);
     const { unsealContactDetails } = await import('@/lib/contactVaultCrypto');
-    expect(() => unsealContactDetails(row)).toThrow(/CONTACT_VAULT_KEY/);
+    expect(() => unsealContactDetails(row, PLAYER)).toThrow(/CONTACT_VAULT_KEY/);
   });
 });
 

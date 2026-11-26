@@ -21,6 +21,8 @@
  *   // call unsubscribe() in useEffect cleanup
  */
 
+import { mutate } from 'swr';
+
 const CHANNEL_NAME = 'scoutoff:indexer-events';
 const LOCK_NAME = 'scoutoff:sse-leader';
 const STREAM_URL = '/api/indexer/stream';
@@ -40,8 +42,19 @@ let isStreamHealthy = false;
 
 const handlers: TopicHandlers = new Map();
 
+/**
+ * SWR keys revalidated when the indexer signals (`event: resync`) that the
+ * Last-Event-ID replay gap was too large to stream, so the client must
+ * refetch through REST (#1663). Runs in every tab: followers receive the
+ * resync over the BroadcastChannel like any other event.
+ */
+const RESYNC_KEYS = ['/api/events', '/api/milestones', '/api/players'];
+
 /** Dispatch a received event to all registered handlers for its type. */
 function dispatch(event: StreamEvent): void {
+  if (event.type === 'resync') {
+    for (const key of RESYNC_KEYS) void mutate(key);
+  }
   const set = handlers.get(event.type);
   if (set) {
     for (const h of set) {
@@ -170,6 +183,21 @@ function connectLeader(wallet?: string): void {
       }
     });
   }
+
+  // The server could not replay the gap since Last-Event-ID; refetch via REST.
+  source.addEventListener('resync', (e: Event) => {
+    resetHeartbeatTimer();
+    let reason = 'gap_too_large';
+    try {
+      const parsed = JSON.parse((e as MessageEvent).data);
+      if (parsed && typeof parsed.reason === 'string') reason = parsed.reason;
+    } catch {
+      // fall back to the default reason
+    }
+    const data: StreamEvent = { id: lastEventId ?? 0, type: 'resync', reason };
+    dispatch(data);
+    broadcastEvent(data);
+  });
 
   source.onerror = () => {
     clearTimeout(heartbeatTimer);

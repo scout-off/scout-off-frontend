@@ -55,6 +55,39 @@ const RATE_LIMIT = { limit: 10, windowMs: 60 * 1000 };
 /** Byte range to fetch from the IPFS gateway for container scanning. */
 const HEADER_SCAN_BYTES = 8 * 1024 * 1024;
 
+/**
+ * Tail bytes fetched in a second range request so MP4 files whose `moov`
+ * atom sits after `mdat` (non-faststart layout) can still be parsed. The
+ * `moov` atom is normally a few hundred KB; 2 MB covers the common case
+ * without downloading the whole file.
+ */
+const TAIL_SCAN_BYTES = 2 * 1024 * 1024;
+
+/**
+ * Fetch a byte range from the IPFS gateway. Returns the bytes plus the total
+ * size reported by the gateway (from `Content-Range`), when available.
+ */
+async function fetchRange(
+  url: string,
+  start: number,
+  end: number,
+): Promise<{ bytes: Uint8Array; totalSize: number | null }> {
+  const response = await fetch(url, {
+    headers: { Range: `bytes=${start}-${end}` },
+  });
+  if (!response.ok && response.status !== 206) {
+    throw new Error(`Gateway range request failed (status ${response.status})`);
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  let totalSize: number | null = null;
+  const contentRange = response.headers.get('content-range');
+  if (contentRange) {
+    const match = /\/(\d+)$/.exec(contentRange);
+    if (match) totalSize = Number(match[1]);
+  }
+  return { bytes: new Uint8Array(arrayBuffer), totalSize };
+}
+
 export async function POST(req: NextRequest) {
   const log = createRequestLogger(req);
   const pinata = getPinataCredentials();
@@ -116,22 +149,11 @@ export async function POST(req: NextRequest) {
   const videoUrl = `${gatewayBase.replace(/\/$/, '')}/${encodeURIComponent(videoCid)}`;
 
   let videoBytes: Uint8Array;
+  let totalSize: number | null;
   try {
-    const response = await fetch(videoUrl, {
-      headers: { Range: `bytes=0-${HEADER_SCAN_BYTES - 1}` },
-    });
-    if (!response.ok && response.status !== 206) {
-      log.warn('Gateway range request failed', {
-        videoCid,
-        status: response.status,
-      });
-      return privateJson(
-        { error: 'Failed to fetch video from IPFS gateway' },
-        { status: 502 },
-      );
-    }
-    const arrayBuffer = await response.arrayBuffer();
-    videoBytes = new Uint8Array(arrayBuffer);
+    const head = await fetchRange(videoUrl, 0, HEADER_SCAN_BYTES - 1);
+    videoBytes = head.bytes;
+    totalSize = head.totalSize;
   } catch (err) {
     log.error('Gateway fetch error', {
       videoCid,
@@ -143,8 +165,38 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Handle the `moov`-after-`mdat` layout: if the file is larger than the
+  // header scan and the leading bytes don't contain a `moov` atom, fetch the
+  // tail so the extractor can locate the metadata. Failures here are
+  // non-fatal — the extractor will fall back to the placeholder.
+  if (totalSize !== null && totalSize > videoBytes.length) {
+    const hasMoov = containsAscii(videoBytes, 'moov');
+    if (!hasMoov) {
+      const tailStart = Math.max(videoBytes.length, totalSize - TAIL_SCAN_BYTES);
+      try {
+        const tail = await fetchRange(videoUrl, tailStart, totalSize - 1);
+        videoBytes = concatBytes(videoBytes, tail.bytes);
+      } catch (err) {
+        log.warn('Gateway tail fetch failed; poster may fall back', {
+          videoCid,
+          reason: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+  }
+
   // Extract poster frame from the scanned bytes.
-  const frame = extractPosterFrameFromBuffer(videoBytes, seek);
+  let frame: Awaited<ReturnType<typeof extractPosterFrameFromBuffer>>;
+  try {
+    frame = await extractPosterFrameFromBuffer(videoBytes, seek);
+  } catch (err) {
+    // Non-faststart MP4 (moov after mdat): a client-side poster still works,
+    // so report it as unprocessable rather than a server error.
+    return privateJson(
+      { error: err instanceof Error ? err.message : 'Unsupported video layout' },
+      { status: 422 },
+    );
+  }
 
   // Real frame extraction isn't implemented yet (see lib/videoPosterFrame.ts):
   // the extractor only returns a 1×1 placeholder. Don't pin it — a stored
@@ -191,4 +243,30 @@ export async function POST(req: NextRequest) {
     },
     { status: 201 },
   );
+}
+
+/** Cheap ASCII substring scan over a byte buffer (no decoding). */
+function containsAscii(bytes: Uint8Array, needle: string): boolean {
+  const n = needle.length;
+  if (n === 0 || bytes.length < n) return false;
+  const first = needle.charCodeAt(0);
+  for (let i = 0; i <= bytes.length - n; i++) {
+    if (bytes[i] !== first) continue;
+    let match = true;
+    for (let j = 1; j < n; j++) {
+      if (bytes[i + j] !== needle.charCodeAt(j)) {
+        match = false;
+        break;
+      }
+    }
+    if (match) return true;
+  }
+  return false;
+}
+
+function concatBytes(a: Uint8Array, b: Uint8Array): Uint8Array {
+  const out = new Uint8Array(a.length + b.length);
+  out.set(a, 0);
+  out.set(b, a.length);
+  return out;
 }

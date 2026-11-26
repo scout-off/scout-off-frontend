@@ -149,7 +149,10 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const sealed = sealContactDetails(JSON.stringify(details));
+    const sealed = sealContactDetails(
+      JSON.stringify(details),
+      normalizedPlayerId,
+    );
     ContactVaultStore.getInstance().upsert(
       normalizedPlayerId,
       normalizedPlayerId,

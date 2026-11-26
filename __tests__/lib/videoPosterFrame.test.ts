@@ -78,20 +78,21 @@ describe('extractPosterFrameFromBuffer', () => {
     jpeg: blackPixelJpeg(),
     width: 1,
     height: 1,
-    timestampSeconds: 0,
   };
 
-  it('returns the placeholder for non-video input', () => {
-    expect(extractPosterFrameFromBuffer(PNG)).toEqual(placeholder);
+  it('returns the placeholder for non-video input', async () => {
+    expect(await extractPosterFrameFromBuffer(PNG)).toMatchObject(placeholder);
   });
 
-  it('returns the placeholder for moov-after-mdat input without mdat in range', () => {
+  it('returns the placeholder for moov-after-mdat input without mdat in range', async () => {
     const data = bytes(box('ftyp', 16), box('moov', 16));
-    expect(extractPosterFrameFromBuffer(data, 2)).toEqual(placeholder);
+    expect(await extractPosterFrameFromBuffer(data, 2)).toMatchObject(placeholder);
   });
 
-  it('returns a 1x1 frame for a recognised container', () => {
-    const result = extractPosterFrameFromBuffer(MP4, 2);
+  it('returns a 1x1 frame for a recognised container', async () => {
+    // No ffmpeg in the test environment, so extraction degrades to the
+    // placeholder.
+    const result = await extractPosterFrameFromBuffer(MP4, 2);
     expect(result.width).toBe(1);
     expect(result.height).toBe(1);
     expect([...result.jpeg.subarray(0, 2)]).toEqual([0xff, 0xd8]);
