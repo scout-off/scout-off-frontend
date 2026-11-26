@@ -220,7 +220,7 @@ function extractFrameWithFfmpeg(
         reject(new Error(`ffmpeg exited ${code}: ${stderr.slice(0, 200)}`));
         return;
       }
-      const out = Buffer.concat(chunks);
+      const out = Buffer.concat(chunks.map((c) => new Uint8Array(c)));
       if (out.length === 0) {
         reject(new Error('ffmpeg produced no frame'));
         return;
@@ -276,7 +276,12 @@ export async function extractPosterFrameFromBuffer(
     return { jpeg: blackPixelJpeg(), width: 1, height: 1, timestampSeconds: seekSeconds };
   }
 
-  if (isMp4 && isMoovAfterMdat(header)) {
+  if (
+    isMp4 &&
+    isMoovAfterMdat(
+      Buffer.from(header.buffer, header.byteOffset, header.byteLength),
+    )
+  ) {
     throw new Error('MP4 has moov after mdat; re-encode with faststart (-movflags +faststart)');
   }
 

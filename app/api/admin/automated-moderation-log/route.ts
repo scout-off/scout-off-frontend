@@ -34,8 +34,10 @@ const MAX_CONTEXT_BYTES = 4096;
 const TIMESTAMP_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 function safeEqual(a: string, b: string): boolean {
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
+  // Uint8Array copies sidestep the @types/node-vs-DOM-lib generic mismatch
+  // (see lib/uploadVerification.ts).
+  const bufA = new Uint8Array(Buffer.from(a));
+  const bufB = new Uint8Array(Buffer.from(b));
   if (bufA.length !== bufB.length) return false;
   return timingSafeEqual(bufA, bufB);
 }

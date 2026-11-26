@@ -139,7 +139,7 @@ export function useIPFSVideoMSE(
     if (!chunk) return;
 
     isAppendingRef.current = true;
-    sb.appendBuffer(chunk);
+    sb.appendBuffer(new Uint8Array(chunk));
   }, []);
 
   const start = useCallback(
