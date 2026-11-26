@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionWallet } from '@/lib/session';
 import { getPlayer } from '@/lib/contract';
-import { rateLimit, getClientIp } from '@/lib/rateLimit';
+import { applyRateLimit, POLICIES } from '@/lib/rateLimitPolicies';
 import { recordSupersededCid } from '@/lib/supersededMediaStore';
 
 /**
@@ -14,16 +14,10 @@ import { recordSupersededCid } from '@/lib/supersededMediaStore';
  * and refuses to record a CID that is still the player's current `ipfsHash`.
  */
 export async function POST(req: NextRequest) {
-  const ip = getClientIp(req);
-  const limited = await rateLimit(`ipfs-superseded:${ip}`, 20, 60_000);
-  if (!limited.ok) {
-    return NextResponse.json(
-      { error: 'Too many requests' },
-      { status: 429, headers: { 'Retry-After': String(limited.retryAfter) } },
-    );
-  }
+  const limited = await applyRateLimit(req, POLICIES.ipfsSuperseded);
+  if (limited) return limited;
 
-  const sessionWallet = await getSessionWallet();
+  const sessionWallet = getSessionWallet(req);
   if (!sessionWallet) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -75,5 +69,5 @@ export async function POST(req: NextRequest) {
   }
 
   const record = recordSupersededCid(oldCid, playerId);
-  return NextResponse.json({ record }, { status: 201 });
+  return NextResponse.json({ id: record.id, record }, { status: 201 });
 }

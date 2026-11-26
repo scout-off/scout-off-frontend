@@ -3,6 +3,12 @@ import { GET, POST } from '@/app/api/admin/automated-moderation-log/route';
 import { NextRequest } from 'next/server';
 import { AdminAuditStore } from '@/lib/adminAuditStore';
 
+jest.mock('@/lib/adminAuth', () => ({
+  requireAdminWallet: () => 'GADMIN',
+}));
+
+const SECRET = 'test-moderation-secret';
+
 const BASE = 'http://localhost/api/admin/automated-moderation-log';
 
 function get(query: string): NextRequest {
@@ -13,7 +19,10 @@ async function record(n: number, userId: string): Promise<void> {
   const res = await POST(
     new NextRequest(BASE, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${SECRET}`,
+      },
       body: JSON.stringify({
         id: `mod-${n}`,
         category: 'spam',
@@ -29,6 +38,7 @@ async function record(n: number, userId: string): Promise<void> {
 }
 
 beforeEach(() => {
+  process.env.MODERATION_WEBHOOK_SECRET = SECRET;
   AdminAuditStore.resetInstance();
   AdminAuditStore.getInstance(':memory:');
 });

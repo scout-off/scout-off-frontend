@@ -9,6 +9,12 @@ import {
 } from '@/lib/supersededMediaStore';
 import { createSessionToken } from '@/lib/session';
 import { SessionStore } from '@/lib/sessionStore';
+import { getPlayer } from '@/lib/contract';
+
+// The cleanup route re-checks each candidate against the player's on-chain
+// record before unpinning; stub the contract read.
+jest.mock('@/lib/contract', () => ({ getPlayer: jest.fn() }));
+const mockGetPlayer = getPlayer as jest.Mock;
 
 const ADMIN = 'GADMIN0000000000000000000000000000000000000000000000000';
 const NON_ADMIN = 'GUSER00000000000000000000000000000000000000000000000000';
@@ -55,6 +61,8 @@ beforeEach(() => {
   process.env.PINATA_SECRET = 'secret';
   SessionStore.resetInstance();
   __resetForTests();
+  mockGetPlayer.mockReset();
+  mockGetPlayer.mockResolvedValue({ ipfsHash: 'bafyCurrent' });
   mockFetch.mockReset();
   mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
   global.fetch = mockFetch as unknown as typeof fetch;
@@ -163,18 +171,26 @@ describe('/api/admin/ipfs-cleanup', () => {
       return new Response(null, { status: 200 });
     });
 
-    const body = await (
-      await POST(
-        postRequest(ADMIN, {
-          currentCids: [{ playerId: 'p1', cid: 'bafyLive' }],
-        }),
-      )
-    ).json();
+    // p1's on-chain profile still points at bafyLive, so it must be skipped.
+    mockGetPlayer.mockImplementation(async (playerId: string) =>
+      playerId === 'p1' ? { ipfsHash: 'bafyLive' } : { ipfsHash: 'bafyCurrent' },
+    );
+
+    const body = await (await POST(postRequest(ADMIN))).json();
 
     expect(body.unpinned).toEqual(['bafyGone']);
     expect(body.skipped).toEqual(['bafyLive']);
     expect(body.errors).toEqual([{ cid: 'bafyErr', error: 'network down' }]);
     expect(unpinnedCids().sort()).toEqual(['bafyErr', 'bafyGone']);
+  });
+
+  it('skips a record when the player cannot be read', async () => {
+    supersede('bafyOld', 'p1', UNPIN_GRACE_PERIOD_MS + 1_000);
+    mockGetPlayer.mockRejectedValue(new Error('rpc down'));
+
+    const body = await (await POST(postRequest(ADMIN))).json();
+    expect(body.skipped).toEqual(['bafyOld']);
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it('reports every eligible record as failed when Pinata credentials are missing', async () => {

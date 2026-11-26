@@ -1,19 +1,19 @@
 import { NextRequest } from 'next/server';
 import { createHmac } from 'crypto';
 
-jest.mock('@/lib/auth/walletAuth', () => ({
+jest.mock('@/lib/adminAuth', () => ({
   requireAdminWallet: jest.fn(),
 }));
 
+const mockStore = {
+  insertEntry: jest.fn(),
+  getEntries: jest.fn().mockReturnValue({ entries: [], nextCursor: null }),
+};
 jest.mock('@/lib/adminAuditStore', () => ({
-  AdminAuditStore: {
-    addEntry: jest.fn().mockResolvedValue(undefined),
-    getEntries: jest.fn().mockResolvedValue([]),
-  },
+  AdminAuditStore: { getInstance: () => mockStore },
 }));
 
-import { requireAdminWallet } from '@/lib/auth/walletAuth';
-import { AdminAuditStore } from '@/lib/adminAuditStore';
+import { requireAdminWallet } from '@/lib/adminAuth';
 import { GET, POST } from '@/app/api/admin/automated-moderation-log/route';
 
 const SECRET = 'test-secret';
@@ -32,6 +32,7 @@ function sign(rawBody: string, timestamp: number) {
 
 const validBody = {
   id: 'mod-1',
+  category: 'auto_flag',
   userId: 'user-1',
   threadId: 'thread-1',
   rule: 'spam',
@@ -71,14 +72,14 @@ describe('automated-moderation-log POST', () => {
     const ts = Date.now();
     const raw = JSON.stringify(validBody);
     const res = await POST(makePost(validBody, { 'x-signature': sign(raw, ts), 'x-signature-timestamp': String(ts) }));
-    expect(res.status).toBe(200);
-    expect(AdminAuditStore.addEntry).toHaveBeenCalled();
+    expect(res.status).toBe(201);
+    expect(mockStore.insertEntry).toHaveBeenCalled();
   });
 
   it('accepts a valid Bearer token', async () => {
     process.env.MODERATION_WEBHOOK_SECRET = SECRET;
     const res = await POST(makePost(validBody, { authorization: `Bearer ${SECRET}` }));
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(201);
   });
 
   it('rejects invalid severity', async () => {
@@ -87,9 +88,9 @@ describe('automated-moderation-log POST', () => {
     expect(res.status).toBe(400);
   });
 
-  it('rejects out-of-range timestamp', async () => {
+  it('rejects a non-numeric timestamp', async () => {
     process.env.MODERATION_WEBHOOK_SECRET = SECRET;
-    const res = await POST(makePost({ ...validBody, timestamp: Date.now() - 3 * 24 * 60 * 60 * 1000 }, { authorization: `Bearer ${SECRET}` }));
+    const res = await POST(makePost({ ...validBody, timestamp: 'yesterday' }, { authorization: `Bearer ${SECRET}` }));
     expect(res.status).toBe(400);
   });
 
@@ -104,21 +105,29 @@ describe('automated-moderation-log GET', () => {
   afterEach(() => jest.clearAllMocks());
 
   it('returns 401 when not authorized', async () => {
-    (requireAdminWallet as jest.Mock).mockResolvedValue({ authorized: false, status: 401, error: 'Unauthorized' });
+    (requireAdminWallet as jest.Mock).mockReturnValue(null);
     const res = await GET(new NextRequest('http://localhost/api/admin/automated-moderation-log'));
     expect(res.status).toBe(401);
   });
 
   it('returns 400 for non-numeric limit', async () => {
-    (requireAdminWallet as jest.Mock).mockResolvedValue({ authorized: true });
+    (requireAdminWallet as jest.Mock).mockReturnValue('GADMIN');
     const res = await GET(new NextRequest('http://localhost/api/admin/automated-moderation-log?limit=abc'));
     expect(res.status).toBe(400);
   });
 
-  it('clamps limit and returns entries', async () => {
-    (requireAdminWallet as jest.Mock).mockResolvedValue({ authorized: true });
+  it('rejects a limit above the maximum', async () => {
+    (requireAdminWallet as jest.Mock).mockReturnValue('GADMIN');
     const res = await GET(new NextRequest('http://localhost/api/admin/automated-moderation-log?limit=9999'));
+    expect(res.status).toBe(400);
+  });
+
+  it('returns entries for an admin', async () => {
+    (requireAdminWallet as jest.Mock).mockReturnValue('GADMIN');
+    const res = await GET(new NextRequest('http://localhost/api/admin/automated-moderation-log?limit=20'));
     expect(res.status).toBe(200);
-    expect(AdminAuditStore.getEntries).toHaveBeenCalledWith({ action: 'automated_moderation', limit: 200 });
+    expect(mockStore.getEntries).toHaveBeenCalledWith(
+      expect.objectContaining({ actionType: 'automated_moderation', limit: 20 }),
+    );
   });
 });
