@@ -2,7 +2,6 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import Badge from '../../components/ui/Badge';
-import type { BadgeProps } from '../../components/ui/Badge';
 
 describe('Badge', () => {
   test('renders the label and uses a span', () => {
@@ -39,24 +38,50 @@ describe('Badge', () => {
     expect(el.className).not.toMatch(/undefined|\[|\]/);
   });
 
-  describe('snapshots', () => {
-    const variants: Array<{ variant: BadgeProps['variant']; label: string }> = [
-      { variant: 'level0', label: 'Level 0' },
-      { variant: 'level1', label: 'Level 1' },
-      { variant: 'level2', label: 'Level 2' },
-      { variant: 'level3', label: 'Level 3' },
-      { variant: 'position', label: 'GK' },
-      { variant: 'region', label: 'Africa' },
-      { variant: 'achievement', label: 'Top Scorer' },
-    ];
+  // ── Snapshot tests — one per variant ──────────────────────────────────────
 
-    variants.forEach(({ variant, label }) => {
-      it(`matches snapshot for variant="${variant}"`, () => {
-        const { container } = render(
-          <Badge variant={variant} label={label} />,
-        );
-        expect(container).toMatchSnapshot();
-      });
-    });
+  test('snapshot: level0 variant', () => {
+    const { container } = render(<Badge variant="level0" label="Level 0" />);
+    expect(container).toMatchSnapshot();
+  });
+
+  test('snapshot: level1 variant', () => {
+    const { container } = render(<Badge variant="level1" label="Level 1" />);
+    expect(container).toMatchSnapshot();
+  });
+
+  test('snapshot: level2 variant', () => {
+    const { container } = render(<Badge variant="level2" label="Level 2" />);
+    expect(container).toMatchSnapshot();
+  });
+
+  test('snapshot: level3 variant', () => {
+    const { container } = render(<Badge variant="level3" label="Level 3" />);
+    expect(container).toMatchSnapshot();
+  });
+
+  test('snapshot: position variant', () => {
+    const { container } = render(
+      <Badge variant="position" label="Striker" />,
+    );
+    expect(container).toMatchSnapshot();
+  });
+
+  test('snapshot: region variant', () => {
+    const { container } = render(<Badge variant="region" label="Europe" />);
+    expect(container).toMatchSnapshot();
+  });
+
+  test('snapshot: achievement variant', () => {
+    const { container } = render(
+      <Badge variant="achievement" label="Top Scorer" />,
+    );
+    expect(container).toMatchSnapshot();
+  });
+
+  test('snapshot: academy variant', () => {
+    const { container } = render(<Badge variant="academy" label="Academy" />);
+    expect(container).toMatchSnapshot();
   });
 });
+
