@@ -80,3 +80,22 @@ describe('fromStroops', () => {
     expect(fromStroops(NaN)).toBe(0);
   });
 });
+
+describe('formatXlm edge cases (#871)', () => {
+  it('handles very large XLM amounts without scientific notation (#871)', () => {
+    expect(formatXlm(1_000_000)).toBe('1,000,000.00');
+    expect(formatXlm(999999999)).toBe('999,999,999.00');
+  });
+
+  it('handles extremely small fractional amounts (#871)', () => {
+    expect(formatXlm(0.0000001)).toBe('0.00');
+    expect(formatXlm(0.004)).toBe('0.00');
+    expect(formatXlm(0.006)).toBe('0.01');
+  });
+
+  it('formats negative values with a minus sign (#871)', () => {
+    expect(formatXlm(-1)).toBe('-1.00');
+    expect(formatXlm(-0.5)).toBe('-0.50');
+    expect(formatXlm('-10')).toBe('-10.00');
+  });
+});
