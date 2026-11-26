@@ -422,7 +422,7 @@ jobs:
 
       # Traces/screenshots of failures are the only way to debug a red E2E
       # run after the fact — they're uploaded whether the specs passed or not.
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: playwright-artifacts
@@ -477,7 +477,7 @@ jobs:
           SESSION_SECRET: lhci-ci-only-session-secret-not-for-production
           SESSIONS_DB_PATH: ${{ runner.temp }}/lhci-sessions.db
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: lighthouse-report
@@ -520,7 +520,7 @@ jobs:
 
       # Always publish the raw JSON as a downloadable artifact for historical
       # tracking and debugging, regardless of pass/fail.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: bundle-size-report
