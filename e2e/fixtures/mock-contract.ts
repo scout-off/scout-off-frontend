@@ -50,7 +50,7 @@ export const DEFAULT_PLAYER = {
     name: 'Test Player',
     age: 25,
     position: 'ST',
-    region: 'Nigeria',
+    region: 'nigeria',
     nationality: 'Nigeria',
   },
   ipfsHash: '',

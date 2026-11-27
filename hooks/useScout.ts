@@ -1,5 +1,5 @@
 'use client';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import useSWR from 'swr';
 import { searchPlayersByName, SearchRateLimitedError } from '@/lib/api';
 import { rankByFuzzyMatch } from '@/lib/fuzzyMatch';
@@ -76,12 +76,31 @@ export function useScout() {
         ? `scout:name:${mode.name}`
         : scoutSearchKey(mode.filter);
 
+  // Last filter search, restored when a name search is cleared.
+  const lastFilter = useRef<PlayerFilter | null>(null);
+
   /** Trigger a filter search with the given filter (indexer-backed, paginated). */
   const search = useCallback((filter: PlayerFilter) => {
+    lastFilter.current = filter;
     setMode({ kind: 'filter', filter });
   }, []);
 
+  /**
+   * Search by player name. An empty name clears the name search: it returns
+   * to the last filter search instead of querying the backend with `name=`,
+   * and never replaces a filter search that is already active (the dashboard
+   * calls this with '' on mount, after PlayerFilterForm's initial search).
+   */
   const searchByName = useCallback((name: string) => {
+    if (!name.trim()) {
+      setMode((prev) => {
+        if (prev.kind !== 'name') return prev;
+        return lastFilter.current
+          ? { kind: 'filter', filter: lastFilter.current }
+          : { kind: 'idle' };
+      });
+      return;
+    }
     setMode({ kind: 'name', name });
   }, []);
 

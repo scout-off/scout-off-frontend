@@ -61,6 +61,47 @@ describe('useScout', () => {
     mockSearchPlayersByName.mockReset();
   });
 
+  test('searchByName("") does not replace an active filter search', async () => {
+    mockListPlayers.mockResolvedValue({
+      players: [makePlayer('p1')],
+      nextCursor: null,
+      total: 1,
+    });
+
+    const { result } = renderHook(() => useScout(), { wrapper });
+
+    // The dashboard fires the filter search on mount, then clears the
+    // (empty) name search — that must not switch to a name= backend query.
+    act(() => result.current.search({ minLevel: 0 }));
+    act(() => result.current.searchByName(''));
+
+    await waitFor(() => expect(result.current.players).toHaveLength(1));
+    expect(mockSearchPlayersByName).not.toHaveBeenCalled();
+  });
+
+  test('clearing a name search returns to the last filter search', async () => {
+    mockListPlayers.mockResolvedValue({
+      players: [makePlayer('p1')],
+      nextCursor: null,
+      total: 1,
+    });
+    mockSearchPlayersByName.mockResolvedValue([makePlayer('n1')]);
+
+    const { result } = renderHook(() => useScout(), { wrapper });
+
+    act(() => result.current.search({ minLevel: 0 }));
+    act(() => result.current.searchByName('Ada'));
+    await waitFor(() =>
+      expect(result.current.players.map((p) => p.id)).toEqual(['n1']),
+    );
+
+    act(() => result.current.searchByName(''));
+    await waitFor(() =>
+      expect(result.current.players.map((p) => p.id)).toEqual(['p1']),
+    );
+    expect(mockSearchPlayersByName).toHaveBeenCalledTimes(1);
+  });
+
   test('search(filter) populates players and filters out archived profiles', async () => {
     mockListPlayers.mockResolvedValueOnce({
       players: [makePlayer('p1'), makePlayer('p2', true), makePlayer('p3')],

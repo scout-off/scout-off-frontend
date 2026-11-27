@@ -7,7 +7,7 @@ import type { TxStatus } from '@/components/ui/TransactionStatus';
 import XlmFiatDisplay from '@/components/ui/XlmFiatDisplay';
 import { recordAuditEntry } from '@/lib/adminAuditClient';
 import { buildWithdrawFees, getPlatformFees } from '@/lib/contract';
-import { formatXlmAmount } from '@/lib/localeFormat';
+import { formatXlm } from '@/lib/formatXlm';
 import type { Locale } from '@/lib/locales';
 import { useLocale, useTranslations } from 'next-intl';
 import AdminLoadError from '@/components/admin/AdminLoadError';
@@ -47,7 +47,7 @@ export default function AdminFeesPage() {
     confirm({
       label: t('withdraw_fees'),
       message: t('withdraw_confirm', {
-        amount: formatXlmAmount(fees ?? 0, locale),
+        amount: formatXlm(fees ?? 0, locale),
       }),
       run: async () => {
         const amountStroops = fees ?? undefined;

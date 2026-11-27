@@ -22,7 +22,7 @@ test.describe('scout browse / filter / pay-to-contact', () => {
         vitals: {
           ...DEFAULT_PLAYER.vitals,
           name: 'Ghana Keeper',
-          region: 'Ghana',
+          region: 'ghana',
         },
       },
     ]);
