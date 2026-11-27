@@ -28,7 +28,9 @@ const ICONS: Record<EventType, JSX.Element> = {
   unknown: <span>ℹ️</span>,
 };
 
-type Translate = ReturnType<typeof useTranslations>;
+type Translate = ReturnType<
+  typeof useTranslations<'scout_dashboard.activityFeed'>
+>;
 
 /**
  * Human-readable description for a contract event. Message keys live under

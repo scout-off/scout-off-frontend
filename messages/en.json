@@ -221,7 +221,9 @@
       "playVideo": "Play video",
       "reconnecting": "Reconnecting…",
       "unavailableRetry": "Unavailable — Retry",
-      "imageAlt": "IPFS media {cid}"
+      "imageAlt": "IPFS media {cid}",
+      "playbackError": "Playback failed.",
+      "retry": "Retry"
     }
   },
   "spending_summary": {
@@ -1067,7 +1069,13 @@
     "error_toast": "Failed to submit the request. Please try again.",
     "error_message": "Something went wrong submitting your request. Please try again.",
     "submitting": "Submitting your request…",
-    "done": "Done"
+    "done": "Done",
+    "pending_title": "Deleting your data…",
+    "pending_message": "Your deletion request is being processed. You can close this window; it will continue in the background.",
+    "pending_progress": "{completed} of {total} steps complete",
+    "step_completed": "Done",
+    "step_failed": "Failed",
+    "step_pending": "Pending"
   },
   "cookieConsent": {
     "title": "Cookie Consent",

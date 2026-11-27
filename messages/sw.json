@@ -719,7 +719,9 @@
       "playVideo": "Cheza video",
       "reconnecting": "Inaunganisha upya…",
       "unavailableRetry": "Haipatikani — Jaribu tena",
-      "imageAlt": "Media ya IPFS {cid}"
+      "imageAlt": "Media ya IPFS {cid}",
+      "playbackError": "Uchezaji umeshindwa.",
+      "retry": "Jaribu tena"
     }
   },
   "spending_summary": {
@@ -1067,7 +1069,13 @@
     "error_toast": "Imeshindwa kutuma ombi. Tafadhali jaribu tena.",
     "error_message": "Hitilafu imetokea wakati wa kutuma ombi lako. Tafadhali jaribu tena.",
     "submitting": "Inatuma ombi lako…",
-    "done": "Imekamilika"
+    "done": "Imekamilika",
+    "pending_title": "Inafuta data yako…",
+    "pending_message": "Ombi lako la kufuta linashughulikiwa. Unaweza kufunga dirisha hili; litaendelea chinichini.",
+    "pending_progress": "Hatua {completed} kati ya {total} zimekamilika",
+    "step_completed": "Imekamilika",
+    "step_failed": "Imeshindwa",
+    "step_pending": "Inasubiri"
   },
   "cookieConsent": {
     "title": "Idhini ya Vidakuzi",

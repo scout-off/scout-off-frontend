@@ -1,3 +1,11 @@
+import { getNetworkPassphrase } from '@/lib/network';
+import {
+  connectWalletConnect,
+  disconnectWalletConnectSession,
+  restoreWalletConnect,
+  signWithWalletConnect,
+} from '@/lib/walletConnectStellar';
+
 export type WalletProvider =
   | 'freighter'
   | 'albedo'
@@ -8,56 +16,6 @@ export type WalletProvider =
 const STANDARD_LEDGER_PATH = "44'/148'/0'";
 
 let _ledgerPublicKey: string | null = null;
-
-// WalletConnect v2 session state. The SDK is dynamically imported on first
-// use (like Ledger below) so the root bundle never pays for it unless the
-// user actually opens the wallet modal and picks a mobile wallet.
-let _wcClient: {
-  connect(opts: unknown): Promise<unknown>;
-  request(opts: unknown): Promise<unknown>;
-  disconnect(opts: unknown): Promise<void>;
-  session?: { topic: string; namespaces: Record<string, unknown> };
-} | null = null;
-let _wcPublicKey: string | null = null;
-let _wcChainId: string | null = null;
-
-function wcProjectId(): string | undefined {
-  return process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || undefined;
-}
-
-function wcChainFor(networkPassphrase: string): string {
-  // Stellar pubnet passphrase is "Public Global Stellar Network ; September 2015".
-  return networkPassphrase.includes('Public Global')
-    ? 'stellar:pubnet'
-    : 'stellar:testnet';
-}
-
-async function getWcClient(networkPassphrase: string) {
-  const projectId = wcProjectId();
-  if (!projectId) {
-    throw new Error(
-      'WalletConnect is not configured. Set NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID to enable mobile wallets.',
-    );
-  }
-  if (_wcClient) return _wcClient;
-  const { EthereumProvider } = await import('@walletconnect/ethereum-provider');
-  const chainId = wcChainFor(networkPassphrase);
-  const provider = await EthereumProvider.init({
-    projectId,
-    chains: [chainId],
-    optionalChains: ['stellar:pubnet', 'stellar:testnet'],
-    showQrModal: true,
-    metadata: {
-      name: 'Scout',
-      description: 'Scout player wallet',
-      url: typeof window !== 'undefined' ? window.location.origin : '',
-      icons: [],
-    },
-  });
-  _wcClient = provider;
-  _wcChainId = chainId;
-  return _wcClient;
-}
 
 export const walletAdapters: Record<
   WalletProvider,
@@ -169,25 +127,7 @@ export const walletAdapters: Record<
   walletconnect: {
     async getPublicKey() {
       try {
-        const client = await getWcClient(
-          'Public Global Stellar Network ; September 2015',
-        );
-        if (!client) throw new Error('WalletConnect unavailable');
-        if (!client.session) {
-          await client.connect({});
-        }
-        const result = (await client.request({
-          method: 'stellar_getAddress',
-          params: {},
-        })) as { address?: string } | string | undefined;
-        const address = typeof result === 'string' ? result : result?.address;
-        if (!address) {
-          throw new Error(
-            'WalletConnect did not return a public key. Please try again.',
-          );
-        }
-        _wcPublicKey = address;
-        return address;
+        return await connectWalletConnect(getNetworkPassphrase());
       } catch (err) {
         throw mapWalletConnectError(
           err,
@@ -197,33 +137,7 @@ export const walletAdapters: Record<
     },
     async signTransaction(xdr, networkPassphrase) {
       try {
-        const client = await getWcClient(networkPassphrase);
-        if (!client) throw new Error('WalletConnect unavailable');
-        const expectedChain = wcChainFor(networkPassphrase);
-        if (_wcChainId && _wcChainId !== expectedChain) {
-          throw new Error(
-            `WalletConnect session is on the wrong network (${_wcChainId}). Please reconnect on ${expectedChain}.`,
-          );
-        }
-        // SEP-10 challenge and regular transactions both go through
-        // `stellar_signXDR`; the wallet returns the signed envelope XDR.
-        const result = (await client.request({
-          method: 'stellar_signXDR',
-          params: { xdr, networkPassphrase },
-        })) as
-          | { signedXDR?: string; signedTxXdr?: string }
-          | string
-          | undefined;
-        const signed =
-          typeof result === 'string'
-            ? result
-            : (result?.signedXDR ?? result?.signedTxXdr);
-        if (!signed) {
-          throw new Error(
-            'WalletConnect did not return a signed transaction. Please try again.',
-          );
-        }
-        return signed;
+        return await signWithWalletConnect(xdr, networkPassphrase);
       } catch (err) {
         throw mapWalletConnectError(
           err,
@@ -302,18 +216,7 @@ export const walletAdapters: Record<
  * the user switches to another adapter.
  */
 export async function disconnectWalletConnect(): Promise<void> {
-  if (!_wcClient) return;
-  try {
-    await _wcClient.disconnect({
-      reason: { code: 6000, message: 'User disconnected' },
-    });
-  } catch {
-    // Best-effort: the relay may already be gone.
-  } finally {
-    _wcClient = null;
-    _wcPublicKey = null;
-    _wcChainId = null;
-  }
+  await disconnectWalletConnectSession();
 }
 
 /**
@@ -321,23 +224,7 @@ export async function disconnectWalletConnect(): Promise<void> {
  * connected public key, or null when there is no live session.
  */
 export async function restoreWalletConnectSession(): Promise<string | null> {
-  if (!wcProjectId()) return null;
-  try {
-    const client = await getWcClient(
-      'Public Global Stellar Network ; September 2015',
-    );
-    if (!client?.session) return null;
-    if (_wcPublicKey) return _wcPublicKey;
-    const result = (await client.request({
-      method: 'stellar_getAddress',
-      params: {},
-    })) as { address?: string } | string | undefined;
-    const address = typeof result === 'string' ? result : result?.address;
-    if (address) _wcPublicKey = address;
-    return address ?? null;
-  } catch {
-    return null;
-  }
+  return restoreWalletConnect(getNetworkPassphrase());
 }
 
 function mapAlbedoError(err: unknown, fallbackMessage: string): Error {

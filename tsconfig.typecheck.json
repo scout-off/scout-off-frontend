@@ -3,6 +3,9 @@
   "compilerOptions": {},
   "exclude": [
     "node_modules",
+    "packages/**",
+    "worker/**",
+    "server/**",
     "__tests__",
     "e2e",
     "**/*.test.ts",

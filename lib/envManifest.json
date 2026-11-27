@@ -785,13 +785,6 @@
       "description": "WalletConnect Cloud project ID. When set, the wallet picker offers \"Mobile wallet (WalletConnect)\"; leave blank to hide it."
     },
     {
-      "name": "INDEXER_HEALTH_URL",
-      "requiredIn": [],
-      "secret": false,
-      "usedBy": ["app/api/indexer/health/route.ts"],
-      "description": "Override URL for the indexer health endpoint proxied by /api/indexer/health."
-    },
-    {
       "name": "NEXT_PUBLIC_SITE_URL",
       "requiredIn": [],
       "secret": false,

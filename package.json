@@ -51,7 +51,7 @@
     "@stellar/stellar-sdk": "13.3.0",
     "@upstash/redis": "^1.38.0",
     "@vercel/analytics": "^2.0.0",
-    "@walletconnect/ethereum-provider": "^2.26.1",
+    "@walletconnect/universal-provider": "^2.26.1",
     "axios": "1.20.0",
     "better-sqlite3": "^12.11.1",
     "dompurify": "^3.4.12",

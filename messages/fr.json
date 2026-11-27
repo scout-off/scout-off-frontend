@@ -238,7 +238,9 @@
       "playVideo": "Lire la vidéo",
       "reconnecting": "Reconnexion…",
       "unavailableRetry": "Indisponible — Réessayer",
-      "imageAlt": "Média IPFS {cid}"
+      "imageAlt": "Média IPFS {cid}",
+      "playbackError": "La lecture a échoué.",
+      "retry": "Réessayer"
     }
   },
   "spending_summary": {
@@ -1067,7 +1069,13 @@
     "error_toast": "Échec de l'envoi de la demande. Veuillez réessayer.",
     "error_message": "Une erreur s'est produite lors de l'envoi de votre demande. Veuillez réessayer.",
     "submitting": "Envoi de votre demande…",
-    "done": "Terminé"
+    "done": "Terminé",
+    "pending_title": "Suppression de vos données…",
+    "pending_message": "Votre demande de suppression est en cours de traitement. Vous pouvez fermer cette fenêtre ; elle se poursuivra en arrière-plan.",
+    "pending_progress": "{completed} étape(s) sur {total} terminée(s)",
+    "step_completed": "Terminé",
+    "step_failed": "Échec",
+    "step_pending": "En attente"
   },
   "cookieConsent": {
     "title": "Consentement aux cookies",
