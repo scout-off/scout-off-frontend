@@ -72,11 +72,15 @@ describe('lib/watchlistClient', () => {
     it('removes a player from the watchlist', async () => {
       const fetchMock = mockFetch({ json: async () => ({}) });
 
-      await removeFromWatchlist('w2');
+      await removeFromWatchlist(2);
 
+      // The route takes the entry id in the JSON body, not the path.
       expect(fetchMock).toHaveBeenCalledWith(
-        '/api/watchlist/w2',
-        expect.objectContaining({ method: 'DELETE' }),
+        '/api/watchlist',
+        expect.objectContaining({
+          method: 'DELETE',
+          body: JSON.stringify({ id: 2 }),
+        }),
       );
     });
   });

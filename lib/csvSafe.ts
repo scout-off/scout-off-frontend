@@ -8,7 +8,11 @@
  * text — the strategy recommended by OWASP.
  */
 export function escapeCsvValue(value: string): string {
-  const sanitized = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  // A plain signed number (e.g. "-42", "+3.5") cannot be a formula, so it is
+  // left as-is to keep numeric cells numeric.
+  const isPlainNumber = /^[+-]?\d+(\.\d+)?$/.test(value);
+  const sanitized =
+    !isPlainNumber && /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
 
   if (/[",\n\r]/.test(sanitized)) {
     return `"${sanitized.replace(/"/g, '""')}"`;

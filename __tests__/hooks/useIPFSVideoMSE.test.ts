@@ -11,6 +11,17 @@
  */
 
 import { renderHook, act } from '@testing-library/react';
+import { raceGateways } from '@/lib/ipfs';
+
+// ESM exports can't be spied on directly; wrap raceGateways in a mock that
+// delegates to the real implementation unless a test overrides it.
+jest.mock('@/lib/ipfs', () => {
+  const actual = jest.requireActual('@/lib/ipfs');
+  return {
+    ...actual,
+    raceGateways: jest.fn((...args: unknown[]) => actual.raceGateways(...args)),
+  };
+});
 import {
   useIPFSVideoMSE,
   isMSESupported as importedMSEFlag,
@@ -239,9 +250,9 @@ describe('useIPFSVideoMSE', () => {
       .mockRejectedValue(new Error('Gateway down'));
 
     // Spy on raceGateways so the recovery path doesn't hang.
-    jest
-      .spyOn(require('@/lib/ipfs'), 'raceGateways')
-      .mockRejectedValue(new Error('All gateways failed'));
+    (raceGateways as jest.Mock).mockRejectedValue(
+      new Error('All gateways failed'),
+    );
 
     const { result } = renderHook(() => useIPFSVideoMSE());
 

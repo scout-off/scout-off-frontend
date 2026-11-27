@@ -46,7 +46,10 @@ describe('buildScoutContactsCsv', () => {
         { playerId: 'p1', name: `${prefix}HYPERLINK("https://evil","Click")` },
       ]);
       const lines = csv.split('\r\n');
-      expect(lines[1].startsWith(`'${prefix}`)).toBe(true);
+      // The cell is quoted (it contains quotes and commas), so the guarding
+      // apostrophe sits just inside the opening quote.
+      const firstCell = lines[1].replace(/^"/, '');
+      expect(firstCell.startsWith(`'${prefix}`)).toBe(true);
     },
   );
 
@@ -55,7 +58,8 @@ describe('buildScoutContactsCsv', () => {
       { playerId: 'p1', position: '=cmd', region: '@SUM(A1)' },
     ]);
     const lines = csv.split('\r\n');
-    expect(lines[1]).toBe(",'=cmd,'@SUM(A1),,");
+    // No name: the player id is used, as for any contact without one.
+    expect(lines[1]).toBe("p1,'=cmd,'@SUM(A1),,");
   });
 
   it('does not prefix purely numeric cells', () => {

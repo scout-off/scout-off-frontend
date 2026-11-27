@@ -37,11 +37,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { raceGateways, DEFAULT_IPFS_FALLBACKS } from '@/lib/ipfs';
 
-/** True in browser environments where MSE is available. */
-export const isMSESupported =
-  typeof window !== 'undefined' &&
-  typeof window.MediaSource !== 'undefined' &&
-  typeof window.MediaSource.isTypeSupported === 'function';
+/** True in browser environments where MSE is available (checked on call). */
+export function detectMSESupport(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.MediaSource !== 'undefined' &&
+    typeof window.MediaSource.isTypeSupported === 'function'
+  );
+}
+
+/** Snapshot of {@link detectMSESupport} at module load, kept for callers. */
+export const isMSESupported = detectMSESupport();
 
 /** Chunk size for each range request to the proxy. 1 MiB keeps requests
  *  short enough to fail and retry cheaply while remaining large enough that
@@ -144,7 +150,7 @@ export function useIPFSVideoMSE(
 
   const start = useCallback(
     (cid: string, mimeType: string) => {
-      if (!isMSESupported) return;
+      if (!detectMSESupport()) return;
 
       // Avoid double-starting.
       if (state !== 'idle' && state !== 'error') return;
@@ -163,7 +169,7 @@ export function useIPFSVideoMSE(
       setError(null);
 
       ms.addEventListener('sourceopen', async () => {
-        if (!isMSESupported) return;
+        if (!detectMSESupport()) return;
 
         // Try to add the SourceBuffer; some browsers reject certain MIME
         // types through MSE even though they play them via <src>. If this
@@ -383,7 +389,7 @@ export function useIPFSVideoMSE(
   }, [cleanup]);
 
   return {
-    isMSESupported,
+    isMSESupported: detectMSESupport(),
     objectUrl,
     state,
     error,

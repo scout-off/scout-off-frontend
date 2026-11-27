@@ -89,8 +89,12 @@ describe('lib/savedSearchClient', () => {
 
       expect(fetchMock).toHaveBeenCalledTimes(1);
       const [url, init] = fetchMock.mock.calls[0];
-      expect(url).toContain(`/api/saved-searches/${savedSearch.id}`);
+      // The route takes the id in the JSON body, not the path.
+      expect(url).toContain('/api/saved-searches');
       expect(init?.method).toBe('DELETE');
+      expect(JSON.parse(init?.body as string)).toMatchObject({
+        id: savedSearch.id,
+      });
     });
   });
 
@@ -108,8 +112,12 @@ describe('lib/savedSearchClient', () => {
 
       expect(fetchMock).toHaveBeenCalledTimes(1);
       const [url, init] = fetchMock.mock.calls[0];
-      expect(url).toContain(`/api/saved-searches/${savedSearch.id}`);
+      expect(url).toContain('/api/saved-searches');
       expect(init?.method).toBe('PATCH');
+      expect(JSON.parse(init?.body as string)).toMatchObject({
+        id: savedSearch.id,
+        name: 'Renamed',
+      });
       expect(result).toEqual(renamed);
     });
   });

@@ -85,12 +85,33 @@ function validateEnvVars(sourceDir, envExamplePath) {
 // fail closed rather than silently accept anonymous traffic (issue #1285).
 const REQUIRED_IN_PRODUCTION = ['MODERATION_WEBHOOK_SECRET'];
 
+/**
+ * Extra source files to scan, passed as `--extra <file>` (repeatable). Used
+ * by the script's own tests so they never write fixtures into the repo, where
+ * a parallel test scanning the tree could pick them up.
+ */
+function extraSourceFiles(argv = process.argv.slice(2)) {
+  const files = [];
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === '--extra' && argv[i + 1]) files.push(argv[++i]);
+  }
+  return files;
+}
+
 function main() {
   const ignore = new Set(manifest.ignore);
   const byName = new Map(manifest.vars.map((v) => [v.name, v]));
   const errors = [];
 
   const used = findEnvUsages();
+  for (const file of extraSourceFiles()) {
+    const content = fs.readFileSync(file, 'utf8');
+    for (const match of content.matchAll(ENV_VAR_PATTERN)) {
+      const files = used.get(match[1]) ?? new Set();
+      files.add(file);
+      used.set(match[1], files);
+    }
+  }
   const unlisted = [...used.keys()].filter(
     (v) => !byName.has(v) && !ignore.has(v),
   );

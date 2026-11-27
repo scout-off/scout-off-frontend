@@ -93,7 +93,10 @@ function TestTree({
   playerId: string;
 }) {
   return (
-    <SWRConfig value={{ provider: () => new Map(), shouldRetryOnError: false }}>
+    // The app uses SWR's default cache (no custom provider), and the
+    // reconciler invalidates through the global mutate — so the test must
+    // share that default cache too.
+    <SWRConfig value={{ shouldRetryOnError: false, dedupingInterval: 0 }}>
       <MockPlayerDisplay playerId={playerId} />
       <CacheReconcilerDriver events={events} />
     </SWRConfig>
@@ -143,7 +146,9 @@ describe('cross-component cache reconciliation', () => {
   });
 
   it('event for a different player does NOT trigger a re-fetch for the watched player', async () => {
-    const { rerender } = render(<TestTree events={[]} playerId={PLAYER_ID} />);
+    // A fresh player id, since tests share SWR's default cache.
+    const WATCHED = 'GPLAYERWATCHED';
+    const { rerender } = render(<TestTree events={[]} playerId={WATCHED} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('milestone-count')).toHaveTextContent('2');
@@ -161,11 +166,11 @@ describe('cross-component cache reconciliation', () => {
     };
 
     await act(async () => {
-      rerender(<TestTree events={[unrelatedEvent]} playerId={PLAYER_ID} />);
+      rerender(<TestTree events={[unrelatedEvent]} playerId={WATCHED} />);
       await new Promise((r) => setTimeout(r, 50));
     });
 
-    // No additional fetch should have been triggered for PLAYER_ID.
+    // No additional fetch should have been triggered for the watched player.
     expect(mockFetchMilestones.mock.calls.length).toBe(beforeCallCount);
     expect(screen.getByTestId('milestone-count')).toHaveTextContent('2');
   });

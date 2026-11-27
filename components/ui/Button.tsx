@@ -53,10 +53,13 @@ export default function Button({
         disabled={!isDisabledByReason && isDisabled}
         aria-disabled={isDisabledByReason ? 'true' : undefined}
         aria-describedby={hintId}
+        aria-busy={isLoading || undefined}
         onClick={handleClick}
         {...props}
       >
-        {isLoading && <Spinner size="sm" />}
+        {/* aria-busy announces the loading state; hiding the spinner keeps
+            the button's accessible name equal to its label. */}
+        {isLoading && <Spinner size="sm" aria-hidden="true" />}
         {children}
       </button>
       {disabledReason && (

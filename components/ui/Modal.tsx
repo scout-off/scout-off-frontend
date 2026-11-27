@@ -94,6 +94,19 @@ export default function Modal({
     }
   }, [isOpen]);
 
+  // If the modal is unmounted while still open (e.g. `{pending && <Modal
+  // isOpen />}`), the effect above never sees isOpen=false, so restore focus
+  // to the trigger here as well.
+  useEffect(
+    () => () => {
+      const trigger = triggerRef.current;
+      if (trigger && typeof (trigger as HTMLElement).focus === 'function') {
+        requestAnimationFrame(() => (trigger as HTMLElement).focus());
+      }
+    },
+    [],
+  );
+
   // ── Keyboard handling ──────────────────────────────────────────────────────
 
   useEffect(() => {

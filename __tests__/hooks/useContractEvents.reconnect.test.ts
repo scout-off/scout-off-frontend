@@ -12,6 +12,7 @@
  *      current implementation; we assert the deterministic growth instead).
  */
 
+import { renderHook } from '@testing-library/react';
 import {
   MAX_RECONNECT_ATTEMPTS,
   BASE_RECONNECT_DELAY_MS,
@@ -135,7 +136,6 @@ describe('useContractEvents — SSE reconnect with fake timers', () => {
 
     global.EventSource = FakeEventSource as unknown as typeof EventSource;
 
-    const { renderHook } = await import('@testing-library/react');
     const { useContractEvents } = await import('@/hooks/useContractEvents');
 
     const { unmount } = renderHook(() => useContractEvents('GCONTRACT123'));
@@ -185,7 +185,6 @@ describe('useContractEvents — SSE reconnect with fake timers', () => {
     // Spy on setInterval to detect when polling starts.
     const setIntervalSpy = jest.spyOn(global, 'setInterval');
 
-    const { renderHook } = await import('@testing-library/react');
     const { useContractEvents } = await import('@/hooks/useContractEvents');
 
     const { unmount } = renderHook(() => useContractEvents('GCONTRACT456'));

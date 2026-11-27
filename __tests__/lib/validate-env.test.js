@@ -27,12 +27,16 @@ describe('validate-env.js', () => {
   });
 
   it('exits with code 1 and prints missing variables when some used vars are not declared', () => {
-    // First, temporarily add a test used env var to a file
-    const testFilePath = path.join(__dirname, '../../temp-test-file.ts');
+    // Write the fixture outside the repo and pass it via --extra, so a
+    // parallel test scanning the source tree never sees it.
+    const testFilePath = path.join(
+      fs.mkdtempSync(path.join(require('os').tmpdir(), 'validate-env-')),
+      'temp-test-file.ts',
+    );
     fs.writeFileSync(testFilePath, 'process.env.TEST_MISSING_VAR=value;');
 
     try {
-      const result = spawnSync('node', [scriptPath], {
+      const result = spawnSync('node', [scriptPath, '--extra', testFilePath], {
         encoding: 'utf8',
       });
 
