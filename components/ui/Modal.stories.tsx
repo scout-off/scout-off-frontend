@@ -22,7 +22,11 @@ function TrapDemo({ extraContent }: { extraContent?: React.ReactNode }) {
   return (
     <div className="p-8">
       {/* Background sentinel — must NOT receive focus while modal is open */}
-      <input data-testid="bg-input" aria-label="background input" />
+      <input
+        data-testid="bg-input"
+        aria-label="background input"
+        className="mr-2 rounded border border-gray-600 bg-white px-2 py-1 text-gray-900"
+      />
       <Button data-testid="open-btn" onClick={() => setOpen(true)}>
         Open Modal
       </Button>
@@ -95,7 +99,7 @@ export const AriaSemantics: Story = {
     // aria-labelledby must point at an element whose text matches the title.
     const labelId = dialog.getAttribute('aria-labelledby');
     await expect(labelId).toBeTruthy();
-    const labelEl = canvasElement.querySelector(`#${labelId}`);
+    const labelEl = canvasElement.ownerDocument.getElementById(labelId!);
     await expect(labelEl).not.toBeNull();
     await expect(labelEl).toHaveTextContent('Semantic Check');
   },

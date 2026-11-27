@@ -81,7 +81,7 @@ export const AriaSemantics: Story = {
 
     const labelId = dialog.getAttribute('aria-labelledby');
     await expect(labelId).toBeTruthy();
-    const labelEl = canvasElement.querySelector(`#${labelId}`);
+    const labelEl = canvasElement.ownerDocument.getElementById(labelId!);
     await expect(labelEl).not.toBeNull();
     await expect(labelEl).toHaveTextContent('Share This Profile');
   },

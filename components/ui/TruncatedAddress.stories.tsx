@@ -38,11 +38,10 @@ export const TooltipOnHover: Story = {
   name: 'Tooltip on Hover (full address + copy button)',
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    // The address renders truncated as a single copy-to-clipboard button.
+    // The address renders truncated as a single copy-to-clipboard button
+    // whose accessible name carries the full address for screen readers.
     const trigger = canvas.getByRole('button', {
-      name: new RegExp(
-        `^${SAMPLE_ADDRESS.slice(0, 4)}.+${SAMPLE_ADDRESS.slice(-4)}$`,
-      ),
+      name: `Copy address ${SAMPLE_ADDRESS}`,
     });
     await expect(trigger).toHaveAttribute('title', 'Click to copy address');
     await expect(trigger).not.toHaveTextContent(SAMPLE_ADDRESS);

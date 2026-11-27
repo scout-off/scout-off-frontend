@@ -164,13 +164,13 @@ export const AriaSemantics: Story = {
 
     const labelId = dialog.getAttribute('aria-labelledby');
     await expect(labelId).toBeTruthy();
-    const labelEl = canvasElement.querySelector(`#${labelId}`);
+    const labelEl = canvasElement.ownerDocument.getElementById(labelId!);
     await expect(labelEl).not.toBeNull();
     await expect(labelEl).toHaveTextContent('Remove Validator');
 
     const descId = dialog.getAttribute('aria-describedby');
     await expect(descId).toBeTruthy();
-    const descEl = canvasElement.querySelector(`#${descId}`);
+    const descEl = canvasElement.ownerDocument.getElementById(descId!);
     await expect(descEl).not.toBeNull();
     await expect(descEl).toHaveTextContent('Remove this validator?');
   },
