@@ -126,6 +126,12 @@ jest.mock('next-intl', () => ({
   },
 }));
 
+// Locale-aware Link (needs a next-intl provider) — render a plain anchor.
+jest.mock('@/i18n/navigation', () => ({
+  __esModule: true,
+  Link: jest.requireActual('next/link').default,
+}));
+
 jest.mock('@/components/PlayerCard', () => ({
   __esModule: true,
   default: ({

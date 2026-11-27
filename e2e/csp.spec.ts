@@ -3,9 +3,15 @@ import { test, expect, type Page } from '@playwright/test';
 /**
  * CSP-violation gate (issue #1664).
  *
- * Runs against the production build used by the `e2e` CI job. Fails if any
- * `securitypolicyviolation` event fires, if the browser logs a CSP error, or if
- * the app's `/api/csp-report` endpoint received a report during the run.
+ * Runs against a production build (E2E_PROD_BUILD=1, which makes
+ * playwright.config.ts boot `next build && next start`; CI runs it as its own
+ * step in the `e2e` job). The dev server deliberately adds 'unsafe-inline' /
+ * 'unsafe-eval' to script-src for the dev overlay (lib/csp.ts), so these
+ * checks are skipped there.
+ *
+ * Fails if script-src allows unsafe-inline/unsafe-eval, if any
+ * `securitypolicyviolation` event fires, if the browser logs a CSP error, or
+ * if the page POSTs a violation report to `/api/csp-report` (report-uri).
  */
 
 const PAGES = ['/en', '/en/player/1', '/en/scout', '/en/sponsorship'];
@@ -18,6 +24,17 @@ interface Violation {
 
 function attachViolationListeners(page: Page): Violation[] {
   const violations: Violation[] = [];
+
+  // report-uri delivery: the browser POSTs each violation to /api/csp-report.
+  page.on('request', (req) => {
+    if (req.method() === 'POST' && req.url().includes('/api/csp-report')) {
+      violations.push({
+        blockedURI: req.postData() ?? '',
+        violatedDirective: 'report-uri',
+        sourceFile: '',
+      });
+    }
+  });
 
   page.on('console', (msg) => {
     if (msg.type() !== 'error') return;
@@ -69,6 +86,11 @@ function attachViolationListeners(page: Page): Violation[] {
 }
 
 test.describe('Content-Security-Policy', () => {
+  test.skip(
+    process.env.E2E_PROD_BUILD !== '1',
+    'needs a production build: run with E2E_PROD_BUILD=1',
+  );
+
   for (const path of PAGES) {
     test(`no CSP violations on ${path}`, async ({ page }) => {
       const violations = attachViolationListeners(page);
@@ -78,9 +100,17 @@ test.describe('Content-Security-Policy', () => {
 
       const csp = response?.headers()['content-security-policy'];
       expect(csp, `CSP header missing on ${path}`).toBeTruthy();
-      expect(csp).toContain("script-src 'self'");
-      expect(csp).toContain('nonce-');
-      expect(csp).not.toContain("'unsafe-inline'");
+      // Only script-src must be strict: style-src keeps 'unsafe-inline' by
+      // design (lib/csp.ts).
+      const scriptSrc =
+        csp!
+          .split(';')
+          .map((d) => d.trim())
+          .find((d) => d.startsWith('script-src ')) ?? '';
+      expect(scriptSrc).toContain("script-src 'self'");
+      expect(scriptSrc).toContain("'nonce-");
+      expect(scriptSrc).not.toContain("'unsafe-inline'");
+      expect(scriptSrc).not.toContain("'unsafe-eval'");
 
       // Give late inline scripts (analytics, Sentry) a chance to run and report.
       await page.waitForTimeout(500);
@@ -91,19 +121,4 @@ test.describe('Content-Security-Policy', () => {
       ).toEqual([]);
     });
   }
-
-  test('no CSP reports were posted during the run', async ({ request }) => {
-    const response = await request.get('/api/csp-report');
-    expect(
-      response.ok(),
-      'GET /api/csp-report should be reachable',
-    ).toBeTruthy();
-
-    const body = (await response.json()) as {
-      count?: number;
-      reports?: unknown[];
-    };
-    const count = body.count ?? body.reports?.length ?? 0;
-    expect(count, 'expected zero CSP reports').toBe(0);
-  });
 });

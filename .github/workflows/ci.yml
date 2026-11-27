@@ -411,6 +411,16 @@ jobs:
       - name: Playwright suite
         run: npm run test:e2e
 
+      # The CSP gate (e2e/csp.spec.ts, issue #1664) asserts the strict
+      # production script-src, which `next dev` deliberately relaxes — so it
+      # runs again here against `next build && next start` (E2E_PROD_BUILD=1
+      # switches playwright.config.ts's webServer). It skips itself in the
+      # dev-server run above.
+      - name: CSP gate (production build)
+        run: npx playwright test e2e/csp.spec.ts
+        env:
+          E2E_PROD_BUILD: '1'
+
       # The session-lifecycle spec is deterministic (localhost only — no
       # testnet, no third-party calls), so it also runs with a 10-second
       # access-token TTL to exercise a token that genuinely lapses, and with

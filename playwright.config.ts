@@ -6,6 +6,7 @@ import { E2E_ADMIN_ADDRESS } from './e2e/fixtures/admin';
 
 const PORT = process.env.E2E_PORT ?? '3100';
 const BASE_URL = `http://127.0.0.1:${PORT}`;
+const PROD_BUILD = process.env.E2E_PROD_BUILD === '1';
 
 /**
  * An environment variable that is set but *empty* counts as unset here.
@@ -81,11 +82,17 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  // E2E_PROD_BUILD=1 boots a production build (`next build && next start`)
+  // instead of the dev server — for checks that only hold in production,
+  // e.g. the strict script-src CSP in e2e/csp.spec.ts. The env below applies
+  // to both commands, so NEXT_PUBLIC_* values are baked into the build.
   webServer: {
-    command: `npm run dev -- --port ${PORT}`,
+    command: PROD_BUILD
+      ? `npm run build && npm run start -- --port ${PORT}`
+      : `npm run dev -- --port ${PORT}`,
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: PROD_BUILD ? 600_000 : 120_000,
     env: {
       NEXT_PUBLIC_BASE_URL: BASE_URL,
       NEXT_PUBLIC_DOMAIN: `127.0.0.1:${PORT}`,

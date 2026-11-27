@@ -54,6 +54,14 @@ jest.mock('next/navigation', () => ({
   useSearchParams: jest.fn(() => new URLSearchParams()),
 }));
 
+// PlayerCard uses the locale-aware wrappers; route them to the mocks above.
+jest.mock('@/i18n/navigation', () => ({
+  __esModule: true,
+  Link: jest.requireMock('next/link').default,
+  useRouter: (...args: unknown[]) =>
+    jest.requireMock('next/navigation').useRouter(...args),
+}));
+
 jest.mock('swr', () => ({
   __esModule: true,
   default: jest
