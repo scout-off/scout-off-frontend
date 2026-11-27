@@ -827,13 +827,6 @@
       "description": "Set to \"true\" to enable sponsorship pledges in the UI."
     },
     {
-      "name": "ARCHIVE_RPC_URL",
-      "requiredIn": [],
-      "secret": false,
-      "usedBy": ["packages/indexer/src/eventPoller.ts"],
-      "description": "Archive Soroban RPC used by the indexer to backfill ledger gaps older than the primary RPC retention window."
-    },
-    {
       "name": "METRICS_PORT",
       "requiredIn": [],
       "secret": false,
