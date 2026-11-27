@@ -245,6 +245,13 @@
       "description": "Port the local dev server binds to for e2e runs. Default: 3100"
     },
     {
+      "name": "E2E_PROD_BUILD",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["playwright.config.ts"],
+      "description": "Set to 1 to run e2e against a production build (next build && next start) instead of next dev; enables prod-only checks such as the CSP gate. Default: unset"
+    },
+    {
       "name": "E2E_TEST_ROUTES",
       "requiredIn": [],
       "secret": false,

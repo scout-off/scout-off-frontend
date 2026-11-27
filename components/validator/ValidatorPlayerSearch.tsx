@@ -109,7 +109,7 @@ export default function ValidatorPlayerSearch({
                 {player.vitals.position} · {player.vitals.region}
               </p>
               <span className="inline-block mt-1 text-xs text-brand-green font-medium">
-                {t(`level${player.progressLevel}`)}
+                {t(`level${player.progressLevel}_label`)}
               </span>
               {lastMilestoneDate && (
                 <p className="text-xs text-gray-400 mt-0.5">

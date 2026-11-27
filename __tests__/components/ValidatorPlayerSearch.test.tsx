@@ -76,6 +76,8 @@ describe('ValidatorPlayerSearch', () => {
       expect(screen.getByText('Test Player')).toBeInTheDocument(),
     );
     expect(mockedGetPlayer).toHaveBeenCalledWith('player-1');
+    // Full level name (progress_levels.level2_label), not the short badge.
+    expect(screen.getByText('Performance Milestones')).toBeInTheDocument();
   });
 
   it('searches by wallet address and displays the result', async () => {
