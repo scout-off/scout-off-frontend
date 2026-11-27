@@ -192,15 +192,11 @@ export async function POST(req: NextRequest) {
   let frame: Awaited<ReturnType<typeof extractPosterFrameFromBuffer>>;
   try {
     frame = await extractPosterFrameFromBuffer(videoBytes, seek);
-  } catch (err) {
+  } catch {
     // Non-faststart MP4 (moov after mdat): a client-side poster still works,
-    // so report it as unprocessable rather than a server error.
-    return privateJson(
-      {
-        error: err instanceof Error ? err.message : 'Unsupported video layout',
-      },
-      { status: 422 },
-    );
+    // so report it as unprocessable rather than a server error. The thrown
+    // message is not echoed back to the client.
+    return privateJson({ error: 'Unsupported video layout' }, { status: 422 });
   }
 
   // Real frame extraction isn't implemented yet (see lib/videoPosterFrame.ts):

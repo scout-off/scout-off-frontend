@@ -6,6 +6,12 @@ const mockNotFound = jest.fn(() => {
 });
 jest.mock('next/navigation', () => ({ notFound: () => mockNotFound() }));
 
+// The page wraps getPlayer in unstable_cache (tag-based revalidation, #1672);
+// outside a Next request there is no incremental cache, so run it directly.
+jest.mock('next/cache', () => ({
+  unstable_cache: (fn: (...args: unknown[]) => unknown) => fn,
+}));
+
 const mockGetPlayer = jest.fn();
 jest.mock('@/lib/contract', () => ({
   getPlayer: (id: string) => mockGetPlayer(id),

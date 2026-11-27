@@ -238,9 +238,7 @@
       "playVideo": "Lire la vidéo",
       "reconnecting": "Reconnexion…",
       "unavailableRetry": "Indisponible — Réessayer",
-      "imageAlt": "Média IPFS {cid}",
-      "playbackError": "La lecture a échoué.",
-      "retry": "Réessayer"
+      "imageAlt": "Média IPFS {cid}"
     }
   },
   "spending_summary": {
@@ -1135,7 +1133,8 @@
     "IPFS_UPLOAD_FAILED": "Échec du téléversement vers IPFS. Veuillez réessayer.",
     "IPFS_NOT_CONFIGURED": "Les téléversements de fichiers sont actuellement indisponibles.",
     "UPLOAD_VERIFICATION_FAILED": "La vérification du téléversement a échoué. Veuillez réessayer.",
-    "INTERNAL_ERROR": "Une erreur interne s'est produite. Veuillez réessayer plus tard."
+    "INTERNAL_ERROR": "Une erreur interne s'est produite. Veuillez réessayer plus tard.",
+    "REAUTH_REQUIRED": "Veuillez confirmer cette action en signant à nouveau avec votre portefeuille."
   },
   "player": {
     "modals": {

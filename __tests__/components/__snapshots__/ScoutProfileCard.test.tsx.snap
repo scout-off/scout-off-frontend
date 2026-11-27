@@ -32,8 +32,10 @@ exports[`ScoutProfileCard — snapshot matches snapshot with a full scout profil
     class="flex items-center gap-2"
   >
     <button
+      aria-label="Copy address GCFW7QAO3WZQ6X4CZ3OYZFXX3A3DL7XVI5DNVTXA5VJUGE5SU6ZRG5OV"
       class="inline-flex items-center gap-1 text-sm text-gray-400"
       title="Click to copy address"
+      type="button"
     >
       <span
         class="font-mono"
@@ -41,6 +43,7 @@ exports[`ScoutProfileCard — snapshot matches snapshot with a full scout profil
         GCFW…G5OV
       </span>
       <svg
+        aria-hidden="true"
         class="w-4 h-4 text-gray-400"
         fill="none"
         stroke="currentColor"
@@ -53,6 +56,11 @@ exports[`ScoutProfileCard — snapshot matches snapshot with a full scout profil
           stroke-width="2"
         />
       </svg>
+      <span
+        aria-live="polite"
+        class="sr-only"
+        role="status"
+      />
     </button>
   </div>
   <p

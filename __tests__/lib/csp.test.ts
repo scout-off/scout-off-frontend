@@ -71,9 +71,9 @@ describe('buildCsp', () => {
     expect(csp).toContain('https://indexer.scoutoff.app');
   });
 
-  it('includes coingecko in connect-src', () => {
+  it('does not allow coingecko in connect-src (rates are proxied server-side)', () => {
     const csp = buildCsp({ nonce: 'abc', env: baseEnv });
-    expect(csp).toContain('https://api.coingecko.com');
+    expect(csp).not.toContain('https://api.coingecko.com');
   });
 
   it('includes sentry ingest origin in connect-src', () => {

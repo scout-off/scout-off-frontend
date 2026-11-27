@@ -70,7 +70,9 @@ describe('GET /api/media/[cid] — happy path', () => {
   });
 
   it('falls back to the next gateway when the primary fails', async () => {
+    // Gateways are raced concurrently; any gateway beyond the two below fails.
     (global.fetch as jest.Mock)
+      .mockResolvedValue({ ok: false, status: 502 } as Response)
       .mockResolvedValueOnce({ ok: false, status: 502 } as Response)
       .mockResolvedValueOnce({
         ok: true,
@@ -87,7 +89,10 @@ describe('GET /api/media/[cid] — happy path', () => {
     });
 
     expect(res.status).toBe(200);
-    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(res.headers.get('content-type')).toBe('image/png');
+    expect(
+      (global.fetch as jest.Mock).mock.calls.length,
+    ).toBeGreaterThanOrEqual(2);
   });
 
   it('returns 502 when every gateway fails', async () => {
@@ -316,27 +321,25 @@ describe('GET /api/media/[cid] — HTTP Range support', () => {
     const firstChunk = new Uint8Array(4096).fill(2);
     const seekChunk = new Uint8Array(4096).fill(9);
 
-    (global.fetch as jest.Mock)
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 206,
-        body: makeBody([firstChunk]),
-        headers: new Headers({
-          'content-type': 'video/mp4',
-          'content-range': 'bytes 0-4095/20971520',
-          'content-length': '4096',
-        }),
-      } as Response)
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 206,
-        body: makeBody([seekChunk]),
-        headers: new Headers({
-          'content-type': 'video/mp4',
-          'content-range': 'bytes 1048576-1048576+4095/20971520',
-          'content-length': '4096',
-        }),
-      } as Response);
+    // Every gateway is raced for each request, so answer by Range header
+    // rather than by call order.
+    (global.fetch as jest.Mock).mockImplementation(
+      async (_url: string, init?: { headers?: Record<string, string> }) => {
+        const seeking = init?.headers?.Range?.startsWith('bytes=1048576');
+        return {
+          ok: true,
+          status: 206,
+          body: makeBody([seeking ? seekChunk : firstChunk]),
+          headers: new Headers({
+            'content-type': 'video/mp4',
+            'content-range': seeking
+              ? 'bytes 1048576-1048576+4095/20971520'
+              : 'bytes 0-4095/20971520',
+            'content-length': '4096',
+          }),
+        } as unknown as Response;
+      },
+    );
 
     const startReq = makeRequest(
       'http://localhost:3000/api/media/QmPZ9gcCEpqKTo6aq61g2nXGUhM4iCL3ewB6LDXZCtioEB',
@@ -367,6 +370,7 @@ describe('GET /api/media/[cid] — mid-stream gateway failover', () => {
   it('retries the next gateway when the first upstream stream fails during read-ahead', async () => {
     const okChunk = new Uint8Array([5, 6, 7]);
     (global.fetch as jest.Mock)
+      .mockResolvedValue({ ok: false, status: 502 } as Response)
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -388,7 +392,6 @@ describe('GET /api/media/[cid] — mid-stream gateway failover', () => {
     });
 
     expect(res.status).toBe(200);
-    expect(global.fetch).toHaveBeenCalledTimes(2);
     const reader = res.body!.getReader();
     const { value } = await reader.read();
     expect(Array.from(value!)).toEqual([5, 6, 7]);

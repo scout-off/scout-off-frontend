@@ -55,7 +55,11 @@ function mockFetchOnce(response: {
   ok: boolean;
   json?: () => Promise<unknown>;
 }) {
-  (global.fetch as jest.Mock).mockResolvedValueOnce(response);
+  // Real Responses always have json(); default to an empty body.
+  (global.fetch as jest.Mock).mockResolvedValueOnce({
+    json: async () => ({}),
+    ...response,
+  });
 }
 
 beforeEach(() => {
@@ -155,7 +159,10 @@ describe('DataDeletionModal', () => {
 
   it('shows the submitting spinner while the request is in flight', async () => {
     const user = userEvent.setup();
-    let resolveFetch: (value: { ok: boolean }) => void = () => {};
+    let resolveFetch: (value: {
+      ok: boolean;
+      json: () => Promise<unknown>;
+    }) => void = () => {};
     (global.fetch as jest.Mock).mockReturnValueOnce(
       new Promise((resolve) => {
         resolveFetch = resolve;
@@ -173,7 +180,7 @@ describe('DataDeletionModal', () => {
 
     expect(screen.getByText('Submitting your request…')).toBeInTheDocument();
 
-    resolveFetch({ ok: true });
+    resolveFetch({ ok: true, json: async () => ({}) });
     await waitFor(() => {
       expect(screen.getByText('Request Submitted')).toBeInTheDocument();
     });
@@ -301,5 +308,34 @@ describe('DataDeletionModal', () => {
     await user.click(screen.getByRole('button', { name: 'Close' }));
 
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('polls a queued request until it completes', async () => {
+    const user = userEvent.setup();
+    mockFetchOnce({ ok: true, json: async () => ({ requestId: 'req-1' }) });
+    mockFetchOnce({
+      ok: true,
+      json: async () => ({
+        id: 'req-1',
+        status: 'completed',
+        steps: [{ name: 'contacts', status: 'completed' }],
+      }),
+    });
+
+    render(<DataDeletionModal isOpen onClose={onClose} />);
+    await user.click(
+      screen.getByRole('button', { name: 'Request Data Deletion' }),
+    );
+    await user.click(
+      screen.getByRole('button', { name: 'Yes, Request Deletion' }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Request Submitted')).toBeInTheDocument();
+    });
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/data-deletion/request/req-1',
+      { cache: 'no-store' },
+    );
   });
 });

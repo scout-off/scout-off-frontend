@@ -221,9 +221,7 @@
       "playVideo": "Play video",
       "reconnecting": "Reconnecting…",
       "unavailableRetry": "Unavailable — Retry",
-      "imageAlt": "IPFS media {cid}",
-      "playbackError": "Playback failed.",
-      "retry": "Retry"
+      "imageAlt": "IPFS media {cid}"
     }
   },
   "spending_summary": {
@@ -1135,7 +1133,8 @@
     "IPFS_UPLOAD_FAILED": "Failed to upload file to IPFS. Please try again.",
     "IPFS_NOT_CONFIGURED": "File uploads are currently unavailable.",
     "UPLOAD_VERIFICATION_FAILED": "Upload verification failed. Please try again.",
-    "INTERNAL_ERROR": "An internal error occurred. Please try again later."
+    "INTERNAL_ERROR": "An internal error occurred. Please try again later.",
+    "REAUTH_REQUIRED": "Please confirm this action by signing with your wallet again."
   },
   "player": {
     "modals": {

@@ -385,13 +385,16 @@ function IPFSMediaItem({ cid, hlsUrl }: IPFSMediaItemProps) {
           </div>
         )}
         {isPlaying && playbackState === 'error' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 gap-2">
-            <span className="text-sm text-white">{t('playbackError')}</span>
+          <div
+            className="absolute inset-0 flex items-center justify-center bg-black/50"
+            role="alert"
+          >
             <button
+              type="button"
               onClick={handleManualRetry}
-              className="px-3 py-1 rounded bg-brand-green text-black text-sm"
+              className="rounded-lg bg-brand-green px-4 py-2 text-sm font-medium text-black hover:bg-brand-green/90"
             >
-              {t('retry')}
+              {t('unavailableRetry')}
             </button>
           </div>
         )}
@@ -404,17 +407,17 @@ function IPFSMediaItem({ cid, hlsUrl }: IPFSMediaItemProps) {
       ref={containerRef}
       className="aspect-square bg-gray-800 rounded-xl overflow-hidden relative"
     >
-      {isVisible && (
-        <Image
-          src={mediaUrl}
-          alt=""
-          fill
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          className="object-cover"
-          placeholder="blur"
-          blurDataURL={BLUR_DATA_URL}
-        />
-      )}
+      {/* next/image lazy-loads natively, so the image is not gated on the
+          IntersectionObserver used for video playback. */}
+      <Image
+        src={mediaUrl}
+        alt={t('imageAlt', { cid })}
+        fill
+        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+        className="object-cover"
+        placeholder="blur"
+        blurDataURL={BLUR_DATA_URL}
+      />
     </div>
   );
 }

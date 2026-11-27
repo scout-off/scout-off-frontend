@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { privateJson } from '@/lib/httpResponses';
 import { getSessionWallet } from '@/lib/session';
 import { getPlayer } from '@/lib/contract';
 import { applyRateLimit, POLICIES } from '@/lib/rateLimitPolicies';
@@ -19,14 +20,14 @@ export async function POST(req: NextRequest) {
 
   const sessionWallet = getSessionWallet(req);
   if (!sessionWallet) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return privateJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   let body: unknown;
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    return privateJson({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
   const { oldCid, playerId } = (body ?? {}) as {
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
     typeof playerId !== 'string' ||
     playerId.trim() === ''
   ) {
-    return NextResponse.json(
+    return privateJson(
       { error: 'oldCid and playerId are required' },
       { status: 400 },
     );
@@ -48,26 +49,26 @@ export async function POST(req: NextRequest) {
 
   const player = await getPlayer(playerId);
   if (!player) {
-    return NextResponse.json({ error: 'Player not found' }, { status: 404 });
+    return privateJson({ error: 'Player not found' }, { status: 404 });
   }
 
   if (
     !player.wallet ||
     player.wallet.toLowerCase() !== sessionWallet.toLowerCase()
   ) {
-    return NextResponse.json(
+    return privateJson(
       { error: 'Forbidden: caller does not own this player' },
       { status: 403 },
     );
   }
 
   if (player.ipfsHash && player.ipfsHash === oldCid) {
-    return NextResponse.json(
+    return privateJson(
       { error: 'oldCid is still the current ipfsHash' },
       { status: 409 },
     );
   }
 
   const record = recordSupersededCid(oldCid, playerId);
-  return NextResponse.json({ id: record.id, record }, { status: 201 });
+  return privateJson({ id: record.id, record }, { status: 201 });
 }

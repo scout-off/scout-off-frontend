@@ -83,7 +83,8 @@ describe('fetchMediaFromGateways', () => {
 
     expect(global.fetch).toHaveBeenCalledWith(
       'https://gateway.example/ipfs/QmClip.mp4',
-      { headers: { Range: 'bytes=0-3' } },
+      // The signal lets the race cancel losing gateways.
+      { headers: { Range: 'bytes=0-3' }, signal: expect.any(AbortSignal) },
     );
     expect(result?.status).toBe(206);
     expect(result?.contentRange).toBe('bytes 0-3/20971520');

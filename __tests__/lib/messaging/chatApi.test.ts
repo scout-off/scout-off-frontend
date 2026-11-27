@@ -26,7 +26,24 @@ describe('chatApi', () => {
 
     await expect(fetchThreadMessages('thread-1')).resolves.toEqual(messages);
     expect(mockGet).toHaveBeenCalledWith('/threads/thread-1/messages', {
+      params: {},
       signal: undefined,
+    });
+  });
+
+  it('fetchThreadMessages forwards pagination options as query params', async () => {
+    mockGet.mockResolvedValueOnce({ data: [] });
+    const controller = new AbortController();
+
+    await fetchThreadMessages('thread-1', {
+      before: 'msg-9',
+      limit: 20,
+      signal: controller.signal,
+    });
+
+    expect(mockGet).toHaveBeenCalledWith('/threads/thread-1/messages', {
+      params: { before: 'msg-9', limit: 20 },
+      signal: controller.signal,
     });
   });
 

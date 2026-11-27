@@ -15,7 +15,11 @@ export default function SessionExpiryWarning() {
   const { isAuthenticated, sessionExpiresAt, reauthenticate } = useWallet();
   const { show: showToast } = useToast();
   const [showWarning, setShowWarning] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+  // The session (by its expiry time) the user dismissed the warning for. A
+  // new session has a different expiry, so the warning can show again.
+  const [dismissedFor, setDismissedFor] = useState<number | null>(null);
+  const dismissed =
+    sessionExpiresAt != null && dismissedFor === sessionExpiresAt;
   const [isReauthenticating, setIsReauthenticating] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -37,14 +41,11 @@ export default function SessionExpiryWarning() {
 
   const handleDismiss = useCallback(() => {
     setShowWarning(false);
-    setDismissed(true);
-  }, []);
+    setDismissedFor(sessionExpiresAt ?? null);
+  }, [sessionExpiresAt]);
 
   useEffect(() => {
-    if (!isAuthenticated || !sessionExpiresAt) return;
-
-    // Reset dismissal when session expiresAt changes (new session)
-    setDismissed(false);
+    if (!isAuthenticated || !sessionExpiresAt || dismissed) return;
 
     function checkAndSetTimer() {
       const now = Date.now();

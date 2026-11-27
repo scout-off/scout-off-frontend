@@ -104,9 +104,19 @@ describe('authenticated responses at runtime', () => {
     expect(res.headers.get('Vary')).toContain('Cookie');
   });
 
-  it('GET /api/admin/automated-moderation-log is private, no-store', async () => {
+  it('GET /api/admin/automated-moderation-log with an admin session is private, no-store', async () => {
+    SessionStore.getInstance().create(
+      'sid-moderation-test',
+      ADMIN,
+      Date.now() + 60 * 60 * 1000,
+    );
+    const token = createSessionToken(ADMIN, 'access', 20 * 60, {
+      sid: 'sid-moderation-test',
+    });
     const res = await moderationLogGET(
-      new NextRequest('http://localhost/api/admin/automated-moderation-log'),
+      new NextRequest('http://localhost/api/admin/automated-moderation-log', {
+        headers: { cookie: `session=${token}` },
+      }),
     );
 
     expect(res.status).toBe(200);

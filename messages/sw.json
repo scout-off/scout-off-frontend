@@ -719,9 +719,7 @@
       "playVideo": "Cheza video",
       "reconnecting": "Inaunganisha upya…",
       "unavailableRetry": "Haipatikani — Jaribu tena",
-      "imageAlt": "Media ya IPFS {cid}",
-      "playbackError": "Uchezaji umeshindwa.",
-      "retry": "Jaribu tena"
+      "imageAlt": "Media ya IPFS {cid}"
     }
   },
   "spending_summary": {
@@ -1135,7 +1133,8 @@
     "IPFS_UPLOAD_FAILED": "Imeshindwa kupakia faili kwenye IPFS. Tafadhali jaribu tena.",
     "IPFS_NOT_CONFIGURED": "Upakiaji wa faili haupatikani kwa sasa.",
     "UPLOAD_VERIFICATION_FAILED": "Uthibitishaji wa upakiaji umeshindwa. Tafadhali jaribu tena.",
-    "INTERNAL_ERROR": "Hitilafu ya ndani imetokea. Tafadhali jaribu tena baadaye."
+    "INTERNAL_ERROR": "Hitilafu ya ndani imetokea. Tafadhali jaribu tena baadaye.",
+    "REAUTH_REQUIRED": "Tafadhali thibitisha kitendo hiki kwa kusaini tena na pochi yako."
   },
   "player": {
     "modals": {
