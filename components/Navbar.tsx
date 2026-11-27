@@ -218,21 +218,21 @@ export default function Navbar() {
                 >
                   {supported.map((c) => (
                     <button
-                      key={c}
+                      key={c.code}
                       type="button"
                       role="option"
-                      aria-selected={currency === c}
+                      aria-selected={currency === c.code}
                       onClick={() => {
-                        setCurrency(c);
+                        setCurrency(c.code);
                         setCurrencyOpen(false);
                       }}
                       className={`w-full text-left px-4 py-2 text-sm hover:bg-brand-green hover:text-black transition ${
-                        currency === c
+                        currency === c.code
                           ? 'bg-brand-green/20 text-brand-green'
                           : ''
                       }`}
                     >
-                      {getCurrencyLabel(c, currentLocale)}
+                      {getCurrencyLabel(c.code, currentLocale)}
                     </button>
                   ))}
                 </div>
@@ -372,20 +372,20 @@ export default function Navbar() {
               <p className="text-xs text-gray-500 px-1 mb-1">Currency</p>
               {supported.map((c) => (
                 <button
-                  key={c}
+                  key={c.code}
                   type="button"
-                  aria-pressed={currency === c}
+                  aria-pressed={currency === c.code}
                   onClick={() => {
-                    setCurrency(c);
+                    setCurrency(c.code);
                     closeMenu();
                   }}
                   className={`w-full text-left px-4 py-2 text-sm rounded hover:bg-brand-green hover:text-black transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green ${
-                    currency === c
+                    currency === c.code
                       ? 'bg-brand-green/20 text-brand-green'
                       : ''
                   }`}
                 >
-                  {getCurrencyLabel(c, currentLocale)}
+                  {getCurrencyLabel(c.code, currentLocale)}
                 </button>
               ))}
             </div>

@@ -20,7 +20,7 @@ import type { Locale } from './locales';
 // are all Latin-script, and mixing Arabic-Indic digits with them produces
 // confusing, hard-to-copy output. Latin digits also match the `dir="ltr"`
 // mixed-content wrappers used for those values.
-const INTL_LOCALE_TAG: Record<Locale, string> = {
+const INTL_LOCALE_TAG: Record<Locale, string> & { ar?: string } = {
   en: 'en-US',
   fr: 'fr-FR',
   sw: 'sw-KE',

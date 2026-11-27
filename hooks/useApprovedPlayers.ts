@@ -1,76 +1,101 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { fetchApprovedPlayerEvents } from '../lib/indexerClient';
+'use client';
 
-const PAGE_SIZE = 200;
+import { useCallback } from 'react';
+import useSWR from 'swr';
+import { fetchValidatorEvents } from '@/lib/indexerClient';
+import { fetchPlayerProfile } from '@/lib/api';
+import type { Player } from '@/types';
+import type { IndexedEvent } from '@/lib/indexerClient';
+
+const MAX_PAGES = 10;
 
 /**
- * Incrementally loads approved-player events from the indexer.
- *
- * Previously this hook eagerly looped up to MAX_PAGES (10) pages and silently
- * dropped everything beyond 2,000 events. It now loads one page at a time and
- * exposes `hasMore` / `loadMore` so callers can surface
- * "Showing N of at least M — load more" instead of truncating silently.
+ * Fetches all `milestone_approved` events for a given validator address from
+ * the indexer (paginated), then deduplicates to unique player IDs and fetches
+ * the corresponding Player profiles.
  */
-export function useApprovedPlayers() {
-  const [playerIds, setPlayerIds] = useState<string[]>([]);
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+async function fetchApprovedPlayers(
+  validatorAddress: string,
+): Promise<Player[]> {
+  const allEvents: IndexedEvent[] = [];
+  let cursor: number | undefined;
 
-  // Dedupe across pages: the indexer can return the same player more than once
-  // (e.g. re-approvals), and page boundaries may overlap.
-  const seenIds = useRef<Set<string>>(new Set());
+  // 1. Fetch all milestone_approved events by this validator
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const { events, nextCursor } = await fetchValidatorEvents(
+      validatorAddress,
+      {
+        type: 'milestone_approved',
+        limit: 200,
+        before: cursor,
+      },
+    );
 
-  const loadPage = useCallback(async (nextCursor: string | null) => {
-    setIsLoading(true);
-    setError(null);
+    allEvents.push(...events);
+    if (nextCursor === null) break;
+    cursor = nextCursor;
+  }
+
+  // 2. Deduplicate to unique player IDs
+  const playerIds = [
+    ...new Set(
+      allEvents
+        .map((e) => e.playerId)
+        .filter((id): id is string => id !== null),
+    ),
+  ];
+
+  if (playerIds.length === 0) return [];
+
+  // 3. Fetch player profiles (with individual error tolerance)
+  const players: Player[] = [];
+  for (const id of playerIds) {
     try {
-      const page = await fetchApprovedPlayerEvents({
-        limit: PAGE_SIZE,
-        cursor: nextCursor ?? undefined,
-      });
-
-      const fresh: string[] = [];
-      for (const event of page.items) {
-        const id = event.playerId;
-        if (!id || seenIds.current.has(id)) continue;
-        seenIds.current.add(id);
-        fresh.push(id);
-      }
-
-      if (fresh.length > 0) {
-        setPlayerIds((prev) => [...prev, ...fresh]);
-      }
-      setCursor(page.nextCursor ?? null);
-      setHasMore(Boolean(page.nextCursor));
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error(String(err)));
-    } finally {
-      setIsLoading(false);
+      const player = await fetchPlayerProfile(id);
+      if (player) players.push(player);
+    } catch {
+      // Skip players whose profiles can't be fetched (removed, network err, etc.)
     }
-  }, []);
+  }
 
-  useEffect(() => {
-    void loadPage(null);
-  }, [loadPage]);
-
-  const loadMore = useCallback(() => {
-    if (isLoading || !hasMore) return;
-    void loadPage(cursor);
-  }, [cursor, hasMore, isLoading, loadPage]);
-
-  const players = useMemo(() => playerIds, [playerIds]);
-
-  return {
-    players,
-    playerIds: players,
-    count: players.length,
-    hasMore,
-    isLoading,
-    error,
-    loadMore,
-  };
+  return players;
 }
 
-export default useApprovedPlayers;
+/**
+ * SWR key for the approved players cache.
+ */
+export function approvedPlayersKey(
+  validatorAddress: string | null,
+): string | null {
+  return validatorAddress ? `approved-players:${validatorAddress}` : null;
+}
+
+/**
+ * Returns all players whose milestones have been approved by the given
+ * validator address.
+ *
+ * Reads from the indexer's validator-events endpoint, deduplicates to unique
+ * player IDs, and fetches the corresponding Player profiles via the backend API.
+ */
+export function useApprovedPlayers(validatorAddress: string | null) {
+  const { data, error, isValidating, mutate } = useSWR<Player[]>(
+    approvedPlayersKey(validatorAddress),
+    () => fetchApprovedPlayers(validatorAddress!),
+    {
+      dedupingInterval: 30_000, // 30 s — data doesn't change rapidly
+      revalidateOnFocus: false,
+      errorRetryCount: 2,
+    },
+  );
+
+  const refetch = useCallback(() => {
+    if (validatorAddress) mutate(undefined, { revalidate: true });
+  }, [validatorAddress, mutate]);
+
+  return {
+    players: data ?? [],
+    loading: isValidating && !data,
+    error: error?.message ?? null,
+    refetch,
+  };
+}

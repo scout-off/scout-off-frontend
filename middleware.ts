@@ -10,6 +10,7 @@ import {
 } from '@/lib/locales';
 import { negotiateLocale } from '@/lib/negotiateLocale';
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
+import { POLICIES } from '@/lib/rateLimitPolicies';
 import { buildCsp } from '@/lib/csp';
 
 function getLocale(request: NextRequest): string {

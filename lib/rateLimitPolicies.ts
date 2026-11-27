@@ -403,9 +403,8 @@ function buildKey(req: NextRequest, policy: RateLimitPolicy): string {
  * Apply a rate-limit policy to an incoming request.
  *
  * Returns a `NextResponse` (HTTP 429) when the caller has exceeded the
- * policy, or `null` when the request may proceed. The 429 body is RFC 7807
- * `application/problem+json` with `type`/`title`/`status`/`detail`, and the
- * response carries a `Retry-After` header.
+ * policy, or `null` when the request may proceed. The 429 body is
+ * `{ error, retryAfterSec }` and the response carries a `Retry-After` header.
  */
 export async function applyRateLimit(
   req: NextRequest,
@@ -418,28 +417,14 @@ export async function applyRateLimit(
     onStoreError: policy.onStoreError,
   });
 
-  if (result.allowed) {
-    return null;
-  }
+  if (!result.limited) return null;
 
-  const retryAfterSec = Math.max(
-    1,
-    Math.ceil((result.resetAt - Date.now()) / 1000),
-  );
-
-  return new NextResponse(
-    JSON.stringify({
-      type: 'https://handsoff.app/problems/rate-limited',
-      title: 'Too Many Requests',
-      status: 429,
-      detail: policy.message,
-    }),
+  const retryAfter = result.retryAfterSec ?? Math.ceil(policy.windowMs / 1000);
+  return NextResponse.json(
+    { error: policy.message, retryAfterSec: retryAfter },
     {
       status: 429,
-      headers: {
-        'Content-Type': 'application/problem+json',
-        'Retry-After': String(retryAfterSec),
-      },
+      headers: { 'Retry-After': String(retryAfter) },
     },
   );
 }

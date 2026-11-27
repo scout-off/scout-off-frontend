@@ -12,8 +12,11 @@
  * `MAX_INCLUSION_FEE_STROOPS`. Results are cached for ~10 s with single-flight
  * dedupe so concurrent builders share one network round-trip.
  */
-import { Horizon, rpc as SorobanRpc } from '@stellar/stellar-sdk';
-import { BASE_FEE, NETWORK } from './stellar';
+import { Horizon, BASE_FEE as SDK_BASE_FEE } from '@stellar/stellar-sdk';
+import { HORIZON_URL, rpc } from './stellar';
+
+/** The SDK exports the minimum fee as a string ("100"). */
+const BASE_FEE = Number(SDK_BASE_FEE);
 
 /** Hard ceiling for any inclusion fee we are willing to pay, in stroops. */
 export const MAX_INCLUSION_FEE_STROOPS = 10_000;
@@ -36,8 +39,10 @@ interface CacheEntry {
   fetchedAt: number;
 }
 
-const cache = new Map<FeeSpeed, CacheEntry>();
-const inFlight = new Map<FeeSpeed, Promise<FeeEstimate>>();
+type CacheKey = `${'classic' | 'soroban'}:${FeeSpeed}`;
+
+const cache = new Map<CacheKey, CacheEntry>();
+const inFlight = new Map<CacheKey, Promise<FeeEstimate>>();
 
 function clampFee(raw: number): number {
   if (!Number.isFinite(raw) || raw <= 0) return BASE_FEE;
@@ -62,14 +67,15 @@ function pickPercentile(
 }
 
 async function fetchClassicFee(speed: FeeSpeed): Promise<FeeEstimate> {
-  const server = new Horizon.Server(NETWORK.horizonUrl);
+  const server = new Horizon.Server(HORIZON_URL, {
+    allowHttp: HORIZON_URL.startsWith('http://'),
+  });
   const stats = await server.feeStats();
   return toEstimate(pickPercentile(stats.max_fee, speed));
 }
 
 async function fetchSorobanFee(speed: FeeSpeed): Promise<FeeEstimate> {
-  const server = new SorobanRpc.Server(NETWORK.sorobanRpcUrl);
-  const stats = await server.getFeeStats();
+  const stats = await rpc.getFeeStats();
   return toEstimate(pickPercentile(stats.inclusionFee, speed));
 }
 
@@ -84,13 +90,14 @@ export async function estimateInclusionFee(
   kind: 'classic' | 'soroban',
   speed: FeeSpeed = 'p70',
 ): Promise<FeeEstimate> {
+  const key: CacheKey = `${kind}:${speed}`;
   const now = Date.now();
-  const cached = cache.get(speed);
+  const cached = cache.get(key);
   if (cached && now - cached.fetchedAt < FEE_CACHE_TTL_MS) {
     return cached.estimate;
   }
 
-  const pending = inFlight.get(speed);
+  const pending = inFlight.get(key);
   if (pending) return pending;
 
   const request = (async () => {
@@ -99,18 +106,29 @@ export async function estimateInclusionFee(
         kind === 'soroban'
           ? await fetchSorobanFee(speed)
           : await fetchClassicFee(speed);
-      cache.set(speed, { estimate, fetchedAt: Date.now() });
+      cache.set(key, { estimate, fetchedAt: Date.now() });
       return estimate;
     } catch {
       // On failure fall back to the base fee rather than blocking the build.
       return toEstimate(BASE_FEE);
     } finally {
-      inFlight.delete(speed);
+      inFlight.delete(key);
     }
   })();
 
-  inFlight.set(speed, request);
+  inFlight.set(key, request);
   return request;
+}
+
+/**
+ * Inclusion fee for a classic (Horizon) transaction, as the string
+ * `TransactionBuilder` expects for its `fee` option.
+ */
+export async function estimateClassicFee(
+  speed: FeeSpeed = 'p70',
+): Promise<string> {
+  const { fee } = await estimateInclusionFee('classic', speed);
+  return String(fee);
 }
 
 /** Clears the fee cache. Exposed for tests. */

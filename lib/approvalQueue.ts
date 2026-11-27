@@ -11,8 +11,7 @@ export type ApprovalQueueStatus =
   | 'processing'
   | 'confirmed'
   | 'failed'
-  | 'invalid'
-  | 'conflict';
+  | 'invalid';
 
 export interface ApprovalIntent {
   /** SHA-256 of playerId + milestone + validator. Also the IndexedDB key. */
@@ -26,12 +25,6 @@ export interface ApprovalIntent {
   retryCount: number;
   txHash?: string;
   errorReason?: string;
-  /**
-   * Set when the lease for this submission was lost (another validator holds
-   * it, or it was already approved on-chain). A conflicted intent must not be
-   * replayed blindly; the validator has to re-claim the submission first.
-   */
-  conflictReason?: string;
 }
 
 const DB_NAME = 'scoutoff-approval-queue';
@@ -161,21 +154,6 @@ export async function updateApprovalIntent(
   const updated = { ...current, ...patch, updatedAt: Date.now() };
   await transact<undefined>('readwrite', (store) => store.put(updated));
   return updated;
-}
-
-/**
- * Marks a queued intent as conflicted because its lease was lost. Conflicted
- * intents are surfaced in the queue UI and skipped by the flush loop so they
- * are never replayed blindly against a submission another validator owns.
- */
-export async function markApprovalConflict(
-  idempotencyKey: string,
-  reason: string,
-): Promise<ApprovalIntent | null> {
-  return updateApprovalIntent(idempotencyKey, {
-    status: 'conflict',
-    conflictReason: reason,
-  });
 }
 
 export async function removeApprovalIntent(

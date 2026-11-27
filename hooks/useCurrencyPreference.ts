@@ -1,126 +1,67 @@
 'use client';
 
-import { useCallback, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { CURRENCY_PREFERENCE_KEY } from '@/lib/storageKeys';
+import { SUPPORTED_CURRENCIES, type CurrencyCode } from '@/lib/currencies';
 
-export const SUPPORTED_CURRENCY_CODES = [
-  'USD',
-  'EUR',
-  'GBP',
-  'NGN',
-  'KES',
-] as const;
+// ── Types ──────────────────────────────────────────────────────────────────────
 
-export type CurrencyCode = (typeof SUPPORTED_CURRENCY_CODES)[number];
+export { SUPPORTED_CURRENCIES, type CurrencyCode };
 
-const STORAGE_KEY = 'currency-preference';
 const DEFAULT_CURRENCY: CurrencyCode = 'USD';
 
-function isSupportedCurrency(value: unknown): value is CurrencyCode {
-  return (
-    typeof value === 'string' &&
-    (SUPPORTED_CURRENCY_CODES as readonly string[]).includes(value)
-  );
-}
+const STORAGE_KEY = CURRENCY_PREFERENCE_KEY;
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
 function getStoredCurrency(): CurrencyCode {
   if (typeof window === 'undefined') return DEFAULT_CURRENCY;
   try {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    return isSupportedCurrency(stored) ? stored : DEFAULT_CURRENCY;
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored && SUPPORTED_CURRENCIES.some((c) => c.code === stored)) {
+      return stored as CurrencyCode;
+    }
   } catch {
-    return DEFAULT_CURRENCY;
+    // localStorage unavailable (private browsing, etc.)
   }
+  return DEFAULT_CURRENCY;
 }
 
 function setStoredCurrency(currency: CurrencyCode): void {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, currency);
+    localStorage.setItem(STORAGE_KEY, currency);
   } catch {
-    // Ignore storage failures (private mode, quota, etc.).
+    // Silently ignore storage errors
   }
 }
 
-// Module-level shared store so every consumer subscribes to the same value.
-let currentCurrency: CurrencyCode = DEFAULT_CURRENCY;
-let initialised = false;
-const listeners = new Set<() => void>();
+// ── Hook ───────────────────────────────────────────────────────────────────────
 
-function emitChange(): void {
-  for (const listener of listeners) listener();
-}
-
-function getSnapshot(): CurrencyCode {
-  if (!initialised) {
-    currentCurrency = getStoredCurrency();
-    initialised = true;
-  }
-  return currentCurrency;
-}
-
-/** The server never knows the stored preference, so SSR (and hydration) render USD. */
-function getServerSnapshot(): CurrencyCode {
-  return DEFAULT_CURRENCY;
-}
-
-function subscribe(onChange: () => void): () => void {
-  listeners.add(onChange);
-
-  const onStorage = (event: StorageEvent) => {
-    if (event.key !== STORAGE_KEY && event.key !== null) return;
-    const next = isSupportedCurrency(event.newValue)
-      ? event.newValue
-      : DEFAULT_CURRENCY;
-    if (next === currentCurrency) return;
-    currentCurrency = next;
-    initialised = true;
-    emitChange();
-  };
-
-  if (typeof window !== 'undefined') {
-    window.addEventListener('storage', onStorage);
-  }
-
-  return () => {
-    listeners.delete(onChange);
-    if (typeof window !== 'undefined') {
-      window.removeEventListener('storage', onStorage);
-    }
-  };
-}
-
-function setCurrency(currency: CurrencyCode): void {
-  if (!isSupportedCurrency(currency)) return;
-  if (currency === currentCurrency) {
-    setStoredCurrency(currency);
-    return;
-  }
-  currentCurrency = currency;
-  initialised = true;
-  setStoredCurrency(currency);
-  emitChange();
-}
-
-export interface UseCurrencyPreferenceResult {
+export interface CurrencyPreferenceReturn {
+  /** Currently selected currency code. */
   currency: CurrencyCode;
-  setCurrency: (currency: CurrencyCode) => void;
-  supported: readonly CurrencyCode[];
+  /** Set the currency preference (persisted to localStorage). */
+  setCurrency: (c: CurrencyCode) => void;
+  /** All supported currencies for the selector UI. */
+  supported: typeof SUPPORTED_CURRENCIES;
 }
 
-export function useCurrencyPreference(): UseCurrencyPreferenceResult {
-  const currency = useSyncExternalStore(
-    subscribe,
-    getSnapshot,
-    getServerSnapshot,
-  );
+/**
+ * Manages the user's fiat currency preference, persisted in localStorage.
+ * Used by the currency selector UI and all XLM-to-fiat display call sites.
+ */
+export function useCurrencyPreference(): CurrencyPreferenceReturn {
+  const [currency, setCurrencyState] =
+    useState<CurrencyCode>(getStoredCurrency);
 
-  const setCurrencyCallback = useCallback((next: CurrencyCode) => {
-    setCurrency(next);
+  const setCurrency = useCallback((c: CurrencyCode) => {
+    setCurrencyState(c);
+    setStoredCurrency(c);
   }, []);
 
-  return {
-    currency,
-    setCurrency: setCurrencyCallback,
-    supported: SUPPORTED_CURRENCY_CODES,
-  };
+  return useMemo(
+    () => ({ currency, setCurrency, supported: SUPPORTED_CURRENCIES }),
+    [currency, setCurrency],
+  );
 }

@@ -23,14 +23,16 @@
  * `messages/en.json` before shipping (a stale translation could silently
  * fall back to English on missing nested keys).
  *
- * Note (issue #1668): `ar` is the first right-to-left locale. It is wired
- * through `i18n/routing.ts`, `messages/ar.json`, `lib/localeFormat.ts`,
- * `lib/playerSitemapPaths.js`, and `next-sitemap.config.js`. The component
+ * Note (issue #1668): `ar` (the first right-to-left locale) is NOT enabled
+ * yet: `messages/ar.json` was never added, and routing to a locale without a
+ * messages file crashes every `/ar` page. Add the translations first, then
+ * add `ar` here, in `i18n/routing.ts`, `lib/playerSitemapPaths.js` and
+ * `next-sitemap.config.js` (`lib/localeFormat.ts` already maps it). The component
  * tree uses logical Tailwind utilities (`ms-*`/`me-*`, `ps-*`/`pe-*`,
  * `start-*`/`end-*`, `text-start`/`text-end`, `rounded-s-*`/`rounded-e-*`)
  * so `dir="rtl"` renders correctly without per-component overrides.
  */
-const SUPPORTED_LOCALES = ['en', 'fr', 'sw', 'ar'] as const;
+const SUPPORTED_LOCALES = ['en', 'fr', 'sw'] as const;
 
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
 
