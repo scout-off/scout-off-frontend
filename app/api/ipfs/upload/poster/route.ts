@@ -172,7 +172,10 @@ export async function POST(req: NextRequest) {
   if (totalSize !== null && totalSize > videoBytes.length) {
     const hasMoov = containsAscii(videoBytes, 'moov');
     if (!hasMoov) {
-      const tailStart = Math.max(videoBytes.length, totalSize - TAIL_SCAN_BYTES);
+      const tailStart = Math.max(
+        videoBytes.length,
+        totalSize - TAIL_SCAN_BYTES,
+      );
       try {
         const tail = await fetchRange(videoUrl, tailStart, totalSize - 1);
         videoBytes = concatBytes(videoBytes, tail.bytes);
@@ -193,7 +196,9 @@ export async function POST(req: NextRequest) {
     // Non-faststart MP4 (moov after mdat): a client-side poster still works,
     // so report it as unprocessable rather than a server error.
     return privateJson(
-      { error: err instanceof Error ? err.message : 'Unsupported video layout' },
+      {
+        error: err instanceof Error ? err.message : 'Unsupported video layout',
+      },
       { status: 422 },
     );
   }

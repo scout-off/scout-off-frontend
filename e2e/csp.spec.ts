@@ -22,8 +22,16 @@ function attachViolationListeners(page: Page): Violation[] {
   page.on('console', (msg) => {
     if (msg.type() !== 'error') return;
     const text = msg.text();
-    if (/content security policy|refused to (load|execute|apply|connect)/i.test(text)) {
-      violations.push({ blockedURI: text, violatedDirective: 'console', sourceFile: '' });
+    if (
+      /content security policy|refused to (load|execute|apply|connect)/i.test(
+        text,
+      )
+    ) {
+      violations.push({
+        blockedURI: text,
+        violatedDirective: 'console',
+        sourceFile: '',
+      });
     }
   });
 
@@ -49,7 +57,11 @@ function attachViolationListeners(page: Page): Violation[] {
     try {
       violations.push(JSON.parse(text.slice(idx + marker.length)) as Violation);
     } catch {
-      violations.push({ blockedURI: text, violatedDirective: 'unknown', sourceFile: '' });
+      violations.push({
+        blockedURI: text,
+        violatedDirective: 'unknown',
+        sourceFile: '',
+      });
     }
   });
 
@@ -73,15 +85,24 @@ test.describe('Content-Security-Policy', () => {
       // Give late inline scripts (analytics, Sentry) a chance to run and report.
       await page.waitForTimeout(500);
 
-      expect(violations, `CSP violations on ${path}: ${JSON.stringify(violations)}`).toEqual([]);
+      expect(
+        violations,
+        `CSP violations on ${path}: ${JSON.stringify(violations)}`,
+      ).toEqual([]);
     });
   }
 
   test('no CSP reports were posted during the run', async ({ request }) => {
     const response = await request.get('/api/csp-report');
-    expect(response.ok(), 'GET /api/csp-report should be reachable').toBeTruthy();
+    expect(
+      response.ok(),
+      'GET /api/csp-report should be reachable',
+    ).toBeTruthy();
 
-    const body = (await response.json()) as { count?: number; reports?: unknown[] };
+    const body = (await response.json()) as {
+      count?: number;
+      reports?: unknown[];
+    };
     const count = body.count ?? body.reports?.length ?? 0;
     expect(count, 'expected zero CSP reports').toBe(0);
   });

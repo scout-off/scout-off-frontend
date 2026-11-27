@@ -68,7 +68,10 @@ function toProfile(row: ScoutRow): ScoutProfile {
   };
 }
 
-function validateField(field: keyof typeof PROFILE_LIMITS, value: unknown): string {
+function validateField(
+  field: keyof typeof PROFILE_LIMITS,
+  value: unknown,
+): string {
   if (typeof value !== 'string') {
     throw new ScoutValidationError(`${field} must be a string`);
   }
@@ -118,7 +121,9 @@ export class ScoutService {
     input: ScoutProfileInput,
   ): Promise<ScoutProfile> {
     if (!requester || requester !== id) {
-      throw new ScoutForbiddenError('Only the owning scout may edit this profile');
+      throw new ScoutForbiddenError(
+        'Only the owning scout may edit this profile',
+      );
     }
 
     const updates: Record<string, string> = {};
@@ -192,7 +197,9 @@ export class ScoutService {
 
   async getContacts(id: string, requester: string): Promise<ScoutContact[]> {
     if (!requester || requester !== id) {
-      throw new ScoutForbiddenError('Contacts are visible only to the owning scout');
+      throw new ScoutForbiddenError(
+        'Contacts are visible only to the owning scout',
+      );
     }
 
     const events = await this.scoutEvents(id, 'pay_to_contact');

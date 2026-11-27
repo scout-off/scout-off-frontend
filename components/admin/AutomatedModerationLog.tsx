@@ -251,7 +251,8 @@ export default function AutomatedModerationLog() {
               headerClassName: 'py-2 pr-4 font-medium',
               className: 'py-2 pr-4 text-gray-200 font-medium',
               render: (entry) =>
-                (entry.data?.rule as string | undefined) ?? tSeverity('unknown'),
+                (entry.data?.rule as string | undefined) ??
+                tSeverity('unknown'),
             },
             {
               key: 'user',

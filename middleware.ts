@@ -111,7 +111,8 @@ export async function middleware(request: NextRequest) {
           type: 'about:blank',
           title: 'Too Many Requests',
           status: 429,
-          detail: 'Admin request rate limit exceeded. Please try again shortly.',
+          detail:
+            'Admin request rate limit exceeded. Please try again shortly.',
         },
         {
           status: 429,

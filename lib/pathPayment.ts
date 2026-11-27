@@ -17,12 +17,7 @@ import {
   Operation,
   TransactionBuilder,
 } from '@stellar/stellar-sdk';
-import {
-  HORIZON_URL,
-  NETWORK,
-  pollTransaction,
-  rpc,
-} from '@/lib/stellar';
+import { HORIZON_URL, NETWORK, pollTransaction, rpc } from '@/lib/stellar';
 import { estimateClassicFee } from '@/lib/feeEstimator';
 import { isMainnet } from '@/lib/network';
 import { withTimeoutSignal } from '@/lib/fetchTimeout';

@@ -144,7 +144,9 @@ export function createRpcClient(config: PollerConfig): RpcClient {
  * `undefined` when `ARCHIVE_RPC_URL` is not configured, in which case the
  * backfill worker is disabled and gaps remain open (and visible in /health).
  */
-export function createArchiveClient(config: PollerConfig): RpcClient | undefined {
+export function createArchiveClient(
+  config: PollerConfig,
+): RpcClient | undefined {
   if (!config.archiveRpcUrl) return undefined;
   const allowHttp = new URL(config.archiveRpcUrl).protocol === 'http:';
   return new SorobanRpc.Server(config.archiveRpcUrl, {

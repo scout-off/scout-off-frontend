@@ -44,9 +44,13 @@ describe('proxy — /health is forwarded', () => {
       ok: true,
       text: async () =>
         JSON.stringify({ status: 'ok', lastLedger: 0, uptime: 1 }),
-      headers: { get: (h: string) => (h === 'content-type' ? 'application/json' : null) },
+      headers: {
+        get: (h: string) => (h === 'content-type' ? 'application/json' : null),
+      },
     };
-    global.fetch = jest.fn().mockResolvedValue(fakeResponse) as unknown as typeof fetch;
+    global.fetch = jest
+      .fn()
+      .mockResolvedValue(fakeResponse) as unknown as typeof fetch;
   });
 
   afterEach(() => {
@@ -71,9 +75,9 @@ describe('proxy — /health is forwarded', () => {
 
 describe('proxy — upstream errors', () => {
   beforeEach(() => {
-    global.fetch = jest.fn().mockRejectedValue(
-      new Error('ECONNREFUSED'),
-    ) as unknown as typeof fetch;
+    global.fetch = jest
+      .fn()
+      .mockRejectedValue(new Error('ECONNREFUSED')) as unknown as typeof fetch;
   });
 
   afterEach(() => {

@@ -173,7 +173,9 @@ describe('/api/admin/ipfs-cleanup', () => {
 
     // p1's on-chain profile still points at bafyLive, so it must be skipped.
     mockGetPlayer.mockImplementation(async (playerId: string) =>
-      playerId === 'p1' ? { ipfsHash: 'bafyLive' } : { ipfsHash: 'bafyCurrent' },
+      playerId === 'p1'
+        ? { ipfsHash: 'bafyLive' }
+        : { ipfsHash: 'bafyCurrent' },
     );
 
     const body = await (await POST(postRequest(ADMIN))).json();

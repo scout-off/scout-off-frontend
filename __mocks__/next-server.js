@@ -25,7 +25,9 @@ class NextResponse {
   }
 
   async text() {
-    return typeof this._body === 'string' ? this._body : JSON.stringify(this._body);
+    return typeof this._body === 'string'
+      ? this._body
+      : JSON.stringify(this._body);
   }
 
   static json(data, init = {}) {

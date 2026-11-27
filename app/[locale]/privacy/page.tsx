@@ -1,3 +1,4 @@
+import type { Locale } from 'next-intl';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import LegalPageLayout from '@/components/ui/LegalPageLayout';
@@ -12,7 +13,7 @@ export async function generateMetadata(
   props: PrivacyPageProps,
 ): Promise<Metadata> {
   const params = await props.params;
-  const locale = params.locale;
+  const locale = params.locale as Locale;
   const t = await getTranslations({ locale, namespace: 'privacy' });
 
   const { buildPageMetadata } = await import('@/lib/seo');
@@ -25,7 +26,7 @@ export async function generateMetadata(
 
 export default async function PrivacyPage(props: PrivacyPageProps) {
   const params = await props.params;
-  const locale = params.locale;
+  const locale = params.locale as Locale;
   const t = await getTranslations({ locale, namespace: 'privacy' });
 
   return (

@@ -65,7 +65,10 @@ router.get('/validator/:wallet/count', (req, res) => {
       .json({ error: `status must be one of ${VALID_STATUSES.join(', ')}` });
   }
   return res.json({
-    count: milestoneSubmissionService.countForValidator(req.params.wallet, status),
+    count: milestoneSubmissionService.countForValidator(
+      req.params.wallet,
+      status,
+    ),
   });
 });
 
@@ -100,24 +103,25 @@ router.get('/validator/:wallet', (req, res) => {
   const version = req.query.version;
   const paginated = version === '2';
 
-  let page;
-  try {
-    page = milestoneSubmissionService.listForValidator(req.params.wallet, status, {
-      limit,
-      cursor,
-      sort,
-    });
-  } catch (err) {
-    if (err instanceof milestoneSubmissionService.InvalidCursorError) {
-      return res.status(400).json({ error: 'invalid cursor' });
-    }
-    throw err;
-  }
-
   if (!paginated) {
     // Legacy shape: flat array of every matching submission.
-    return res.json(page.items);
+    const items = milestoneSubmissionService.listForValidator(
+      req.params.wallet,
+      status,
+    );
+    return res.json(sort === 'newest' ? items.reverse() : items);
   }
+
+  if (
+    cursor !== null &&
+    milestoneSubmissionService.decodeCursor(cursor) === null
+  ) {
+    return res.status(400).json({ error: 'invalid cursor' });
+  }
+  const page = milestoneSubmissionService.listPageForValidator(
+    req.params.wallet,
+    { status, limit, cursor, sort: sort === 'newest' ? 'desc' : 'asc' },
+  );
   return res.json({ items: page.items, nextCursor: page.nextCursor });
 });
 

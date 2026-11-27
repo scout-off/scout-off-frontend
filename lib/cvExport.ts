@@ -361,14 +361,17 @@ export async function generatePlayerCvPdf(
       color: MUTED,
       maxWidth: PAGE_WIDTH - MARGIN * 2 - 62,
     });
-    page.drawText(safeText(`Token: ${verification.token.slice(0, 24)}…`, font), {
-      x: MARGIN + 62,
-      y: y - 44,
-      size: 7,
-      font,
-      color: MUTED,
-      maxWidth: PAGE_WIDTH - MARGIN * 2 - 62,
-    });
+    page.drawText(
+      safeText(`Token: ${verification.token.slice(0, 24)}…`, font),
+      {
+        x: MARGIN + 62,
+        y: y - 44,
+        size: 7,
+        font,
+        color: MUTED,
+        maxWidth: PAGE_WIDTH - MARGIN * 2 - 62,
+      },
+    );
     y -= 60;
   }
   drawText(`Generated ${new Date().toLocaleDateString()} · scoutoff.app`, {

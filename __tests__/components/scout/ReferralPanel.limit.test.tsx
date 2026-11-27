@@ -22,9 +22,15 @@ jest.mock('@/hooks/useWallet', () => ({
   }),
 }));
 
-const mockGenerate = generateReferralCode as jest.MockedFunction<typeof generateReferralCode>;
-const mockStats = getReferralStats as jest.MockedFunction<typeof getReferralStats>;
-const mockList = listReferralCodes as jest.MockedFunction<typeof listReferralCodes>;
+const mockGenerate = generateReferralCode as jest.MockedFunction<
+  typeof generateReferralCode
+>;
+const mockStats = getReferralStats as jest.MockedFunction<
+  typeof getReferralStats
+>;
+const mockList = listReferralCodes as jest.MockedFunction<
+  typeof listReferralCodes
+>;
 
 function axiosError(status: number, data: unknown) {
   return Object.assign(new Error(`Request failed with status code ${status}`), {
@@ -54,23 +60,33 @@ describe('ReferralPanel referral code limit (#1774)', () => {
       </ToastProvider>,
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Generate Invite Link' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Generate Invite Link' }),
+    );
 
     expect(
-      await screen.findByText('You already have 10 unused codes — share one of those first.'),
+      await screen.findByText(
+        'You already have 10 unused codes — share one of those first.',
+      ),
     ).toBeInTheDocument();
   });
 
   it('still shows the server message for other errors', async () => {
-    mockGenerate.mockRejectedValue(axiosError(400, { error: 'scoutWallet is required' }));
+    mockGenerate.mockRejectedValue(
+      axiosError(400, { error: 'scoutWallet is required' }),
+    );
     render(
       <ToastProvider>
         <ReferralPanel />
       </ToastProvider>,
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Generate Invite Link' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Generate Invite Link' }),
+    );
 
-    expect(await screen.findByText('scoutWallet is required')).toBeInTheDocument();
+    expect(
+      await screen.findByText('scoutWallet is required'),
+    ).toBeInTheDocument();
   });
 });

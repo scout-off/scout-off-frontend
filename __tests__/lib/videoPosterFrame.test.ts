@@ -86,7 +86,9 @@ describe('extractPosterFrameFromBuffer', () => {
 
   it('returns the placeholder for moov-after-mdat input without mdat in range', async () => {
     const data = bytes(box('ftyp', 16), box('moov', 16));
-    expect(await extractPosterFrameFromBuffer(data, 2)).toMatchObject(placeholder);
+    expect(await extractPosterFrameFromBuffer(data, 2)).toMatchObject(
+      placeholder,
+    );
   });
 
   it('returns a 1x1 frame for a recognised container', async () => {

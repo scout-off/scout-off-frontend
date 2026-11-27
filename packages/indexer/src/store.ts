@@ -1,8 +1,8 @@
-import type { Database } from "better-sqlite3";
-import type { Pool } from "pg";
-import type { IndexedEvent } from "./types";
+import type { Database } from 'better-sqlite3';
+import type { Pool } from 'pg';
+import type { IndexedEvent } from './types';
 
-export type GapStatus = "open" | "backfilling" | "closed";
+export type GapStatus = 'open' | 'backfilling' | 'closed';
 
 export interface RetentionGap {
   id: number;
@@ -77,7 +77,12 @@ export class SqliteIndexerStore implements IndexerStore {
     );
     const tx = this.db.transaction((batch: IndexedEvent[]) => {
       for (const event of batch) {
-        stmt.run(event.ledger, event.txHash, event.opIndex, JSON.stringify(event));
+        stmt.run(
+          event.ledger,
+          event.txHash,
+          event.opIndex,
+          JSON.stringify(event),
+        );
       }
     });
     tx(events);
@@ -176,7 +181,7 @@ export class PostgresIndexerStore implements IndexerStore {
     if (events.length === 0) return;
     const client = await this.pool.connect();
     try {
-      await client.query("BEGIN");
+      await client.query('BEGIN');
       for (const event of events) {
         await client.query(
           `INSERT INTO indexed_events (ledger, tx_hash, op_index, payload)
@@ -185,9 +190,9 @@ export class PostgresIndexerStore implements IndexerStore {
           [event.ledger, event.txHash, event.opIndex, JSON.stringify(event)],
         );
       }
-      await client.query("COMMIT");
+      await client.query('COMMIT');
     } catch (err) {
-      await client.query("ROLLBACK");
+      await client.query('ROLLBACK');
       throw err;
     } finally {
       client.release();

@@ -39,7 +39,10 @@ router.get('/:id/comments', async (req, res) => {
 // POST /players/:id/archive
 router.post('/:id/archive', requireAuth, async (req, res) => {
   try {
-    const player = await playerService.archivePlayer(req.params.id, req.user.id);
+    const player = await playerService.archivePlayer(
+      req.params.id,
+      req.user.id,
+    );
     if (!player) {
       return res.status(404).json({ error: 'Player not found' });
     }
@@ -52,7 +55,10 @@ router.post('/:id/archive', requireAuth, async (req, res) => {
 // POST /players/:id/unarchive
 router.post('/:id/unarchive', requireAuth, async (req, res) => {
   try {
-    const player = await playerService.unarchivePlayer(req.params.id, req.user.id);
+    const player = await playerService.unarchivePlayer(
+      req.params.id,
+      req.user.id,
+    );
     if (!player) {
       return res.status(404).json({ error: 'Player not found' });
     }
@@ -65,7 +71,10 @@ router.post('/:id/unarchive', requireAuth, async (req, res) => {
 // POST /players/:id/backup-wallet/remove
 router.post('/:id/backup-wallet/remove', requireAuth, async (req, res) => {
   try {
-    const player = await playerService.removeBackupWallet(req.params.id, req.user.id);
+    const player = await playerService.removeBackupWallet(
+      req.params.id,
+      req.user.id,
+    );
     if (!player) {
       return res.status(404).json({ error: 'Player not found' });
     }

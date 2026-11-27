@@ -1,3 +1,4 @@
+import type { Locale } from 'next-intl';
 import { ImageResponse } from 'next/og';
 import { getTranslations } from 'next-intl/server';
 import { readFile } from 'node:fs/promises';
@@ -15,7 +16,10 @@ export default async function Image({
 }: {
   params: { locale: string };
 }) {
-  const t = await getTranslations({ locale: params.locale, namespace: 'meta' });
+  const t = await getTranslations({
+    locale: params.locale as Locale,
+    namespace: 'meta',
+  });
 
   // Noto Sans covers Latin Extended and African-language glyphs that the
   // default system font misses. Reading from public/fonts/ keeps this
@@ -63,8 +67,18 @@ export default async function Image({
     {
       ...size,
       fonts: [
-        { name: 'Noto Sans', data: regularBytes.buffer as ArrayBuffer, weight: 400, style: 'normal' },
-        { name: 'Noto Sans', data: boldBytes.buffer as ArrayBuffer, weight: 800, style: 'normal' },
+        {
+          name: 'Noto Sans',
+          data: regularBytes.buffer as ArrayBuffer,
+          weight: 400,
+          style: 'normal',
+        },
+        {
+          name: 'Noto Sans',
+          data: boldBytes.buffer as ArrayBuffer,
+          weight: 800,
+          style: 'normal',
+        },
       ],
     },
   );

@@ -278,7 +278,11 @@ export default function PendingMilestoneQueue({
       }
     }
 
-    setBulkSummary({ succeeded, failed, skipped: ids.length - succeeded - failed });
+    setBulkSummary({
+      succeeded,
+      failed,
+      skipped: ids.length - succeeded - failed,
+    });
     setBulkRunning(false);
     setStopRequested(false);
     setSelectedIds((prev) => {
@@ -293,7 +297,10 @@ export default function PendingMilestoneQueue({
     if (!validatorAddress || isPaused) return;
     const id = submission.id;
 
-    if (isLeaseActive(submission) && submission.claimedBy !== validatorAddress) {
+    if (
+      isLeaseActive(submission) &&
+      submission.claimedBy !== validatorAddress
+    ) {
       setItemStatus((prev) => ({ ...prev, [id]: 'skipped' }));
       setItemError((prev) => ({
         ...prev,
@@ -415,7 +422,9 @@ export default function PendingMilestoneQueue({
           onClick={handleBulkApprove}
           disabled={bulkRunning || selectedIds.size === 0 || isPaused}
         >
-          {bulkRunning ? 'Approving…' : `Approve selected (${selectedIds.size})`}
+          {bulkRunning
+            ? 'Approving…'
+            : `Approve selected (${selectedIds.size})`}
         </Button>
         {bulkRunning && (
           <Button variant="secondary" onClick={handleCancelBulk}>
@@ -436,7 +445,8 @@ export default function PendingMilestoneQueue({
           const id = submission.id;
           const status = itemStatus[id];
           const claimedByOther =
-            isLeaseActive(submission) && submission.claimedBy !== validatorAddress;
+            isLeaseActive(submission) &&
+            submission.claimedBy !== validatorAddress;
           const hash = itemHash[id];
           return (
             <li
@@ -462,7 +472,8 @@ export default function PendingMilestoneQueue({
                     </p>
                     {claimedByOther && (
                       <span className="mt-1 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                        Being reviewed by {truncateAddress(submission.claimedBy!)}
+                        Being reviewed by{' '}
+                        {truncateAddress(submission.claimedBy!)}
                       </span>
                     )}
                   </div>
@@ -498,7 +509,9 @@ export default function PendingMilestoneQueue({
                     </a>
                   )}
                   {itemError[id] && (
-                    <span className="text-xs text-red-600">{itemError[id]}</span>
+                    <span className="text-xs text-red-600">
+                      {itemError[id]}
+                    </span>
                   )}
                 </div>
               </div>

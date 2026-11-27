@@ -252,360 +252,673 @@ export function getRememberedAddresses(): RememberedAddress[] {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
     return parsed.filter(
-      (a): a is RememberedAddress =>
-        a && typeof a.publicKey === 'string' && typeof a.provider === 'string',
+      (a: unknown) =>
+        typeof a === 'object' &&
+        a !== null &&
+        typeof (a as RememberedAddress).publicKey === 'string' &&
+        typeof (a as RememberedAddress).provider === 'string',
     );
   } catch {
     return [];
   }
 }
 
-function rememberAddress(publicKey: string, provider: WalletProvider) {
-  if (typeof window === 'undefined') return;
-  try {
-    const existing = getRememberedAddresses().filter(
-      (a) => a.publicKey !== publicKey,
-    );
-    const next: RememberedAddress[] = [
-      { publicKey, provider, lastUsed: new Date().toISOString() },
-      ...existing,
-    ].slice(0, 10);
-    localStorage.setItem(REMEMBERED_ADDRESSES_KEY, JSON.stringify(next));
-  } catch {
-    // ignore quota / serialization errors
+export function addRememberedAddress(addr: RememberedAddress) {
+  const existing = getRememberedAddresses();
+  const filtered = existing.filter((a) => a.publicKey !== addr.publicKey);
+  filtered.push(addr);
+  // Keep at most 10 remembered addresses
+  const trimmed = filtered.slice(-10);
+  localStorage.setItem(REMEMBERED_ADDRESSES_KEY, JSON.stringify(trimmed));
+}
+
+export function removeRememberedAddress(publicKey: string) {
+  const existing = getRememberedAddresses();
+  const filtered = existing.filter((a) => a.publicKey !== publicKey);
+  localStorage.setItem(REMEMBERED_ADDRESSES_KEY, JSON.stringify(filtered));
+}
+
+export function clearAllRememberedAddresses(): void {
+  // Clear the remembered addresses list on disconnect to prevent the
+  // account switcher from leaking wallet addresses between sessions
+  // on shared computers. Per docs/disconnect-state-policy.md, this
+  // per-wallet state should not persist after logout.
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(REMEMBERED_ADDRESSES_KEY);
   }
 }
 
-// ── WalletConnect session restore ─────────────────────────────────────────────
-//
-// WalletConnect sessions live in the SDK's own storage (localStorage by
-// default), so after a reload the pairing survives even though our React
-// state does not.  On mount we ask the adapter to rehydrate any existing
-// session and, if the restored account matches the stored session, keep the
-// user signed in.  The adapter is dynamically imported so the WC SDK stays
-// out of the shared runtime chunk unless the user actually used it.
-async function restoreWalletConnectSession(
-  stored: StoredSession,
-): Promise<string | null> {
-  if (stored.provider !== 'walletconnect') return null;
-  try {
-    const adapter = walletAdapters.walletconnect;
-    const publicKey = await adapter.getPublicKey();
-    if (!publicKey) return null;
-    // Reject sessions that were restored on the wrong chain — the adapter
-    // throws on a namespace mismatch, but guard here too so a stale stored
-    // session can never silently authenticate against the wrong network.
-    if (publicKey !== stored.publicKey) return null;
-    return publicKey;
-  } catch {
-    return null;
-  }
-}
+// ── Context value ─────────────────────────────────────────────────────────────
 
-// ── Context shape ─────────────────────────────────────────────────────────────
-
-export interface WalletContextValue {
+interface WalletContextValue {
   publicKey: string | null;
-  provider: WalletProvider | null;
-  networkType: 'testnet' | 'public';
-  connecting: boolean;
-  error: string | null;
-  connect: (provider: WalletProvider) => Promise<string | null>;
+  isAuthenticated: boolean;
+  isConnecting: boolean;
+  connectingProvider: WalletProvider | null;
+  isRestoringSession: boolean;
+  xlmBalance: string | null;
+  balanceError: string | null;
+  isLoadingBalance: boolean;
+  walletProvider: WalletProvider | null;
+  walletProviderInfo: WalletProviderInfo | null;
+  showWalletModal: boolean;
+  openWalletModal: () => void;
+  closeWalletModal: () => void;
   connectWithProvider: (
     provider: WalletProvider,
+    rememberMe?: boolean,
     expectedPublicKey?: string,
-  ) => Promise<string | null>;
-  disconnect: () => Promise<void>;
-  signTransaction: (xdr: string) => Promise<string>;
-  signAuthEntry: (entryXdr: string) => Promise<string>;
-  signOnly: (xdr: string) => Promise<string>;
+  ) => Promise<void>;
+  connect: () => Promise<void>;
+  disconnect: () => void;
+  /** Re-authenticate the current session (used before expiry). */
+  reauthenticate: () => Promise<void>;
   signAndSubmit: (xdr: string) => Promise<string>;
+  signOnly: (xdr: string) => Promise<string>;
   refreshBalance: () => Promise<void>;
-  balance: string | null;
+  /** When the current session expires (epoch ms), or null if unknown. */
+  sessionExpiresAt: number | null;
+  /** The wallet address that the current session cookie authenticated. */
+  sessionCookieWallet: string | null;
+  /** Whether the connected wallet differs from the session cookie's wallet. */
+  sessionMismatch: boolean;
 }
 
 const WalletContext = createContext<WalletContextValue | null>(null);
 
-export function useWallet(): WalletContextValue {
-  const ctx = useContext(WalletContext);
-  if (!ctx) throw new Error('useWallet must be used within a WalletProvider');
-  return ctx;
-}
-
-// ── Provider component ────────────────────────────────────────────────────────
-
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [publicKey, setPublicKey] = useState<string | null>(null);
-  const [provider, setProvider] = useState<WalletProvider | null>(null);
-  const [connecting, setConnecting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [balance, setBalance] = useState<string | null>(null);
-  const restoredRef = useRef(false);
+  // Keep the module-level active wallet in sync during render (not in an
+  // effect) so wallet-scoped localStorage helpers never read the previous
+  // wallet's keys while children render after an account switch (#1343).
+  setActiveWallet(publicKey);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectingProvider, setConnectingProvider] =
+    useState<WalletProvider | null>(null);
+  const [isRestoringSession, setIsRestoringSession] = useState(true);
+  const [xlmBalance, setXlmBalance] = useState<string | null>(null);
+  const [balanceError, setBalanceError] = useState<string | null>(null);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const [walletProvider, setWalletProvider] = useState<WalletProvider | null>(
+    null,
+  );
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [sessionExpiresAt, setSessionExpiresAt] = useState<number | null>(null);
+  const [sessionCookieWallet, setSessionCookieWallet] = useState<string | null>(
+    null,
+  );
 
-  // ── Restore session on mount ────────────────────────────────────────────────
-  useEffect(() => {
-    if (restoredRef.current) return;
-    restoredRef.current = true;
+  // ── Concurrency guard: de-duplicate concurrent doConnect calls ──────────
+  // Multiple callers (e.g. reauthenticate from SessionExpiryWarning and a
+  // manual WalletButton click) can race into doConnect simultaneously.  We
+  // model this on the in-flight dedup pattern from hooks/useXlmUsdRate.ts:
+  // the first caller creates the promise, subsequent callers piggyback on
+  // the same promise, and it is cleaned up on settlement.
+  const inFlightConnectRef = useRef<Promise<void> | null>(null);
 
-    const stored = getStoredSession();
-    if (!stored) return;
+  // ── Session cookie wallet reconciliation ──────────────────────────────────
+  // Compare the currently-connected wallet address with the identity the
+  // session cookie actually authenticated. If they differ, the session is
+  // stale and we need to prompt re-authentication.
+  const sessionMismatch = useMemo(() => {
+    if (!sessionCookieWallet || !publicKey) return false;
+    return sessionCookieWallet !== publicKey;
+  }, [sessionCookieWallet, publicKey]);
 
-    // Reject sessions stored for a different network than the one this build
-    // targets (e.g. a testnet session after switching to mainnet).
-    if (stored.networkType !== CURRENT_NETWORK_TYPE) {
-      removeStoredSession();
-      removeSessionExpiry();
-      return;
+  // The wallet address the current session cookie authenticated is captured
+  // directly by `restoreSession` below, from the same GET /api/auth/session
+  // it already performs — see the `setSessionCookieWallet` call there. A
+  // fresh user-initiated `doConnect` deliberately does not touch it: the
+  // just-authenticated `publicKey` is the cookie's identity by construction,
+  // so `sessionMismatch` stays false without an extra round-trip.
+
+  const walletProviderInfo: WalletProviderInfo | null = walletProvider
+    ? (WALLET_PROVIDERS.find((wp) => wp.provider === walletProvider) ?? null)
+    : null;
+
+  const loadBalance = useCallback(async (address: string) => {
+    setIsLoadingBalance(true);
+    setBalanceError(null);
+    try {
+      // Horizon, not Soroban RPC: rpc.getAccount() returns only the
+      // account id and sequence number, never balances.
+      const { getXLMBalance } = await import('@/lib/stellar');
+      setXlmBalance((await getXLMBalance(address)).toFixed(7));
+    } catch (err: unknown) {
+      setXlmBalance(null);
+      setBalanceError(
+        err instanceof Error ? err.message : 'Failed to load balance',
+      );
+    } finally {
+      setIsLoadingBalance(false);
     }
-
-    // Expired sessions are dropped without touching the wallet.
-    const expiry = getSessionExpiry();
-    if (expiry !== null && Date.now() > expiry) {
-      removeStoredSession();
-      removeSessionExpiry();
-      return;
-    }
-
-    if (stored.provider === 'walletconnect') {
-      // WalletConnect sessions persist in the SDK's storage; rehydrate them
-      // asynchronously and only then mark the user as connected.
-      void restoreWalletConnectSession(stored).then((restoredKey) => {
-        if (restoredKey) {
-          setPublicKey(restoredKey);
-          setProvider('walletconnect');
-          setActiveWallet(restoredKey);
-        } else {
-          removeStoredSession();
-          removeSessionExpiry();
-        }
-      });
-      return;
-    }
-
-    setPublicKey(stored.publicKey);
-    setProvider(stored.provider);
-    setActiveWallet(stored.publicKey);
   }, []);
-
-  // ── Balance loading ─────────────────────────────────────────────────────────
-  const loadBalance = useCallback(async (key: string) => {
-    try {
-      const { fetchBalance } = await import('@/lib/stellar');
-      const bal = await fetchBalance(key);
-      setBalance(bal);
-    } catch {
-      setBalance(null);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (publicKey) void loadBalance(publicKey);
-    else setBalance(null);
-  }, [publicKey, loadBalance]);
-
-  // ── Connect ─────────────────────────────────────────────────────────────────
-  const doConnect = useCallback(
-    async (
-      targetProvider: WalletProvider,
-      expectedPublicKey?: string,
-    ): Promise<string | null> => {
-      setConnecting(true);
-      setError(null);
-      try {
-        const adapter = walletAdapters[targetProvider];
-        if (!adapter) throw new Error(`Unknown wallet provider: ${targetProvider}`);
-        const key = await adapter.connect();
-        if (!key) throw new Error('Wallet did not return a public key');
-        if (expectedPublicKey && key !== expectedPublicKey) {
-          throw new WalletAccountMismatchError(expectedPublicKey, key);
-        }
-        setPublicKey(key);
-        setProvider(targetProvider);
-        setStoredSession(key, targetProvider, CURRENT_NETWORK_TYPE);
-        setActiveWallet(key);
-        rememberAddress(key, targetProvider);
-        return key;
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Failed to connect wallet';
-        setError(message);
-        return null;
-      } finally {
-        setConnecting(false);
-      }
-    },
-    [],
-  );
-
-  const connect = useCallback(
-    (targetProvider: WalletProvider) => doConnect(targetProvider),
-    [doConnect],
-  );
-
-  const connectWithProvider = useCallback(
-    (targetProvider: WalletProvider, expectedPublicKey?: string) =>
-      doConnect(targetProvider, expectedPublicKey),
-    [doConnect],
-  );
-
-  // ── Disconnect ──────────────────────────────────────────────────────────────
-  const disconnect = useCallback(async () => {
-    const currentProvider = provider;
-    try {
-      if (currentProvider) {
-        // WalletConnect keeps its pairing in the SDK's own storage, so a
-        // plain state reset would leave the session alive and rehydrate it
-        // on the next reload.  Always tear the WC session down explicitly.
-        await walletAdapters[currentProvider]?.disconnect?.();
-      }
-    } catch {
-      // Best-effort: a failed wallet-side disconnect must not block sign-out.
-    }
-    setPublicKey(null);
-    setProvider(null);
-    setBalance(null);
-    setError(null);
-    removeStoredSession();
-    removeSessionExpiry();
-    removeWalletScopedKeys();
-    purgeAllContactDetails();
-    try {
-      localStorage.removeItem(BLOCKED_USERS_KEY);
-    } catch {
-      // ignore
-    }
-    try {
-      await clearUserCaches();
-    } catch {
-      // ignore
-    }
-    void mutate(() => true, undefined, { revalidate: false });
-  }, [provider]);
-
-  // ── Signing ─────────────────────────────────────────────────────────────────
-  const signTransaction = useCallback(
-    async (xdr: string): Promise<string> => {
-      if (!provider) throw new Error('No wallet connected');
-      return walletAdapters[provider].signTransaction(xdr);
-    },
-    [provider],
-  );
-
-  const signAuthEntry = useCallback(
-    async (entryXdr: string): Promise<string> => {
-      if (!provider) throw new Error('No wallet connected');
-      const adapter = walletAdapters[provider];
-      if (!adapter.signAuthEntry) {
-        throw new Error('This wallet does not support signing auth entries');
-      }
-      return adapter.signAuthEntry(entryXdr);
-    },
-    [provider],
-  );
-
-  const signOnly = useCallback(
-    async (xdr: string): Promise<string> => {
-      if (!provider) throw new Error('No wallet connected');
-      return walletAdapters[provider].signTransaction(xdr);
-    },
-    [provider],
-  );
-
-  const signAndSubmit = useCallback(
-    async (xdr: string): Promise<string> => {
-      if (!provider) throw new Error('No wallet connected');
-      const signed = await walletAdapters[provider].signTransaction(xdr);
-      const { submitTransaction } = await import('@/lib/stellar');
-      return submitTransaction(signed);
-    },
-    [provider],
-  );
 
   const refreshBalance = useCallback(async () => {
     if (publicKey) await loadBalance(publicKey);
   }, [publicKey, loadBalance]);
 
-  // ── Periodic session reconciliation ─────────────────────────────────────────
-  useEffect(() => {
-    if (!publicKey) return;
-    let cancelled = false;
+  // Restore session from localStorage on mount AND on tab-refocus.
+  //
+  // Per Issue #13: if the stored session is unusable (provider API throws,
+  // wallet extension has been uninstalled, etc.) we don't leave the app in
+  // an unauthenticated state with no explanation — we:
+  //   1. Probe the provider by attempting to read the public key.
+  //   2. If the probe throws (extension uninstalled, network reset, etc.)
+  //      clear the stale localStorage entry and dispatch a CustomEvent
+  //      that the ToastProvider listens for, so a reconnect-needed toast
+  //      surfaces without coupling WalletContext to a Toast hook (which
+  //      would require a circular layout dependency).
+  //   3. Always flip `isRestoringSession` to false in `finally`, so
+  //      callers like useRequireWallet are unblocked even when restore
+  //      fails.
+  //
+  // Per Issue #967: The stored session now includes `networkType` so the
+  // reconnect triggered by tab-refocus (visibilitychange → visible) can
+  // detect and warn about silent network drift, then re-apply the stored
+  // network preference rather than defaulting to the env default.
+  const restoreSession = useCallback(async () => {
+    let session: StoredSession | null = null;
+    try {
+      session = getStoredSession();
+      if (!session) return;
+      const { publicKey: pk, provider, networkType } = session;
 
-    const reconcile = async () => {
-      try {
-        const session = await getServerSession();
-        if (cancelled) return;
-        if (!session) {
-          // Server session gone — try a silent refresh before giving up.
-          const refreshed = await refreshSession();
-          if (cancelled) return;
-          if (!refreshed) {
-            await disconnect();
-          }
+      // Detect silent network drift: if the stored session was created on
+      // a different network than the current env default, warn so the user
+      // isn't surprised, but still honour the stored preference.
+      if (networkType && networkType !== CURRENT_NETWORK_TYPE) {
+        console.warn(
+          `Wallet network mismatch: session prefers ${networkType}, env defaults to ${CURRENT_NETWORK_TYPE}. Using stored network.`,
+        );
+      }
+
+      // Re-probe the provider to confirm the session is still valid (e.g.
+      // the extension wasn't uninstalled). Skip the probe for web-based
+      // wallets — Albedo is opened via popup and probing `getPublicKey()`
+      // here would trigger an unexpected confirmation popup on every page
+      // load, contradicting the very reason `isWalletInstalled` claims
+      // it's installed without probing. Albedo failures surface on the
+      // next actual connect attempt instead.
+      if (provider !== 'albedo') {
+        await walletAdapters[provider].getPublicKey();
+      }
+
+      // Per #778: localStorage is only a hint for which wallet/provider to
+      // reconnect with — it is never proof of authentication. Reconcile
+      // against the server's session cookie before trusting this address.
+      // A `null` result means the check itself was inconclusive (network
+      // error) — treated as "assume still valid" rather than forcing a
+      // logout on a transient blip, since it's neither an explicit mismatch
+      // nor an explicit expiry.
+      const serverSession = await getServerSession();
+      // The address the server cookie actually authenticated, for the
+      // `sessionMismatch` guard. `null` when the check was inconclusive
+      // (network error) — `sessionMismatch` then stays false, matching the
+      // "assume still valid" stance above.
+      let cookieWallet: string | null = null;
+      if (serverSession && !serverSession.authenticated) {
+        const refreshed = await refreshSession();
+        if (!refreshed.authenticated || refreshed.publicKey !== pk) {
+          throw new Error(
+            'Server session expired or absent, and refresh failed',
+          );
         }
+        // Refresh rotated the cookie to a valid session for `pk`.
+        cookieWallet = refreshed.publicKey ?? pk;
+      } else if (
+        serverSession?.authenticated &&
+        serverSession.publicKey &&
+        serverSession.publicKey !== pk
+      ) {
+        // The server's session belongs to a different address than the one
+        // localStorage remembers — never show `pk` as authenticated based
+        // on the stale local hint alone.
+        throw new Error('Server session address does not match stored address');
+      } else if (serverSession?.authenticated) {
+        cookieWallet = serverSession.publicKey ?? null;
+      }
+
+      setSessionCookieWallet(cookieWallet);
+      setPublicKey(pk);
+      setIsAuthenticated(true);
+      setWalletProvider(provider);
+
+      // Restore session expiry from localStorage so SessionExpiryWarning
+      // can schedule its timer. If the stored expiry is already past, the
+      // reconciliation loop (below) will detect the expired server cookie
+      // and sign the user out shortly.
+      const storedExpiry = getSessionExpiry();
+      if (storedExpiry && storedExpiry > Date.now()) {
+        setSessionExpiresAt(storedExpiry);
+      } else {
+        setSessionExpiresAt(null);
+      }
+
+      try {
+        await loadBalance(pk);
       } catch {
-        // Network hiccup — keep the local session and retry next tick.
+        // Balance load failure is non-fatal — session itself is valid.
       }
-    };
+    } catch {
+      if (!session) return;
+      removeStoredSession();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('scoutoff:session-expired', {
+            detail: {
+              message:
+                'Your session expired. Please reconnect your wallet to continue.',
+            },
+          }),
+        );
+      }
+    } finally {
+      setIsRestoringSession(false);
+    }
+  }, [loadBalance]);
 
-    const interval = setInterval(reconcile, RECONCILIATION_INTERVAL_MS);
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') void reconcile();
-    };
-    document.addEventListener('visibilitychange', onVisibility);
-
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', onVisibility);
-    };
-  }, [publicKey, disconnect]);
-
-  // ── Cross-tab invalidation ──────────────────────────────────────────────────
+  // Run on mount and on every tab-refocus (visibilitychange → visible).
   useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === SESSION_INVALIDATED_KEY) {
-        void disconnect();
+    restoreSession();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        restoreSession();
       }
     };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, [disconnect]);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [restoreSession]);
 
-  const value = useMemo<WalletContextValue>(
+  // ── Periodic session reconciliation ─────────────────────────────────────
+  // While authenticated, poll GET /api/auth/server periodically to detect
+  // server-side session expiry (e.g. access token TTL elapsed, cookie
+  // cleared by user) that the client can't observe via wallet extension
+  // availability alone.  The interval is 60s — see RECONCILIATION_INTERVAL_MS
+  // header comment for the rate-limit math.
+  //
+  // On tab refocus (visibilitychange → visible) we also reconcile immediately
+  // (handled by the restoreSession effect above), which doesn't count toward
+  // the polling cadence.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const reconcileWithServer = async () => {
+      const serverSession = await getServerSession();
+      if (serverSession && !serverSession.authenticated) {
+        // Server says the session is gone.  Try a refresh first — the
+        // access token may have just elapsed while the refresh token is
+        // still valid.
+        const refreshed = await refreshSession();
+        if (!refreshed.authenticated) {
+          // Refresh failed — sign out locally.
+          setPublicKey(null);
+          setIsAuthenticated(false);
+          setSessionExpiresAt(null);
+          setWalletProvider(null);
+          removeStoredSession();
+          removeSessionExpiry();
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(
+              new CustomEvent('scoutoff:session-expired', {
+                detail: {
+                  message:
+                    'Your session expired. Please reconnect your wallet to continue.',
+                },
+              }),
+            );
+          }
+        } else if (
+          refreshed.publicKey &&
+          publicKey &&
+          refreshed.publicKey !== publicKey
+        ) {
+          // Refresh returned a different address — force re-auth.
+          setPublicKey(null);
+          setIsAuthenticated(false);
+          setSessionExpiresAt(null);
+          setWalletProvider(null);
+          removeStoredSession();
+          removeSessionExpiry();
+        }
+      }
+    };
+
+    const intervalId = setInterval(
+      reconcileWithServer,
+      RECONCILIATION_INTERVAL_MS,
+    );
+    return () => clearInterval(intervalId);
+  }, [isAuthenticated, publicKey]);
+
+  // ── Cross-tab session invalidation listener ─────────────────────────────
+  // When another tab calls disconnect(), it writes then removes
+  // SESSION_INVALIDATED_KEY from localStorage.  The browser fires a
+  // `storage` event in every other same-origin tab, which we listen for
+  // here to sign the user out without requiring a visibilitychange event.
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === SESSION_INVALIDATED_KEY) {
+        // Another tab logged out — reconcile our state against the server.
+        setPublicKey(null);
+        setIsAuthenticated(false);
+        setSessionExpiresAt(null);
+        setWalletProvider(null);
+        removeStoredSession();
+        removeSessionExpiry();
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  const openWalletModal = useCallback(() => setShowWalletModal(true), []);
+  const closeWalletModal = useCallback(() => setShowWalletModal(false), []);
+
+  const doConnect = useCallback(
+    async (
+      provider: WalletProvider,
+      rememberMe = false,
+      expectedPublicKey?: string,
+    ) => {
+      setIsConnecting(true);
+      setConnectingProvider(provider);
+      try {
+        // Keep the SDK (and SEP-10 validation which imports it) off the
+        // critical path of every page — load both only when connecting.
+        const [
+          { NETWORK },
+          {
+            validateSep10Challenge,
+            getSep10ClientConfig,
+            SEP10_VALIDATION_USER_ERROR,
+          },
+        ] = await Promise.all([
+          import('@/lib/stellar'),
+          import('@/lib/sep10Validation'),
+        ]);
+        const pk = await walletAdapters[provider].getPublicKey();
+
+        // ── Account-switch mismatch guard ────────────────────────────────────
+        // When the caller knows which account they expect (e.g. AccountSwitcher),
+        // verify the wallet adapter returned that exact key.  Wallet extension
+        // APIs cannot be forced to switch their active account from a dApp; if
+        // there's a mismatch we must abort cleanly without persisting any session
+        // data for the unintended account.
+        if (expectedPublicKey && pk !== expectedPublicKey) {
+          throw new WalletAccountMismatchError(expectedPublicKey, pk);
+        }
+
+        // SEP-10 Auth Flow
+        const challengeRes = await fetch(`/api/auth/sep10?account=${pk}`);
+        if (!challengeRes.ok) throw new Error('Failed to fetch auth challenge');
+        const { transaction } = await challengeRes.json();
+
+        // Client-side challenge verification (SEP-10 "Verifying the Challenge
+        // Transaction") — never ask a wallet to sign until we independently
+        // confirm this XDR is a well-formed auth challenge for this account
+        // and domain. Server-side verifyChallengeTxSigners alone cannot protect
+        // the user if the browser was handed an arbitrary transaction.
+        const sep10Config = getSep10ClientConfig();
+        const validation = validateSep10Challenge({
+          challengeXdr: transaction,
+          clientAccount: pk,
+          serverAccount: sep10Config.serverAccount,
+          homeDomain: sep10Config.homeDomain,
+          networkPassphrase: NETWORK,
+        });
+        if (!validation.valid) {
+          console.error(
+            'SEP-10 challenge validation failed:',
+            validation.reason,
+          );
+          throw new Error(SEP10_VALIDATION_USER_ERROR);
+        }
+
+        const signedXdr = await walletAdapters[provider].signTransaction(
+          transaction,
+          NETWORK,
+        );
+
+        const authRes = await fetch('/api/auth/sep10', {
+          method: 'POST',
+          body: JSON.stringify({ signedXdr, publicKey: pk, rememberMe }),
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (!authRes.ok) throw new Error('Authentication failed');
+
+        // Read maxAge from server response so frontend knows when session expires
+        const authData = await authRes.json();
+        const maxAge: number =
+          authData.maxAge ?? (rememberMe ? 2592000 : 86400);
+        const expiresAt = Date.now() + maxAge * 1000;
+
+        setPublicKey(pk);
+        setIsAuthenticated(true);
+        setWalletProvider(provider);
+        setSessionExpiresAt(expiresAt);
+        setSessionExpiry(expiresAt);
+        setStoredSession(pk, provider, CURRENT_NETWORK_TYPE);
+        setShowWalletModal(false);
+        clearUserCaches();
+
+        // Remember this address for account switcher
+        addRememberedAddress({
+          publicKey: pk,
+          provider,
+          lastUsed: new Date().toISOString(),
+        });
+
+        await loadBalance(pk);
+      } catch (error) {
+        // WalletAccountMismatchError is an expected, user-facing outcome —
+        // not an unexpected failure — so we don't log it as an error.
+        if (!(error instanceof WalletAccountMismatchError)) {
+          console.error('Connection/Auth error:', error);
+        }
+        setPublicKey(null);
+        setIsAuthenticated(false);
+        setXlmBalance(null);
+        throw error;
+      } finally {
+        setIsConnecting(false);
+        setConnectingProvider(null);
+      }
+    },
+    [loadBalance],
+  );
+
+  const connect = useCallback(async () => {
+    const session = getStoredSession();
+    if (session) {
+      await doConnect(session.provider);
+    } else {
+      openWalletModal();
+    }
+  }, [doConnect, openWalletModal]);
+
+  const connectWithProvider = useCallback(
+    async (
+      provider: WalletProvider,
+      rememberMe = false,
+      expectedPublicKey?: string,
+    ) => {
+      await doConnect(provider, rememberMe, expectedPublicKey);
+    },
+    [doConnect],
+  );
+
+  // Re-authenticate the current session.  Concurrent calls (e.g. the user
+  // manually reconnecting while SessionExpiryWarning's auto-flow is also
+  // mid-reauth) are de-duplicated into a single in-flight doConnect promise,
+  // modelling the pattern from hooks/useXlmUsdRate.ts's inFlight Map.
+  const reauthenticate = useCallback(async () => {
+    const session = getStoredSession();
+    if (!session) {
+      openWalletModal();
+      return;
+    }
+    if (inFlightConnectRef.current) {
+      return inFlightConnectRef.current;
+    }
+    const promise = doConnect(session.provider).finally(() => {
+      inFlightConnectRef.current = null;
+    });
+    inFlightConnectRef.current = promise;
+    return promise;
+  }, [doConnect, openWalletModal]);
+
+  const disconnect = useCallback(() => {
+    // DELETE /api/auth/sep10 clears the session cookies AND revokes the
+    // session row server-side (see #1179), so a copy of the cookie
+    // captured before this call stops working immediately rather than
+    // remaining valid until its natural expiry. Fire-and-forget: the
+    // client-side cleanup below must not wait on (or be blocked by) the
+    // network round trip.
+    //
+    // Per docs/disconnect-state-policy.md: on shared computers (common for
+    // scouts working from academy or club machines), we must clear all
+    // per-wallet state that shouldn't leak to the next wallet that connects.
+    Promise.resolve(fetch('/api/auth/sep10', { method: 'DELETE' })).catch(
+      () => {},
+    );
+    setPublicKey(null);
+    setIsAuthenticated(false);
+    setXlmBalance(null);
+    setBalanceError(null);
+    setWalletProvider(null);
+    setSessionExpiresAt(null);
+    removeStoredSession();
+    removeSessionExpiry();
+    clearAllRememberedAddresses();
+    // Wallet-scoped caches (#1343). The read-receipt preference is kept per
+    // wallet since it is keyed by address and can't leak to another wallet.
+    removeWalletScopedKeys(BLOCKED_USERS_KEY);
+    // Unlocked contact details (and any other cached data) must not survive
+    // logout — see lib/contactDetailsCache.ts. The explicit purge below is
+    // belt-and-suspenders on top of this blanket wipe: it also cancels any
+    // pending auto-purge timers, which the blanket mutate alone wouldn't do.
+    mutate(() => true, undefined, { revalidate: false });
+    purgeAllContactDetails();
+    clearUserCaches();
+
+    // Cross-tab propagation: writing then removing a localStorage key fires
+    // the browser's native `storage` event in every other same-origin tab.
+    // Other tabs' WalletContext listens for this key and calls
+    // handleSessionInvalidated() below.
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(SESSION_INVALIDATED_KEY, String(Date.now()));
+        localStorage.removeItem(SESSION_INVALIDATED_KEY);
+      } catch {
+        // localStorage may be full or disabled — best-effort.
+      }
+    }
+  }, []);
+
+  const signAndSubmit = useCallback(
+    async (xdr: string): Promise<string> => {
+      if (!publicKey) throw new Error('Wallet not connected');
+      if (!walletProvider) throw new Error('No wallet provider selected');
+      const { NETWORK, rpc, TransactionBuilder } =
+        await import('@/lib/stellar');
+      const signedXdr = await walletAdapters[walletProvider].signTransaction(
+        xdr,
+        NETWORK,
+      );
+      const tx = TransactionBuilder.fromXDR(signedXdr, NETWORK);
+      const result = await rpc.sendTransaction(
+        tx as Parameters<typeof rpc.sendTransaction>[0],
+      );
+      return (result as { hash: string }).hash;
+    },
+    [publicKey, walletProvider],
+  );
+
+  /**
+   * Signs an XDR transaction without submitting it — the wallet-adapter
+   * "signFn" callback shape that lib/contract.ts's lower-level
+   * signAndSubmitTx/payToContact expect, for callers that need the
+   * contract's decoded return value (e.g. unlocked ContactDetails), which
+   * signAndSubmit above discards.
+   */
+  const signOnly = useCallback(
+    async (xdr: string): Promise<string> => {
+      if (!publicKey) throw new Error('Wallet not connected');
+      if (!walletProvider) throw new Error('No wallet provider selected');
+      const { NETWORK } = await import('@/lib/stellar');
+      return walletAdapters[walletProvider].signTransaction(xdr, NETWORK);
+    },
+    [publicKey, walletProvider],
+  );
+
+  const value = useMemo(
     () => ({
       publicKey,
-      provider,
-      networkType: CURRENT_NETWORK_TYPE,
-      connecting,
-      error,
-      connect,
+      isAuthenticated,
+      isConnecting,
+      connectingProvider,
+      isRestoringSession,
+      xlmBalance,
+      balanceError,
+      isLoadingBalance,
+      walletProvider,
+      walletProviderInfo,
+      showWalletModal,
+      openWalletModal,
+      closeWalletModal,
       connectWithProvider,
+      connect,
       disconnect,
-      signTransaction,
-      signAuthEntry,
-      signOnly,
+      reauthenticate,
       signAndSubmit,
+      signOnly,
       refreshBalance,
-      balance,
+      sessionExpiresAt,
+      sessionCookieWallet,
+      sessionMismatch,
     }),
     [
       publicKey,
-      provider,
-      connecting,
-      error,
-      connect,
+      isAuthenticated,
+      isConnecting,
+      connectingProvider,
+      isRestoringSession,
+      xlmBalance,
+      balanceError,
+      isLoadingBalance,
+      walletProvider,
+      walletProviderInfo,
+      showWalletModal,
+      openWalletModal,
+      closeWalletModal,
       connectWithProvider,
+      connect,
       disconnect,
-      signTransaction,
-      signAuthEntry,
-      signOnly,
+      reauthenticate,
       signAndSubmit,
+      signOnly,
       refreshBalance,
-      balance,
+      sessionExpiresAt,
+      sessionCookieWallet,
+      sessionMismatch,
     ],
   );
 
   return (
     <WalletContext.Provider value={value}>{children}</WalletContext.Provider>
   );
+}
+
+export function useWalletContext() {
+  const ctx = useContext(WalletContext);
+  if (!ctx)
+    throw new Error('useWalletContext must be used inside WalletProvider');
+  return ctx;
 }

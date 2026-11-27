@@ -1,4 +1,7 @@
-import { normalizeReferralCode, REFERRAL_LIMIT_REACHED } from '@/lib/referralCode';
+import {
+  normalizeReferralCode,
+  REFERRAL_LIMIT_REACHED,
+} from '@/lib/referralCode';
 
 describe('normalizeReferralCode (#1777)', () => {
   it('trims and upper-cases codes', () => {

@@ -91,9 +91,9 @@ export class SessionStore {
     this.db = db;
     this.db.exec(SCHEMA);
     // Migrate pre-#1676 databases that predate the auth_time column.
-    const cols = this.db
-      .prepare('PRAGMA table_info(sessions)')
-      .all() as Array<{ name: string }>;
+    const cols = this.db.prepare('PRAGMA table_info(sessions)').all() as Array<{
+      name: string;
+    }>;
     if (!cols.some((c) => c.name === 'auth_time')) {
       this.db.exec('ALTER TABLE sessions ADD COLUMN auth_time INTEGER');
     }
@@ -185,10 +185,10 @@ export class SessionStore {
    */
   getAuthTime(id: string): number | null {
     const row = this.db
-      .prepare(
-        'SELECT auth_time, revoked_at FROM sessions WHERE id = ?',
-      )
-      .get(id) as { auth_time: number | null; revoked_at: number | null } | undefined;
+      .prepare('SELECT auth_time, revoked_at FROM sessions WHERE id = ?')
+      .get(id) as
+      | { auth_time: number | null; revoked_at: number | null }
+      | undefined;
     if (!row || row.revoked_at !== null) return null;
     return row.auth_time;
   }

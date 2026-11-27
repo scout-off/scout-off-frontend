@@ -65,7 +65,9 @@ describe('TruncatedAddress', () => {
     it('renders a span, not a button, when copyable=false', () => {
       render(<TruncatedAddress address={ADDRESS} copyable={false} />);
       expect(screen.queryByRole('button')).not.toBeInTheDocument();
-      expect(screen.getByText(`${ADDRESS.slice(0, 4)}…${ADDRESS.slice(-4)}`)).toBeInTheDocument();
+      expect(
+        screen.getByText(`${ADDRESS.slice(0, 4)}…${ADDRESS.slice(-4)}`),
+      ).toBeInTheDocument();
     });
   });
 

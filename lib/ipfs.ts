@@ -79,9 +79,7 @@ export async function raceGateways(
         .then((res) => {
           clearTimeout(timeoutId);
           if (!res.ok) {
-            reject(
-              new Error(`Gateway ${gateway} returned HTTP ${res.status}`),
-            );
+            reject(new Error(`Gateway ${gateway} returned HTTP ${res.status}`));
             return;
           }
           resolve({

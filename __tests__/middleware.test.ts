@@ -212,17 +212,21 @@ describe('middleware unsupported locale prefixes (issue #1687)', () => {
   });
 
   it('preserves the query string when stripping an unsupported prefix', async () => {
-    expect(await redirectFor('https://scoutoff.app/de/scout?ref=TEST')).toEqual({
-      location: 'https://scoutoff.app/en/scout?ref=TEST',
-      status: 307,
-    });
+    expect(await redirectFor('https://scoutoff.app/de/scout?ref=TEST')).toEqual(
+      {
+        location: 'https://scoutoff.app/en/scout?ref=TEST',
+        status: 307,
+      },
+    );
   });
 
   it('preserves the query string when normalising casing', async () => {
-    expect(await redirectFor('https://scoutoff.app/EN/scout?ref=TEST')).toEqual({
-      location: 'https://scoutoff.app/en/scout?ref=TEST',
-      status: 301,
-    });
+    expect(await redirectFor('https://scoutoff.app/EN/scout?ref=TEST')).toEqual(
+      {
+        location: 'https://scoutoff.app/en/scout?ref=TEST',
+        status: 301,
+      },
+    );
   });
 });
 

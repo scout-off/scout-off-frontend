@@ -85,7 +85,9 @@ export async function GET(
       );
     }
 
-    const details = JSON.parse(unsealContactDetails(sealed, normalizedPlayerId)) as ContactDetails;
+    const details = JSON.parse(
+      unsealContactDetails(sealed, normalizedPlayerId),
+    ) as ContactDetails;
     log.info('Contact details released', { playerId: normalizedPlayerId });
     return privateJson(details);
   } catch (err) {

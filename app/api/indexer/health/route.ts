@@ -1,14 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
 
 const INDEXER_HEALTH_URL =
-  process.env.INDEXER_HEALTH_URL ?? "http://localhost:3001/health";
+  process.env.INDEXER_HEALTH_URL ?? 'http://localhost:3001/health';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export interface IndexerGap {
   gap_start: number;
   gap_end: number;
-  status: "open" | "backfilling" | "closed";
+  status: 'open' | 'backfilling' | 'closed';
 }
 
 export interface IndexerHealthResponse {
@@ -21,20 +21,20 @@ export interface IndexerHealthResponse {
 export async function GET() {
   try {
     const res = await fetch(INDEXER_HEALTH_URL, {
-      cache: "no-store",
+      cache: 'no-store',
       signal: AbortSignal.timeout(5000),
     });
 
     if (!res.ok) {
       return NextResponse.json(
-        { status: "unavailable", gaps: [] },
+        { status: 'unavailable', gaps: [] },
         { status: 502 },
       );
     }
 
     const body = (await res.json()) as IndexerHealthResponse;
     const gaps = Array.isArray(body.gaps) ? body.gaps : [];
-    const openGaps = gaps.filter((gap) => gap.status !== "closed");
+    const openGaps = gaps.filter((gap) => gap.status !== 'closed');
 
     return NextResponse.json(
       {
@@ -46,7 +46,7 @@ export async function GET() {
     );
   } catch {
     return NextResponse.json(
-      { status: "unavailable", gaps: [], historyIncomplete: false },
+      { status: 'unavailable', gaps: [], historyIncomplete: false },
       { status: 502 },
     );
   }

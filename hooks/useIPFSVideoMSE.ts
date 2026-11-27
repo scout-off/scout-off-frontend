@@ -225,7 +225,8 @@ export function useIPFSVideoMSE(
     // re-racing for every segment. The initial race picks the fastest gateway;
     // subsequent segments use the same gateway until it fails.
     let gateways = [
-      process.env.NEXT_PUBLIC_IPFS_GATEWAY ?? 'https://gateway.pinata.cloud/ipfs',
+      process.env.NEXT_PUBLIC_IPFS_GATEWAY ??
+        'https://gateway.pinata.cloud/ipfs',
       ...fallbacks,
     ];
     let gatewayIdx = 0;
@@ -235,7 +236,12 @@ export function useIPFSVideoMSE(
 
     while (true) {
       const sb = sourceBufferRef.current;
-      if (!sb || !mediaSourceRef.current || mediaSourceRef.current.readyState === 'closed') return;
+      if (
+        !sb ||
+        !mediaSourceRef.current ||
+        mediaSourceRef.current.readyState === 'closed'
+      )
+        return;
 
       if (gatewayIdx >= gateways.length) {
         setState('error');

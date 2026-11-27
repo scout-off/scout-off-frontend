@@ -229,9 +229,7 @@ export async function fetchMediaFromGateways(options: {
     );
 
     if (readAhead === 'error') {
-      throw new Error(
-        `Gateway ${gateway} stalled or failed during read-ahead`,
-      );
+      throw new Error(`Gateway ${gateway} stalled or failed during read-ahead`);
     }
 
     const { prefix, reader } = readAhead;

@@ -188,7 +188,9 @@ describe('useIPFSVideoMSE', () => {
     expect(global.fetch).toHaveBeenCalledWith(
       '/api/media/QmTest.mp4',
       expect.objectContaining({
-        headers: expect.objectContaining({ Range: expect.stringMatching(/^bytes=/) }),
+        headers: expect.objectContaining({
+          Range: expect.stringMatching(/^bytes=/),
+        }),
       }),
     );
   });

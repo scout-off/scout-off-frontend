@@ -1,5 +1,12 @@
 {
-  "ignore": ["BASE_REF", "CI", "NODE_ENV", "VERCEL", "E2E_ALT_WALLET_SECRET"],
+  "ignore": [
+    "BASE_REF",
+    "CI",
+    "NODE_ENV",
+    "VERCEL",
+    "E2E_ALT_WALLET_SECRET",
+    "GITHUB_STEP_SUMMARY"
+  ],
   "vars": [
     {
       "name": "CRON_SECRET",
@@ -755,6 +762,111 @@
         "packages/indexer/src/__tests__/replicas.pg.integration.test.ts"
       ],
       "description": "Disposable Postgres used only by the indexer replica integration test. The test is skipped when blank."
+    },
+    {
+      "name": "MODERATION_WEBHOOK_SECRET",
+      "requiredIn": ["production"],
+      "secret": true,
+      "usedBy": ["app/api/admin/automated-moderation-log/route.ts"],
+      "description": "Shared secret the chat server uses to authenticate POST /api/admin/automated-moderation-log, either as an HMAC-SHA256 x-signature over \"<timestamp>.<body>\" or as a Bearer token. The route returns 503 when unset."
+    },
+    {
+      "name": "REVALIDATE_SECRET",
+      "requiredIn": [],
+      "secret": true,
+      "usedBy": ["lib/cronAuth.ts", "app/api/revalidate/player/route.ts"],
+      "description": "Shared secret the indexer uses to HMAC-sign POST /api/revalidate/player bodies (x-revalidate-signature). The route returns 500 when unset (issue #1672)."
+    },
+    {
+      "name": "NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["lib/walletAdapters.ts", "context/WalletContext.tsx"],
+      "description": "WalletConnect Cloud project ID. When set, the wallet picker offers \"Mobile wallet (WalletConnect)\"; leave blank to hide it."
+    },
+    {
+      "name": "INDEXER_HEALTH_URL",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["app/api/indexer/health/route.ts"],
+      "description": "Override URL for the indexer health endpoint proxied by /api/indexer/health."
+    },
+    {
+      "name": "NEXT_PUBLIC_SITE_URL",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["app/sitemap-index.xml/route.ts"],
+      "description": "Public site origin used when building absolute URLs in the sitemap index."
+    },
+    {
+      "name": "INDEXER_URL",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["app/sitemap-index.xml/route.ts"],
+      "description": "Indexer base URL used to enumerate players for the sitemap index."
+    },
+    {
+      "name": "ADMIN_MULTISIG_ENABLED",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["lib/adminAuth.ts"],
+      "description": "Set to \"true\" to require multisig co-signing for admin actions (lib/adminAuth.ts)."
+    },
+    {
+      "name": "CONTACT_VAULT_KEYS",
+      "requiredIn": [],
+      "secret": true,
+      "usedBy": ["lib/contactVaultCrypto.ts"],
+      "description": "Keyring for the contact vault: comma-separated kid:base64key pairs, enabling key rotation. Falls back to CONTACT_VAULT_KEY when unset."
+    },
+    {
+      "name": "CONTACT_VAULT_ACTIVE_KID",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["lib/contactVaultCrypto.ts"],
+      "description": "Key id from CONTACT_VAULT_KEYS used to seal new contact records."
+    },
+    {
+      "name": "NEXT_PUBLIC_SPONSORSHIP_PLEDGE_ENABLED",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["lib/network.ts"],
+      "description": "Set to \"true\" to enable sponsorship pledges in the UI."
+    },
+    {
+      "name": "ARCHIVE_RPC_URL",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["packages/indexer/src/eventPoller.ts"],
+      "description": "Archive Soroban RPC used by the indexer to backfill ledger gaps older than the primary RPC retention window."
+    },
+    {
+      "name": "METRICS_PORT",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["packages/indexer/src/server.ts"],
+      "description": "Port the indexer exposes Prometheus /metrics on."
+    },
+    {
+      "name": "METRICS_BEARER_TOKEN",
+      "requiredIn": [],
+      "secret": true,
+      "usedBy": ["packages/indexer/src/server.ts"],
+      "description": "Bearer token required to scrape the indexer /metrics endpoint."
+    },
+    {
+      "name": "VISUAL_LOCALES",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["playwright.visual.config.ts"],
+      "description": "Comma-separated locales the visual regression suite renders (defaults to all)."
+    },
+    {
+      "name": "REFERRAL_MAX_UNREDEEMED",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["server/src/referralService.js"],
+      "description": "Backend cap on unredeemed referral codes per wallet."
     }
   ]
 }

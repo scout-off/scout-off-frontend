@@ -21,7 +21,10 @@ import React from 'react';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { SWRConfig, mutate } from 'swr';
-import { useMilestoneHistory, milestonesKey } from '@/hooks/useMilestoneHistory';
+import {
+  useMilestoneHistory,
+  milestonesKey,
+} from '@/hooks/useMilestoneHistory';
 import { useCacheReconciler } from '@/hooks/useCacheReconciler';
 import type { FeedEvent } from '@/hooks/useContractEvents';
 import type { Milestone } from '@/types';
@@ -106,7 +109,7 @@ describe('cross-component cache reconciliation', () => {
     mockFetchMilestones.mockResolvedValue(TWO_MILESTONES);
   });
 
-  it('live event for player X updates X\'s cached milestone count in a separately-mounted component', async () => {
+  it("live event for player X updates X's cached milestone count in a separately-mounted component", async () => {
     const { rerender } = render(<TestTree events={[]} playerId={PLAYER_ID} />);
 
     // Wait for initial load.
@@ -128,9 +131,7 @@ describe('cross-component cache reconciliation', () => {
 
     // Deliver the event via the reconciler.
     await act(async () => {
-      rerender(
-        <TestTree events={[liveEvent]} playerId={PLAYER_ID} />,
-      );
+      rerender(<TestTree events={[liveEvent]} playerId={PLAYER_ID} />);
       // Allow the reconciler's fire-and-forget invalidation to settle.
       await new Promise((r) => setTimeout(r, 50));
     });

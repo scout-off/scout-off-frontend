@@ -10,7 +10,9 @@ export const revalidate = 3600; // 1 hour
 
 export const SHARD_SIZE = 10000;
 
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://handsoff.example').replace(/\/$/, '');
+const SITE_URL = (
+  process.env.NEXT_PUBLIC_SITE_URL || 'https://handsoff.example'
+).replace(/\/$/, '');
 
 function escapeXml(value: string): string {
   return value
@@ -45,7 +47,9 @@ function sitemapEntry(loc: string, lastmod?: string): string {
 
 export async function GET(): Promise<NextResponse> {
   const now = new Date().toISOString();
-  const entries: string[] = [sitemapEntry(`${SITE_URL}/sitemaps/static.xml`, now)];
+  const entries: string[] = [
+    sitemapEntry(`${SITE_URL}/sitemaps/static.xml`, now),
+  ];
 
   const shardCount = await fetchPlayerShardCount();
   for (let n = 0; n < shardCount; n += 1) {

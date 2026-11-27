@@ -140,10 +140,16 @@ describe('lib/ipfs', () => {
 
       (global.fetch as jest.Mock)
         .mockImplementationOnce(
-          () => new Promise<{ ok: boolean }>((r) => { primaryResolve = r; }),
+          () =>
+            new Promise<{ ok: boolean }>((r) => {
+              primaryResolve = r;
+            }),
         )
         .mockImplementationOnce(
-          () => new Promise<{ ok: boolean }>((r) => { fallbackResolve = r; }),
+          () =>
+            new Promise<{ ok: boolean }>((r) => {
+              fallbackResolve = r;
+            }),
         );
 
       const racePromise = raceGateways(mockCid, [mockFallback1], 3000);

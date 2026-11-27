@@ -21,9 +21,7 @@ describe('useComparePlayers', () => {
       name: `Player ${id}`,
     }));
 
-    const { result } = renderHook(() =>
-      useComparePlayers(['1', '2', '3']),
-    );
+    const { result } = renderHook(() => useComparePlayers(['1', '2', '3']));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -57,9 +55,7 @@ describe('useComparePlayers', () => {
       return { id, name: `Player ${id}` };
     });
 
-    const { result } = renderHook(() =>
-      useComparePlayers(['1', '2', '3']),
-    );
+    const { result } = renderHook(() => useComparePlayers(['1', '2', '3']));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 

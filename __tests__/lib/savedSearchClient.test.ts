@@ -82,9 +82,7 @@ describe('lib/savedSearchClient', () => {
 
   describe('removeSavedSearch', () => {
     it('deletes a saved search', async () => {
-      const fetchMock = jest
-        .fn()
-        .mockResolvedValue(mockFetchResponse(null));
+      const fetchMock = jest.fn().mockResolvedValue(mockFetchResponse(null));
       global.fetch = fetchMock as unknown as typeof fetch;
 
       await removeSavedSearch(savedSearch.id, savedSearch.version);
@@ -99,9 +97,7 @@ describe('lib/savedSearchClient', () => {
   describe('renameSavedSearch', () => {
     it('renames a saved search', async () => {
       const renamed = { ...savedSearch, name: 'Renamed', version: 2 };
-      const fetchMock = jest
-        .fn()
-        .mockResolvedValue(mockFetchResponse(renamed));
+      const fetchMock = jest.fn().mockResolvedValue(mockFetchResponse(renamed));
       global.fetch = fetchMock as unknown as typeof fetch;
 
       const result = await renameSavedSearch(
@@ -121,9 +117,7 @@ describe('lib/savedSearchClient', () => {
   describe('markSavedSearchViewed', () => {
     it('marks a saved search as viewed', async () => {
       const viewed = { ...savedSearch, lastViewedAt: 1_700_000_100 };
-      const fetchMock = jest
-        .fn()
-        .mockResolvedValue(mockFetchResponse(viewed));
+      const fetchMock = jest.fn().mockResolvedValue(mockFetchResponse(viewed));
       global.fetch = fetchMock as unknown as typeof fetch;
 
       const result = await markSavedSearchViewed(
@@ -149,9 +143,7 @@ describe('lib/savedSearchClient', () => {
     });
 
     it('surfaces a rejected fetch to the caller', async () => {
-      const fetchMock = jest
-        .fn()
-        .mockRejectedValue(new Error('network down'));
+      const fetchMock = jest.fn().mockRejectedValue(new Error('network down'));
       global.fetch = fetchMock as unknown as typeof fetch;
 
       await expect(fetchSavedSearches()).rejects.toThrow('network down');

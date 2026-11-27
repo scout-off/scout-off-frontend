@@ -61,7 +61,9 @@ describe('formatXlm full precision', () => {
   });
 
   it('applies grouping for large amounts', () => {
-    expect(formatXlm(1234567.1234567, 'en', { precision: 'full' })).toBe('1,234,567.1234567');
+    expect(formatXlm(1234567.1234567, 'en', { precision: 'full' })).toBe(
+      '1,234,567.1234567',
+    );
   });
 });
 

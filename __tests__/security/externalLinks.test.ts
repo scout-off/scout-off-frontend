@@ -44,10 +44,13 @@ describe('external links open without window.opener (#725)', () => {
         const start = text.lastIndexOf('<', match.index);
         const end = text.indexOf('>', match.index);
         const tag = text.slice(start, end === -1 ? undefined : end);
-        const rel = /rel=(?:"([^"]*)"|'([^']*)'|\{\s*["']([^"']*)["']\s*\})/.exec(tag);
-        const value = rel ? rel[1] ?? rel[2] ?? rel[3] ?? '' : '';
+        const rel =
+          /rel=(?:"([^"]*)"|'([^']*)'|\{\s*["']([^"']*)["']\s*\})/.exec(tag);
+        const value = rel ? (rel[1] ?? rel[2] ?? rel[3] ?? '') : '';
         if (!/\bnoopener\b/.test(value) || !/\bnoreferrer\b/.test(value)) {
-          offenders.push(`${path.relative(ROOT, file)}:${lineOf(text, match.index)}`);
+          offenders.push(
+            `${path.relative(ROOT, file)}:${lineOf(text, match.index)}`,
+          );
         }
       }
     }
@@ -63,7 +66,9 @@ describe('external links open without window.opener (#725)', () => {
       while ((match = pattern.exec(text))) {
         const args = match[1];
         if (/_blank/.test(args) && !/noopener/.test(args)) {
-          offenders.push(`${path.relative(ROOT, file)}:${lineOf(text, match.index)}`);
+          offenders.push(
+            `${path.relative(ROOT, file)}:${lineOf(text, match.index)}`,
+          );
         }
       }
     }

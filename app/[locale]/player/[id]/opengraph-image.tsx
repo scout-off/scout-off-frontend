@@ -50,8 +50,18 @@ export default async function Image({ params }: { params: { id: string } }) {
     readFile(path.join(process.cwd(), 'public/fonts/NotoSans-Bold.ttf')),
   ]);
   const ogFonts: OgFont[] = [
-    { name: 'Noto Sans', data: regularBytes.buffer as ArrayBuffer, weight: 400, style: 'normal' },
-    { name: 'Noto Sans', data: boldBytes.buffer as ArrayBuffer, weight: 700, style: 'normal' },
+    {
+      name: 'Noto Sans',
+      data: regularBytes.buffer as ArrayBuffer,
+      weight: 400,
+      style: 'normal',
+    },
+    {
+      name: 'Noto Sans',
+      data: boldBytes.buffer as ArrayBuffer,
+      weight: 700,
+      style: 'normal',
+    },
   ];
 
   if (!player) {

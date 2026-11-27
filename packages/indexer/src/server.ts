@@ -117,7 +117,10 @@ export function isMetricsAuthorised(req: http.IncomingMessage): boolean {
   const supplied = authHeader.slice('Bearer '.length);
   const key = crypto.randomBytes(32);
   const a = crypto.createHmac('sha256', key).update(supplied).digest();
-  const b = crypto.createHmac('sha256', key).update(METRICS_BEARER_TOKEN).digest();
+  const b = crypto
+    .createHmac('sha256', key)
+    .update(METRICS_BEARER_TOKEN)
+    .digest();
   return crypto.timingSafeEqual(a, b);
 }
 
@@ -168,7 +171,10 @@ async function handleHealth(res: http.ServerResponse): Promise<void> {
   });
 }
 
-function handleMetrics(req: http.IncomingMessage, res: http.ServerResponse): void {
+function handleMetrics(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): void {
   if (!isMetricsAuthorised(req)) {
     res.writeHead(401, {
       'WWW-Authenticate': 'Bearer realm="indexer-metrics"',
@@ -194,7 +200,8 @@ function handleMetrics(req: http.IncomingMessage, res: http.ServerResponse): voi
     '# HELP scoutoff_indexer_events_total Total events processed by type',
     '# TYPE scoutoff_indexer_events_total counter',
     ...Object.entries(snap.eventCounts).map(
-      ([type, count]) => `scoutoff_indexer_events_total{type="${type}"} ${count}`,
+      ([type, count]) =>
+        `scoutoff_indexer_events_total{type="${type}"} ${count}`,
     ),
     '# HELP scoutoff_indexer_unknown_events_total Total events with an unknown topic or contract version',
     '# TYPE scoutoff_indexer_unknown_events_total counter',
@@ -826,7 +833,9 @@ export async function startServer(): Promise<void> {
 
   if (metricsServer && METRICS_PORT) {
     metricsServer.listen(METRICS_PORT, () => {
-      logger.info(`Indexer metrics server listening on internal port ${METRICS_PORT}`);
+      logger.info(
+        `Indexer metrics server listening on internal port ${METRICS_PORT}`,
+      );
     });
   }
   // The poller needs SOROBAN_RPC_URL/CONTRACT_ID; a config error here is a

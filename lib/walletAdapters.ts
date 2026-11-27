@@ -1,4 +1,9 @@
-export type WalletProvider = 'freighter' | 'albedo' | 'lobstr' | 'ledger' | 'walletconnect';
+export type WalletProvider =
+  | 'freighter'
+  | 'albedo'
+  | 'lobstr'
+  | 'ledger'
+  | 'walletconnect';
 
 const STANDARD_LEDGER_PATH = "44'/148'/0'";
 
@@ -164,7 +169,9 @@ export const walletAdapters: Record<
   walletconnect: {
     async getPublicKey() {
       try {
-        const client = await getWcClient('Public Global Stellar Network ; September 2015');
+        const client = await getWcClient(
+          'Public Global Stellar Network ; September 2015',
+        );
         if (!client) throw new Error('WalletConnect unavailable');
         if (!client.session) {
           await client.connect({});
@@ -173,8 +180,7 @@ export const walletAdapters: Record<
           method: 'stellar_getAddress',
           params: {},
         })) as { address?: string } | string | undefined;
-        const address =
-          typeof result === 'string' ? result : result?.address;
+        const address = typeof result === 'string' ? result : result?.address;
         if (!address) {
           throw new Error(
             'WalletConnect did not return a public key. Please try again.',
@@ -204,7 +210,10 @@ export const walletAdapters: Record<
         const result = (await client.request({
           method: 'stellar_signXDR',
           params: { xdr, networkPassphrase },
-        })) as { signedXDR?: string; signedTxXdr?: string } | string | undefined;
+        })) as
+          | { signedXDR?: string; signedTxXdr?: string }
+          | string
+          | undefined;
         const signed =
           typeof result === 'string'
             ? result
@@ -295,7 +304,9 @@ export const walletAdapters: Record<
 export async function disconnectWalletConnect(): Promise<void> {
   if (!_wcClient) return;
   try {
-    await _wcClient.disconnect({ reason: { code: 6000, message: 'User disconnected' } });
+    await _wcClient.disconnect({
+      reason: { code: 6000, message: 'User disconnected' },
+    });
   } catch {
     // Best-effort: the relay may already be gone.
   } finally {
@@ -312,7 +323,9 @@ export async function disconnectWalletConnect(): Promise<void> {
 export async function restoreWalletConnectSession(): Promise<string | null> {
   if (!wcProjectId()) return null;
   try {
-    const client = await getWcClient('Public Global Stellar Network ; September 2015');
+    const client = await getWcClient(
+      'Public Global Stellar Network ; September 2015',
+    );
     if (!client?.session) return null;
     if (_wcPublicKey) return _wcPublicKey;
     const result = (await client.request({

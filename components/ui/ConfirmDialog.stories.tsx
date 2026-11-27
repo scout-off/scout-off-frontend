@@ -118,13 +118,23 @@ function ConfirmDialogDemo({
   const [open, setOpen] = useState(false);
   return (
     <div className="p-8">
-      <Button data-testid="open-btn" variant="danger" onClick={() => setOpen(true)}>
+      <Button
+        data-testid="open-btn"
+        variant="danger"
+        onClick={() => setOpen(true)}
+      >
         Remove Validator
       </Button>
       <ConfirmDialog
         isOpen={open}
-        onConfirm={() => { onConfirm(); setOpen(false); }}
-        onCancel={() => { onCancel(); setOpen(false); }}
+        onConfirm={() => {
+          onConfirm();
+          setOpen(false);
+        }}
+        onCancel={() => {
+          onCancel();
+          setOpen(false);
+        }}
         title="Remove Validator"
         message="This will permanently revoke validator privileges."
         confirmLabel="Remove"
@@ -188,7 +198,9 @@ export const FocusTrapPlay: Story = {
     const dialog = await canvas.findByRole('dialog');
 
     // Initial focus lands inside the dialog after the opening rAF tick.
-    await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
+    await waitFor(() =>
+      expect(dialog.contains(document.activeElement)).toBe(true),
+    );
 
     // Tab forward — every step must keep focus inside.
     const tabbable = within(dialog).getAllByRole('button');

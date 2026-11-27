@@ -1,7 +1,12 @@
 jest.unmock('next-intl');
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@/__tests__/setup-providers-intl';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+} from '@/__tests__/setup-providers-intl';
 import '@testing-library/jest-dom';
 import MilestoneTimeline from '@/components/player/MilestoneTimeline';
 import type { Milestone, MilestoneDispute } from '@/types';

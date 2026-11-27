@@ -61,7 +61,7 @@ export interface NewAdminAuditEntry {
   adminWallet: string;
   target?: string | null;
   amountStroops?: number | null;
-  txHash?: string |null;
+  txHash?: string | null;
   status: AdminAuditStatus;
   timestamp: number;
   data?: Record<string, unknown>;

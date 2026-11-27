@@ -25,7 +25,9 @@ jest.mock('@/lib/rateLimit', () => ({
 }));
 
 import { checkRateLimit } from '@/lib/rateLimit';
-const mockCheckRateLimit = checkRateLimit as jest.MockedFunction<typeof checkRateLimit>;
+const mockCheckRateLimit = checkRateLimit as jest.MockedFunction<
+  typeof checkRateLimit
+>;
 
 function makeRequest(cookieHeader?: string, ip?: string): NextRequest {
   const headers: Record<string, string> = {};

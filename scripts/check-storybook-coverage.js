@@ -66,6 +66,9 @@ const DIRS = [
       // useTheme hook reads/writes document.documentElement class; story
       // needs decorator to reset DOM between renders; deferred #1524 follow-up.
       'ThemeToggle.tsx',
+      // Effect-only component that renders null and redirects after wallet
+      // auth; there is no visual output for a story to show.
+      'ReturnToRedirect.tsx',
     ]),
   },
   {

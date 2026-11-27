@@ -1,3 +1,4 @@
+import type { Locale } from 'next-intl';
 import { readFileSync } from 'fs';
 import path from 'path';
 import type { Metadata } from 'next';
@@ -27,7 +28,7 @@ export async function generateMetadata(
   props: ChangelogPageProps,
 ): Promise<Metadata> {
   const params = await props.params;
-  const locale = params.locale;
+  const locale = params.locale as Locale;
   const t = await getTranslations({ locale, namespace: 'changelog' });
 
   const { buildPageMetadata } = await import('@/lib/seo');
@@ -40,7 +41,7 @@ export async function generateMetadata(
 
 export default async function ChangelogPage(props: ChangelogPageProps) {
   const params = await props.params;
-  const locale = params.locale;
+  const locale = params.locale as Locale;
   const t = await getTranslations({ locale, namespace: 'changelog' });
   const changelogEntries = loadChangelogEntries().sort((left, right) => {
     if (left.date === right.date) {

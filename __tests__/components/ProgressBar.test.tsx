@@ -36,9 +36,15 @@ describe('ProgressBar', () => {
 
   it('clamps out-of-range levels', () => {
     const { rerender } = render(<ProgressBar level={5 as ProgressLevel} />);
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '3');
+    expect(screen.getByRole('progressbar')).toHaveAttribute(
+      'aria-valuenow',
+      '3',
+    );
 
     rerender(<ProgressBar level={-1 as ProgressLevel} />);
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0');
+    expect(screen.getByRole('progressbar')).toHaveAttribute(
+      'aria-valuenow',
+      '0',
+    );
   });
 });

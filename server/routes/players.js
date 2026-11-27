@@ -88,7 +88,7 @@ router.get('/search', async (req, res) => {
            JOIN player_search ps ON ps.rowid = fts.rowid
           WHERE ${conditions.join(' AND ')}
           ORDER BY bm25(player_search_fts), ps.progress_level DESC
-          LIMIT ?`
+          LIMIT ?`,
       )
       .all(...params);
 
@@ -97,7 +97,7 @@ router.get('/search', async (req, res) => {
     // Fall back to the service layer if FTS is unavailable.
     try {
       const name = normalizeName(
-        typeof req.query.name === 'string' ? req.query.name : ''
+        typeof req.query.name === 'string' ? req.query.name : '',
       );
       if (!name) return res.json({ players: [] });
       const players = await playerService.searchPlayers(name, {

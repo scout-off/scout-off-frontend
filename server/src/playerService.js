@@ -25,7 +25,7 @@ function toCommentDTO(row) {
 
 function ensurePlayer(playerId) {
   db.prepare(
-    'INSERT OR IGNORE INTO players_offchain (player_id) VALUES (?)'
+    'INSERT OR IGNORE INTO players_offchain (player_id) VALUES (?)',
   ).run(playerId);
 }
 
@@ -39,7 +39,7 @@ function getPlayer(playerId) {
 function listComments(playerId) {
   const rows = db
     .prepare(
-      'SELECT * FROM player_comments WHERE player_id = ? ORDER BY created_at ASC, id ASC'
+      'SELECT * FROM player_comments WHERE player_id = ? ORDER BY created_at ASC, id ASC',
     )
     .all(playerId);
   return rows.map(toCommentDTO);
@@ -50,7 +50,7 @@ function archivePlayer(playerId) {
   db.prepare(
     `UPDATE players_offchain
        SET archived = 1, archived_at = datetime('now'), updated_at = datetime('now')
-     WHERE player_id = ?`
+     WHERE player_id = ?`,
   ).run(playerId);
   return getPlayer(playerId);
 }
@@ -60,7 +60,7 @@ function unarchivePlayer(playerId) {
   db.prepare(
     `UPDATE players_offchain
        SET archived = 0, archived_at = NULL, updated_at = datetime('now')
-     WHERE player_id = ?`
+     WHERE player_id = ?`,
   ).run(playerId);
   return getPlayer(playerId);
 }
@@ -70,7 +70,7 @@ function removeBackupWallet(playerId) {
   db.prepare(
     `UPDATE players_offchain
        SET backup_wallet = NULL, updated_at = datetime('now')
-     WHERE player_id = ?`
+     WHERE player_id = ?`,
   ).run(playerId);
   return getPlayer(playerId);
 }

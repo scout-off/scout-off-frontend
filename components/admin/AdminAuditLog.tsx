@@ -339,7 +339,10 @@ export default function AdminAuditLog() {
                         amount: formatNumber(
                           entry.amountStroops / STROOPS_PER_XLM,
                           locale,
-                          { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+                          {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          },
                         ),
                       })
                     : '—',

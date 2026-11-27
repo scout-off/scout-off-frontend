@@ -71,12 +71,19 @@ export async function loadAdminAccount(
   const data = (await res.json()) as {
     id: string;
     signers?: Array<{ key: string; weight: number }>;
-    thresholds?: { low_threshold: number; med_threshold: number; high_threshold: number };
+    thresholds?: {
+      low_threshold: number;
+      med_threshold: number;
+      high_threshold: number;
+    };
   };
 
   return {
     accountId: data.id,
-    signers: (data.signers ?? []).map((s) => ({ key: s.key, weight: s.weight })),
+    signers: (data.signers ?? []).map((s) => ({
+      key: s.key,
+      weight: s.weight,
+    })),
     thresholds: {
       low: data.thresholds?.low_threshold ?? 0,
       medium: data.thresholds?.med_threshold ?? 0,
@@ -151,7 +158,9 @@ export async function requireAdminSigner(
   const account = await loadAdminAccount();
   if (!account) return null;
 
-  const isSigner = account.signers.some((s) => s.key === wallet && s.weight > 0);
+  const isSigner = account.signers.some(
+    (s) => s.key === wallet && s.weight > 0,
+  );
   if (!isSigner) return null;
 
   return { wallet, account };

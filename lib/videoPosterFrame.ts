@@ -191,14 +191,22 @@ function extractFrameWithFfmpeg(
   return new Promise((resolve, reject) => {
     const args = [
       '-hide_banner',
-      '-loglevel', 'error',
-      '-ss', seekSeconds.toFixed(3),
-      '-i', inputPath,
-      '-frames:v', '1',
-      '-vf', `scale='min(${maxEdge},iw)':'min(${maxEdge},ih)':force_original_aspect_ratio=decrease`,
-      '-q:v', '3',
-      '-f', 'image2',
-      '-vcodec', 'mjpeg',
+      '-loglevel',
+      'error',
+      '-ss',
+      seekSeconds.toFixed(3),
+      '-i',
+      inputPath,
+      '-frames:v',
+      '1',
+      '-vf',
+      `scale='min(${maxEdge},iw)':'min(${maxEdge},ih)':force_original_aspect_ratio=decrease`,
+      '-q:v',
+      '3',
+      '-f',
+      'image2',
+      '-vcodec',
+      'mjpeg',
       'pipe:1',
     ];
     const child = spawn('ffmpeg', args, { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -209,7 +217,9 @@ function extractFrameWithFfmpeg(
       reject(new Error('ffmpeg extraction timed out'));
     }, EXTRACTION_TIMEOUT_MS);
     child.stdout.on('data', (c: Buffer) => chunks.push(c));
-    child.stderr.on('data', (c: Buffer) => { stderr += c.toString(); });
+    child.stderr.on('data', (c: Buffer) => {
+      stderr += c.toString();
+    });
     child.on('error', (err) => {
       clearTimeout(timer);
       reject(err);
@@ -234,14 +244,28 @@ function extractFrameWithFfmpeg(
  * Reads the JPEG SOF marker to recover the encoded frame dimensions.  Returns
  * null when the marker cannot be located.
  */
-function readJpegDimensions(jpeg: Buffer): { width: number; height: number } | null {
+function readJpegDimensions(
+  jpeg: Buffer,
+): { width: number; height: number } | null {
   let i = 2;
   while (i + 9 < jpeg.length) {
-    if (jpeg[i] !== 0xff) { i++; continue; }
+    if (jpeg[i] !== 0xff) {
+      i++;
+      continue;
+    }
     const marker = jpeg[i + 1];
     // SOF0..SOF15 excluding DHT(C4), JPG(C8), DAC(CC).
-    if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
-      return { height: jpeg.readUInt16BE(i + 5), width: jpeg.readUInt16BE(i + 7) };
+    if (
+      marker >= 0xc0 &&
+      marker <= 0xcf &&
+      marker !== 0xc4 &&
+      marker !== 0xc8 &&
+      marker !== 0xcc
+    ) {
+      return {
+        height: jpeg.readUInt16BE(i + 5),
+        width: jpeg.readUInt16BE(i + 7),
+      };
     }
     const len = jpeg.readUInt16BE(i + 2);
     if (len < 2) return null;
@@ -267,13 +291,26 @@ export async function extractPosterFrameFromBuffer(
   videoBytes: Uint8Array,
   seekSeconds: number = DEFAULT_SEEK_SECONDS,
 ): Promise<PosterFrameResult> {
-  const header = videoBytes.subarray(0, Math.min(videoBytes.length, HEADER_SCAN_BYTES));
+  const header = videoBytes.subarray(
+    0,
+    Math.min(videoBytes.length, HEADER_SCAN_BYTES),
+  );
   const isMp4 = looksLikeMp4(header);
   const isWebm = looksLikeWebm(header);
 
   if (!isMp4 && !isWebm) {
-    console.warn(JSON.stringify({ event: 'poster.extract.unsupported', bytes: videoBytes.length }));
-    return { jpeg: blackPixelJpeg(), width: 1, height: 1, timestampSeconds: seekSeconds };
+    console.warn(
+      JSON.stringify({
+        event: 'poster.extract.unsupported',
+        bytes: videoBytes.length,
+      }),
+    );
+    return {
+      jpeg: blackPixelJpeg(),
+      width: 1,
+      height: 1,
+      timestampSeconds: seekSeconds,
+    };
   }
 
   if (
@@ -282,7 +319,9 @@ export async function extractPosterFrameFromBuffer(
       Buffer.from(header.buffer, header.byteOffset, header.byteLength),
     )
   ) {
-    throw new Error('MP4 has moov after mdat; re-encode with faststart (-movflags +faststart)');
+    throw new Error(
+      'MP4 has moov after mdat; re-encode with faststart (-movflags +faststart)',
+    );
   }
 
   const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'poster-'));
@@ -294,28 +333,52 @@ export async function extractPosterFrameFromBuffer(
     let best: { jpeg: Buffer; variance: number; ts: number } | null = null;
     for (const ts of candidates) {
       try {
-        const jpeg = await extractFrameWithFfmpeg(inputPath, ts, POSTER_MAX_EDGE);
+        const jpeg = await extractFrameWithFfmpeg(
+          inputPath,
+          ts,
+          POSTER_MAX_EDGE,
+        );
         // Approximate luminance variance via compressed byte entropy: a
         // fully black/white frame compresses to a tiny JPEG, so larger
         // payloads correlate with more visual detail.
         const variance = jpeg.length;
         if (!best || variance > best.variance) best = { jpeg, variance, ts };
       } catch (err) {
-        console.warn(JSON.stringify({ event: 'poster.extract.frame_failed', ts, error: String(err) }));
+        console.warn(
+          JSON.stringify({
+            event: 'poster.extract.frame_failed',
+            ts,
+            error: String(err),
+          }),
+        );
       }
     }
 
     if (!best) {
       console.warn(JSON.stringify({ event: 'poster.extract.no_frames' }));
-      return { jpeg: blackPixelJpeg(), width: 1, height: 1, timestampSeconds: seekSeconds };
+      return {
+        jpeg: blackPixelJpeg(),
+        width: 1,
+        height: 1,
+        timestampSeconds: seekSeconds,
+      };
     }
 
     const dims = readJpegDimensions(best.jpeg) ?? { width: 1, height: 1 };
     let thumbnail: Buffer | undefined;
     try {
-      thumbnail = await extractFrameWithFfmpeg(inputPath, best.ts, THUMBNAIL_MAX_EDGE);
+      thumbnail = await extractFrameWithFfmpeg(
+        inputPath,
+        best.ts,
+        THUMBNAIL_MAX_EDGE,
+      );
     } catch (err) {
-      console.warn(JSON.stringify({ event: 'poster.extract.thumbnail_failed', error: String(err) }));
+      console.warn(
+        JSON.stringify({
+          event: 'poster.extract.thumbnail_failed',
+          error: String(err),
+        }),
+      );
     }
 
     return {
@@ -326,9 +389,18 @@ export async function extractPosterFrameFromBuffer(
       thumbnail,
     };
   } catch (err) {
-    console.warn(JSON.stringify({ event: 'poster.extract.failed', error: String(err) }));
-    return { jpeg: blackPixelJpeg(), width: 1, height: 1, timestampSeconds: seekSeconds };
+    console.warn(
+      JSON.stringify({ event: 'poster.extract.failed', error: String(err) }),
+    );
+    return {
+      jpeg: blackPixelJpeg(),
+      width: 1,
+      height: 1,
+      timestampSeconds: seekSeconds,
+    };
   } finally {
-    await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => undefined);
+    await fs
+      .rm(tmpDir, { recursive: true, force: true })
+      .catch(() => undefined);
   }
 }

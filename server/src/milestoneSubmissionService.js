@@ -146,7 +146,9 @@ function listPageForValidator(validatorWallet, options = {}) {
   const fetchLimit = limit + 1;
   let rows;
   if (sort === 'desc') {
-    const anchorCreatedAt = decoded ? decoded.createdAt : Number.MAX_SAFE_INTEGER;
+    const anchorCreatedAt = decoded
+      ? decoded.createdAt
+      : Number.MAX_SAFE_INTEGER;
     const anchorId = decoded ? decoded.id : '\uffff';
     rows = listPageDesc.all(
       validatorWallet,
@@ -172,7 +174,8 @@ function listPageForValidator(validatorWallet, options = {}) {
   const hasMore = rows.length > limit;
   const pageRows = hasMore ? rows.slice(0, limit) : rows;
   const last = pageRows[pageRows.length - 1];
-  const nextCursor = hasMore && last ? encodeCursor(last.created_at, last.id) : null;
+  const nextCursor =
+    hasMore && last ? encodeCursor(last.created_at, last.id) : null;
 
   return { items: pageRows.map(toSubmission), nextCursor };
 }

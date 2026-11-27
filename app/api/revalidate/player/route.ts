@@ -47,16 +47,25 @@ function constantTimeEqual(a: string, b: string): boolean {
   return timingSafeEqual(bufA, bufB);
 }
 
-function verifySignature(rawBody: string, signature: string | null, secret: string): boolean {
+function verifySignature(
+  rawBody: string,
+  signature: string | null,
+  secret: string,
+): boolean {
   if (!signature) return false;
-  const expected = createHmac('sha256', secret).update(rawBody, 'utf8').digest('hex');
+  const expected = createHmac('sha256', secret)
+    .update(rawBody, 'utf8')
+    .digest('hex');
   return constantTimeEqual(expected, signature);
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const secret = process.env.REVALIDATE_SECRET;
   if (!secret) {
-    return NextResponse.json({ error: 'revalidation not configured' }, { status: 503 });
+    return NextResponse.json(
+      { error: 'revalidation not configured' },
+      { status: 503 },
+    );
   }
 
   const clientKey =
@@ -84,7 +93,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'invalid json' }, { status: 400 });
   }
 
-  const playerId = typeof payload.playerId === 'string' ? payload.playerId.trim() : '';
+  const playerId =
+    typeof payload.playerId === 'string' ? payload.playerId.trim() : '';
   if (!playerId) {
     return NextResponse.json({ error: 'missing playerId' }, { status: 400 });
   }

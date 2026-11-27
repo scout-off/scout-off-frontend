@@ -14,7 +14,9 @@ jest.mock('@/lib/rateLimit', () => ({
 }));
 
 import { checkRateLimit } from '@/lib/rateLimit';
-const mockCheckRateLimit = checkRateLimit as jest.MockedFunction<typeof checkRateLimit>;
+const mockCheckRateLimit = checkRateLimit as jest.MockedFunction<
+  typeof checkRateLimit
+>;
 
 // Mock stellar-sdk so tests don't need real Stellar keys or network access.
 // Keypair.fromSecret is mocked to return the secret itself as the "public
@@ -468,7 +470,10 @@ describe('POST /api/auth/sep10 — production fails closed with no allow-list co
 
 describe('POST /api/auth/sep10 — rate limiting (issue #1700)', () => {
   test('returns 429 with Retry-After header when the rate limiter fires', async () => {
-    mockCheckRateLimit.mockResolvedValueOnce({ limited: true, retryAfterSec: 42 });
+    mockCheckRateLimit.mockResolvedValueOnce({
+      limited: true,
+      retryAfterSec: 42,
+    });
 
     const res = await POST(makeRequest(ALLOWED_ORIGIN));
     expect(res.status).toBe(429);

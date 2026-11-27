@@ -84,8 +84,14 @@ test('generateCode stops exactly at the cap and inserts nothing past it', () =>
 test('POST /referrals/generate returns 409 REFERRAL_LIMIT_REACHED at the cap', () =>
   withCap(2, async () => {
     const wallet = 'GLIMIT_HTTP';
-    assert.equal((await post('/referrals/generate', { scoutWallet: wallet })).status, 201);
-    assert.equal((await post('/referrals/generate', { scoutWallet: wallet })).status, 201);
+    assert.equal(
+      (await post('/referrals/generate', { scoutWallet: wallet })).status,
+      201,
+    );
+    assert.equal(
+      (await post('/referrals/generate', { scoutWallet: wallet })).status,
+      201,
+    );
     const res = await post('/referrals/generate', { scoutWallet: wallet });
     assert.equal(res.status, 409);
     assert.deepEqual(res.body, {
@@ -100,7 +106,10 @@ test('redeemed codes do not count toward the cap', () =>
   withCap(1, async () => {
     const wallet = 'GLIMIT_REDEEM';
     const first = referralService.generateCode(wallet);
-    assert.throws(() => referralService.generateCode(wallet), referralService.ReferralLimitError);
+    assert.throws(
+      () => referralService.generateCode(wallet),
+      referralService.ReferralLimitError,
+    );
     assert.equal(referralService.redeemCode(first.code, 'GSOMEONE_ELSE'), true);
     const next = referralService.generateCode(wallet);
     assert.match(next.code, /^SCOUT-/);
@@ -109,25 +118,45 @@ test('redeemed codes do not count toward the cap', () =>
 // ── #1777: case- and whitespace-insensitive redemption ─────────────────────
 
 test('redeeming ignores case and surrounding whitespace', async () => {
-  for (const variant of [(c) => c.toLowerCase(), (c) => `  ${c} `, (c) => c[0] + c.slice(1).toLowerCase()]) {
+  for (const variant of [
+    (c) => c.toLowerCase(),
+    (c) => `  ${c} `,
+    (c) => c[0] + c.slice(1).toLowerCase(),
+  ]) {
     const { code } = referralService.generateCode(`GCASE_${Math.random()}`);
-    const res = await post('/referrals/redeem', { code: variant(code), usedBy: 'GPLAYER_CASE' });
+    const res = await post('/referrals/redeem', {
+      code: variant(code),
+      usedBy: 'GPLAYER_CASE',
+    });
     assert.equal(res.status, 200, `variant ${variant(code)} failed`);
     assert.deepEqual(res.body, { success: true });
   }
 });
 
 test('a whitespace-only code is still a 400', async () => {
-  const res = await post('/referrals/redeem', { code: '   ', usedBy: 'GPLAYER' });
+  const res = await post('/referrals/redeem', {
+    code: '   ',
+    usedBy: 'GPLAYER',
+  });
   assert.equal(res.status, 400);
 });
 
 test('self-redemption and double redemption are still rejected after normalizing', async () => {
   const { code } = referralService.generateCode('GSELF_SCOUT');
-  const self = await post('/referrals/redeem', { code: code.toLowerCase(), usedBy: 'GSELF_SCOUT' });
+  const self = await post('/referrals/redeem', {
+    code: code.toLowerCase(),
+    usedBy: 'GSELF_SCOUT',
+  });
   assert.equal(self.status, 404);
 
-  assert.equal((await post('/referrals/redeem', { code: ` ${code}`, usedBy: 'GPLAYER_1' })).status, 200);
-  const again = await post('/referrals/redeem', { code: code.toLowerCase(), usedBy: 'GPLAYER_2' });
+  assert.equal(
+    (await post('/referrals/redeem', { code: ` ${code}`, usedBy: 'GPLAYER_1' }))
+      .status,
+    200,
+  );
+  const again = await post('/referrals/redeem', {
+    code: code.toLowerCase(),
+    usedBy: 'GPLAYER_2',
+  });
   assert.equal(again.status, 404);
 });

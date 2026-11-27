@@ -32,7 +32,10 @@ export interface ScoutContact {
 
 export interface ScoutStore {
   getProfile(id: string): Promise<ScoutProfile | null>;
-  upsertProfile(id: string, patch: Partial<Omit<ScoutProfile, 'id' | 'updatedAt'>>): Promise<ScoutProfile>;
+  upsertProfile(
+    id: string,
+    patch: Partial<Omit<ScoutProfile, 'id' | 'updatedAt'>>,
+  ): Promise<ScoutProfile>;
   countEvents(scoutId: string, type: string): Promise<number>;
   listContacts(scoutId: string): Promise<ScoutContact[]>;
 }
@@ -58,7 +61,11 @@ const profileUpdateSchema = z
 const CONTACT_EVENT = 'pay_to_contact';
 const TRIAL_OFFER_EVENT = 'log_trial_offer';
 
-function isOwner(req: Request, deps: ScoutRouterDeps, scoutId: string): boolean {
+function isOwner(
+  req: Request,
+  deps: ScoutRouterDeps,
+  scoutId: string,
+): boolean {
   const wallet = deps.getAuthenticatedWallet(req);
   if (!wallet) return false;
   return wallet.toLowerCase() === scoutId.toLowerCase();
@@ -87,7 +94,9 @@ export function createScoutRouter(deps: ScoutRouterDeps): Router {
 
     const parsed = profileUpdateSchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ error: 'invalid_profile', details: parsed.error.flatten() });
+      res
+        .status(400)
+        .json({ error: 'invalid_profile', details: parsed.error.flatten() });
       return;
     }
 

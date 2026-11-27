@@ -13,7 +13,9 @@ describe('lib/watchlistClient', () => {
     jest.restoreAllMocks();
   });
 
-  function mockFetch(response: Partial<Response> & { json?: () => Promise<unknown> }) {
+  function mockFetch(
+    response: Partial<Response> & { json?: () => Promise<unknown> },
+  ) {
     const fetchMock = jest.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -38,7 +40,10 @@ describe('lib/watchlistClient', () => {
 
       const result = await fetchWatchlist();
 
-      expect(fetchMock).toHaveBeenCalledWith('/api/watchlist', expect.anything());
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/watchlist',
+        expect.anything(),
+      );
       expect(result).toEqual(entries);
     });
   });

@@ -12,7 +12,9 @@ const DEFAULT_MAX_UNREDEEMED_CODES_PER_WALLET = 10;
  */
 function maxUnredeemedCodesPerWallet() {
   const parsed = Number.parseInt(process.env.REFERRAL_MAX_UNREDEEMED ?? '', 10);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_MAX_UNREDEEMED_CODES_PER_WALLET;
+  return Number.isInteger(parsed) && parsed > 0
+    ? parsed
+    : DEFAULT_MAX_UNREDEEMED_CODES_PER_WALLET;
 }
 
 /** Thrown when a wallet already holds the maximum number of unredeemed codes. */

@@ -51,7 +51,10 @@ function QRModalDemo({ onClose }: { onClose: () => void }) {
       </Button>
       <QRModal
         isOpen={open}
-        onClose={() => { onClose(); setOpen(false); }}
+        onClose={() => {
+          onClose();
+          setOpen(false);
+        }}
         url={SAMPLE_URL}
         title="Share This Profile"
       />
@@ -108,7 +111,9 @@ export const FocusTrapPlay: Story = {
     await expect(dialog.querySelector('canvas')).not.toBeNull();
 
     // Initial focus lands inside the dialog after the opening rAF tick.
-    await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
+    await waitFor(() =>
+      expect(dialog.contains(document.activeElement)).toBe(true),
+    );
 
     // Tab forward — every step must keep focus inside the dialog.
     const tabbable = within(dialog).getAllByRole('button');

@@ -70,8 +70,12 @@ describe('TruncatedAddress', () => {
 
   // ── #1780 ────────────────────────────────────────────────────────────────
   it('is type="button" so it never submits an enclosing form', () => {
-    const onSubmit = jest.fn((event: React.FormEvent) => event.preventDefault());
-    Object.assign(navigator, { clipboard: { writeText: jest.fn().mockResolvedValue(undefined) } });
+    const onSubmit = jest.fn((event: React.FormEvent) =>
+      event.preventDefault(),
+    );
+    Object.assign(navigator, {
+      clipboard: { writeText: jest.fn().mockResolvedValue(undefined) },
+    });
     render(
       <form onSubmit={onSubmit}>
         <TruncatedAddress address={mockAddress} />
@@ -94,19 +98,27 @@ describe('TruncatedAddress', () => {
   });
 
   it('announces the copy in a status live region', async () => {
-    Object.assign(navigator, { clipboard: { writeText: jest.fn().mockResolvedValue(undefined) } });
+    Object.assign(navigator, {
+      clipboard: { writeText: jest.fn().mockResolvedValue(undefined) },
+    });
     render(<TruncatedAddress address={mockAddress} />);
     expect(screen.getByRole('status')).toHaveTextContent('');
     fireEvent.click(screen.getByRole('button'));
-    expect(await screen.findByRole('status')).toHaveTextContent('Address copied');
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Address copied',
+    );
   });
 
   it('clears its reset timer on unmount', async () => {
     jest.useFakeTimers();
     try {
-      Object.assign(navigator, { clipboard: { writeText: jest.fn().mockResolvedValue(undefined) } });
+      Object.assign(navigator, {
+        clipboard: { writeText: jest.fn().mockResolvedValue(undefined) },
+      });
       const clearSpy = jest.spyOn(global, 'clearTimeout');
-      const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const errorSpy = jest
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const { unmount } = render(<TruncatedAddress address={mockAddress} />);
       await act(async () => {
         fireEvent.click(screen.getByRole('button'));

@@ -1,3 +1,4 @@
+import type { Locale } from 'next-intl';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
@@ -14,7 +15,7 @@ export async function generateMetadata(
   props: StatusPageProps,
 ): Promise<Metadata> {
   const params = await props.params;
-  const locale = params.locale;
+  const locale = params.locale as Locale;
   const t = await getTranslations({ locale, namespace: 'status' });
 
   const { buildPageMetadata } = await import('@/lib/seo');
@@ -27,7 +28,7 @@ export async function generateMetadata(
 
 export default async function StatusPage(props: StatusPageProps) {
   const params = await props.params;
-  const locale = params.locale;
+  const locale = params.locale as Locale;
   const t = await getTranslations({ locale, namespace: 'status' });
   const statusPageUrl = process.env.NEXT_PUBLIC_STATUS_PAGE_URL;
 

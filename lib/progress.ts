@@ -13,7 +13,12 @@ export const PROGRESS_LEVELS: ProgressLevelInfo[] = [
   { level: 0, key: 'level0_label', badgeKey: 'level0', color: 'bg-gray-600' },
   { level: 1, key: 'level1_label', badgeKey: 'level1', color: 'bg-blue-400' },
   { level: 2, key: 'level2_label', badgeKey: 'level2', color: 'bg-amber-400' },
-  { level: 3, key: 'level3_label', badgeKey: 'level3', color: 'bg-emerald-400' },
+  {
+    level: 3,
+    key: 'level3_label',
+    badgeKey: 'level3',
+    color: 'bg-emerald-400',
+  },
 ];
 
 /** English fallback labels for non-UI contexts (CSV exports, server logs). */

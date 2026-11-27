@@ -96,7 +96,9 @@ export default function ConfigStatus() {
                   </span>
                 )
               ) : c.present ? (
-                <span className="text-green-400 font-medium">{t('present')}</span>
+                <span className="text-green-400 font-medium">
+                  {t('present')}
+                </span>
               ) : (
                 <span className="text-red-400 font-medium">{t('missing')}</span>
               ),

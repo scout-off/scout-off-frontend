@@ -30,8 +30,9 @@ class MockIntersectionObserver {
 beforeEach(() => {
   jest.resetAllMocks();
   observerCallback = null;
-  (global as unknown as { IntersectionObserver: unknown }).IntersectionObserver =
-    MockIntersectionObserver;
+  (
+    global as unknown as { IntersectionObserver: unknown }
+  ).IntersectionObserver = MockIntersectionObserver;
 });
 
 describe('useInfiniteScroll — public return shape', () => {

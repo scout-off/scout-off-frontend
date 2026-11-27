@@ -41,7 +41,10 @@ const inFlight = new Map<FeeSpeed, Promise<FeeEstimate>>();
 
 function clampFee(raw: number): number {
   if (!Number.isFinite(raw) || raw <= 0) return BASE_FEE;
-  return Math.min(Math.max(Math.ceil(raw), BASE_FEE), MAX_INCLUSION_FEE_STROOPS);
+  return Math.min(
+    Math.max(Math.ceil(raw), BASE_FEE),
+    MAX_INCLUSION_FEE_STROOPS,
+  );
 }
 
 function toEstimate(raw: number): FeeEstimate {

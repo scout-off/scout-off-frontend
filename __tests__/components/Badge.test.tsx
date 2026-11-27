@@ -61,9 +61,7 @@ describe('Badge', () => {
   });
 
   test('snapshot: position variant', () => {
-    const { container } = render(
-      <Badge variant="position" label="Striker" />,
-    );
+    const { container } = render(<Badge variant="position" label="Striker" />);
     expect(container).toMatchSnapshot();
   });
 
@@ -84,4 +82,3 @@ describe('Badge', () => {
     expect(container).toMatchSnapshot();
   });
 });
-

@@ -89,10 +89,15 @@ export default function Tooltip({ content, children }: TooltipProps) {
   // Reposition on scroll/resize while visible
   useEffect(() => {
     if (!visible) return;
-    window.addEventListener('scroll', updatePosition, { passive: true, capture: true });
+    window.addEventListener('scroll', updatePosition, {
+      passive: true,
+      capture: true,
+    });
     window.addEventListener('resize', updatePosition, { passive: true });
     return () => {
-      window.removeEventListener('scroll', updatePosition, { capture: true } as EventListenerOptions);
+      window.removeEventListener('scroll', updatePosition, {
+        capture: true,
+      } as EventListenerOptions);
       window.removeEventListener('resize', updatePosition);
     };
   }, [visible, updatePosition]);
@@ -119,7 +124,9 @@ export default function Tooltip({ content, children }: TooltipProps) {
   return (
     <span className="inline-flex" ref={triggerRef}>
       <span
-        aria-describedby={visible && !isValidElement(children) ? tooltipId : undefined}
+        aria-describedby={
+          visible && !isValidElement(children) ? tooltipId : undefined
+        }
         onMouseEnter={show}
         onMouseLeave={scheduleHide}
         onFocus={show}

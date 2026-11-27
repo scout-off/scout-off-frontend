@@ -134,7 +134,10 @@ function parseMediaPath(raw: string): { cid: string; subPath: string } | null {
   if (!isValidCid(cidPart)) return null;
   if (!subPath) return null;
   // Reject traversal and absolute paths; allow nested rendition dirs.
-  if (subPath.startsWith('/') || subPath.split('/').some((s) => s === '..' || s === '.')) {
+  if (
+    subPath.startsWith('/') ||
+    subPath.split('/').some((s) => s === '..' || s === '.')
+  ) {
     return null;
   }
   return { cid: normalizeCid(cidPart), subPath };
@@ -174,8 +177,13 @@ async function getMedia(
   const moderation = MediaModerationStore.getInstance();
   const originalParam = searchParams.get('original');
   const originalCid =
-    originalParam && isValidCid(originalParam) ? normalizeCid(originalParam) : null;
-  if (moderation.isDenylisted(cid) || (originalCid && moderation.isDenylisted(originalCid))) {
+    originalParam && isValidCid(originalParam)
+      ? normalizeCid(originalParam)
+      : null;
+  if (
+    moderation.isDenylisted(cid) ||
+    (originalCid && moderation.isDenylisted(originalCid))
+  ) {
     return NextResponse.json(
       { error: 'This media has been removed for legal or policy reasons' },
       { status: 451, headers: { 'Cache-Control': 'no-store' } },

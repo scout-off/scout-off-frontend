@@ -17,11 +17,7 @@ type Story = StoryObj<typeof Modal>;
 
 /** Renders a trigger button that opens a Modal, capturing the trigger so focus
  *  restoration can be verified after close. */
-function TrapDemo({
-  extraContent,
-}: {
-  extraContent?: React.ReactNode;
-}) {
+function TrapDemo({ extraContent }: { extraContent?: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="p-8">
@@ -30,11 +26,7 @@ function TrapDemo({
       <Button data-testid="open-btn" onClick={() => setOpen(true)}>
         Open Modal
       </Button>
-      <Modal
-        isOpen={open}
-        onClose={() => setOpen(false)}
-        title="Trap Demo"
-      >
+      <Modal isOpen={open} onClose={() => setOpen(false)} title="Trap Demo">
         {extraContent ?? (
           <p className="text-gray-300 mb-4">
             Press Escape or click outside to close.
@@ -132,7 +124,9 @@ export const FocusTrapPlay: Story = {
     // ── Initial focus ──────────────────────────────────────────────────────
     // The first focusable element inside the dialog should have focus after
     // the opening rAF tick fires.
-    await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
+    await waitFor(() =>
+      expect(dialog.contains(document.activeElement)).toBe(true),
+    );
 
     // ── Tab forward wrapping ───────────────────────────────────────────────
     // Tab through all tabbable elements plus one extra cycle; every step must
@@ -189,6 +183,8 @@ export const FocusFallbackPlay: Story = {
     // The close button is always present in Modal, so it will receive focus.
     // This story verifies that at least the dialog region (or its close button)
     // has focus, not an element outside the dialog.
-    await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
+    await waitFor(() =>
+      expect(dialog.contains(document.activeElement)).toBe(true),
+    );
   },
 };

@@ -2,7 +2,13 @@
 
 import { useCallback, useSyncExternalStore } from 'react';
 
-export const SUPPORTED_CURRENCY_CODES = ['USD', 'EUR', 'GBP', 'NGN', 'KES'] as const;
+export const SUPPORTED_CURRENCY_CODES = [
+  'USD',
+  'EUR',
+  'GBP',
+  'NGN',
+  'KES',
+] as const;
 
 export type CurrencyCode = (typeof SUPPORTED_CURRENCY_CODES)[number];
 

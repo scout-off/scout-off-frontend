@@ -117,7 +117,10 @@ function loadKeyring(): Keyring {
         );
       }
       const kid = trimmed.slice(0, sep).trim();
-      const key = decodeKey(trimmed.slice(sep + 1), `CONTACT_VAULT_KEYS[${kid}]`);
+      const key = decodeKey(
+        trimmed.slice(sep + 1),
+        `CONTACT_VAULT_KEYS[${kid}]`,
+      );
       keys.set(kid, key);
     }
   }
@@ -233,7 +236,8 @@ export function unsealContactDetails(
 ): string {
   const { kid, blob } = splitEnvelope(sealed.ciphertext);
   const { keys } = loadKeyring();
-  const key = kid === LEGACY_KID ? keys.get(loadKeyring().activeKid) : keys.get(kid);
+  const key =
+    kid === LEGACY_KID ? keys.get(loadKeyring().activeKid) : keys.get(kid);
   if (!key) {
     throw new Error(`No contact-vault key configured for kid=${kid}.`);
   }

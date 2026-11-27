@@ -31,10 +31,19 @@ export function pendingQueueKey(
  */
 export function useValidatorPendingQueue(validatorAddress: string | null) {
   const getKey = useCallback(
-    (pageIndex: number, previousPage: { items: MilestoneSubmission[]; nextCursor: string | null } | null) => {
+    (
+      pageIndex: number,
+      previousPage: {
+        items: MilestoneSubmission[];
+        nextCursor: string | null;
+      } | null,
+    ) => {
       if (!validatorAddress) return null;
       if (pageIndex > 0 && !previousPage?.nextCursor) return null;
-      return pendingQueueKey(validatorAddress, previousPage?.nextCursor ?? null);
+      return pendingQueueKey(
+        validatorAddress,
+        previousPage?.nextCursor ?? null,
+      );
     },
     [validatorAddress],
   );
@@ -63,7 +72,9 @@ export function useValidatorPendingQueue(validatorAddress: string | null) {
     [data],
   );
 
-  const hasMore = Boolean(data && data.length > 0 && data[data.length - 1]?.nextCursor);
+  const hasMore = Boolean(
+    data && data.length > 0 && data[data.length - 1]?.nextCursor,
+  );
 
   const loadMore = useCallback(() => {
     if (!validatorAddress || !hasMore) return;

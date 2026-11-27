@@ -1,3 +1,4 @@
+import type { Locale } from 'next-intl';
 import { ReactNode } from 'react';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
@@ -42,7 +43,7 @@ export async function generateMetadata(props: {
 }): Promise<Metadata> {
   const params = await props.params;
 
-  const { locale } = params;
+  const locale = params.locale as Locale;
 
   const [seo, t] = await Promise.all([
     seoMetadata(),
@@ -78,7 +79,7 @@ export async function generateMetadata(props: {
 export default async function LocaleLayout(props: LocaleLayoutProps) {
   const params = await props.params;
 
-  const { locale } = params;
+  const locale = params.locale as Locale;
 
   const { children } = props;
 

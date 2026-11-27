@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import type { Locale } from 'next-intl';
+import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 
 // Next.js only renders the segment-level `not-found.tsx` for explicit
 // `notFound()` calls, not for unmatched sub-paths. This catch-all turns any
@@ -16,10 +17,10 @@ export async function generateMetadata({
 }: {
   params: Promise<{ locale: string; rest: string[] }>;
 }): Promise<Metadata> {
-  const { locale } = await params;
+  const locale = (await params).locale as Locale;
   setRequestLocale(locale);
-  const t = await getTranslations("not_found");
-  return { title: t("title") };
+  const t = await getTranslations('not_found');
+  return { title: t('title') };
 }
 
 export default async function CatchAllPage({
@@ -27,7 +28,7 @@ export default async function CatchAllPage({
 }: {
   params: Promise<{ locale: string; rest: string[] }>;
 }) {
-  const { locale } = await params;
+  const locale = (await params).locale as Locale;
   setRequestLocale(locale);
   notFound();
 }

@@ -85,9 +85,10 @@ describe('useValidatorActionLog — loading state', () => {
     }) => void = () => {};
     mockFetch.mockImplementation(
       () =>
-        new Promise<{ entries: ValidatorActionLogEntry[]; nextCursor: string | null }>(
-          (resolve) => (resolveFetch = resolve),
-        ),
+        new Promise<{
+          entries: ValidatorActionLogEntry[];
+          nextCursor: string | null;
+        }>((resolve) => (resolveFetch = resolve)),
     );
 
     const { result } = renderHook(() => useValidatorActionLog(VALIDATOR), {

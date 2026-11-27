@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from '@playwright/test';
 
 // The catch-all `app/[locale]/[...rest]/page.tsx` calls `notFound()`, which
 // renders the localized `app/[locale]/not-found.tsx` with a real 404 status.
@@ -6,25 +6,25 @@ import { test, expect } from "@playwright/test";
 // the translated document title, and that the CTAs keep the current locale.
 const cases = [
   {
-    locale: "en",
-    heading: "Page not found",
-    title: "Page Not Found — ScoutOff",
-    backToHome: "Back to home",
-    browsePlayers: "Browse players",
+    locale: 'en',
+    heading: 'Page not found',
+    title: 'Page Not Found — ScoutOff',
+    backToHome: 'Back to home',
+    browsePlayers: 'Browse players',
   },
   {
-    locale: "fr",
-    heading: "Page introuvable",
-    title: "Page introuvable — ScoutOff",
+    locale: 'fr',
+    heading: 'Page introuvable',
+    title: 'Page introuvable — ScoutOff',
     backToHome: "Retour à l'accueil",
-    browsePlayers: "Parcourir les joueurs",
+    browsePlayers: 'Parcourir les joueurs',
   },
   {
-    locale: "sw",
-    heading: "Ukurasa haujapatikana",
-    title: "Ukurasa Haujapatikana — ScoutOff",
-    backToHome: "Rudi kwenye ukurasa wa nyumbani",
-    browsePlayers: "Tafuta wachezaji",
+    locale: 'sw',
+    heading: 'Ukurasa haujapatikana',
+    title: 'Ukurasa Haujapatikana — ScoutOff',
+    backToHome: 'Rudi kwenye ukurasa wa nyumbani',
+    browsePlayers: 'Tafuta wachezaji',
   },
 ];
 
@@ -35,17 +35,17 @@ for (const { locale, heading, title, backToHome, browsePlayers } of cases) {
     const response = await page.goto(`/${locale}/does-not-exist`);
     expect(response?.status()).toBe(404);
 
-    await expect(page.locator("html")).toHaveAttribute("lang", locale);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText(heading);
+    await expect(page.locator('html')).toHaveAttribute('lang', locale);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(heading);
     await expect(page).toHaveTitle(title);
 
     // The two CTAs keep the current locale in their href.
     await expect(
-      page.getByRole("link", { name: backToHome, exact: true })
-    ).toHaveAttribute("href", `/${locale}`);
+      page.getByRole('link', { name: backToHome, exact: true }),
+    ).toHaveAttribute('href', `/${locale}`);
     await expect(
-      page.getByRole("link", { name: browsePlayers, exact: true })
-    ).toHaveAttribute("href", `/${locale}/scout`);
+      page.getByRole('link', { name: browsePlayers, exact: true }),
+    ).toHaveAttribute('href', `/${locale}/scout`);
   });
 }
 
@@ -60,8 +60,8 @@ for (const { locale, heading, title } of cases) {
     const response = await page.goto(`/${locale}/player/does-not-exist-player`);
     expect(response?.status()).toBe(404);
 
-    await expect(page.locator("html")).toHaveAttribute("lang", locale);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText(heading);
+    await expect(page.locator('html')).toHaveAttribute('lang', locale);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(heading);
     await expect(page).toHaveTitle(title);
   });
 }

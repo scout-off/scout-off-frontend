@@ -39,7 +39,7 @@ describe('buildScoutContactsCsv', () => {
     expect(lines[3]).toBe('C,,,Unverified,');
   });
 
-  it.each(['=', '+', '-', '@']) (
+  it.each(['=', '+', '-', '@'])(
     'neutralises formula injection for names starting with %s',
     (prefix) => {
       const csv = buildScoutContactsCsv([

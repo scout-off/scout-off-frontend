@@ -99,7 +99,10 @@ class InMemoryStore implements RateLimitStore {
     }
   }
 
-  async increment(key: string, windowMs: number): Promise<FixedIncrementResult> {
+  async increment(
+    key: string,
+    windowMs: number,
+  ): Promise<FixedIncrementResult> {
     const now = Date.now();
 
     if (++this.callsSinceSweep >= IN_MEMORY_SWEEP_EVERY) {
@@ -125,7 +128,10 @@ class InMemoryStore implements RateLimitStore {
     return { count: entry.count, ttlMs: entry.resetAt - now };
   }
 
-  async incrementSliding(key: string, windowMs: number): Promise<SlidingIncrementResult> {
+  async incrementSliding(
+    key: string,
+    windowMs: number,
+  ): Promise<SlidingIncrementResult> {
     const now = Date.now();
     const windowStart = Math.floor(now / windowMs) * windowMs;
     const prevWindowStart = windowStart - windowMs;
@@ -135,7 +141,8 @@ class InMemoryStore implements RateLimitStore {
     const prevKey = `${key}:${prevWindowStart}`;
 
     const prevEntry = this.map.get(prevKey);
-    const prevCount = prevEntry && now < prevEntry.resetAt ? prevEntry.count : 0;
+    const prevCount =
+      prevEntry && now < prevEntry.resetAt ? prevEntry.count : 0;
 
     const currentEntry = this.map.get(currentKey);
     let currentCount: number;
@@ -229,7 +236,10 @@ return { count, math.floor(ttl / 1000) }`;
     return { count, ttlMs };
   }
 
-  async incrementSliding(key: string, windowMs: number): Promise<SlidingIncrementResult> {
+  async incrementSliding(
+    key: string,
+    windowMs: number,
+  ): Promise<SlidingIncrementResult> {
     const now = Date.now();
     const windowStart = Math.floor(now / windowMs) * windowMs;
     const prevWindowStart = windowStart - windowMs;
