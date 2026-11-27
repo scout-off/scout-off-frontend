@@ -10,7 +10,8 @@ import {
 } from '@/lib/locales';
 import { negotiateLocale } from '@/lib/negotiateLocale';
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
-import { POLICIES } from '@/lib/rateLimitPolicies';
+// Edge-safe policy table (rateLimitPolicies itself imports the session store).
+import { POLICIES } from '@/lib/rateLimitPolicyRegistry';
 import { buildCsp } from '@/lib/csp';
 
 function getLocale(request: NextRequest): string {
