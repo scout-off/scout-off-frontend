@@ -5,6 +5,11 @@ interface EmptyStateProps {
   description?: string;
   icon?: ReactNode;
   action?: { label: string; onClick: () => void };
+  /**
+   * Heading level for the title. Defaults to h3; pages that render the empty
+   * state directly under their h1 should pass 'h2' to keep heading order.
+   */
+  headingLevel?: 'h2' | 'h3' | 'h4';
 }
 
 export default function EmptyState({
@@ -12,6 +17,7 @@ export default function EmptyState({
   description,
   icon,
   action,
+  headingLevel: Heading = 'h3',
 }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
@@ -33,9 +39,9 @@ export default function EmptyState({
           </svg>
         )}
       </div>
-      <h3 className="text-gray-900 dark:text-white font-semibold text-lg">
+      <Heading className="text-gray-900 dark:text-white font-semibold text-lg">
         {title}
-      </h3>
+      </Heading>
       {description && (
         <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 max-w-sm">
           {description}

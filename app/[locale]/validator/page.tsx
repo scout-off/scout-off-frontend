@@ -77,6 +77,7 @@ function ValidatorDashboardContent() {
       <div className="flex flex-col gap-8">
         <h1 className="text-3xl font-bold text-white">{t('title')}</h1>
         <EmptyState
+          headingLevel="h2"
           title={t('access_only_title')}
           description={t('access_only_description')}
         />

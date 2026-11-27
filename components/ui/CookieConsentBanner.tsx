@@ -136,7 +136,7 @@ export default function CookieConsentBanner({
               trackers. Your data stays private — see our{' '}
               <Link
                 href="/privacy"
-                className="text-brand-green underline underline-offset-2 hover:text-green-400"
+                className="text-green-800 underline underline-offset-2 hover:text-green-700 dark:text-brand-green dark:hover:text-green-400"
               >
                 Privacy Policy
               </Link>{' '}
