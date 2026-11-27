@@ -4,168 +4,156 @@
  * admin audit log entries and drives the periodic on-chain reconciliation
  * check described in docs/admin-audit-log.md.
  */
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 
-jest.mock('@/lib/adminAuditLogClient', () => ({
+jest.mock('@/lib/adminAuditClient', () => ({
   fetchAuditLog: jest.fn(),
-  runAuditReconciliation: jest.fn(),
+  fetchReconciliation: jest.fn(),
+  fetchReconciliationHistory: jest.fn(),
 }));
 
 import {
   fetchAuditLog,
-  runAuditReconciliation,
-} from '@/lib/adminAuditLogClient';
+  fetchReconciliation,
+  fetchReconciliationHistory,
+} from '@/lib/adminAuditClient';
 import { useAdminAuditLog } from '@/hooks/useAdminAuditLog';
 import type {
-  AuditLogEntry,
-  AuditLogQuery,
-  AuditReconciliation,
-} from '@/types';
+  AdminAuditEntry,
+  ReconciliationResult,
+  ReconciliationRun,
+} from '@/lib/adminAudit';
 
 const mockFetchAuditLog = fetchAuditLog as jest.Mock;
-const mockRunReconciliation = runAuditReconciliation as jest.Mock;
+const mockFetchReconciliation = fetchReconciliation as jest.Mock;
+const mockFetchHistory = fetchReconciliationHistory as jest.Mock;
 
-const ENTRY: AuditLogEntry = {
-  id: 'audit-1',
-  actor: 'GADMINWALLETABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGHIJK',
-  action: 'player.approved',
-  target: 'player-1',
-  timestamp: 1_900_000_000,
-  metadata: {},
-};
+function entry(id: number): AdminAuditEntry {
+  return {
+    id,
+    actionType: 'validator_add',
+    adminWallet: 'GADMIN',
+    target: `GVALIDATOR${id}`,
+    amountStroops: null,
+    txHash: null,
+    status: 'confirmed',
+    timestamp: 1_900_000_000 + id,
+    data: {},
+  };
+}
 
-const RECONCILIATION: AuditReconciliation = {
+const RECONCILIATION: ReconciliationResult = {
   checkedAt: 1_900_000_100,
-  onChainCount: 1,
-  offChainCount: 1,
   mismatches: [],
+  skipped: [],
 };
+
+const HISTORY: ReconciliationRun[] = [
+  {
+    id: 1,
+    checkedAt: 1_900_000_100,
+    mismatches: [],
+    newMismatchCount: 0,
+    skipped: [],
+  },
+];
 
 beforeEach(() => {
   jest.resetAllMocks();
-  mockFetchAuditLog.mockResolvedValue([ENTRY]);
-  mockRunReconciliation.mockResolvedValue(RECONCILIATION);
-});
-
-afterEach(() => {
-  jest.useRealTimers();
+  mockFetchAuditLog.mockResolvedValue({
+    entries: [entry(3), entry(2)],
+    nextCursor: 2,
+  });
+  mockFetchReconciliation.mockResolvedValue(RECONCILIATION);
+  mockFetchHistory.mockResolvedValue(HISTORY);
 });
 
 describe('useAdminAuditLog — initial load', () => {
-  it('populates entries from fetchAuditLog', async () => {
+  it('populates entries and the pagination cursor', async () => {
     const { result } = renderHook(() => useAdminAuditLog());
 
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    expect(result.current.loading).toBe(true);
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
-    expect(mockFetchAuditLog).toHaveBeenCalledTimes(1);
-    expect(result.current.entries).toEqual([ENTRY]);
-    expect(result.current.error).toBeNull();
-    expect(result.current.loading).toBe(false);
+    expect(mockFetchAuditLog).toHaveBeenCalledWith({ limit: 100 });
+    expect(result.current.entries.map((e) => e.id)).toEqual([3, 2]);
+    expect(result.current.nextCursor).toBe(2);
+    expect(result.current.error).toBe(false);
   });
-});
 
-describe('useAdminAuditLog — setFilter', () => {
-  it('re-fetches with the new AuditLogQuery', async () => {
-    const { result } = renderHook(() => useAdminAuditLog());
-
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(mockFetchAuditLog).toHaveBeenCalledTimes(1);
-
-    const query: AuditLogQuery = { action: 'player.approved', limit: 10 };
-
-    await act(async () => {
-      result.current.setFilter(query);
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(mockFetchAuditLog).toHaveBeenCalledTimes(2);
-    expect(mockFetchAuditLog).toHaveBeenLastCalledWith(query);
-    expect(result.current.filter).toEqual(query);
-  });
-});
-
-describe('useAdminAuditLog — runReconciliation', () => {
-  it('sets reconciling true then populates reconciliation', async () => {
-    let resolveReconciliation: (value: AuditReconciliation) => void = () => {};
-    mockRunReconciliation.mockImplementation(
-      () =>
-        new Promise<AuditReconciliation>((resolve) => {
-          resolveReconciliation = resolve;
-        }),
-    );
-
-    const { result } = renderHook(() => useAdminAuditLog());
-
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(result.current.reconciling).toBe(false);
-
-    await act(async () => {
-      result.current.runReconciliation();
-      await Promise.resolve();
-    });
-
-    expect(result.current.reconciling).toBe(true);
-
-    await act(async () => {
-      resolveReconciliation(RECONCILIATION);
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(result.current.reconciling).toBe(false);
-    expect(result.current.reconciliation).toEqual(RECONCILIATION);
-  });
-});
-
-describe('useAdminAuditLog — error state', () => {
-  it('returns the error message and clears loading when the fetch fails', async () => {
+  it('surfaces a fetch failure as an error with its message', async () => {
     mockFetchAuditLog.mockRejectedValue(new Error('Audit log unavailable'));
 
     const { result } = renderHook(() => useAdminAuditLog());
 
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.error).toBe(true);
+    expect(result.current.errorMessage).toBe('Audit log unavailable');
     expect(result.current.entries).toEqual([]);
-    expect(result.current.error).toBe('Audit log unavailable');
-    expect(result.current.loading).toBe(false);
   });
 });
 
-describe('useAdminAuditLog — reconciliation interval', () => {
-  it('uses fake timers so the 5-minute interval is not exercised as a real timer', async () => {
-    jest.useFakeTimers();
+describe('useAdminAuditLog — pagination and filters', () => {
+  it('loadMore appends the next page using the cursor', async () => {
+    const { result } = renderHook(() => useAdminAuditLog());
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
+    mockFetchAuditLog.mockResolvedValueOnce({
+      entries: [entry(1)],
+      nextCursor: null,
+    });
+    act(() => result.current.loadMore());
+
+    await waitFor(() =>
+      expect(result.current.entries.map((e) => e.id)).toEqual([3, 2, 1]),
+    );
+    expect(mockFetchAuditLog).toHaveBeenLastCalledWith({
+      limit: 100,
+      before: 2,
+    });
+    expect(result.current.nextCursor).toBeNull();
+  });
+
+  it('setFilter reloads with the new filter', async () => {
+    const { result } = renderHook(() => useAdminAuditLog());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() =>
+      result.current.setFilter({ limit: 100, actionType: 'fee_withdrawal' }),
+    );
+
+    await waitFor(() =>
+      expect(mockFetchAuditLog).toHaveBeenLastCalledWith({
+        limit: 100,
+        actionType: 'fee_withdrawal',
+      }),
+    );
+  });
+});
+
+describe('useAdminAuditLog — reconciliation', () => {
+  it('runs reconciliation on mount and loads its history', async () => {
     const { result } = renderHook(() => useAdminAuditLog());
 
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    await waitFor(() =>
+      expect(result.current.reconciliation).toEqual(RECONCILIATION),
+    );
+    await waitFor(() =>
+      expect(result.current.reconciliationHistory).toEqual(HISTORY),
+    );
+    expect(result.current.reconciling).toBe(false);
+  });
 
-    expect(mockRunReconciliation).not.toHaveBeenCalled();
+  it('keeps the last result when a reconciliation run fails', async () => {
+    const { result } = renderHook(() => useAdminAuditLog());
+    await waitFor(() =>
+      expect(result.current.reconciliation).toEqual(RECONCILIATION),
+    );
 
-    await act(async () => {
-      jest.advanceTimersByTime(5 * 60 * 1000);
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    mockFetchReconciliation.mockRejectedValueOnce(new Error('rpc down'));
+    act(() => result.current.runReconciliation());
 
-    expect(mockRunReconciliation).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(result.current.reconciling).toBe(false));
     expect(result.current.reconciliation).toEqual(RECONCILIATION);
   });
 });

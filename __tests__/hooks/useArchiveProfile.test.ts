@@ -1,129 +1,117 @@
 /**
- * Issue #1061 — hook test coverage suite.
- * Tests for useArchiveProfile (hooks/useArchiveProfile.ts), which wraps
- * archiving a player's profile and is consumed by
- * components/player/ArchiveProfileModal.tsx.
+ * Tests for useArchiveProfile (hooks/useArchiveProfile.ts), which wraps the
+ * player profile archive / unarchive API calls with loading and error state.
  */
 import { renderHook, act } from '@testing-library/react';
 
 jest.mock('@/lib/api', () => ({
   archivePlayerProfile: jest.fn(),
+  unarchivePlayerProfile: jest.fn(),
 }));
 
-import { archivePlayerProfile } from '@/lib/api';
+import { archivePlayerProfile, unarchivePlayerProfile } from '@/lib/api';
 import { useArchiveProfile } from '@/hooks/useArchiveProfile';
 
 const mockArchive = archivePlayerProfile as jest.Mock;
+const mockUnarchive = unarchivePlayerProfile as jest.Mock;
 
 beforeEach(() => {
   jest.resetAllMocks();
-  mockArchive.mockResolvedValue(undefined);
+  mockArchive.mockResolvedValue({ archived: true });
+  mockUnarchive.mockResolvedValue({ archived: false });
 });
 
-describe('useArchiveProfile — happy path', () => {
-  it('updates loading/success state after a successful archive call', async () => {
+describe('useArchiveProfile — archive', () => {
+  it('starts idle', () => {
     const { result } = renderHook(() => useArchiveProfile());
-
     expect(result.current.loading).toBe(false);
     expect(result.current.error).toBeNull();
-    expect(result.current.success).toBe(false);
+  });
 
+  it('archives the profile and returns the API result', async () => {
+    const { result } = renderHook(() => useArchiveProfile());
+
+    let returned: unknown;
     await act(async () => {
-      await result.current.archive('player-1');
+      returned = await result.current.archive('player-1');
     });
 
     expect(mockArchive).toHaveBeenCalledWith('player-1');
+    expect(returned).toEqual({ archived: true });
     expect(result.current.loading).toBe(false);
-    expect(result.current.success).toBe(true);
     expect(result.current.error).toBeNull();
   });
-});
 
-describe('useArchiveProfile — loading state', () => {
-  it('loading is true while the archive request is in-flight', async () => {
-    let resolveArchive: () => void = () => {};
-    mockArchive.mockImplementation(
-      () => new Promise<void>((resolve) => (resolveArchive = resolve)),
-    );
-
+  it('is loading while the archive request is in flight', async () => {
+    let resolve: (v: unknown) => void = () => {};
+    mockArchive.mockImplementation(() => new Promise((r) => (resolve = r)));
     const { result } = renderHook(() => useArchiveProfile());
 
-    let pending: Promise<void>;
+    let pending!: Promise<unknown>;
     act(() => {
       pending = result.current.archive('player-1');
     });
-
     expect(result.current.loading).toBe(true);
 
     await act(async () => {
-      resolveArchive();
+      resolve({ archived: true });
       await pending;
     });
-
     expect(result.current.loading).toBe(false);
-    expect(result.current.success).toBe(true);
   });
 
-  it('does not double-submit while a request is in flight', async () => {
-    let resolveArchive: () => void = () => {};
-    mockArchive.mockImplementation(
-      () => new Promise<void>((resolve) => (resolveArchive = resolve)),
-    );
-
-    const { result } = renderHook(() => useArchiveProfile());
-
-    let first: Promise<void>;
-    act(() => {
-      first = result.current.archive('player-1');
-    });
-
-    await act(async () => {
-      await result.current.archive('player-1');
-    });
-
-    expect(mockArchive).toHaveBeenCalledTimes(1);
-
-    await act(async () => {
-      resolveArchive();
-      await first;
-    });
-
-    expect(mockArchive).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe('useArchiveProfile — error state', () => {
-  it('surfaces a mapped error message when the archive call fails', async () => {
+  it('surfaces the error message and rethrows when archiving fails', async () => {
     mockArchive.mockRejectedValue(new Error('Player already archived'));
-
     const { result } = renderHook(() => useArchiveProfile());
 
     await act(async () => {
-      await result.current.archive('player-1');
+      await expect(result.current.archive('player-1')).rejects.toThrow(
+        'Player already archived',
+      );
     });
 
-    expect(result.current.loading).toBe(false);
-    expect(result.current.success).toBe(false);
     expect(result.current.error).toBe('Player already archived');
+    expect(result.current.loading).toBe(false);
+  });
+
+  it('falls back to a generic message for non-Error rejections', async () => {
+    mockArchive.mockRejectedValue('boom');
+    const { result } = renderHook(() => useArchiveProfile());
+
+    await act(async () => {
+      await result.current.archive('player-1').catch(() => undefined);
+    });
+
+    expect(result.current.error).toBe('Failed to archive profile');
   });
 });
 
-describe('useArchiveProfile — reset', () => {
-  it('reset clears success/error state between calls', async () => {
+describe('useArchiveProfile — unarchive', () => {
+  it('unarchives the profile and clears a previous error', async () => {
+    mockArchive.mockRejectedValueOnce(new Error('nope'));
     const { result } = renderHook(() => useArchiveProfile());
 
     await act(async () => {
-      await result.current.archive('player-1');
+      await result.current.archive('player-1').catch(() => undefined);
+    });
+    expect(result.current.error).toBe('nope');
+
+    await act(async () => {
+      await result.current.unarchive('player-1');
     });
 
-    expect(result.current.success).toBe(true);
-
-    act(() => {
-      result.current.reset();
-    });
-
-    expect(result.current.success).toBe(false);
+    expect(mockUnarchive).toHaveBeenCalledWith('player-1');
     expect(result.current.error).toBeNull();
-    expect(result.current.loading).toBe(false);
+  });
+
+  it('reports unarchive failures', async () => {
+    mockUnarchive.mockRejectedValue(new Error('Not archived'));
+    const { result } = renderHook(() => useArchiveProfile());
+
+    await act(async () => {
+      await result.current.unarchive('player-1').catch(() => undefined);
+    });
+
+    expect(result.current.error).toBe('Not archived');
   });
 });

@@ -7,7 +7,8 @@
 import { renderHook, act } from '@testing-library/react';
 import React from 'react';
 
-import { ThemeProvider, useTheme } from '@/context/ThemeContext';
+import { ThemeProvider } from '@/context/ThemeContext';
+import { useTheme } from '@/hooks/useTheme';
 
 function wrapper({ children }: { children: React.ReactNode }) {
   return React.createElement(ThemeProvider, null, children);

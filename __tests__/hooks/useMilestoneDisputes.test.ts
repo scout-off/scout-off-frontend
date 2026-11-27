@@ -1,38 +1,65 @@
 /**
- * Issue #1066 — hook test coverage suite.
- * Tests for useMilestoneDisputes (hooks/useMilestoneDisputes.ts), which reads a
- * player's milestone dispute records and is consumed by
- * components/player/DisputeMilestoneModal.tsx.
+ * Tests for useMilestoneDisputes (hooks/useMilestoneDisputes.ts), which
+ * tracks the authenticated player's own milestone disputes (issue #562).
  */
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import React from 'react';
 import { SWRConfig } from 'swr';
 
-jest.mock('@/lib/api', () => ({
-  fetchMilestoneDisputes: jest.fn(),
+jest.mock('@/lib/disputesClient', () => ({
+  fetchMyDisputes: jest.fn(),
+  createDispute: jest.fn(),
 }));
 
-import { fetchMilestoneDisputes } from '@/lib/api';
-import { useMilestoneDisputes } from '@/hooks/useMilestoneDisputes';
+import { createDispute, fetchMyDisputes } from '@/lib/disputesClient';
+import {
+  myDisputesKey,
+  useMilestoneDisputes,
+} from '@/hooks/useMilestoneDisputes';
 import type { MilestoneDispute } from '@/types';
 
-const mockFetch = fetchMilestoneDisputes as jest.Mock;
+const mockFetch = fetchMyDisputes as jest.Mock;
+const mockCreate = createDispute as jest.Mock;
 
-const DISPUTE: MilestoneDispute = {
-  id: 'dispute-1',
-  playerId: 'player-1',
-  milestoneId: 'milestone-1',
-  reason: 'Milestone not delivered',
-  status: 'open',
-  createdAt: 1_900_000_000,
-};
+const WALLET = 'GPLAYERWALLET';
+
+function dispute(id: number, milestoneId: string): MilestoneDispute {
+  return {
+    id,
+    playerId: 'player-1',
+    playerWallet: WALLET,
+    validatorWallet: 'GVALIDATOR',
+    milestoneId,
+    milestoneDescription: `Milestone ${milestoneId}`,
+    reason: 'Milestone not delivered',
+    status: 'pending',
+    createdAt: 1_900_000_000,
+    responseDeadline: 1_900_100_000,
+    decidedAt: null,
+    decidedBy: null,
+    resolutionNote: null,
+    revokeTxHash: null,
+  };
+}
+
+const DISPUTE = dispute(1, 'milestone-1');
 
 function wrapper({ children }: { children: React.ReactNode }) {
   return React.createElement(
     SWRConfig,
-    { value: { provider: () => new Map(), shouldRetryOnError: false } },
+    {
+      value: {
+        provider: () => new Map(),
+        shouldRetryOnError: false,
+        dedupingInterval: 0,
+      },
+    },
     children,
   );
+}
+
+function renderDisputes(wallet: string | null = WALLET) {
+  return renderHook(() => useMilestoneDisputes(wallet), { wrapper });
 }
 
 beforeEach(() => {
@@ -40,56 +67,25 @@ beforeEach(() => {
   mockFetch.mockResolvedValue([DISPUTE]);
 });
 
-describe('useMilestoneDisputes — happy path', () => {
-  it('fetches disputes for the given player ID', async () => {
-    const { result } = renderHook(() => useMilestoneDisputes('player-1'), {
-      wrapper,
-    });
-
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(mockFetch).toHaveBeenCalledWith('player-1');
-    expect(result.current.disputes).toEqual([DISPUTE]);
-    expect(result.current.error).toBeNull();
-    expect(result.current.loading).toBe(false);
+describe('myDisputesKey', () => {
+  it('is null without a wallet and wallet-scoped otherwise', () => {
+    expect(myDisputesKey(null)).toBeNull();
+    expect(myDisputesKey(WALLET)).toBe(`disputes:mine:${WALLET}`);
   });
 });
 
-describe('useMilestoneDisputes — loading state', () => {
-  it('loading is true while the fetch is in-flight', async () => {
-    let resolveFetch: (disputes: MilestoneDispute[]) => void = () => {};
-    mockFetch.mockImplementation(
-      () =>
-        new Promise<MilestoneDispute[]>((resolve) => (resolveFetch = resolve)),
-    );
+describe('useMilestoneDisputes', () => {
+  it("loads the wallet's disputes", async () => {
+    const { result } = renderDisputes();
 
-    const { result } = renderHook(() => useMilestoneDisputes('player-1'), {
-      wrapper,
-    });
-
-    await act(async () => {
-      await Promise.resolve();
-    });
-
-    expect(result.current.loading).toBe(true);
-
-    await act(async () => {
-      resolveFetch([DISPUTE]);
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
+    await waitFor(() => expect(result.current.disputes).toEqual([DISPUTE]));
+    expect(mockFetch).toHaveBeenCalled();
     expect(result.current.loading).toBe(false);
-    expect(result.current.disputes).toEqual([DISPUTE]);
+    expect(result.current.error).toBeNull();
   });
 
-  it('does not fetch when playerId is null', async () => {
-    const { result } = renderHook(() => useMilestoneDisputes(null), {
-      wrapper,
-    });
+  it('does not fetch without a wallet', async () => {
+    const { result } = renderDisputes(null);
 
     await act(async () => {
       await Promise.resolve();
@@ -99,52 +95,44 @@ describe('useMilestoneDisputes — loading state', () => {
     expect(result.current.disputes).toEqual([]);
     expect(result.current.loading).toBe(false);
   });
-});
 
-describe('useMilestoneDisputes — error state', () => {
-  it('returns the error message when the fetch fails', async () => {
+  it('surfaces fetch errors', async () => {
     mockFetch.mockRejectedValue(new Error('Disputes unavailable'));
+    const { result } = renderDisputes();
 
-    const { result } = renderHook(() => useMilestoneDisputes('player-1'), {
-      wrapper,
-    });
-
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
+    await waitFor(() =>
+      expect(result.current.error).toBe('Disputes unavailable'),
+    );
     expect(result.current.disputes).toEqual([]);
-    expect(result.current.error).toBe('Disputes unavailable');
-    expect(result.current.loading).toBe(false);
   });
-});
 
-describe('useMilestoneDisputes — refetch', () => {
-  it('refetch picks up a newly filed dispute', async () => {
-    const { result } = renderHook(() => useMilestoneDisputes('player-1'), {
-      wrapper,
-    });
+  it('findByMilestoneId returns the matching dispute', async () => {
+    const { result } = renderDisputes();
+    await waitFor(() => expect(result.current.disputes).toHaveLength(1));
 
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    expect(result.current.findByMilestoneId('milestone-1')).toEqual(DISPUTE);
+    expect(result.current.findByMilestoneId('unknown')).toBeUndefined();
+  });
 
-    expect(result.current.disputes).toEqual([DISPUTE]);
+  it('file() creates a dispute and prepends it to the cache', async () => {
+    const created = dispute(2, 'milestone-2');
+    mockCreate.mockResolvedValue(created);
+    const { result } = renderDisputes();
+    await waitFor(() => expect(result.current.disputes).toHaveLength(1));
 
-    const NEW_DISPUTE: MilestoneDispute = {
-      ...DISPUTE,
-      id: 'dispute-2',
-      reason: 'Second milestone not delivered',
+    const params = {
+      playerId: 'player-1',
+      milestoneId: 'milestone-2',
+      milestoneDescription: 'Milestone milestone-2',
+      reason: 'Evidence was fabricated',
     };
-    mockFetch.mockResolvedValue([DISPUTE, NEW_DISPUTE]);
-
+    let returned: MilestoneDispute | undefined;
     await act(async () => {
-      await result.current.refetch();
+      returned = await result.current.file(params);
     });
 
-    expect(mockFetch.mock.calls.length).toBeGreaterThanOrEqual(2);
-    expect(result.current.disputes).toEqual([DISPUTE, NEW_DISPUTE]);
+    expect(mockCreate).toHaveBeenCalledWith(params);
+    expect(returned).toEqual(created);
+    expect(result.current.disputes.map((d) => d.id)).toEqual([2, 1]);
   });
 });

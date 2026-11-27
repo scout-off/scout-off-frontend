@@ -1,122 +1,129 @@
 /**
- * Issue #1067 — hook test coverage suite.
  * Tests for useNotificationPreferences (hooks/useNotificationPreferences.ts),
- * which reads/writes per-channel notification settings for
- * components/NotificationPreferencesPanel.tsx.
+ * which loads the wallet's notification category preferences and applies
+ * optimistic updates with rollback on failure (issue #560).
  */
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
+import React from 'react';
+import { SWRConfig } from 'swr';
 
-jest.mock('@/lib/api', () => ({
+jest.mock('@/lib/notificationPreferencesClient', () => ({
   fetchNotificationPreferences: jest.fn(),
-  saveNotificationPreferences: jest.fn(),
+  updateNotificationPreferences: jest.fn(),
+  DEFAULT_NOTIFICATION_PREFERENCES: {
+    milestoneApprovals: true,
+    contactUnlocks: true,
+  },
 }));
 
 import {
   fetchNotificationPreferences,
-  saveNotificationPreferences,
-} from '@/lib/api';
-import { useNotificationPreferences } from '@/hooks/useNotificationPreferences';
+  updateNotificationPreferences,
+} from '@/lib/notificationPreferencesClient';
+import {
+  notificationPreferencesKey,
+  useNotificationPreferences,
+} from '@/hooks/useNotificationPreferences';
 import type { NotificationPreferences } from '@/types';
 
 const mockFetch = fetchNotificationPreferences as jest.Mock;
-const mockSave = saveNotificationPreferences as jest.Mock;
+const mockUpdate = updateNotificationPreferences as jest.Mock;
 
-const PREFS: NotificationPreferences = {
-  email: true,
-  push: false,
-  inApp: true,
+const WALLET = 'GWALLET';
+const STORED: NotificationPreferences = {
+  milestoneApprovals: false,
+  contactUnlocks: true,
+  version: 1,
 };
+
+function wrapper({ children }: { children: React.ReactNode }) {
+  return React.createElement(
+    SWRConfig,
+    {
+      value: {
+        provider: () => new Map(),
+        shouldRetryOnError: false,
+        dedupingInterval: 0,
+      },
+    },
+    children,
+  );
+}
+
+function renderPrefs(wallet: string | null = WALLET) {
+  return renderHook(() => useNotificationPreferences(wallet), { wrapper });
+}
 
 beforeEach(() => {
   jest.resetAllMocks();
-  mockFetch.mockResolvedValue(PREFS);
-  mockSave.mockResolvedValue(PREFS);
+  mockFetch.mockResolvedValue(STORED);
 });
 
-describe('useNotificationPreferences — loading on mount', () => {
-  it('loads existing preferences on mount', async () => {
-    const { result } = renderHook(() => useNotificationPreferences());
-
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(result.current.preferences).toEqual(PREFS);
-    expect(result.current.error).toBeNull();
-    expect(result.current.loading).toBe(false);
-  });
-
-  it('loading is true while the fetch is in-flight', async () => {
-    let resolveFetch: (prefs: NotificationPreferences) => void = () => {};
-    mockFetch.mockImplementation(
-      () =>
-        new Promise<NotificationPreferences>(
-          (resolve) => (resolveFetch = resolve),
-        ),
+describe('notificationPreferencesKey', () => {
+  it('is null without a wallet and wallet-scoped otherwise', () => {
+    expect(notificationPreferencesKey(null)).toBeNull();
+    expect(notificationPreferencesKey(WALLET)).toBe(
+      `notification-preferences:${WALLET}`,
     );
+  });
+});
 
-    const { result } = renderHook(() => useNotificationPreferences());
+describe('useNotificationPreferences', () => {
+  it('returns the defaults until the stored preferences load', async () => {
+    const { result } = renderPrefs();
 
-    await act(async () => {
-      await Promise.resolve();
+    expect(result.current.preferences).toEqual({
+      milestoneApprovals: true,
+      contactUnlocks: true,
     });
-
-    expect(result.current.loading).toBe(true);
-
-    await act(async () => {
-      resolveFetch(PREFS);
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
+    await waitFor(() => expect(result.current.preferences).toEqual(STORED));
     expect(result.current.loading).toBe(false);
-    expect(result.current.preferences).toEqual(PREFS);
   });
-});
 
-describe('useNotificationPreferences — successful save', () => {
-  it('updates local state optimistically on a successful save', async () => {
-    const { result } = renderHook(() => useNotificationPreferences());
-
+  it('does not fetch without a wallet', async () => {
+    renderPrefs(null);
     await act(async () => {
       await Promise.resolve();
-      await Promise.resolve();
     });
-
-    const next: NotificationPreferences = { ...PREFS, push: true };
-
-    await act(async () => {
-      await result.current.save(next);
-    });
-
-    expect(mockSave).toHaveBeenCalledWith(next);
-    expect(result.current.preferences).toEqual(next);
-    expect(result.current.error).toBeNull();
+    expect(mockFetch).not.toHaveBeenCalled();
   });
-});
 
-describe('useNotificationPreferences — failed save', () => {
-  it('rolls back the optimistic update when the save fails', async () => {
-    const { result } = renderHook(() => useNotificationPreferences());
-
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(result.current.preferences).toEqual(PREFS);
-
-    mockSave.mockRejectedValue(new Error('Save failed'));
-    const next: NotificationPreferences = { ...PREFS, push: true };
+  it('applies an update optimistically and keeps the saved value', async () => {
+    const next = { ...STORED, milestoneApprovals: true };
+    const saved = { ...next, version: 2 };
+    mockUpdate.mockResolvedValue(saved);
+    const { result } = renderPrefs();
+    await waitFor(() => expect(result.current.preferences).toEqual(STORED));
 
     await act(async () => {
-      await result.current.save(next);
+      await result.current.update(next);
     });
 
-    expect(mockSave).toHaveBeenCalledWith(next);
-    expect(result.current.preferences).toEqual(PREFS);
-    expect(result.current.error).toBe('Save failed');
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
+    expect(mockUpdate).toHaveBeenCalledWith(next);
+    expect(result.current.preferences).toEqual(saved);
+  });
+
+  it('rolls back and rethrows when the update fails', async () => {
+    mockUpdate.mockRejectedValue(new Error('Save failed'));
+    const { result } = renderPrefs();
+    await waitFor(() => expect(result.current.preferences).toEqual(STORED));
+
+    await act(async () => {
+      await expect(
+        result.current.update({ ...STORED, contactUnlocks: false }),
+      ).rejects.toThrow('Save failed');
+    });
+
+    expect(result.current.preferences).toEqual(STORED);
+  });
+
+  it('surfaces load errors', async () => {
+    mockFetch.mockRejectedValue(new Error('Preferences unavailable'));
+    const { result } = renderPrefs();
+
+    await waitFor(() =>
+      expect(result.current.error).toBe('Preferences unavailable'),
+    );
   });
 });
